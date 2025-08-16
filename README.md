@@ -52,7 +52,10 @@ mkdir -p ~/ros2_humble/src
 cd ~/ros2_humble/src
 git clone https://github.com/idesign0/ros2_macOS.git .
 ```
-
+After cloning, run:
+```bash
+git submodule update --init --recursive
+```
 ### 2️⃣ Install Homebrew Packages  
 
 If you don’t already have Homebrew installed (needed to install more dependencies), follow the instructions at:  
@@ -78,6 +81,11 @@ You can verify or manually install additional required packages with this comman
 brew install asio assimp bison bullet cmake console_bridge cppcheck \
 cunit eigen freetype graphviz opencv openssl orocos-kdl pcre poco \
 pyqt@5 python qt@5 sip spdlog osrf/simulation/tinyxml1 tinyxml2
+```
+
+unlink some brew packages:
+```bash
+brew unlink boost qt
 ```
 
 ### 3️⃣ Official ROS 2 macOS Prerequisites
@@ -107,45 +115,37 @@ pyqt@5 python qt@5 sip spdlog osrf/simulation/tinyxml1 tinyxml2
   To ensure ROS 2 and its dependencies work correctly on your macOS system, add the following environment variables and aliases to your shell configuration (`~/.zshrc` or `~/.bash_profile`):
   
   ```bash
-  # Minimum required CMake policy version and C++ standard
-  export CMAKE_POLICY_VERSION_MINIMUM=3.5
-  export CMAKE_CXX_STANDARD=17
-  
-  # Qt 5 paths (Homebrew)
-  export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:$(brew --prefix qt@5)"
-  export PATH="$PATH:$(brew --prefix qt@5)/bin"
-  
-  # OMPL path (Homebrew)
-  export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:$(brew --prefix ompl)"
-  
-  # Google Benchmark path
-  export benchmark_DIR="$(brew --prefix google-benchmark)/lib/cmake/benchmark"
-  
-  # Generic Homebrew prefixes for CMake to find packages
-  export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:/usr/local/opt:/opt/homebrew/opt"
-  
-  # Python 3.11 framework path
-  export PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
-  
-  # Python pip aliases for convenience
-  alias pip3.10="python3.10 -m pip"
-  alias pip3.11="python3.11 -m pip"
-  
-  # OpenSSL root directory (Homebrew)
-  export OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3
-  
-  # Gazebo Harmonic environment variables
-  export GZ_VERSION=harmonic
-  # export GZ_SIM_SYSTEM_PLUGIN_PATH= ~/ros2_humble/install/gz_ros2_control/lib/
-  
-  # Source ROS 2 workspace setup script
-  source ~/humble-ros2/install/setup.zsh
-  
-  # Source your overlay workspace setup script
-  # source ~/ros2_ws/install/setup.zsh
-  
-  # Enable Python argcomplete for colcon
-  eval "$(register-python-argcomplete colcon)"
+ # Minimum required CMake policy version and C++ standard
+export CMAKE_POLICY_VERSION_MINIMUM=3.5
+export MY_TOOLCHAIN_FILE="$HOME/humble-ros2/src/cmake/toolchain.cmake"
+
+# Qt 5 paths (Homebrew)
+export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:$(brew --prefix qt@5)"
+export PATH="$PATH:$(brew --prefix qt@5)/bin"
+
+# Python 3.11 framework path
+export PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:$HOME/Library/Python/3.11/bin:$PATH"
+
+# Python pip aliases for convenience
+alias pip3.10="python3.10 -m pip"
+alias pip3.11="python3.11 -m pip"
+
+# OpenSSL root directory (Homebrew)
+export OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3
+
+# Gazebo Harmonic environment variables
+export GZ_VERSION=harmonic
+export GZ_SIM_SYSTEM_PLUGIN_PATH=~/humble-ros2/install/gz_ros2_control/lib/
+
+# Source ROS 2 workspace setup script
+source ~/humble-ros2/install/setup.zsh
+
+# Source your overlay workspace setup script
+source ~/ros2_ws/install/setup.zsh
+
+# Enable Python argcomplete for colcon
+eval "$(register-python-argcomplete colcon)"
+export PATH="$HOME/bin:$PATH"
   ```
   > - **Please uncomment these lines after:**
   >   1. You have installed **Gazebo Harmonic** and verified it works correctly, and you have successfully built all ROS 2 packages without errors.
@@ -157,6 +157,17 @@ pyqt@5 python qt@5 sip spdlog osrf/simulation/tinyxml1 tinyxml2
   
   Use `python3 -m pip` (instead of just `pip`) to avoid confusion between Python 2 and Python 3 installations.
   
+  Please make sure you are usign Python@3.11:
+  
+  ```bash
+which python3
+>> /Library/Frameworks/Python.framework/Versions/3.11/bin/python3
+
+which pip
+>> /Library/Frameworks/Python.framework/Versions/3.11/bin/pip
+
+  ```
+
   First, upgrade `pip`:
   
   ```bash
