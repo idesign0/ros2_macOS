@@ -1,0 +1,27 @@
+<package format="2">
+  <name>rqt_shell</name>
+  <version>1.0.2</version>
+  <description>rqt_shell is a Python GUI plugin providing an interactive shell.</description>
+  <maintainer email="scholz@sim.tu-darmstadt.de">Dorian Scholz</maintainer>
+  <maintainer email="kunal_tyagi@yahoo.com">Kunal Tyagi</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://wiki.ros.org/rqt_shell</url>
+  <url type="repository">https://github.com/ros-visualization/rqt_shell</url>
+  <url type="bugtracker">https://github.com/ros-visualization/rqt_shell/issues</url>
+
+  <author>Dorian Scholz</author>
+
+  <exec_depend version_gte="0.2.19">python_qt_binding</exec_depend>
+  <exec_depend>python3-catkin-pkg-modules</exec_depend>
+  <exec_depend>qt_gui</exec_depend>
+  <exec_depend>qt_gui_py_common</exec_depend>
+  <exec_depend>rqt_gui</exec_depend>
+  <exec_depend>rqt_gui_py</exec_depend>
+
+  <export>
+    <qt_gui plugin="${prefix}/plugin.xml"/>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

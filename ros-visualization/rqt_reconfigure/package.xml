@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>rqt_reconfigure</name>
+  <version>1.1.2</version>
+  <description>
+    This rqt plugin provides a way to view and edit parameters on nodes.
+  </description>
+  <maintainer email="logans@cottsay.net">Scott K Logan</maintainer>
+  <maintainer email="michael.jeronimo@openrobotics.org">Michael Jeronimo</maintainer>
+
+  <license>BSD</license>
+
+  <!-- Some tests are ASL 2.0 -->
+  <license>Apache License 2.0</license>
+
+  <url type="website">http://wiki.ros.org/rqt_reconfigure</url>
+  <url type="repository">https://github.com/ros-visualization/rqt_reconfigure</url>
+  <url type="bugtracker">https://github.com/ros-visualization/rqt_reconfigure/issues</url>
+
+  <author>Isaac Saito</author>
+  <author>Ze'ev Klapow</author>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend version_gte="0.2.19">python_qt_binding</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>qt_gui_py_common</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rqt_console</exec_depend>
+  <exec_depend>rqt_gui</exec_depend>
+  <exec_depend>rqt_gui_py</exec_depend>
+  <exec_depend>rqt_py_common</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_xmllint</test_depend>
+
+  <export>
+    <architecture_independent/>
+    <build_type>ament_python</build_type>
+    <rqt_gui plugin="${prefix}/plugin.xml"/>
+  </export>
+</package>

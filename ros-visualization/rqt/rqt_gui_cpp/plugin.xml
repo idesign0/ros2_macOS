@@ -1,0 +1,7 @@
+<library path="rqt_gui_cpp">
+  <class name="rqt_gui_cpp/RosCppPluginProvider" type="rqt_gui_cpp::RosCppPluginProvider" base_class_type="qt_gui_cpp::PluginProvider">
+    <description>
+      A C++ plugin provider for the ROS GUI integrating plugins using roscpp client library.
+    </description>
+  </class>
+</library>

@@ -1,0 +1,17 @@
+diff --git a/cmake/thread_safety_attributes.cpp b/cmake/thread_safety_attributes.cpp
+index db0a6bfb..26ccf1a5 100644
+--- a/cmake/thread_safety_attributes.cpp	2020-07-15 17:35:35.557813957 -0700
++++ b/cmake/thread_safety_attributes.cpp	2020-07-15 17:36:19.040227189 -0700
+@@ -1,4 +1,12 @@
+ #define HAVE_THREAD_SAFETY_ATTRIBUTES
+ #include "../src/mutex.h"
+ 
++namespace benchmark
++{
++namespace internal
++{
++int InitializeStreams() { return 0; }
++}
++}
++
+ int main() {}

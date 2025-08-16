@@ -1,0 +1,3 @@
+*.pyc
+*~
+src/python_qt_binding.egg-info/

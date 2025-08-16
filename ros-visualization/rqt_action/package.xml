@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>rqt_action</name>
+  <version>2.0.1</version>
+  <description>rqt_action provides a feature to introspect all available ROS
+  action types. By utilizing rqt_msg, the output format is
+  unified with it and rqt_srv. Note that the actions shown on this plugin
+  is the ones that are stored on your machine, not on the ROS core your rqt
+  instance connects to.</description>
+
+  <maintainer email="audrow@openrobotics.org">Audrow Nash</maintainer>
+
+  <license>BSD</license>
+
+  <url type="website">http://wiki.ros.org/rqt_action</url>
+  <url type="repository">https://github.com/ros-visualization/rqt_action</url>
+  <url type="bugtracker">https://github.com/ros-visualization/rqt_action/issues</url>
+
+  <author email="ablasdel@gmail.com">Aaron Blasdel</author>
+  <author email="geoff@openrobotics.org">Geoffrey Biggs</author>
+  <author>Isaac Isao Saito</author>
+  <author email="mabel@openrobotics.org">Mabel Zhang</author>
+  <author email="mikael@osrfoundation.org">Mikael Arguedas</author>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rqt_msg</exec_depend>
+  <exec_depend version_gte="0.2.19">python_qt_binding</exec_depend>
+  <exec_depend>rqt_gui</exec_depend>
+  <exec_depend>rqt_gui_py</exec_depend>
+  <exec_depend>rqt_py_common</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+    <rqt_gui plugin="${prefix}/plugin.xml"/>
+  </export>
+</package>

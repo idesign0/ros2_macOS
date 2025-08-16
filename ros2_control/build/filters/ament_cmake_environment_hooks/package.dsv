@@ -1,0 +1,4 @@
+source;share/filters/local_setup.bash
+source;share/filters/local_setup.dsv
+source;share/filters/local_setup.sh
+source;share/filters/local_setup.zsh

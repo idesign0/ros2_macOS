@@ -1,0 +1,6 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\b qt_dotgraph provides helpers to work with dot graphs.
+*/

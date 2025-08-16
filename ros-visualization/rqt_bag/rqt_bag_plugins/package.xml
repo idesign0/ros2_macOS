@@ -1,0 +1,32 @@
+<package format="3">
+  <name>rqt_bag_plugins</name>
+  <version>1.1.5</version>
+  <description>rqt_bag provides a GUI plugin for displaying and replaying ROS bag files.</description>
+  <maintainer email="mabel@openrobotics.org">Mabel Zhang</maintainer>
+  <maintainer email="michael.jeronimo@openrobotics.org">Michael Jeronimo</maintainer>
+  <license>BSD</license>
+  <url type="website">http://wiki.ros.org/rqt_bag</url>
+  <url type="repository">https://github.com/ros-visualization/rqt_bag</url>
+  <url type="bugtracker">https://github.com/ros-visualization/rqt_bag/issues</url>
+  <author email="dthomas@osrfoundation.org">Dirk Thomas</author>
+  <author email="ablasdel@gmail.com">Aaron Blasdel</author>
+  <author email="namniart@gmail.com">Austin Hendrix</author>
+  <author>Tim Field</author>
+
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>python3-cairo</exec_depend>
+  <exec_depend>python3-pil</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rosbag2</exec_depend>
+  <exec_depend>rqt_bag</exec_depend>
+  <exec_depend>rqt_gui</exec_depend>
+  <exec_depend>rqt_gui_py</exec_depend>
+  <exec_depend>rqt_plot</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+    <rqt_bag plugin="${prefix}/plugin.xml"/>
+  </export>
+</package>

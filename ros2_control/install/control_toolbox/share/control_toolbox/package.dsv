@@ -1,0 +1,11 @@
+source;share/control_toolbox/hook/cmake_prefix_path.ps1
+source;share/control_toolbox/hook/cmake_prefix_path.dsv
+source;share/control_toolbox/hook/cmake_prefix_path.sh
+source;share/control_toolbox/hook/dyld_library_path.ps1
+source;share/control_toolbox/hook/dyld_library_path.dsv
+source;share/control_toolbox/hook/dyld_library_path.sh
+source;share/control_toolbox/local_setup.bash
+source;share/control_toolbox/local_setup.dsv
+source;share/control_toolbox/local_setup.ps1
+source;share/control_toolbox/local_setup.sh
+source;share/control_toolbox/local_setup.zsh

@@ -1,0 +1,26 @@
+<package format="2">
+  <name>qt_gui_app</name>
+  <version>2.2.4</version>
+  <description>
+    qt_gui_app provides the main to start an instance of the integrated graphical user interface provided by qt_gui.
+  </description>
+  <maintainer email="dthomas@osrfoundation.org">Dirk Thomas</maintainer>
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/qt_gui_app</url>
+  <url type="repository">https://github.com/ros-visualization/qt_gui_app</url>
+  <url type="bugtracker">https://github.com/ros-visualization/qt_gui_app/issues</url>
+  <author>Dirk Thomas</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>qt_gui</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

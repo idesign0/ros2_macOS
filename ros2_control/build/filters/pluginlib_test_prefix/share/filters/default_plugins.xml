@@ -1,0 +1,82 @@
+<class_libraries>
+  <library path="median">
+    <class name="filters/MultiChannelMedianFilterDouble" type="filters::MultiChannelMedianFilter&lt;double&gt;"
+	    base_class_type="filters::MultiChannelFilterBase&lt;double&gt;">
+      <description>
+	This is a median filter which works on a stream of std::vector of doubles.
+      </description>
+    </class>
+    <class name="filters/MedianFilterDouble" type="filters::MedianFilter&lt;double&gt;"
+	    base_class_type="filters::FilterBase&lt;double&gt;">
+      <description>
+	This is a median filter which works on a stream of doubles.
+      </description>
+    </class>
+    <class name="filters/MultiChannelMedianFilterFloat" type="filters::MultiChannelMedianFilter&lt;float&gt;"
+	    base_class_type="filters::MultiChannelFilterBase&lt;float&gt;">
+      <description>
+	This is a median filter which works on a stream of std::vector of floats.
+      </description>
+    </class>
+    <class name="filters/MedianFilterFloat" type="filters::MedianFilter&lt;float&gt;"
+	    base_class_type="filters::FilterBase&lt;float&gt;">
+      <description>
+	This is a median filter which works on a stream of floats.
+      </description>
+    </class>
+  </library>
+  <library path="mean">
+    <class name="filters/MeanFilterDouble" type="filters::MeanFilter&lt;double&gt;"
+	    base_class_type="filters::FilterBase&lt;double&gt;">
+      <description>
+	This is a mean filter which works on a stream of doubles.
+      </description>
+    </class>
+    <class name="filters/MeanFilterFloat" type="filters::MeanFilter&lt;float&gt;"
+	    base_class_type="filters::FilterBase&lt;float&gt;">
+      <description>
+	This is a mean filter which works on a stream of floats.
+      </description>
+    </class>
+    <class name="filters/MultiChannelMeanFilterDouble" type="filters::MultiChannelMeanFilter&lt;double&gt;"
+	    base_class_type="filters::MultiChannelFilterBase&lt;double&gt;">
+      <description>
+	This is a mean filter which works on a stream of vectors of doubles.
+      </description>
+    </class>
+    <class name="filters/MultiChannelMeanFilterFloat" type="filters::MultiChannelMeanFilter&lt;float&gt;"
+	    base_class_type="filters::MultiChannelFilterBase&lt;float&gt;">
+      <description>
+	This is a mean filter which works on a stream of vectors of floats.
+      </description>
+    </class>
+  </library>
+  <library path="increment">
+    <class name="filters/IncrementFilterInt" type="filters::IncrementFilter&lt;int&gt;"
+	    base_class_type="filters::FilterBase&lt;int&gt;">
+      <description>
+	This is a increment filter which works on a stream of ints.
+      </description>
+    </class>
+    <class name="filters/MultiChannelIncrementFilterInt" type="filters::MultiChannelIncrementFilter&lt;int&gt;"
+	    base_class_type="filters::MultiChannelFilterBase&lt;int&gt;">
+      <description>
+	This is a increment filter which works on a stream of vectors of ints.
+      </description>
+    </class>
+  </library>
+  <library path="transfer_function">
+    <class name="filters/MultiChannelTransferFunctionFilterDouble" type="filters::MultiChannelTransferFunctionFilter&lt;double&gt;"
+	    base_class_type="filters::MultiChannelFilterBase&lt;double&gt;">
+      <description>
+	This is a transfer filter which works on a stream of doubles.
+      </description>
+    </class>
+    <class name="filters/TransferFunctionFilterDouble" type="filters::SingleChannelTransferFunctionFilter&lt;double&gt;"
+	    base_class_type="filters::FilterBase&lt;double&gt;">
+      <description>
+	This is a transfer filter which works on a stream of doubles.
+      </description>
+    </class>
+  </library>
+</class_libraries>

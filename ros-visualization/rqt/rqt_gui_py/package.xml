@@ -1,0 +1,25 @@
+<package format="2">
+  <name>rqt_gui_py</name>
+  <version>1.1.7</version>
+  <description>rqt_gui_py enables GUI plugins to use the Python client library for ROS.</description>
+  <maintainer email="michael.jeronimo@openrobotics.org">Michael Jeronimo</maintainer>
+  <license>BSD</license>
+  <url type="website">http://ros.org/wiki/rqt_gui_py</url>
+  <url type="repository">https://github.com/ros-visualization/rqt</url>
+  <url type="bugtracker">https://github.com/ros-visualization/rqt/issues</url>
+  <author>Dirk Thomas</author>
+
+  <build_depend version_gte="0.3.0">qt_gui</build_depend>
+  <build_depend version_gte="0.3.0">rqt_gui</build_depend>
+
+  <exec_depend version_gte="0.3.0">qt_gui</exec_depend>
+  <exec_depend version_gte="0.3.0">rqt_gui</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <rqt_gui plugin="${prefix}/plugin.xml"/>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

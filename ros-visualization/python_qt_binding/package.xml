@@ -1,0 +1,40 @@
+<package format="2">
+  <name>python_qt_binding</name>
+  <version>1.1.2</version>
+  <description>
+    This stack provides Python bindings for Qt.
+    There are two providers: pyside and pyqt.  PySide2 is available under
+    the GPL, LGPL and a commercial license.  PyQt is released under the GPL.
+
+    Both the bindings and tools to build bindings are included from each
+    available provider.  For PySide, it is called "Shiboken".  For PyQt,
+    this is called "SIP".
+
+    Also provided is adapter code to make the user's Python code
+    independent of which binding provider was actually used which makes
+    it very easy to switch between these.
+  </description>
+  <maintainer email="sloretz@openrobotics.org">Shane Loretz</maintainer>
+  <license>BSD</license>
+
+  <url>http://ros.org/wiki/python_qt_binding</url>
+  <author>Dave Hershberger</author>
+  <author>Dorian Scholz</author>
+  <author>Dirk Thomas</author>
+  <author>Stephen Brawner</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>qtbase5-dev</build_depend>
+  <build_depend>python3-qt5-bindings</build_depend>
+
+  <exec_depend>python3-qt5-bindings</exec_depend>
+
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

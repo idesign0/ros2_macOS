@@ -1,0 +1,2 @@
+include package.xml
+recursive-include cmake *.cmake *.py

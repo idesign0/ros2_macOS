@@ -1,0 +1,1 @@
+#pragma message("#include \"rate_limiter_parameters.hpp\" is deprecated. Use #include <control_toolbox/rate_limiter_parameters.hpp> instead.")

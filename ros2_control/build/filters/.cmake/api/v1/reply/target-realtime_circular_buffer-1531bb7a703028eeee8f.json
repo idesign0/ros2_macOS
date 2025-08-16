@@ -1,0 +1,58 @@
+{
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library"
+		],
+		"files" : 
+		[
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 49,
+				"parent" : 0
+			}
+		]
+	},
+	"id" : "realtime_circular_buffer::@6890427a1f51a3e7e1df",
+	"name" : "realtime_circular_buffer",
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"path" : "include/filters/realtime_circular_buffer.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "include/filters/realtime_circular_buffer.hpp",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "INTERFACE_LIBRARY"
+}

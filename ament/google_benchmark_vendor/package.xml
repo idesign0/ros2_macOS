@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>google_benchmark_vendor</name>
+  <version>0.1.2</version>
+  <description>This package provides Google Benchmark.</description>
+
+  <maintainer email="audrow@openrobotics.org">Audrow Nash</maintainer>
+
+  <license>Apache License 2.0</license>  <!-- Both this package and Google Benchmark are ASL 2.0 -->
+
+  <url type="website">https://github.com/google/benchmark</url>
+
+  <author email="michel@ekumenlabs.com">Michel Hidalgo</author>
+  <author email="scott@openrobotics.org">Scott K Logan</author>
+
+  <buildtool_depend>cmake</buildtool_depend>
+  <buildtool_depend>git</buildtool_depend>
+
+  <depend>benchmark</depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

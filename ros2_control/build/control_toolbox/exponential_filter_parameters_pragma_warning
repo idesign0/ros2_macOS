@@ -1,0 +1,1 @@
+#pragma message("#include \"exponential_filter_parameters.hpp\" is deprecated. Use #include <control_toolbox/exponential_filter_parameters.hpp> instead.")

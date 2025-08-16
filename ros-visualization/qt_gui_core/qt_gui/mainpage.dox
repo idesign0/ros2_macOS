@@ -1,0 +1,10 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\b qt_gui provides the infrastructure for an integrated graphical user interface based on Qt.
+It is extensible with Python- and C++-based plugins (implemented in separate packages) which can contribute arbitrary widgets.
+It requires either PyQt or PySide bindings.
+
+The code API of qt_gui (except the exposed interfaces for plugins, namely qt_gui.plugin.Plugin and qt_gui.plugin_context.PluginContext) is not stable, so it is not recommended for use in other tools.
+*/

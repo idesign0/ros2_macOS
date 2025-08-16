@@ -1,0 +1,34 @@
+<package format="2">
+  <name>rqt_console</name>
+  <version>2.0.3</version>
+  <description>rqt_console provides a GUI plugin for displaying and filtering ROS messages.</description>
+  <maintainer email="dthomas@osrfoundation.org">Dirk Thomas</maintainer>
+  <maintainer email="ablasdel@gmail.com">Aaron Blasdel</maintainer>
+  <maintainer email="arne.hitzmann@gmail.com">Arne Hitzmann</maintainer>
+  <author>Aaron Blasdel</author>
+
+  <license>BSD</license>
+
+  <url type="website">http://wiki.ros.org/rqt_console</url>
+  <url type="repository">https://github.com/ros-visualization/rqt_console</url>
+  <url type="bugtracker">https://github.com/ros-visualization/rqt_console/issues</url>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend version_gte="0.2.19">python_qt_binding</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rqt_gui</exec_depend>
+  <exec_depend>rqt_gui_py</exec_depend>
+  <exec_depend>rqt_py_common</exec_depend>
+
+  <!-- TODO(mlautman): Replace once rqt_logger_level has been ported -->
+  <!-- <exec_depend>rqt_logger_level</exec_depend> -->
+
+  <!-- Note: This is needed for rcl_interfaces Log.msg -->
+  <exec_depend>rcl_interfaces</exec_depend>
+
+  <export>
+    <architecture_independent/>
+    <build_type>ament_python</build_type>
+    <rqt_gui plugin="${prefix}/plugin.xml"/>
+  </export>
+</package>

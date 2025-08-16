@@ -1,0 +1,32 @@
+<package format="2">
+  <name>filters</name>
+  <version>2.2.2</version>
+  <description>
+    This library provides a standardized interface for processing data as a sequence
+    of filters.  This package contains a base class upon which to build specific implementations
+    as well as an interface which dynamically loads filters based on runtime parameters.
+  </description>
+
+  <maintainer email="tfoote@openrobotics.org">Tully Foote</maintainer>
+  <maintainer email="jon.binney@gmail.com">Jon Binney</maintainer>
+  <license>BSD</license>
+  <url>https://wiki.ros.org/filters</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>libboost-dev</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_cmake_cppcheck</test_depend>
+  <test_depend>ament_cmake_cpplint</test_depend>
+  <test_depend>ament_cmake_uncrustify</test_depend>
+  <test_depend>ament_cmake_xmllint</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <filters plugin="default_plugins.xml"/>
+  </export>
+
+</package>

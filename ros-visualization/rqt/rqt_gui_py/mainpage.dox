@@ -1,0 +1,6 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\b rqt_gui_py enables GUI plugins to use the Python client library for ROS.
+*/
