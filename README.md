@@ -235,11 +235,12 @@ cd ~/ros2_humble
 > Please refer to the **Troubleshooting** section below for specific instructions based on the error type.
 
 ```bash
-colcon build --symlink-install \
-  --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=Off \
-  --packages-ignore qt_gui_cpp rqt_gui_cpp \
+colcon build \
+  --symlink-install \
+  --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests  \
   --executor parallel \
-  --parallel-workers $(sysctl -n hw.ncpu)
+  --parallel-workers $(sysctl -n hw.ncpu) \
+  --cmake-args -DCMAKE_TOOLCHAIN_FILE=$MY_TOOLCHAIN_FILE
 ```
 source:
 ```bash
@@ -250,13 +251,7 @@ What does each option mean?
 - `--symlink-install`  
   Uses symlinks for installed files instead of copying — useful for faster iterative development.
 
-- `--cmake-args -DCMAKE_BUILD_TYPE=Release`  
-  Builds with **Release** optimizations (faster, optimized binaries). You can switch to `Debug` for debug symbols. *I will keep exploring more ways to optimize the build further and am open to suggestions as well.*
-
-- `-DBUILD_TESTING=Off`  
-Disables building test packages. This is recommended because some tests (e.g., in controller_manager) use obsolete C++ methods like random_shuffle, which cause build errors on newer compilers.
-
-- `--packages-ignore qt_gui_cpp rqt_gui_cpp`  
+- `--packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests`  
   Skips these two packages known to have macOS issues. See: [ros2/ros2#1139](https://github.com/ros2/ros2/issues/1139)
 
 - `--executor parallel`  
