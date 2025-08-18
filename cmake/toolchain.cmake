@@ -12,6 +12,10 @@ set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
 
+# Backward ROS
+# On macOS, do NOT add Linux-only flags
+set(CMAKE_EXE_LINKER_FLAGS "${backward_ros_full_path_LIBRARIES} ${CMAKE_EXE_LINKER_FLAGS}" CACHE STRING "Linker flags" FORCE)
+
 # Optimization flags
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_options(-O3 -march=native)
@@ -72,6 +76,10 @@ set(LAPACK_LIBRARIES "-framework Accelerate" CACHE STRING "LAPACK libraries")
 set(BOOST_ROOT "$ENV{HOME}/humble-ros2/src/ros-commondep/boost-1.89" CACHE PATH "Boost root")
 set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
 set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
+
+# Asio from Boost
+set(THIRDPARTY_Asio ON CACHE BOOL "Allow Thirdparty Asio")
+set(ASIO_INCLUDE_DIR "${BOOST_INCLUDEDIR}/boost/asio" CACHE PATH "Asio include directory")
 
 # Ensure Boost can be found without searching system paths first
 set(CMAKE_PREFIX_PATH "${BOOST_ROOT};${CMAKE_PREFIX_PATH}")

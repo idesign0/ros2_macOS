@@ -1,6 +1,3 @@
-[submodule "navigation2_dynamic"]
-	path = navigation2_dynamic
-	url = https://github.com/ros-navigation/navigation2_dynamic.git
 [submodule "ros-planning/navigation2_dynamic"]
 	path = ros-planning/navigation2_dynamic
 	url = https://github.com/ros-navigation/navigation2_dynamic.git
@@ -379,3 +376,12 @@
 [submodule "eProsima/Fast-DDS"]
 	path = eProsima/Fast-DDS
 	url = https://github.com/idesign0/id_Fast-DDS.git
+[submodule "ros-planning/navigation2"]
+	path = ros-planning/navigation2
+	url = https://github.com/idesign0/id_navigation2.git
+[submodule "ros-planning/dependencies/vision_opencv"]
+	path = ros-planning/dependencies/vision_opencv
+	url = https://github.com/ros-perception/vision_opencv
+[submodule "ros-planning/dependencies/angles"]
+	path = ros-planning/dependencies/angles
+	url = https://github.com/ros/angles
