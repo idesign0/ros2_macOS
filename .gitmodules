@@ -389,3 +389,6 @@
 [submodule "ros-planning/dependencies/angles"]
 	path = ros-planning/dependencies/angles
 	url = https://github.com/ros/angles
+[submodule "ros-planning/dependencies/xtensor"]
+	path = ros-planning/dependencies/xtensor
+	url = https://github.com/xtensor-stack/xtensor.git
