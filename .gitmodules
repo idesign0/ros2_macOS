@@ -16,6 +16,7 @@
 [submodule "ros-planning/dependencies/behaviortree_cpp_v3-release"]
 	path = ros-planning/dependencies/behaviortree_cpp_v3-release
 	url = https://github.com/BehaviorTree/behaviortree_cpp_v3-release.git
+	update = none
 [submodule "ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK"]
 	path = ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK
 	url = https://github.com/ROBOTIS-GIT/DynamixelSDK.git
@@ -61,6 +62,7 @@
 [submodule "ros/backward_ros"]
 	path = ros/backward_ros
 	url = https://github.com/idesign0/id_backward_ros-release
+	update = none
 [submodule "ros/urdfdom"]
 	path = ros/urdfdom
 	url = https://github.com/ros/urdfdom.git
@@ -325,12 +327,14 @@
 [submodule "moveit/OctoMap/octomap"]
 	path = moveit/OctoMap/octomap
 	url = https://github.com/OctoMap/octomap.git
+	update = none
 [submodule "moveit/OctoMap/octomap_msgs"]
 	path = moveit/OctoMap/octomap_msgs
 	url = https://github.com/OctoMap/octomap_msgs.git
 [submodule "moveit/pantor/ruckig"]
 	path = moveit/pantor/ruckig
 	url = https://github.com/pantor/ruckig.git
+	update = none
 [submodule "moveit/random_numbers"]
 	path = moveit/random_numbers
 	url = https://github.com/moveit/random_numbers.git
@@ -381,7 +385,7 @@
 	url = https://github.com/idesign0/id_navigation2.git
 [submodule "ros-planning/dependencies/vision_opencv"]
 	path = ros-planning/dependencies/vision_opencv
-	url = https://github.com/ros-perception/vision_opencv
+	url = https://github.com/idesign0/id_vision_opencv.git
 [submodule "ros-planning/dependencies/angles"]
 	path = ros-planning/dependencies/angles
 	url = https://github.com/ros/angles
