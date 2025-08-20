@@ -1,5 +1,9 @@
 message(WARN " Toolchain.cmake is being used.")
 
+# Include ROS 2 install paths so CMake finds packages automatically
+set(ENV{AMENT_PREFIX_PATH} "$ENV{HOME}/humble-ros2/install:$ENV{AMENT_PREFIX_PATH}")
+set(ENV{CMAKE_PREFIX_PATH} "$ENV{HOME}/humble-ros2/install:$ENV{CMAKE_PREFIX_PATH}")
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -78,8 +82,8 @@ set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
 set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
 
 # Asio from Boost
-set(THIRDPARTY_Asio ON CACHE BOOL "Allow Thirdparty Asio")
-set(ASIO_INCLUDE_DIR "${BOOST_INCLUDEDIR}/boost/asio" CACHE PATH "Asio include directory")
+set(THIRDPARTY_Asio ON CACHE BOOL "Allow Thirdparty Asio" FORCE)
+set(Asio_INCLUDE_DIR "$ENV{HOME}/humble-ros2/src/ros-commondep/asio-1.10.8/asio/include" CACHE PATH "Asio include directory" FORCE)
 
 # Ensure Boost can be found without searching system paths first
 set(CMAKE_PREFIX_PATH "${BOOST_ROOT};${CMAKE_PREFIX_PATH}")
@@ -87,13 +91,15 @@ set(CMAKE_PREFIX_PATH "${BOOST_ROOT};${CMAKE_PREFIX_PATH}")
 # Force modern CMake Boost behavior
 set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Don't search system paths for Boost")
 set(Boost_NO_BOOST_CMAKE OFF CACHE BOOL "Allow BoostConfig.cmake if present")
+find_package(Boost REQUIRED)
 
-# Actually find Boost now, so Boost::boost is defined globally
-find_package(Boost REQUIRED)   # Add COMPONENTS here if you want (e.g., REQUIRED headers, system, thread)
+# Make sure CMake uses your Boost include & lib paths
+set(Boost_INCLUDE_DIRS "${BOOST_INCLUDEDIR}" CACHE PATH "Boost include dirs" FORCE)
+set(Boost_LIBRARY_DIRS "${BOOST_LIBRARYDIR}" CACHE PATH "Boost library dir" FORCE)
 
-# Make the target visible to everything using this toolchain
-set(Boost_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} CACHE PATH "Boost include dirs" FORCE)
-set(Boost_LIBRARIES ${Boost_LIBRARIES} CACHE STRING "Boost libraries" FORCE)
+# Force include + lib dirs globally
+include_directories(SYSTEM ${BOOST_INCLUDEDIR})
+link_directories(${BOOST_LIBRARYDIR})
 
 # Globally enable deprecated Boost Timer API
 add_definitions(-DBOOST_TIMER_ENABLE_DEPRECATED)

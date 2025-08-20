@@ -7,15 +7,18 @@
 [submodule "ros-planning/dependencies/ceres-solver"]
 	path = ros-planning/dependencies/ceres-solver
 	url = https://github.com/idesign0/id_ceres-solver-main
+	branch = 1.14.x
+	update = none
 [submodule "ros-planning/dependencies/BehaviorTree.ROS2"]
 	path = ros-planning/dependencies/BehaviorTree.ROS2
-	url = https://github.com/BehaviorTree/BehaviorTree.ROS2.git
+	url = https://github.com/idesign0/id_BehaviorTree.ROS2.git
 [submodule "ros-planning/dependencies/robot_localization"]
 	path = ros-planning/dependencies/robot_localization
 	url = https://github.com/cra-ros-pkg/robot_localization.git
 [submodule "ros-planning/dependencies/behaviortree_cpp_v3-release"]
 	path = ros-planning/dependencies/behaviortree_cpp_v3-release
-	url = https://github.com/BehaviorTree/behaviortree_cpp_v3-release.git
+    url = https://github.com/idesign0/id_behaviortree_cpp_v3-release.git
+	branch = 3.8.7-macOS-fix-dhruv
 	update = none
 [submodule "ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK"]
 	path = ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK
@@ -62,6 +65,7 @@
 [submodule "ros/backward_ros"]
 	path = ros/backward_ros
 	url = https://github.com/idesign0/id_backward_ros-release
+	branch = release/humble/1.0.8-2-fix
 	update = none
 [submodule "ros/urdfdom"]
 	path = ros/urdfdom
@@ -99,9 +103,13 @@
 [submodule "gazebo-release/gz_cmake2_vendor"]
 	path = gazebo-release/gz_cmake2_vendor
 	url = https://github.com/gazebo-release/gz_cmake2_vendor.git
+	branch = 0.3.0
+	update = none
 [submodule "gazebo-release/gz_math6_vendor"]
 	path = gazebo-release/gz_math6_vendor
 	url = https://github.com/gazebo-release/gz_math6_vendor.git
+	branch = 0.3.0
+	update = none
 [submodule "ros2_control/filters"]
 	path = ros2_control/filters
 	url = https://github.com/ros/filters.git
@@ -303,9 +311,13 @@
 [submodule "eclipse-iceoryx/iceoryx"]
 	path = eclipse-iceoryx/iceoryx
 	url = https://github.com/eclipse-iceoryx/iceoryx.git
+	branch = v2.95.7
+	update = none
 [submodule "eclipse-cyclonedds/cyclonedds"]
 	path = eclipse-cyclonedds/cyclonedds
 	url = https://github.com/eclipse-cyclonedds/cyclonedds.git
+	branch = releases/0.10.x
+	update = none
 [submodule "gzsim/ros_gz"]
 	path = gzsim/ros_gz
 	url = https://github.com/gazebosim/ros_gz.git
@@ -327,6 +339,7 @@
 [submodule "moveit/OctoMap/octomap"]
 	path = moveit/OctoMap/octomap
 	url = https://github.com/OctoMap/octomap.git
+	branch = v1.9.8
 	update = none
 [submodule "moveit/OctoMap/octomap_msgs"]
 	path = moveit/OctoMap/octomap_msgs
@@ -334,6 +347,7 @@
 [submodule "moveit/pantor/ruckig"]
 	path = moveit/pantor/ruckig
 	url = https://github.com/pantor/ruckig.git
+	branch = v0.6.5
 	update = none
 [submodule "moveit/random_numbers"]
 	path = moveit/random_numbers
@@ -377,9 +391,13 @@
 [submodule "eProsima/Fast-CDR"]
 	path = eProsima/Fast-CDR
 	url = https://github.com/eProsima/Fast-CDR.git
+	branch = v1.0.24
+	update = none
 [submodule "eProsima/Fast-DDS"]
 	path = eProsima/Fast-DDS
 	url = https://github.com/idesign0/id_Fast-DDS.git
+	branch = v2.6.2
+	update = none
 [submodule "ros-planning/navigation2"]
 	path = ros-planning/navigation2
 	url = https://github.com/idesign0/id_navigation2.git
@@ -392,3 +410,24 @@
 [submodule "ros-planning/dependencies/xtensor"]
 	path = ros-planning/dependencies/xtensor
 	url = https://github.com/xtensor-stack/xtensor.git
+	branch = 0.25.0
+	update = none 
+[submodule "ros-planning/dependencies/xtl"]
+	path = ros-planning/dependencies/xtl
+	url = https://github.com/xtensor-stack/xtl.git
+	branch = 0.7.5
+	update = none
+[submodule "ros-planning/dependencies/PickNickRobotics/generate_parameter_library"]
+	path = ros-planning/dependencies/PickNickRobotics/generate_parameter_library
+	url = https://github.com/PickNikRobotics/generate_parameter_library.git
+[submodule "ros-planning/dependencies/rsl"]
+	path = ros-planning/dependencies/rsl
+	url = https://github.com/ros2-gbp/rsl-release.git
+	branch = release/humble/rsl
+[submodule "ros-planning/dependencies/PickNickRobotics/cpp_polyfills"]
+	path = ros-planning/dependencies/PickNickRobotics/cpp_polyfills
+	url = https://github.com/PickNikRobotics/cpp_polyfills.git
+[submodule "ros-commondep/asio-1.10.8"]
+	path = ros-commondep/asio-1.10.8
+	url = https://github.com/chriskohlhoff/asio.git
+	branch = asio-1-10-8
