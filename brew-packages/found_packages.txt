@@ -9,9 +9,9 @@
 ${ARGN}
 ${ARGV}
 ${Dependency} REQUIRED
+${IO_TARGET}
 ${PACKAGE} REQUIRED 
 ${PROJECT_NAME}
-${PROJECT_NAME}_testing
 ${PROJECT_NAME}_testutils REQUIRED
 ${_dep} QUIET
 ${_dep} QUIET ${_REQUIRED_KEYWORD}
@@ -32,20 +32,19 @@ ${rmw_implementation} REQUIRED
 //; s/
 <dependency> REQUIRED
 @dep REQUIRED
+Asio CONFIG QUIET
 Asio QUIET
 Atomic MODULE
 BISON 3.0.4
 BLAS QUIET
-BLAS REQUIRED
 Backward
 Backward REQUIRED
 Boost
 Boost 1.56
-Boost 1.70 REQUIRED COMPONENTS filesystem regex PATHS C:/Boost
-Boost 1.73 REQUIRED ALL
-Boost 1.73 REQUIRED COMPONENTS ALL
 Boost COMPONENTS coroutine QUIET
+Boost COMPONENTS headers
 Boost COMPONENTS system filesystem REQUIRED
+Boost QUIET
 Boost QUIET COMPONENTS headers
 Boost REQUIRED
 Boost REQUIRED COMPONENTS
@@ -70,8 +69,8 @@ Boost..
 Bullet 2.87 REQUIRED
 Bullet REQUIRED
 CHOLMOD REQUIRED
+CSparse REQUIRED
 CURL QUIET
-CURL REQUIRED
 CXSparse
 Catch 2.13.2
 Catch 2.13.9
@@ -88,11 +87,9 @@ Ceres REQUIRED COMPONENTS SuiteSparse EigenSparse
 Ceres REQUIRED HINTS ${CERES_DIR_HINTS}
 Ceres REQUIRED PATHS "/some/where/local/"
 Curses QUIET
-CycloneDDS CONFIG REQUIRED
 CycloneDDS CXX REQUIRED
 CycloneDDS QUIET CONFIG
 CycloneDDS REQUIRED
-CycloneDDS-CXX CONFIG REQUIRED
 Doxygen
 Doxygen 1.8 COMPONENTS doxygen
 Doxygen REQUIRED
@@ -145,13 +142,13 @@ OpenCV REQUIRED COMPONENTS core highgui imgcodecs imgproc videoio
 OpenCV REQUIRED COMPONENTS core highgui imgproc videoio
 OpenGL REQUIRED
 OpenMP
+OpenMP QUIET
 OpenMP REQUIRED
 OpenSSL
 OpenSSL QUIET
 OpenSSL REQUIRED
 OpenSplice COMPONENTS kernel sac REQUIRED
 PATCH
-Patch REQUIRED
 Perl REQUIRED
 PkgConfig
 PkgConfig REQUIRED
@@ -165,7 +162,7 @@ Python3 ${Python3_VERSION} REQUIRED COMPONENTS Interpreter Development
 Python3 3.8 REQUIRED
 Python3 COMPONENTS Interpreter
 Python3 COMPONENTS Interpreter Development
-Python3 COMPONENTS Interpreter REQUIRED
+Python3 COMPONENTS Interpreter Development REQUIRED
 Python3 QUIET COMPONENTS Interpreter
 Python3 REQUIRED COMPONENTS Development
 Python3 REQUIRED COMPONENTS Development NumPy
@@ -176,6 +173,8 @@ PythonExtra MODULE REQUIRED
 PythonExtra REQUIRED
 PythonInterp
 PythonInterp "3.3" REQUIRED
+PythonInterp 3
+PythonInterp 3 REQUIRED
 PythonInterp 3.6 REQUIRED
 PythonInterp REQUIRED
 PythonLibs
@@ -199,6 +198,7 @@ Qt5OpenGL REQUIRED
 Qt5Widgets CONFIG REQUIRED
 Qt5Widgets REQUIRED
 Qt5Xml REQUIRED
+Reflexxes QUIET
 SQLite3
 SQLite3 CONFIG QUIET
 SQLite3 QUIET
@@ -279,6 +279,7 @@ ament_cmake_test QUIET
 ament_cmake_test QUIET REQUIRED
 ament_cmake_test REQUIRED
 ament_cmake_uncrustify REQUIRED
+ament_cmake_vendor_package REQUIRED
 ament_cmake_xmllint QUIET
 ament_cmake_xmllint REQUIRED
 ament_index_cpp REQUIRED
@@ -296,14 +297,13 @@ behaviortree_cpp_v3 REQUIRED
 behaviortree_ros2 REQUIRED
 benchmark QUIET
 benchmark REQUIRED
-benchmark REQUIRED PATHS /usr/local NO_DEFAULT_PATH
 bond REQUIRED
 bondcpp REQUIRED
 boost_${__boost_comp_nv} ${Boost_VERSION} EXACT CONFIG ${_BOOST_REQUIRED} ${_BOOST_QUIET} HINTS ${_BOOST_CMAKEDIR}
-boost_${dep_boost_container} 1.88.0 EXACT CONFIG ${_BOOST_REQUIRED} ${_BOOST_QUIET} HINTS ${_BOOST_CMAKEDIR}
-boost_${dep_boost_graph} 1.88.0 EXACT CONFIG ${_BOOST_REQUIRED} ${_BOOST_QUIET} HINTS ${_BOOST_CMAKEDIR}
-boost_${dep_boost_numpy} 1.88.0 EXACT CONFIG ${_BOOST_REQUIRED} ${_BOOST_QUIET} HINTS ${_BOOST_CMAKEDIR}
-boost_${dep_boost_python} 1.88.0 EXACT CONFIG ${_BOOST_REQUIRED} ${_BOOST_QUIET} HINTS ${_BOOST_CMAKEDIR}
+boost_${dep_boost_container} 1.89.0 EXACT CONFIG ${_BOOST_REQUIRED} ${_BOOST_QUIET} HINTS ${_BOOST_CMAKEDIR}
+boost_${dep_boost_graph} 1.89.0 EXACT CONFIG ${_BOOST_REQUIRED} ${_BOOST_QUIET} HINTS ${_BOOST_CMAKEDIR}
+boost_${dep_boost_numpy} 1.89.0 EXACT CONFIG ${_BOOST_REQUIRED} ${_BOOST_QUIET} HINTS ${_BOOST_CMAKEDIR}
+boost_${dep_boost_python} 1.89.0 EXACT CONFIG ${_BOOST_REQUIRED} ${_BOOST_QUIET} HINTS ${_BOOST_CMAKEDIR}
 btcpp_ros2_interfaces REQUIRED
 builtin_interfaces REQUIRED
 camera_calibration_parsers REQUIRED
@@ -336,6 +336,7 @@ cv_bridge REQUIRED
 cyclonedds_cmake_module REQUIRED
 diagnostic_msgs REQUIRED
 diagnostic_updater REQUIRED
+doctest            REQUIRED
 dwb_core REQUIRED
 dwb_msgs REQUIRED
 dynamixel_sdk REQUIRED
@@ -360,6 +361,7 @@ fcl REQUIRED
 filters CONFIG REQUIRED
 fmt REQUIRED
 foonathan_memory REQUIRED
+freertos_sdk REQUIRED COMPONENTS FreeRTOS_cpp11 FreeRTOS_POSIX
 freetype CONFIG REQUIRED
 gazebo_ros_pkgs REQUIRED
 generate_parameter_library REQUIRED
@@ -370,17 +372,24 @@ geometry_msgs REQUIRED
 gflags
 glog
 gmock_vendor QUIET
+gps_msgs REQUIRED
 graph_msgs REQUIRED
 gtest_vendor QUIET
 gtest_vendor REQUIRED
+gz-cmake4 4.1.0 REQUIRED
+gz-cmake4 REQUIRED
 gz-math7 REQUIRED
 gz-msgs10 REQUIRED
+gz-msgs11 REQUIRED
 gz-msgs9 REQUIRED
 gz-plugin2 REQUIRED
 gz-sim7 REQUIRED
 gz-sim8 REQUIRED
+gz-transport${PROJECT_VERSION_MAJOR} REQUIRED
 gz-transport12 REQUIRED
 gz-transport13 REQUIRED
+gz-transport14 QUIET REQUIRED OPTIONAL_COMPONENTS log
+gz-utils3 REQUIRED COMPONENTS cli
 hardware_interface REQUIRED
 iceoryx_binding_c ${iceoryx_required}
 iceoryx_binding_c CONFIG REQUIRED
@@ -390,17 +399,16 @@ iceoryx_hoofs
 iceoryx_hoofs CONFIG REQUIRED
 iceoryx_hoofs REQUIRED
 iceoryx_hoofs_testing REQUIRED
+iceoryx_platform
+iceoryx_platform REQUIRED
 iceoryx_posh
 iceoryx_posh CONFIG REQUIRED
 iceoryx_posh REQUIRED
 iceoryx_posh_testing REQUIRED
 iceoryx_utils REQUIRED
-ignition-cmake2 2.13 REQUIRED
-ignition-cmake2 QUIET
 ignition-gazebo2 2.1 QUIET REQUIRED
 ignition-gazebo5 REQUIRED
 ignition-gazebo6 REQUIRED
-ignition-math6 QUIET
 ignition-math6 REQUIRED
 ignition-msgs7 REQUIRED
 ignition-msgs8 REQUIRED
@@ -408,9 +416,7 @@ ignition-plugin1 REQUIRED
 ignition-rendering2 QUIET REQUIRED
 ignition-sensors2 QUIET REQUIRED
 ignition-transport10 REQUIRED
-ignition-transport11 QUIET REQUIRED OPTIONAL_COMPONENTS log
 ignition-transport11 REQUIRED
-ignition-utils1 REQUIRED COMPONENTS cli
 image_transport REQUIRED
 interactive_markers REQUIRED
 joint_limits_interface REQUIRED
@@ -450,9 +456,9 @@ moveit_setup_framework REQUIRED
 moveit_setup_srdf_plugins REQUIRED
 moveit_task_constructor_core REQUIRED
 moveit_task_constructor_msgs REQUIRED
+nanoflann REQUIRED
 nav2_amcl REQUIRED
 nav2_behavior_tree REQUIRED
-nav2_behaviors REQUIRED
 nav2_common REQUIRED
 nav2_controller REQUIRED
 nav2_core REQUIRED
@@ -473,6 +479,7 @@ navigation2 REQUIRED
 nlohmann_json 3.1.1 QUIET
 nlohmann_json QUIET
 nlohmann_json QUIET CONFIG
+nlohmann_json REQUIRED
 object_recognition_msgs REQUIRED
 octomap 1.9.7...<1.10.0 REQUIRED
 octomap REQUIRED
@@ -493,6 +500,7 @@ pluginlib REQUIRED
 pr2_moveit_config_FOUND QUIET
 py_binding_tools REQUIRED
 pybind11
+pybind11 2.4 CONFIG QUIET
 pybind11 2.6 REQUIRED
 pybind11 2.9 EXACT CONFIG REQUIRED
 pybind11 CONFIG
@@ -517,9 +525,11 @@ rclcpp
 rclcpp REQUIRED
 rclcpp_action REQUIRED
 rclcpp_components REQUIRED
+rclcpp_components REQUIRED rclcpp_components
 rclcpp_lifecycle
 rclcpp_lifecycle REQUIRED
 rclpy REQUIRED
+rcpputils
 rcpputils REQUIRED
 rcutils
 rcutils REQUIRED
@@ -533,10 +543,10 @@ rmw_fastrtps_shared_cpp REQUIRED
 rmw_implementation REQUIRED
 rmw_implementation_cmake REQUIRED
 ros1_bridge QUIET
+ros2_control_cmake REQUIRED
 ros2_control_test_assets REQUIRED
 ros_gz_bridge REQUIRED
 ros_gz_interfaces REQUIRED
-ros_testing
 ros_testing REQUIRED
 rosbag2_compression REQUIRED
 rosbag2_cpp
@@ -634,17 +644,14 @@ xsimd
 xsimd ${xsimd_REQUIRED_VERSION} REQUIRED
 xsimd QUIET
 xsimd REQUIRED
-xsimd REQUIRED CONFIG
 xtensor REQUIRED
 xtensor REQUIRED CONFIG
 xtl ${xtl_REQUIRED_VERSION} REQUIRED
-xtl 0.4.11 REQUIRED
 xtl REQUIRED
 xtl REQUIRED CONFIG
 yaml-cpp CONFIG REQUIRED QUIET
 yaml-cpp QUIET
 yaml-cpp QUIET NO_CMAKE_PACKAGE_REGISTRY
-yaml-cpp REQUIRED
 yaml_cpp_vendor REQUIRED
 zstd 1.4.4 QUIET
 zstd REQUIRED
