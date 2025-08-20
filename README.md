@@ -80,7 +80,7 @@ You can verify or manually install additional required packages with this comman
 ```bash
 brew install asio assimp bison bullet cmake console_bridge cppcheck \
 cunit eigen freetype graphviz opencv openssl orocos-kdl pcre poco \
-pyqt@5 python qt@5 sip spdlog osrf/simulation/tinyxml1 tinyxml2
+pyqt@5 python qt@5 sip spdlog tinyxml2
 ```
 
 unlink some brew packages:
