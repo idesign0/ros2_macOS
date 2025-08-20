@@ -1,9 +1,11 @@
 [submodule "ros-planning/navigation2_dynamic"]
 	path = ros-planning/navigation2_dynamic
 	url = https://github.com/ros-navigation/navigation2_dynamic.git
+	branch = master
 [submodule "ros-planning/navigation2_auxiliary"]
 	path = ros-planning/navigation2_auxiliary
 	url = https://github.com/ros-navigation/navigation2_auxiliary.git
+	branch = main
 [submodule "ros-planning/dependencies/ceres-solver"]
 	path = ros-planning/dependencies/ceres-solver
 	url = https://github.com/idesign0/id_ceres-solver-main
@@ -12,9 +14,11 @@
 [submodule "ros-planning/dependencies/BehaviorTree.ROS2"]
 	path = ros-planning/dependencies/BehaviorTree.ROS2
 	url = https://github.com/idesign0/id_BehaviorTree.ROS2.git
+	branch = humble
 [submodule "ros-planning/dependencies/robot_localization"]
 	path = ros-planning/dependencies/robot_localization
 	url = https://github.com/cra-ros-pkg/robot_localization.git
+	branch = humble-devel
 [submodule "ros-planning/dependencies/behaviortree_cpp_v3-release"]
 	path = ros-planning/dependencies/behaviortree_cpp_v3-release
     url = https://github.com/idesign0/id_behaviortree_cpp_v3-release.git
@@ -23,295 +27,386 @@
 [submodule "ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK"]
 	path = ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK
 	url = https://github.com/ROBOTIS-GIT/DynamixelSDK.git
+	branch = humble
 [submodule "ros-planning/dependencies/geographiclib"]
 	path = ros-planning/dependencies/geographiclib
 	url = https://github.com/geographiclib/geographiclib.git
+	branch = main
 [submodule "ros-planning/dependencies/BehaviorTree.CPP"]
 	path = ros-planning/dependencies/BehaviorTree.CPP
 	url = https://github.com/BehaviorTree/BehaviorTree.CPP.git
+	branch = master
 [submodule "ros-planning/navigation_msgs"]
 	path = ros-planning/navigation_msgs
 	url = https://github.com/ros-planning/navigation_msgs.git
+	branch = humble
 [submodule "ros-planning/slam_toolbox"]
 	path = ros-planning/slam_toolbox
 	url = https://github.com/idesign0/id_slam_toolbox.git
+	branch = humble
 [submodule "osrf/osrf_pycommon"]
 	path = osrf/osrf_pycommon
 	url = https://github.com/osrf/osrf_pycommon.git
+	branch = master
 [submodule "osrf/osrf_testing_tools_cpp"]
 	path = osrf/osrf_testing_tools_cpp
 	url = https://github.com/osrf/osrf_testing_tools_cpp.git
+	branch = humble
 [submodule "ros/eigen_stl_containers"]
 	path = ros/eigen_stl_containers
 	url = https://github.com/ros/eigen_stl_containers.git
+	branch = ros2
 [submodule "ros/ros_tutorials"]
 	path = ros/ros_tutorials
 	url = https://github.com/ros/ros_tutorials.git
+	branch = humble
 [submodule "ros/bond_core"]
 	path = ros/bond_core
 	url = https://github.com/ros/bond_core.git
+	branch = ros2
 [submodule "ros/resource_retriever"]
 	path = ros/resource_retriever
 	url = https://github.com/ros/resource_retriever.git
+	branch = humble
 [submodule "ros/kdl_parser"]
 	path = ros/kdl_parser
 	url = https://github.com/ros/kdl_parser.git
+	branch = humble
 [submodule "ros/pluginlib"]
 	path = ros/pluginlib
 	url = https://github.com/ros/pluginlib.git
+	branch = humble
 [submodule "ros/urdfdom_headers"]
 	path = ros/urdfdom_headers
 	url = https://github.com/ros/urdfdom_headers.git
+	branch = humble
 [submodule "ros/backward_ros"]
 	path = ros/backward_ros
 	url = https://github.com/idesign0/id_backward_ros-release
-	branch = release/humble/1.0.8-2-fix
+	branch = release/humble/backward_ros/1.0.8-2-macOS-fix
 	update = none
 [submodule "ros/urdfdom"]
 	path = ros/urdfdom
 	url = https://github.com/ros/urdfdom.git
+	branch = humble
 [submodule "ros/xacro"]
 	path = ros/xacro
 	url = https://github.com/ros/xacro.git
+	branch = ros2
 [submodule "ros/ros-geographic-info/geographic_info"]
 	path = ros/ros-geographic-info/geographic_info
 	url = https://github.com/ros-geographic-info/geographic_info.git
+	branch = ros2
 [submodule "ros/robot_state_publisher"]
 	path = ros/robot_state_publisher
 	url = https://github.com/ros/robot_state_publisher.git
+	branch = humble
 [submodule "ros/diagnostics"]
 	path = ros/diagnostics
 	url = https://github.com/ros/diagnostics.git
+	branch = ros2
 [submodule "ros/ros_environment"]
 	path = ros/ros_environment
 	url = https://github.com/ros/ros_environment.git
+	branch = humble
 [submodule "ros/class_loader"]
 	path = ros/class_loader
 	url = https://github.com/ros/class_loader.git
+	branch = humble
 [submodule "ros-perception/laser_geometry"]
 	path = ros-perception/laser_geometry
 	url = https://github.com/ros-perception/laser_geometry.git
+	branch = humble
 [submodule "ros-perception/wg-perception/object_recognition_msgs"]
 	path = ros-perception/wg-perception/object_recognition_msgs
 	url = https://github.com/wg-perception/object_recognition_msgs.git
+	branch = ros2
 [submodule "ros-perception/vision_msgs"]
 	path = ros-perception/vision_msgs
 	url = https://github.com/ros-perception/vision_msgs.git
+	branch = humble
 [submodule "ros-perception/image_common"]
 	path = ros-perception/image_common
 	url = https://github.com/ros-perception/image_common.git
+	branch = humble
 [submodule "gazebo-release/gz_cmake2_vendor"]
 	path = gazebo-release/gz_cmake2_vendor
 	url = https://github.com/gazebo-release/gz_cmake2_vendor.git
-	branch = 0.3.0
+	branch = main
 	update = none
 [submodule "gazebo-release/gz_math6_vendor"]
 	path = gazebo-release/gz_math6_vendor
 	url = https://github.com/gazebo-release/gz_math6_vendor.git
-	branch = 0.3.0
+	branch = main
 	update = none
 [submodule "ros2_control/filters"]
 	path = ros2_control/filters
 	url = https://github.com/ros/filters.git
+	branch = ros2
 [submodule "ros2_control/ros2_control_cmake"]
 	path = ros2_control/ros2_control_cmake
 	url = https://github.com/ros-controls/ros2_control_cmake.git
+	branch = master
 [submodule "ros2_control/ros2_control"]
 	path = ros2_control/ros2_control
 	url = https://github.com/idesign0/id_ros2_control.git
+	branch = humble
 [submodule "ros2_control/ros2_controllers"]
 	path = ros2_control/ros2_controllers
 	url = https://github.com/ros-controls/ros2_controllers.git
+	branch = humble
 [submodule "ros2_control/realtime_tools"]
 	path = ros2_control/realtime_tools
 	url = https://github.com/idesign0/id_realtime_tools.git
+	branch = humble
 [submodule "ros2_control/control_msgs"]
 	path = ros2_control/control_msgs
 	url = https://github.com/ros-controls/control_msgs.git
+	branch = humble
 [submodule "ros2_control/control_toolbox"]
 	path = ros2_control/control_toolbox
 	url = https://github.com/ros-controls/control_toolbox.git
+	branch = humble
 [submodule "ros2_control/kinematics_interface"]
 	path = ros2_control/kinematics_interface
 	url = https://github.com/ros-controls/kinematics_interface.git
+	branch = humble
 [submodule "ros-drivers/ackermann_msgs"]
 	path = ros-drivers/ackermann_msgs
 	url = https://github.com/ros-drivers/ackermann_msgs.git
+	branch = ros2
 [submodule "ros-tooling/libstatistics_collector"]
 	path = ros-tooling/libstatistics_collector
 	url = https://github.com/ros-tooling/libstatistics_collector.git
+	branch = humble
 [submodule "ros-tooling/keyboard_handler"]
 	path = ros-tooling/keyboard_handler
 	url = https://github.com/ros-tooling/keyboard_handler.git
+	branch = humble
 [submodule "ros2/rclcpp"]
 	path = ros2/rclcpp
 	url = https://github.com/ros2/rclcpp.git
+	branch = humble
 [submodule "ros2/rcl"]
 	path = ros2/rcl
 	url = https://github.com/ros2/rcl.git
+	branch = humble
 [submodule "ros2/ament_cmake_ros"]
 	path = ros2/ament_cmake_ros
 	url = https://github.com/ros2/ament_cmake_ros.git
+	branch = humble
 [submodule "ros2/rmw_dds_common"]
 	path = ros2/rmw_dds_common
 	url = https://github.com/ros2/rmw_dds_common.git
+	branch = humble
 [submodule "ros2/example_interfaces"]
 	path = ros2/example_interfaces
 	url = https://github.com/ros2/example_interfaces.git
+	branch = humble
 [submodule "ros2/tinyxml_vendor"]
 	path = ros2/tinyxml_vendor
 	url = https://github.com/ros2/tinyxml_vendor.git
+	branch = humble
 [submodule "ros2/rcutils"]
 	path = ros2/rcutils
 	url = https://github.com/ros2/rcutils.git
+	branch = fujitatomoya/humble/backport-pull-441
 [submodule "ros2/message_filters"]
 	path = ros2/message_filters
 	url = https://github.com/ros2/message_filters.git
+	branch = humble
 [submodule "ros2/rclpy"]
 	path = ros2/rclpy
 	url = https://github.com/ros2/rclpy.git
+	branch = humble
 [submodule "ros2/urdf"]
 	path = ros2/urdf
 	url = https://github.com/ros2/urdf.git
+	branch = humble
 [submodule "ros2/launch"]
 	path = ros2/launch
 	url = https://github.com/ros2/launch.git
+	branch = humble
 [submodule "ros2/performance_test_fixture"]
 	path = ros2/performance_test_fixture
 	url = https://github.com/ros2/performance_test_fixture.git
+	branch = humble
 [submodule "ros2/rosidl_dds"]
 	path = ros2/rosidl_dds
 	url = https://github.com/ros2/rosidl_dds.git
+	branch = humble
 [submodule "ros2/launch_ros"]
 	path = ros2/launch_ros
 	url = https://github.com/ros2/launch_ros.git
+	branch = humble
 [submodule "ros2/console_bridge_vendor"]
 	path = ros2/console_bridge_vendor
 	url = https://github.com/ros2/console_bridge_vendor.git
+	branch = humble
 [submodule "ros2/tlsf"]
 	path = ros2/tlsf
 	url = https://github.com/ros2/tlsf.git
+	branch = humble
 [submodule "ros2/rmw"]
 	path = ros2/rmw
 	url = https://github.com/ros2/rmw.git
+	branch = humble
 [submodule "ros2/rosidl_typesupport_fastrtps"]
 	path = ros2/rosidl_typesupport_fastrtps
 	url = https://github.com/ros2/rosidl_typesupport_fastrtps.git
+	branch = humble
 [submodule "ros2/orocos_kdl_vendor"]
 	path = ros2/orocos_kdl_vendor
 	url = https://github.com/ros2/orocos_kdl_vendor.git
+	branch = humble
 [submodule "ros2/rosidl_defaults"]
 	path = ros2/rosidl_defaults
 	url = https://github.com/ros2/rosidl_defaults.git
+	branch = humble
 [submodule "ros2/mimick_vendor"]
 	path = ros2/mimick_vendor
 	url = https://github.com/ros2/mimick_vendor.git
+	branch = humble
 [submodule "ros2/rosidl_typesupport"]
 	path = ros2/rosidl_typesupport
 	url = https://github.com/ros2/rosidl_typesupport.git
+	branch = humble
 [submodule "ros2/ros_testing"]
 	path = ros2/ros_testing
 	url = https://github.com/ros2/ros_testing.git
+	branch = humble
 [submodule "ros2/eigen3_cmake_module"]
 	path = ros2/eigen3_cmake_module
 	url = https://github.com/ros2/eigen3_cmake_module.git
+	branch = humble
 [submodule "ros2/common_interfaces"]
 	path = ros2/common_interfaces
 	url = https://github.com/ros2/common_interfaces.git
+	branch = humble
 [submodule "ros2/rmw_fastrtps"]
 	path = ros2/rmw_fastrtps
 	url = https://github.com/idesign0/id_rmw_fastrtps.git
+	branch = humble
 [submodule "ros2/ros2cli_common_extensions"]
 	path = ros2/ros2cli_common_extensions
 	url = https://github.com/ros2/ros2cli_common_extensions.git
+	branch = humble
 [submodule "ros2/rmw_implementation"]
 	path = ros2/rmw_implementation
 	url = https://github.com/ros2/rmw_implementation.git
+	branch = humble
 [submodule "ros2/examples"]
 	path = ros2/examples
 	url = https://github.com/ros2/examples.git
+	branch = humble
 [submodule "ros2/tinyxml2_vendor"]
 	path = ros2/tinyxml2_vendor
 	url = https://github.com/ros2/tinyxml2_vendor.git
+	branch = humble
 [submodule "ros2/rosidl"]
 	path = ros2/rosidl
 	url = https://github.com/ros2/rosidl.git
+	branch = humble
 [submodule "ros2/geometry2"]
 	path = ros2/geometry2
 	url = https://github.com/idesign0/id_geometry2
+	branch = humble
 [submodule "ros2/rcl_interfaces"]
 	path = ros2/rcl_interfaces
 	url = https://github.com/ros2/rcl_interfaces.git
+	branch = humble
 [submodule "ros2/ros2cli"]
 	path = ros2/ros2cli
 	url = https://github.com/ros2/ros2cli.git
+	branch = humble
 [submodule "ros2/rosbag2"]
 	path = ros2/rosbag2
 	url = https://github.com/ros2/rosbag2.git
+	branch = humble
 [submodule "ros2/sros2"]
 	path = ros2/sros2
 	url = https://github.com/ros2/sros2.git
+	branch = humble
 [submodule "ros2/realtime_support"]
 	path = ros2/realtime_support
 	url = https://github.com/ros2/realtime_support.git
+	branch = humble
 [submodule "ros2/spdlog_vendor"]
 	path = ros2/spdlog_vendor
 	url = https://github.com/ros2/spdlog_vendor.git
+	branch = humble
 [submodule "ros2/rmw_cyclonedds"]
 	path = ros2/rmw_cyclonedds
 	url = https://github.com/ros2/rmw_cyclonedds.git
+	branch = humble
 [submodule "ros2/rviz"]
 	path = ros2/rviz
 	url = https://github.com/idesign0/id_rviz.git
+	branch = humble
 [submodule "ros2/system_tests"]
 	path = ros2/system_tests
 	url = https://github.com/ros2/system_tests.git
+	branch = humble
 [submodule "ros2/rpyutils"]
 	path = ros2/rpyutils
 	url = https://github.com/ros2/rpyutils.git
+	branch = humble
 [submodule "ros2/test_interface_files"]
 	path = ros2/test_interface_files
 	url = https://github.com/ros2/test_interface_files.git
+	branch = humble
 [submodule "ros2/rcpputils"]
 	path = ros2/rcpputils
 	url = https://github.com/ros2/rcpputils.git
+	branch = humble
 [submodule "ros2/yaml_cpp_vendor"]
 	path = ros2/yaml_cpp_vendor
 	url = https://github.com/ros2/yaml_cpp_vendor.git
+	branch = humble
 [submodule "ros2/rcl_logging"]
 	path = ros2/rcl_logging
 	url = https://github.com/ros2/rcl_logging.git
+	branch = humble
 [submodule "ros2/python_cmake_module"]
 	path = ros2/python_cmake_module
 	url = https://github.com/ros2/python_cmake_module.git
+	branch = humble
 [submodule "ros2/ros2_tracing"]
 	path = ros2/ros2_tracing
 	url = https://github.com/ros2/ros2_tracing.git
+	branch = humble
 [submodule "ros2/rosidl_runtime_py"]
 	path = ros2/rosidl_runtime_py
 	url = https://github.com/ros2/rosidl_runtime_py.git
+	branch = humble
 [submodule "ros2/pybind11_vendor"]
 	path = ros2/pybind11_vendor
 	url = https://github.com/ros2/pybind11_vendor.git
+	branch = humble
 [submodule "ros2/libyaml_vendor"]
 	path = ros2/libyaml_vendor
 	url = https://github.com/ros2/libyaml_vendor.git
+	branch = humble
 [submodule "ros2/unique_identifier_msgs"]
 	path = ros2/unique_identifier_msgs
 	url = https://github.com/ros2/unique_identifier_msgs.git
+	branch = humble
 [submodule "ros2/demos"]
 	path = ros2/demos
 	url = https://github.com/ros2/demos.git
+	branch = humble
 [submodule "ros2/rosidl_python"]
 	path = ros2/rosidl_python
 	url = https://github.com/ros2/rosidl_python.git
+	branch = humble
 [submodule "ros2/rmw_connextdds"]
 	path = ros2/rmw_connextdds
 	url = https://github.com/ros2/rmw_connextdds.git
+	branch = humble
 [submodule "eclipse-iceoryx/iceoryx"]
 	path = eclipse-iceoryx/iceoryx
 	url = https://github.com/eclipse-iceoryx/iceoryx.git
-	branch = v2.95.7
+	branch = main
 	update = none
 [submodule "eclipse-cyclonedds/cyclonedds"]
 	path = eclipse-cyclonedds/cyclonedds
@@ -321,105 +416,129 @@
 [submodule "gzsim/ros_gz"]
 	path = gzsim/ros_gz
 	url = https://github.com/gazebosim/ros_gz.git
+	branch = humble
 [submodule "gzsim/gz-transport"]
 	path = gzsim/gz-transport
 	url = https://github.com/gazebosim/gz-transport.git
+	branch = gz-transport14
 [submodule "gzsim/gps_umd"]
 	path = gzsim/gps_umd
 	url = https://github.com/swri-robotics/gps_umd.git
+	branch = ros2-devel
 [submodule "gzsim/gz_ros2_control"]
 	path = gzsim/gz_ros2_control
 	url = https://github.com/ros-controls/gz_ros2_control.git
+	branch = humble
 [submodule "gzsim/actuator_msgs"]
 	path = gzsim/actuator_msgs
 	url = https://github.com/rudislabs/actuator_msgs.git
+	branch = main
 [submodule "moveit/moveit2"]
 	path = moveit/moveit2
 	url = https://github.com/idesign0/id_moveit2
+	branch = humble
 [submodule "moveit/OctoMap/octomap"]
 	path = moveit/OctoMap/octomap
 	url = https://github.com/OctoMap/octomap.git
-	branch = v1.9.8
+	branch = master
 	update = none
 [submodule "moveit/OctoMap/octomap_msgs"]
 	path = moveit/OctoMap/octomap_msgs
 	url = https://github.com/OctoMap/octomap_msgs.git
+	branch = ros2
 [submodule "moveit/pantor/ruckig"]
 	path = moveit/pantor/ruckig
 	url = https://github.com/pantor/ruckig.git
-	branch = v0.6.5
+	branch = main
 	update = none
 [submodule "moveit/random_numbers"]
 	path = moveit/random_numbers
 	url = https://github.com/moveit/random_numbers.git
+	branch = ros2
 [submodule "moveit/moveit_task_constructor"]
 	path = moveit/moveit_task_constructor
 	url = https://github.com/idesign0/id_moveit_task_constructor.git
+	branch = humble
 [submodule "moveit/geometric_shapes"]
 	path = moveit/geometric_shapes
 	url = https://github.com/moveit/geometric_shapes.git
+	branch = ros2
 [submodule "moveit/srdfdom"]
 	path = moveit/srdfdom
 	url = https://github.com/moveit/srdfdom.git
+	branch = ros2
 [submodule "moveit/warehouse_ros"]
 	path = moveit/warehouse_ros
 	url = https://github.com/moveit/warehouse_ros.git
+	branch = ros2
 [submodule "moveit/moveit_visual_tools"]
 	path = moveit/moveit_visual_tools
 	url = https://github.com/moveit/moveit_visual_tools.git
+	branch = ros2
 [submodule "moveit/moveit_resources"]
 	path = moveit/moveit_resources
 	url = https://github.com/moveit/moveit_resources.git
+	branch = humble
 [submodule "moveit/py_binding_tools"]
 	path = moveit/py_binding_tools
 	url = https://github.com/moveit/py_binding_tools.git
+	branch = ros2
 [submodule "moveit/moveit_msgs"]
 	path = moveit/moveit_msgs
 	url = https://github.com/moveit/moveit_msgs.git
+	branch = humble
 [submodule "moveit/PickNickRobotics/rviz_visual_tools"]
 	path = moveit/PickNickRobotics/rviz_visual_tools
 	url = https://github.com/PickNikRobotics/rviz_visual_tools
+	branch = ros2
 [submodule "moveit/PickNickRobotics/launch_param_builder"]
 	path = moveit/PickNickRobotics/launch_param_builder
 	url = https://github.com/PickNikRobotics/launch_param_builder.git
+	branch = main
 [submodule "moveit/PickNickRobotics/graph_msgs"]
 	path = moveit/PickNickRobotics/graph_msgs
 	url = https://github.com/PickNikRobotics/graph_msgs.git
+	branch = ros2
 [submodule "eProsima/foonathan_memory_vendor"]
 	path = eProsima/foonathan_memory_vendor
 	url = https://github.com/eProsima/foonathan_memory_vendor.git
+	branch = master
 [submodule "eProsima/Fast-CDR"]
 	path = eProsima/Fast-CDR
 	url = https://github.com/eProsima/Fast-CDR.git
-	branch = v1.0.24
+	branch = 1.0.x
 	update = none
 [submodule "eProsima/Fast-DDS"]
 	path = eProsima/Fast-DDS
 	url = https://github.com/idesign0/id_Fast-DDS.git
-	branch = v2.6.2
+	branch = 2.6.2
 	update = none
 [submodule "ros-planning/navigation2"]
 	path = ros-planning/navigation2
 	url = https://github.com/idesign0/id_navigation2.git
+	branch = humble
 [submodule "ros-planning/dependencies/vision_opencv"]
 	path = ros-planning/dependencies/vision_opencv
 	url = https://github.com/idesign0/id_vision_opencv.git
+	branch = humble
 [submodule "ros-planning/dependencies/angles"]
 	path = ros-planning/dependencies/angles
 	url = https://github.com/ros/angles
+	branch = ros2
 [submodule "ros-planning/dependencies/xtensor"]
 	path = ros-planning/dependencies/xtensor
 	url = https://github.com/xtensor-stack/xtensor.git
-	branch = 0.25.0
+	branch = master
 	update = none 
 [submodule "ros-planning/dependencies/xtl"]
 	path = ros-planning/dependencies/xtl
 	url = https://github.com/xtensor-stack/xtl.git
-	branch = 0.7.5
+	branch = master
 	update = none
 [submodule "ros-planning/dependencies/PickNickRobotics/generate_parameter_library"]
 	path = ros-planning/dependencies/PickNickRobotics/generate_parameter_library
 	url = https://github.com/PickNikRobotics/generate_parameter_library.git
+	branch = main
 [submodule "ros-planning/dependencies/rsl"]
 	path = ros-planning/dependencies/rsl
 	url = https://github.com/ros2-gbp/rsl-release.git
@@ -427,7 +546,8 @@
 [submodule "ros-planning/dependencies/PickNickRobotics/cpp_polyfills"]
 	path = ros-planning/dependencies/PickNickRobotics/cpp_polyfills
 	url = https://github.com/PickNikRobotics/cpp_polyfills.git
+	branch = main
 [submodule "ros-commondep/asio-1.10.8"]
 	path = ros-commondep/asio-1.10.8
 	url = https://github.com/chriskohlhoff/asio.git
-	branch = asio-1-10-8
+	branch = asio-1-10-branch
