@@ -85,7 +85,7 @@ pyqt@5 python qt@5 sip spdlog osrf/simulation/tinyxml1 tinyxml2
 
 unlink some brew packages:
 ```bash
-brew unlink boost qt
+brew unlink boost boost-pytnon3 xtensor xdm xtl qt
 ```
 
 ### 3️⃣ Official ROS 2 macOS Prerequisites
