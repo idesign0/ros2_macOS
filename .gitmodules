@@ -10,7 +10,6 @@
 	path = ros-planning/dependencies/ceres-solver
 	url = https://github.com/idesign0/id_ceres-solver-main
 	branch = 1.14.x
-	update = none
 [submodule "ros-planning/dependencies/BehaviorTree.ROS2"]
 	path = ros-planning/dependencies/BehaviorTree.ROS2
 	url = https://github.com/idesign0/id_BehaviorTree.ROS2.git
@@ -23,7 +22,6 @@
 	path = ros-planning/dependencies/behaviortree_cpp_v3-release
     url = https://github.com/idesign0/id_behaviortree_cpp_v3-release.git
 	branch = 3.8.7-macOS-fix-dhruv
-	update = none
 [submodule "ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK"]
 	path = ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK
 	url = https://github.com/ROBOTIS-GIT/DynamixelSDK.git
@@ -84,7 +82,6 @@
 	path = ros/backward_ros
 	url = https://github.com/idesign0/id_backward_ros-release
 	branch = release/humble/backward_ros/1.0.8-2-macOS-fix
-	update = none
 [submodule "ros/urdfdom"]
 	path = ros/urdfdom
 	url = https://github.com/ros/urdfdom.git
@@ -132,13 +129,11 @@
 [submodule "gazebo-release/gz_cmake2_vendor"]
 	path = gazebo-release/gz_cmake2_vendor
 	url = https://github.com/gazebo-release/gz_cmake2_vendor.git
-	branch = main
-	update = none
+	branch = humble
 [submodule "gazebo-release/gz_math6_vendor"]
 	path = gazebo-release/gz_math6_vendor
 	url = https://github.com/gazebo-release/gz_math6_vendor.git
-	branch = main
-	update = none
+	branch = humble
 [submodule "ros2_control/filters"]
 	path = ros2_control/filters
 	url = https://github.com/ros/filters.git
@@ -406,13 +401,11 @@
 [submodule "eclipse-iceoryx/iceoryx"]
 	path = eclipse-iceoryx/iceoryx
 	url = https://github.com/eclipse-iceoryx/iceoryx.git
-	branch = main
-	update = none
+	branch = release_2.0
 [submodule "eclipse-cyclonedds/cyclonedds"]
 	path = eclipse-cyclonedds/cyclonedds
 	url = https://github.com/eclipse-cyclonedds/cyclonedds.git
 	branch = releases/0.10.x
-	update = none
 [submodule "gzsim/ros_gz"]
 	path = gzsim/ros_gz
 	url = https://github.com/gazebosim/ros_gz.git
@@ -441,7 +434,6 @@
 	path = moveit/OctoMap/octomap
 	url = https://github.com/OctoMap/octomap.git
 	branch = master
-	update = none
 [submodule "moveit/OctoMap/octomap_msgs"]
 	path = moveit/OctoMap/octomap_msgs
 	url = https://github.com/OctoMap/octomap_msgs.git
@@ -449,8 +441,7 @@
 [submodule "moveit/pantor/ruckig"]
 	path = moveit/pantor/ruckig
 	url = https://github.com/pantor/ruckig.git
-	branch = main
-	update = none
+	branch = v0.6.5
 [submodule "moveit/random_numbers"]
 	path = moveit/random_numbers
 	url = https://github.com/moveit/random_numbers.git
@@ -507,12 +498,10 @@
 	path = eProsima/Fast-CDR
 	url = https://github.com/eProsima/Fast-CDR.git
 	branch = 1.0.x
-	update = none
 [submodule "eProsima/Fast-DDS"]
 	path = eProsima/Fast-DDS
 	url = https://github.com/idesign0/id_Fast-DDS.git
 	branch = 2.6.2
-	update = none
 [submodule "ros-planning/navigation2"]
 	path = ros-planning/navigation2
 	url = https://github.com/idesign0/id_navigation2.git
@@ -529,12 +518,10 @@
 	path = ros-planning/dependencies/xtensor
 	url = https://github.com/xtensor-stack/xtensor.git
 	branch = master
-	update = none 
 [submodule "ros-planning/dependencies/xtl"]
 	path = ros-planning/dependencies/xtl
 	url = https://github.com/xtensor-stack/xtl.git
 	branch = master
-	update = none
 [submodule "ros-planning/dependencies/PickNickRobotics/generate_parameter_library"]
 	path = ros-planning/dependencies/PickNickRobotics/generate_parameter_library
 	url = https://github.com/PickNikRobotics/generate_parameter_library.git
