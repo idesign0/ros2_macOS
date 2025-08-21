@@ -1,15 +1,5 @@
 message(WARN " Toolchain.cmake is being used.")
 
-# Homebrew prefix for Apple Silicon
-set(HOMEBREW_PREFIX "/opt/homebrew")
-
-# Add Homebrew to CMake search paths
-set(CMAKE_PREFIX_PATH "${HOMEBREW_PREFIX}/opt" ${CMAKE_PREFIX_PATH})
-
-# Ensure headers and libs are also searched
-list(APPEND CMAKE_INCLUDE_PATH "${HOMEBREW_PREFIX}/include")
-list(APPEND CMAKE_LIBRARY_PATH "${HOMEBREW_PREFIX}/lib")
-
 # Include ROS 2 install paths so CMake finds packages automatically
 set(ENV{AMENT_PREFIX_PATH} "$ENV{HOME}/humble-ros2/install:$ENV{AMENT_PREFIX_PATH}")
 set(ENV{CMAKE_PREFIX_PATH} "$ENV{HOME}/humble-ros2/install:$ENV{CMAKE_PREFIX_PATH}")
@@ -121,6 +111,9 @@ set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/google-benchmark;${CMAKE_PREFIX_PATH}")
 set(CSPARSE_INCLUDE_DIR "/opt/homebrew/include/suitesparse")
 set(CSPARSE_LIBRARY "/opt/homebrew/lib/libsuitesparse.dylib")
 
+# Ceres
+set(Ceres_DIR "$ENV{HOME}/humble-ros2/install/ceres-solver/lib/cmake/Ceres" CACHE PATH "")
+
 # moveit_ros_perception
 # Toolchain for macOS Homebrew OpenGL dependencies
 set(GLEW_INCLUDE_DIR "/opt/homebrew/opt/glew/include" CACHE PATH "GLEW include directory")
@@ -136,3 +129,13 @@ set(GLUT_LIBRARIES ${GLUT_LIBRARY} CACHE INTERNAL "")
 
 set(SYSTEM_GL_INCLUDE_DIR ${GLEW_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS} CACHE INTERNAL "")
 set(SYSTEM_GL_LIBRARIES ${GLEW_LIBRARIES} ${GLUT_LIBRARIES} CACHE INTERNAL "")
+
+# Homebrew prefix for Apple Silicon
+set(HOMEBREW_PREFIX "/opt/homebrew")
+
+# Add Homebrew to CMake search paths
+set(CMAKE_PREFIX_PATH "${HOMEBREW_PREFIX}/opt" ${CMAKE_PREFIX_PATH})
+
+# Ensure headers and libs are also searched
+list(APPEND CMAKE_INCLUDE_PATH "${HOMEBREW_PREFIX}/include")
+list(APPEND CMAKE_LIBRARY_PATH "${HOMEBREW_PREFIX}/lib")
