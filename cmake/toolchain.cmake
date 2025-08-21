@@ -1,5 +1,15 @@
 message(WARN " Toolchain.cmake is being used.")
 
+# Homebrew prefix for Apple Silicon
+set(HOMEBREW_PREFIX "/opt/homebrew")
+
+# Add Homebrew to CMake search paths
+set(CMAKE_PREFIX_PATH "${HOMEBREW_PREFIX}/opt" ${CMAKE_PREFIX_PATH})
+
+# Ensure headers and libs are also searched
+list(APPEND CMAKE_INCLUDE_PATH "${HOMEBREW_PREFIX}/include")
+list(APPEND CMAKE_LIBRARY_PATH "${HOMEBREW_PREFIX}/lib")
+
 # Include ROS 2 install paths so CMake finds packages automatically
 set(ENV{AMENT_PREFIX_PATH} "$ENV{HOME}/humble-ros2/install:$ENV{AMENT_PREFIX_PATH}")
 set(ENV{CMAKE_PREFIX_PATH} "$ENV{HOME}/humble-ros2/install:$ENV{CMAKE_PREFIX_PATH}")
@@ -105,7 +115,7 @@ link_directories(${BOOST_LIBRARYDIR})
 add_definitions(-DBOOST_TIMER_ENABLE_DEPRECATED)
 
 # Google Benchmark paths (Homebrew)
-set(CMAKE_PREFIX_PATH "/opt/homebrew/Cellar/google-benchmark/1.9.4;${CMAKE_PREFIX_PATH}")
+set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/google-benchmark;${CMAKE_PREFIX_PATH}")
 
 # CSparse paths (Homebrew)
 set(CSPARSE_INCLUDE_DIR "/opt/homebrew/include/suitesparse")
