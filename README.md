@@ -153,6 +153,7 @@ export PATH="$HOME/bin:$PATH"
   > - **Please uncomment these lines after:**
   >   1. You have installed **Gazebo Harmonic** and verified it works correctly, and you have successfully built all ROS 2 packages without errors.
   >   2. You have created and built your **separate overlay workspace** (`ros2_ws`).
+  >   3. **$MY_TOOLCHAIN_FILE** path should be set properly so **toolchain.cmake** can be access during the build.
   > 
   > This ensures that your environment is properly configured only once the related components are ready, avoiding errors during the initial setup.
   
