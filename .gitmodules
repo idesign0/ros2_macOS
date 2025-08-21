@@ -501,7 +501,7 @@
 [submodule "eProsima/Fast-DDS"]
 	path = eProsima/Fast-DDS
 	url = https://github.com/idesign0/id_Fast-DDS.git
-	branch = 2.6.2
+	branch = 2.6.2-macOS-fix-dhruv
 [submodule "ros-planning/navigation2"]
 	path = ros-planning/navigation2
 	url = https://github.com/idesign0/id_navigation2.git
