@@ -50,12 +50,15 @@ First, create your ROS 2 workspace and clone this repository into the `src` fold
 ```bash
 mkdir -p ~/ros2_humble/src
 cd ~/ros2_humble/src
-git clone https://github.com/idesign0/ros2_macOS.git .
+git clone -b humble https://github.com/idesign0/ros2_macOS.git .
 ```
 After cloning, run:
 ```bash
+git submodule sync --recursive
 git submodule update --init --recursive
 ```
+> ⚠️ **Note:**
+> if you are using VSCode keep Git: Repository Scan Max Dept to -1 so all submodules get fetch and you can see them in Source control.
 ### 2️⃣ Install Homebrew Packages  
 
 If you don’t already have Homebrew installed (needed to install more dependencies), follow the instructions at:  
