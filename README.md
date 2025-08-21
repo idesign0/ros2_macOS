@@ -48,8 +48,8 @@ This guide will walk you through:
 First, create your ROS 2 workspace and clone this repository into the `src` folder:
 
 ```bash
-mkdir -p ~/ros2_humble/src
-cd ~/ros2_humble/src
+mkdir -p ~/humble-ros2/src
+cd ~/humble-ros2/src
 git clone -b humble https://github.com/idesign0/ros2_macOS.git .
 ```
 After cloning, run:
@@ -73,7 +73,7 @@ brew doctor
 and now, Go back to the root of your workspace and run the Homebrew packages installation script:
 
 ```bash
-cd ~/ros2_humble
+cd ~/humble-ros2
 ./brew-packages/install_brew_packages.sh
 ```
 This script installs essential tools and libraries needed for building ROS 2 Humble on macOS ARM64.
@@ -231,7 +231,7 @@ brew install gz-harmonic
 
 ### 2. 🔨 Build
 ```bash
-cd ~/ros2_humble
+cd ~/humble-ros2
 ```
 > ⚠️ **Note:**  
 > The build process might require several attempts to complete successfully,  
