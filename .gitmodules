@@ -81,7 +81,7 @@
 [submodule "ros/backward_ros"]
 	path = ros/backward_ros
 	url = https://github.com/idesign0/id_backward_ros-release
-	branch = release/humble/backward_ros/1.0.8-2-macOS-fix
+	branch = release/humble/1.0.8-2-fix
 [submodule "ros/urdfdom"]
 	path = ros/urdfdom
 	url = https://github.com/ros/urdfdom.git
@@ -205,7 +205,7 @@
 [submodule "ros2/rcutils"]
 	path = ros2/rcutils
 	url = https://github.com/ros2/rcutils.git
-	branch = fujitatomoya/humble/backport-pull-441
+	branch = humble
 [submodule "ros2/message_filters"]
 	path = ros2/message_filters
 	url = https://github.com/ros2/message_filters.git
@@ -433,7 +433,7 @@
 [submodule "moveit/OctoMap/octomap"]
 	path = moveit/OctoMap/octomap
 	url = https://github.com/OctoMap/octomap.git
-	branch = master
+	branch = v1.9.8
 [submodule "moveit/OctoMap/octomap_msgs"]
 	path = moveit/OctoMap/octomap_msgs
 	url = https://github.com/OctoMap/octomap_msgs.git
@@ -517,11 +517,11 @@
 [submodule "ros-planning/dependencies/xtensor"]
 	path = ros-planning/dependencies/xtensor
 	url = https://github.com/xtensor-stack/xtensor.git
-	branch = master
+	branch = 0.25.0
 [submodule "ros-planning/dependencies/xtl"]
 	path = ros-planning/dependencies/xtl
 	url = https://github.com/xtensor-stack/xtl.git
-	branch = master
+	branch = 0.7.5
 [submodule "ros-planning/dependencies/PickNickRobotics/generate_parameter_library"]
 	path = ros-planning/dependencies/PickNickRobotics/generate_parameter_library
 	url = https://github.com/PickNikRobotics/generate_parameter_library.git
