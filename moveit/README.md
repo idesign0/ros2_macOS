@@ -14,52 +14,18 @@ brew install freeglut ompl
 pip install ruckig==0.8.4
 ```
 ### 🏗️ Build Instructions
-#### 1. Build required perception packages first:
-Build the required perception packages from ros-perception first:
+
+### 1. Build 
 ```bash
-cd ~/ros2_humble
-colcon build --base-paths src/ros-perception/ --symlink-install \
-  --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=Off \
+cd ~/humble-ros2
+colcon build \
+  --symlink-install \
+  --base-paths src/moveit/  \
   --executor parallel \
-  --parallel-workers $(sysctl -n hw.ncpu)
+  --parallel-workers $(sysctl -n hw.ncpu) \
+  --cmake-args -DCMAKE_TOOLCHAIN_FILE=$MY_TOOLCHAIN_FILE
 ```
-#### 2. Build OpenMP-dependent MoveIt packages with LLVM (SKIP this step!)
-> **Note:**  
-> Previously, building OpenMP-dependent MoveIt packages on macOS required installing LLVM and switching the compiler (`CC`/`CXX`) to LLVM Clang.  
-> Thanks to a new manual OpenMP flag workaround, this step is **no longer necessary**. All ROS packages can now be built using the default Apple Clang without switching compilers.  
-> The instructions below are kept only for legacy reference.
-Apple’s default Clang does not support OpenMP. For the following packages, install LLVM and set environment variables before building:
-  - moveit_ros_perception
-  - moveit_planners_ompl
-
-Set up LLVM and environment variables:
-
-```bash
-brew install llvm libomp
-
-export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
-export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
-export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
-export CC=/opt/homebrew/opt/llvm/bin/clang
-export CXX=/opt/homebrew/opt/llvm/bin/clang++
-```
-```bash
-colcon build --packages-select moveit_ros_perception moveit_planners_ompl --symlink-install \
-  --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=Off \
-  --executor parallel \
-  --parallel-workers $(sysctl -n hw.ncpu)
-```
-> **Important**: After building these two packages, **restart your terminal** to reset to the default Apple Clang compiler before building the remaining packages.
-
-#### 3. Build the rest of the MoveIt packages:
-```bash
-cd ~/ros2_humble
-colcon build --base-paths src/moveit/ --symlink-install \
-  --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=Off \
-  --executor parallel \
-  --parallel-workers $(sysctl -n hw.ncpu)
-```
-### 4. Test Moveit with MoveIt2_tutorials
+### 2. Test Moveit with MoveIt2_tutorials
 
 To test that your MoveIt installation works correctly, clone the [MoveIt2 Tutorials](https://github.com/moveit/moveit2_tutorials.git) repository:
 
