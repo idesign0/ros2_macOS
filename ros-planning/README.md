@@ -33,11 +33,13 @@ This script installs essential tools and libraries needed for building ROS 2 Hum
 This build focuses on nav2 and related packages only.
 
 ```bash
-cd ~/ros2_humble
-colcon build --base-paths src/ros-planning/ --symlink-install \
-  --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=Off \
+cd ~/humble-ros2
+colcon build \
+  --symlink-install \
+  --base-paths src/ros-planning/  \
   --executor parallel \
-  --parallel-workers $(sysctl -n hw.ncpu)
+  --parallel-workers $(sysctl -n hw.ncpu) \
+  --cmake-args -DCMAKE_TOOLCHAIN_FILE=$MY_TOOLCHAIN_FILE
 ```
 ```bash
 source ~/.zshrc
