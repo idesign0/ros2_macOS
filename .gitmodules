@@ -541,3 +541,15 @@
 [submodule "ros2_macos_sdk/libfranka"]
 	path = ros2_macos_sdk/libfranka
 	url = https://github.com/idesign0/id_libfranka.git
+[submodule "ros2_macos_sdk/ur_client_lib"]
+	path = ros2_macos_sdk/ur_client_lib
+	url = https://github.com/idesign0/id_Universal_Robots_Client_Library
+[submodule "ros-driver/ur_ros2_driver/dependencies/ur_msgs"]
+	path = ros-driver/ur_ros2_driver/dependencies/ur_msgs
+	url = https://github.com/ros-industrial/ur_msgs.git
+[submodule "ros-drivers/ur_ros2_driver"]
+	path = ros-drivers/ur_ros2_driver
+	url = https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver
+[submodule "ros-drivers/ur_msgs"]
+	path = ros-drivers/ur_msgs
+	url = https://github.com/ros-industrial/ur_msgs.git
