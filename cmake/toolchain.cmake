@@ -9,8 +9,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+
+# Setting all the Build Tests Off
 set(BUILD_TESTING OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
+set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 
 # Ceres
 set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
