@@ -14,8 +14,9 @@ This repository provides a full build of **ROS 2 Humble** from source for **ARM6
 - **gazebo-release** simulation packages  
 - **gzsim** components, including `ros2_gz_bridge`, `gz_ros2_control`, and more  
 - **osrf** organization packages  
-- **ros-drivers** (e.g., `ackermann_msgs`)  
-- **ros-perception** packages  
+- **ros-drivers** (e.g., `ackermann_msgs`, `UR`, `Dynamixel`, `Intel RealSense`, `Franka`, `Velodyne/Ouster` (both SDKs and Drivers))
+- **ros2_macos_sdks** (e.g., `UR Client Library`, `DynamixelSDK`, `librealsense`, `libfranka`)
+- **ros-perception** (e.g., `Perception PCL`)  
 - **ros-planning** (e.g., `navigation_msgs`)  
 - **ros-teleop** tools  
 - **ros-tooling** utilities  
@@ -24,7 +25,7 @@ This repository provides a full build of **ROS 2 Humble** from source for **ARM6
 - **ros2_control** framework  
 - **rviz** visualization tool  
 - **moveit2** (with a dedicated README inside the `moveit` folder for testing and debugging)
-- **navi2** (with a dedicated README inside the `ros-planning` folder for testing and debugging)
+- **nav2** (with a dedicated README inside the `ros-planning` folder for testing and debugging)
 - **SLAM_toolbox** ('ros-planning/')
 
 Additionally, this setup includes:  
