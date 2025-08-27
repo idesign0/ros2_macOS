@@ -1,9 +1,5 @@
 message(WARN " Toolchain.cmake is being used.")
 
-# Include ROS 2 install paths so CMake finds packages automatically
-set(ENV{AMENT_PREFIX_PATH} "$ENV{HOME}/humble-ros2/install:$ENV{AMENT_PREFIX_PATH}")
-set(ENV{CMAKE_PREFIX_PATH} "$ENV{HOME}/humble-ros2/install:$ENV{CMAKE_PREFIX_PATH}")
-
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +14,18 @@ set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 # Ceres
 set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
+
+# --- yaml-cpp from ROS 2 Humble install ---
+set(YAML_CPP_INCLUDE_DIRS
+    "$ENV{HOME}/humble-ros2/install/yaml_cpp_vendor/opt/yaml_cpp_vendor/include"
+    CACHE PATH "yaml-cpp include dir")
+
+set(YAML_CPP_LIBRARIES
+    "$ENV{HOME}/humble-ros2/install/yaml_cpp_vendor/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib"
+    CACHE FILEPATH "yaml-cpp library")
+
+# Use the paths
+include_directories(${YAML_CPP_INCLUDE_DIRS})
 
 # Backward ROS
 # On macOS, do NOT add Linux-only flags
@@ -132,13 +140,3 @@ set(GLUT_LIBRARIES ${GLUT_LIBRARY} CACHE INTERNAL "")
 
 set(SYSTEM_GL_INCLUDE_DIR ${GLEW_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS} CACHE INTERNAL "")
 set(SYSTEM_GL_LIBRARIES ${GLEW_LIBRARIES} ${GLUT_LIBRARIES} CACHE INTERNAL "")
-
-# Homebrew prefix for Apple Silicon
-set(HOMEBREW_PREFIX "/opt/homebrew")
-
-# Add Homebrew to CMake search paths
-set(CMAKE_PREFIX_PATH "${HOMEBREW_PREFIX}/opt" ${CMAKE_PREFIX_PATH})
-
-# Ensure headers and libs are also searched
-list(APPEND CMAKE_INCLUDE_PATH "${HOMEBREW_PREFIX}/include")
-list(APPEND CMAKE_LIBRARY_PATH "${HOMEBREW_PREFIX}/lib")
