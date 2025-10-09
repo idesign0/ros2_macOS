@@ -41,11 +41,18 @@ endif()
 string(REPLACE "-Werror" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 string(REPLACE "-Werror" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
+# 2. Force the new, modified flags into the CMake cache
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "Modified CXX flags without -Werror" FORCE)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "Modified C flags without -Werror" FORCE)
+
 # Suppress warning as errors
 add_compile_options(-Wno-unused-command-line-argument
         -Wno-pessimizing-move
         -Wno-error=pessimizing-move
         -Wno-deprecated-dynamic-exception-spec
+        -Wno-unused-variable
+        -Wno-unused-parameter
+        -Wno-unused-but-set-variable
 )
 
 # macOS specific linker
@@ -124,6 +131,34 @@ set(CSPARSE_LIBRARY "/opt/homebrew/lib/libsuitesparse.dylib")
 
 # Ceres
 set(Ceres_DIR "$ENV{HOME}/humble-ros2/install/ceres-solver/lib/cmake/Ceres" CACHE PATH "")
+
+#livox_ros_driver2
+set(PCL_ALL_IN_ONE_INSTALLER OFF CACHE BOOL "Disable bundled Boost" FORCE)
+set(ROS_EDITION "ROS2" CACHE STRING "ROS edition")
+set(ROS_VERSION "2" CACHE STRING "ROS Version")
+set(HUMBLE_ROS "humble" CACHE STRING "ROS 2 Humble")
+set(ROS_DISTRO "humble" CACHE STRING "ROS 2 Distro")
+
+# Qt5 installation prefix (Homebrew)
+set(QT5_PREFIX "/opt/homebrew/opt/qt@5" CACHE PATH "Qt5 prefix path")
+
+# Add Qt5 CMake modules to CMAKE_PREFIX_PATH (Homebrew first)
+set(CMAKE_PREFIX_PATH "${QT5_PREFIX}/lib/cmake;${CMAKE_PREFIX_PATH}" CACHE PATH "Prefix path for Qt5" FORCE)
+
+# Add Qt5 binaries to PATH (for moc, uic, rcc)
+set(ENV{PATH} "${QT5_PREFIX}/bin:$ENV{PATH}")
+
+# Tell CMake to look for frameworks last (helps prevent conflicts with system Qt/OpenGL)
+set(CMAKE_FIND_FRAMEWORK LAST)
+
+# --- OpenGL from Homebrew Mesa ---
+# In toolchain.cmake, before find_package(Qt5 COMPONENTS Gui REQUIRED)
+set(_GL_INCDIRS "/opt/homebrew/include" CACHE STRING "")
+set(_qt5gui_OPENGL_INCLUDE_DIR "/opt/homebrew/include/GL" CACHE PATH "")
+set(Qt5Gui_OPENGL_IMPLEMENTATION GL CACHE STRING "")
+
+# Libraries
+set(Qt5Gui_OPENGL_LIBRARIES "/opt/homebrew/lib/libGL.dylib" CACHE FILEPATH "")
 
 # moveit_ros_perception
 # Toolchain for macOS Homebrew OpenGL dependencies

@@ -33,7 +33,7 @@
 [submodule "ros-planning/dependencies/BehaviorTree.CPP"]
 	path = ros-planning/dependencies/BehaviorTree.CPP
 	url = https://github.com/BehaviorTree/BehaviorTree.CPP.git
-	branch = master
+	branch = ros2-3.1.1
 [submodule "ros-planning/navigation_msgs"]
 	path = ros-planning/navigation_msgs
 	url = https://github.com/ros-planning/navigation_msgs.git
@@ -590,3 +590,42 @@
 	path = ros-drivers/velodyne
 	url = https://github.com/ros-drivers/velodyne.git
 	branch = humble-devel
+[submodule "ros2_macos_sdk/livox_sdk"]
+	path = ros2_macos_sdk/livox_sdk
+	url = https://github.com/Livox-SDK/Livox-SDK2.git
+	branch = master
+[submodule "ros-drivers/livox_ros_driver2"]
+	path = ros-drivers/livox_ros_driver2
+	url = https://github.com/idesign0/id_livox_ros_driver2.git
+	branch = master
+[submodule "ros-perception/ros-event-camera/event_camera_msgs"]
+	path = ros-perception/ros-event-camera/event_camera_msgs
+	url = https://github.com/ros-event-camera/event_camera_msgs.git
+	branch = humble
+[submodule "ros-perception/ros-event-camera/event_camera_codecs"]
+	path = ros-perception/ros-event-camera/event_camera_codecs
+	url = https://github.com/ros-event-camera/event_camera_codecs.git
+	branch = humble
+[submodule "ros-perception/ros-event-camera/event_camera_renderer"]
+	path = ros-perception/ros-event-camera/event_camera_renderer
+	url = https://github.com/idesign0/event_camera_renderer.git
+	branch = humble
+[submodule "ros-perception/ros-event-camera/event_camera_tools"]
+	path = ros-perception/ros-event-camera/event_camera_tools
+	url = https://github.com/idesign0/event_camera_tools.git
+	branch = master
+[submodule "ros-perception/ros-event-camera/dependencies/dvs_msgs"]
+	path = ros-perception/ros-event-camera/dependencies/dvs_msgs
+	url = https://github.com/ros-event-camera/dvs_msgs.git
+	branch = ros2
+[submodule "ros-perception/ros-event-camera/dependencies/prophesee_event_msgs"]
+	path = ros-perception/ros-event-camera/dependencies/prophesee_event_msgs
+	url = https://github.com/ros-event-camera/prophesee_event_msgs.git
+	branch = ros2
+[submodule "ros-planning/spatio_temporal_voxel_layer"]
+	path = ros-planning/spatio_temporal_voxel_layer
+	url = https://github.com/idesign0/spatio_temporal_voxel_layer.git
+	branch = humble
+[submodule "ros-simulation/webots/webots_ros2"]
+	path = ros-simulation/webots/webots_ros2
+	url = https://github.com/cyberbotics/webots_ros2.git
