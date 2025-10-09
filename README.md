@@ -3,6 +3,24 @@
 This repository provides a streamlined setup for running **ROS 2 Humble** and **Gazebo Sim Harmonic** on **macOS with Apple Silicon (M1/M2/M3)**. ROS 2 is built from source with macOS patches, and Gazebo is installed via Homebrew.
 
 ---
+## New Packages Added
+
+This setup now includes the following additional submodules:
+
+- **Livox SDK (Livox-SDK2)**: `ros2_macos_sdk/livox_sdk` ([GitHub link](https://github.com/Livox-SDK/Livox-SDK2.git)) - branch: master  
+- **Livox ROS Driver 2**: `ros-drivers/livox_ros_driver2` ([GitHub link](https://github.com/idesign0/id_livox_ros_driver2.git)) - branch: master  
+- **Event Camera software stack**: `ros-perception/ros-event-camera/`  
+  - `event_camera_msgs` ([GitHub link](https://github.com/ros-event-camera/event_camera_msgs.git)) - branch: humble  
+  - `event_camera_codecs` ([GitHub link](https://github.com/ros-event-camera/event_camera_codecs.git)) - branch: humble  
+  - `event_camera_renderer` ([GitHub link](https://github.com/idesign0/event_camera_renderer.git)) - branch: humble  
+  - `event_camera_tools` ([GitHub link](https://github.com/idesign0/event_camera_tools.git)) - branch: master  
+  - `dependencies/dvs_msgs` ([GitHub link](https://github.com/ros-event-camera/dvs_msgs.git)) - branch: ros2  
+  - `dependencies/prophesee_event_msgs` ([GitHub link](https://github.com/ros-event-camera/prophesee_event_msgs.git)) - branch: ros2  
+- **Spatio-temporal voxel layer**: `ros-planning/spatio_temporal_voxel_layer` ([GitHub link](https://github.com/idesign0/spatio_temporal_voxel_layer.git)) - branch: humble  
+- **Webots ROS2**: `ros-simulation/webots/webots_ros2` ([GitHub link](https://github.com/cyberbotics/webots_ros2.git))
+    > ⚠️ Note: To use this package, installation of the Webots simulator is required. See [Webots official site](https://cyberbotics.com) for installation instructions.   
+
+---
 
 ## ✅ What's Included
 
@@ -12,21 +30,29 @@ This repository provides a full build of **ROS 2 Humble** from source for **ARM6
 - **backward_ros** for stack tracing  
 - **eProsima** middleware components  
 - **gazebo-release** simulation packages  
-- **gzsim** components, including `ros2_gz_bridge`, `gz_ros2_control`, and more  
+- **gzsim** components, including `ros2_gz_bridge`, `gz_ros2_control`, and related packages  
 - **osrf** organization packages  
-- **ros-drivers** (e.g., `ackermann_msgs`, `UR`, `Dynamixel`, `Intel RealSense`, `Franka`, `Velodyne/Ouster` (both SDKs and Drivers))
-- **ros2_macos_sdks** (e.g., `UR Client Library`, `DynamixelSDK`, `librealsense`, `libfranka`)
-- **ros-perception** (e.g., `Perception PCL`)  
-- **ros-planning** (e.g., `navigation_msgs`)  
+- **ros-drivers**, including:
+  - Ackermann, UR, Dynamixel, Intel RealSense, Franka, Velodyne, Ouster (both SDKs and drivers)
+  - **Livox ROS Driver 2**
+- **ros2_macos_sdks**, including:
+  - UR Client Library, DynamixelSDK, librealsense, libfranka, **Livox SDK**
+- **ros-perception**, including:
+  - PCL perception tools
+  - **Event Camera software stack**: `event_camera_msgs`, `event_camera_codecs`, `event_camera_renderer`, `event_camera_tools`, `dvs_msgs`, `prophesee_event_msgs`
+- **ros-planning**, including:
+  - `navigation_msgs`, `moveit2`, `SLAM_toolbox`, `spatio_temporal_voxel_layer`
+- **ros-simulation**, including:
+  - `webots_ros2`
 - **ros-teleop** tools  
 - **ros-tooling** utilities  
 - **ros-visualization** tools  
 - Core **ros** and **ros2** packages  
 - **ros2_control** framework  
 - **rviz** visualization tool  
-- **moveit2** (with a dedicated README inside the `moveit` folder for testing and debugging)
-- **nav2** (with a dedicated README inside the `ros-planning` folder for testing and debugging)
-- **SLAM_toolbox** ('ros-planning/')
+- **moveit2** (dedicated README inside `moveit/` for testing and debugging)  
+- **nav2** (dedicated README inside `ros-planning/` for testing and debugging)  
+- **SLAM_toolbox** (`ros-planning/`)  
 
 Additionally, this setup includes:  
 - **Gazebo Harmonic** installed via Homebrew  
