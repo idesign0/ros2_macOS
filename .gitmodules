@@ -40,7 +40,7 @@
 	branch = humble
 [submodule "ros-planning/slam_toolbox"]
 	path = ros-planning/slam_toolbox
-	url = https://github.com/idesign0/id_slam_toolbox.git
+	url = https://github.com/SteveMacenski/slam_toolbox.git
 	branch = humble
 [submodule "osrf/osrf_pycommon"]
 	path = osrf/osrf_pycommon
@@ -144,7 +144,7 @@
 	branch = master
 [submodule "ros2_control/ros2_control"]
 	path = ros2_control/ros2_control
-	url = https://github.com/idesign0/id_ros2_control.git
+	url = https://github.com/ros-controls/ros2_control.git
 	branch = humble
 [submodule "ros2_control/ros2_controllers"]
 	path = ros2_control/ros2_controllers
@@ -152,7 +152,7 @@
 	branch = humble
 [submodule "ros2_control/realtime_tools"]
 	path = ros2_control/realtime_tools
-	url = https://github.com/idesign0/id_realtime_tools.git
+	url = https://github.com/ros-controls/realtime_tools.git
 	branch = humble
 [submodule "ros2_control/control_msgs"]
 	path = ros2_control/control_msgs
@@ -280,7 +280,7 @@
 	branch = humble
 [submodule "ros2/rmw_fastrtps"]
 	path = ros2/rmw_fastrtps
-	url = https://github.com/idesign0/id_rmw_fastrtps.git
+	url = https://github.com/ros2/rmw_fastrtps.git
 	branch = humble
 [submodule "ros2/ros2cli_common_extensions"]
 	path = ros2/ros2cli_common_extensions
@@ -428,7 +428,7 @@
 	branch = main
 [submodule "moveit/moveit2"]
 	path = moveit/moveit2
-	url = https://github.com/idesign0/id_moveit2
+	url = https://github.com/moveit/moveit2.git
 	branch = humble
 [submodule "moveit/OctoMap/octomap"]
 	path = moveit/OctoMap/octomap
@@ -448,7 +448,7 @@
 	branch = ros2
 [submodule "moveit/moveit_task_constructor"]
 	path = moveit/moveit_task_constructor
-	url = https://github.com/idesign0/id_moveit_task_constructor.git
+	url = https://github.com/ros-planning/moveit_task_constructor.git
 	branch = humble
 [submodule "moveit/geometric_shapes"]
 	path = moveit/geometric_shapes
@@ -504,7 +504,7 @@
 	branch = 2.6.2-macOS-fix-dhruv
 [submodule "ros-planning/navigation2"]
 	path = ros-planning/navigation2
-	url = https://github.com/idesign0/id_navigation2.git
+	url = https://github.com/ros-navigation/navigation2.git
 	branch = humble
 [submodule "ros-planning/dependencies/vision_opencv"]
 	path = ros-planning/dependencies/vision_opencv
