@@ -1,8 +1,0 @@
-/**
-\mainpage
-\htmlinclude manifest.html
-
-\b rqt_gui provides the main to start an instance of the integrated graphical user interface provided by qt_gui.
-
-The code API of rqt_gui (except the exposed interfaces for plugins) is not stable, so it is not recommended for use in other tools.
-*/

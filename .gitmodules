@@ -629,3 +629,71 @@
 [submodule "ros-simulation/webots/webots_ros2"]
 	path = ros-simulation/webots/webots_ros2
 	url = https://github.com/cyberbotics/webots_ros2.git
+[submodule "ros-visualization/interactive_markers"]
+	path = ros-visualization/interactive_markers
+	url = https://github.com/ros-visualization/interactive_markers.git
+	branch = humble
+[submodule "ros-visualization/python_qt_binding"]
+	path = ros-visualization/python_qt_binding
+	url = https://github.com/ros-visualization/python_qt_binding.git
+	branch = humble
+[submodule "ros-visualization/qt_gui_core"]
+	path = ros-visualization/qt_gui_core
+	url = https://github.com/ros-visualization/qt_gui_core.git
+	branch = humble
+[submodule "ros-visualization/rqt"]
+	path = ros-visualization/rqt
+	url = https://github.com/ros-visualization/rqt.git
+	branch = humble
+[submodule "ros-visualization/rqt_action"]
+	path = ros-visualization/rqt_action
+	url = https://github.com/ros-visualization/rqt_action.git
+	branch = humble
+[submodule "ros-visualization/rqt_bag"]
+	path = ros-visualization/rqt_bag
+	url = https://github.com/ros-visualization/rqt_bag.git
+	branch = humble
+[submodule "ros-visualization/rqt_console"]
+	path = ros-visualization/rqt_console
+	url = https://github.com/ros-visualization/rqt_console.git
+	branch = humble
+[submodule "ros-visualization/rqt_graph"]
+	path = ros-visualization/rqt_graph
+	url = https://github.com/ros-visualization/rqt_graph.git
+	branch = humble
+[submodule "ros-visualization/rqt_msg"]
+	path = ros-visualization/rqt_msg
+	url = https://github.com/ros-visualization/rqt_msg.git
+	branch = humble
+[submodule "ros-visualization/rqt_plot"]
+	path = ros-visualization/rqt_plot
+	url = https://github.com/ros-visualization/rqt_plot.git
+	branch = humble
+[submodule "ros-visualization/rqt_publisher"]
+	path = ros-visualization/rqt_publisher
+	url = https://github.com/ros-visualization/rqt_publisher.git
+	branch = humble
+[submodule "ros-visualization/rqt_py_console"]
+	path = ros-visualization/rqt_py_console
+	url = https://github.com/ros-visualization/rqt_py_console.git
+	branch = humble
+[submodule "ros-visualization/rqt_reconfigure"]
+	path = ros-visualization/rqt_reconfigure
+	url = https://github.com/ros-visualization/rqt_reconfigure.git
+	branch = humble
+[submodule "ros-visualization/rqt_service_caller"]
+	path = ros-visualization/rqt_service_caller
+	url = https://github.com/ros-visualization/rqt_service_caller.git
+	branch = humble
+[submodule "ros-visualization/rqt_shell"]
+	path = ros-visualization/rqt_shell
+	url = https://github.com/ros-visualization/rqt_shell.git
+	branch = humble
+[submodule "ros-visualization/rqt_srv"]
+	path = ros-visualization/rqt_srv
+	url = https://github.com/ros-visualization/rqt_srv.git
+	branch = humble
+[submodule "ros-visualization/rqt_topic"]
+	path = ros-visualization/rqt_topic
+	url = https://github.com/ros-visualization/rqt_topic.git
+	branch = humble
