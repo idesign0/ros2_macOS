@@ -653,3 +653,75 @@
 	path = ament/googletest
 	url = https://github.com/ament/googletest.git
 	branch = kilted
+[submodule "gazebo-release/gz_cmake_vendor"]
+	path = gazebo-release/gz_cmake_vendor
+	url = https://github.com/gazebo-release/gz_cmake_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_math_vendor"]
+	path = gazebo-release/gz_math_vendor
+	url = https://github.com/gazebo-release/gz_math_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_utils_vendor"]
+	path = gazebo-release/gz_utils_vendor
+	url = https://github.com/gazebo-release/gz_utils_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_common_vendor"]
+	path = gazebo-release/gz_common_vendor
+	url = https://github.com/gazebo-release/gz_common_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_fuel_tools_vendor"]
+	path = gazebo-release/gz_fuel_tools_vendor
+	url = https://github.com/gazebo-release/gz_fuel_tools_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_gui_vendor"]
+	path = gazebo-release/gz_gui_vendor
+	url = https://github.com/gazebo-release/gz_gui_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_launch_vendor"]
+	path = gazebo-release/gz_launch_vendor
+	url = https://github.com/gazebo-release/gz_launch_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_msgs_vendor"]
+	path = gazebo-release/gz_msgs_vendor
+	url = https://github.com/gazebo-release/gz_msgs_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_physics_vendor"]
+	path = gazebo-release/gz_physics_vendor
+	url = https://github.com/gazebo-release/gz_physics_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_plugin_vendor"]
+	path = gazebo-release/gz_plugin_vendor
+	url = https://github.com/gazebo-release/gz_plugin_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_rendering_vendor"]
+	path = gazebo-release/gz_rendering_vendor
+	url = https://github.com/gazebo-release/gz_rendering_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_sensors_vendor"]
+	path = gazebo-release/gz_sensors_vendor
+	url = https://github.com/gazebo-release/gz_sensors_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_sim_vendor"]
+	path = gazebo-release/gz_sim_vendor
+	url = https://github.com/gazebo-release/gz_sim_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_tools_vendor"]
+	path = gazebo-release/gz_tools_vendor
+	url = https://github.com/gazebo-release/gz_tools_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_transport_vendor"]
+	path = gazebo-release/gz_transport_vendor
+	url = https://github.com/gazebo-release/gz_transport_vendor.git
+	branch = kilted
+[submodule "gazebo-release/sdformat_vendor"]
+	path = gazebo-release/sdformat_vendor
+	url = https://github.com/gazebo-release/sdformat_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_ogre_next_vendor"]
+	path = gazebo-release/gz_ogre_next_vendor
+	url = https://github.com/gazebo-release/gz_ogre_next_vendor.git
+	branch = kilted
+[submodule "gazebo-release/gz_dartsim_vendor"]
+	path = gazebo-release/gz_dartsim_vendor
+	url = https://github.com/gazebo-release/gz_dartsim_vendor.git
+	branch = rolling
