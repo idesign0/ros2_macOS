@@ -428,7 +428,7 @@
 	branch = main
 [submodule "moveit/moveit2"]
 	path = moveit/moveit2
-	url = https://github.com/moveit/moveit2.git
+	url = https://github.com/idesign0/id_moveit2.git
 	branch = kilted
 [submodule "moveit/OctoMap/octomap"]
 	path = moveit/OctoMap/octomap
@@ -441,7 +441,7 @@
 [submodule "moveit/pantor/ruckig"]
 	path = moveit/pantor/ruckig
 	url = https://github.com/pantor/ruckig.git
-	branch = v0.6.5
+	branch = v0.15.3
 [submodule "moveit/random_numbers"]
 	path = moveit/random_numbers
 	url = https://github.com/moveit/random_numbers.git
@@ -504,7 +504,7 @@
 	branch = 3.2.x
 [submodule "ros-planning/navigation2"]
 	path = ros-planning/navigation2
-	url = https://github.com/ros-navigation/navigation2.git
+	url = https://github.com/idesign0/id_navigation2.git
 	branch = kilted
 [submodule "ros-planning/dependencies/vision_opencv"]
 	path = ros-planning/dependencies/vision_opencv
@@ -589,7 +589,7 @@
 [submodule "ros-drivers/velodyne"]
 	path = ros-drivers/velodyne
 	url = https://github.com/ros-drivers/velodyne.git
-	branch = kilted-devel
+	branch = ros2
 [submodule "ros2_macos_sdk/livox_sdk"]
 	path = ros2_macos_sdk/livox_sdk
 	url = https://github.com/Livox-SDK/Livox-SDK2.git
@@ -629,6 +629,7 @@
 [submodule "ros-simulation/webots/webots_ros2"]
 	path = ros-simulation/webots/webots_ros2
 	url = https://github.com/cyberbotics/webots_ros2.git
+	branch = master
 [submodule "ament/ament_cmake"]
 	path = ament/ament_cmake
 	url = https://github.com/ament/ament_cmake.git
