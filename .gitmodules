@@ -201,7 +201,7 @@
 [submodule "ros2/tinyxml_vendor"]
 	path = ros2/tinyxml_vendor
 	url = https://github.com/ros2/tinyxml_vendor.git
-	branch = kilted
+	branch = rolling
 [submodule "ros2/rcutils"]
 	path = ros2/rcutils
 	url = https://github.com/ros2/rcutils.git
@@ -365,7 +365,7 @@
 [submodule "ros2/python_cmake_module"]
 	path = ros2/python_cmake_module
 	url = https://github.com/ros2/python_cmake_module.git
-	branch = kilted
+	branch = rolling
 [submodule "ros2/ros2_tracing"]
 	path = ros2/ros2_tracing
 	url = https://github.com/ros2/ros2_tracing.git
@@ -449,7 +449,7 @@
 [submodule "moveit/moveit_task_constructor"]
 	path = moveit/moveit_task_constructor
 	url = https://github.com/ros-planning/moveit_task_constructor.git
-	branch = kilted
+	branch = ros2
 [submodule "moveit/geometric_shapes"]
 	path = moveit/geometric_shapes
 	url = https://github.com/moveit/geometric_shapes.git
@@ -469,7 +469,7 @@
 [submodule "moveit/moveit_resources"]
 	path = moveit/moveit_resources
 	url = https://github.com/moveit/moveit_resources.git
-	branch = kilted
+	branch = ros2
 [submodule "moveit/py_binding_tools"]
 	path = moveit/py_binding_tools
 	url = https://github.com/moveit/py_binding_tools.git
@@ -477,7 +477,7 @@
 [submodule "moveit/moveit_msgs"]
 	path = moveit/moveit_msgs
 	url = https://github.com/moveit/moveit_msgs.git
-	branch = kilted
+	branch = ros2
 [submodule "moveit/PickNickRobotics/rviz_visual_tools"]
 	path = moveit/PickNickRobotics/rviz_visual_tools
 	url = https://github.com/PickNikRobotics/rviz_visual_tools
@@ -509,7 +509,7 @@
 [submodule "ros-planning/dependencies/vision_opencv"]
 	path = ros-planning/dependencies/vision_opencv
 	url = https://github.com/idesign0/id_vision_opencv.git
-	branch = kilted
+	branch = rolling
 [submodule "ros-planning/dependencies/angles"]
 	path = ros-planning/dependencies/angles
 	url = https://github.com/ros/angles
@@ -549,23 +549,23 @@
 [submodule "ros-drivers/ur_ros2_driver"]
 	path = ros-drivers/ur_ros2_driver
 	url = https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver
-	branch = kilted
+	branch = main
 [submodule "ros-drivers/ur_msgs"]
 	path = ros-drivers/ur_msgs
 	url = https://github.com/ros-industrial/ur_msgs.git
 	branch = kilted-devel
 [submodule "ros-drivers/franka_ros2"]
 	path = ros-drivers/franka_ros2
-	branch = kilted
+	branch = humble
 	url = https://github.com/frankarobotics/franka_ros2.git
 [submodule "ros-drivers/DynamixelInterfaces/dynamixel_interfaces"]
 	path = ros-drivers/DynamixelInterfaces/dynamixel_interfaces
 	url = https://github.com/ROBOTIS-GIT/dynamixel_interfaces
-	branch = kilted
+	branch = main
 [submodule "ros-drivers/DynamixelInterfaces/dynamixel_hardware_interface"]
 	path = ros-drivers/DynamixelInterfaces/dynamixel_hardware_interface
 	url = https://github.com/ROBOTIS-GIT/dynamixel_hardware_interface
-	branch = kilted
+	branch = main
 [submodule "ros2_macos_sdk/librealsense"]
 	path = ros2_macos_sdk/librealsense
 	url = https://github.com/IntelRealSense/librealsense.git
@@ -601,15 +601,15 @@
 [submodule "ros-perception/ros-event-camera/event_camera_msgs"]
 	path = ros-perception/ros-event-camera/event_camera_msgs
 	url = https://github.com/ros-event-camera/event_camera_msgs.git
-	branch = kilted
+	branch = 1.1.6
 [submodule "ros-perception/ros-event-camera/event_camera_codecs"]
 	path = ros-perception/ros-event-camera/event_camera_codecs
 	url = https://github.com/ros-event-camera/event_camera_codecs.git
-	branch = kilted
+	branch = master
 [submodule "ros-perception/ros-event-camera/event_camera_renderer"]
 	path = ros-perception/ros-event-camera/event_camera_renderer
 	url = https://github.com/idesign0/event_camera_renderer.git
-	branch = kilted
+	branch = 1.1.6
 [submodule "ros-perception/ros-event-camera/event_camera_tools"]
 	path = ros-perception/ros-event-camera/event_camera_tools
 	url = https://github.com/idesign0/event_camera_tools.git
