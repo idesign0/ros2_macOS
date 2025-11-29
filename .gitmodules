@@ -10,10 +10,6 @@
 	path = ros-planning/dependencies/ceres-solver
 	url = https://github.com/idesign0/id_ceres-solver-main
 	branch = master
-[submodule "ros-planning/dependencies/BehaviorTree.ROS2"]
-	path = ros-planning/dependencies/BehaviorTree.ROS2
-	url = https://github.com/idesign0/id_BehaviorTree.ROS2.git
-	branch = humble
 [submodule "ros-planning/dependencies/robot_localization"]
 	path = ros-planning/dependencies/robot_localization
 	url = https://github.com/cra-ros-pkg/robot_localization.git
@@ -30,10 +26,6 @@
 	path = ros-planning/dependencies/geographiclib
 	url = https://github.com/geographiclib/geographiclib.git
 	branch = main
-[submodule "ros-planning/dependencies/BehaviorTree.CPP"]
-	path = ros-planning/dependencies/BehaviorTree.CPP
-	url = https://github.com/BehaviorTree/BehaviorTree.CPP.git
-	branch = ros2-3.1.1
 [submodule "ros-planning/navigation_msgs"]
 	path = ros-planning/navigation_msgs
 	url = https://github.com/ros-planning/navigation_msgs.git
@@ -410,10 +402,6 @@
 	path = gzsim/ros_gz
 	url = https://github.com/gazebosim/ros_gz.git
 	branch = kilted
-[submodule "gzsim/gz-transport"]
-	path = gzsim/gz-transport
-	url = https://github.com/gazebosim/gz-transport.git
-	branch = gz-transport14
 [submodule "gzsim/gps_umd"]
 	path = gzsim/gps_umd
 	url = https://github.com/swri-robotics/gps_umd.git
@@ -722,10 +710,6 @@
 	path = gazebo-release/gz_ogre_next_vendor
 	url = https://github.com/gazebo-release/gz_ogre_next_vendor.git
 	branch = kilted
-[submodule "gazebo-release/gz_dartsim_vendor"]
-	path = gazebo-release/gz_dartsim_vendor
-	url = https://github.com/gazebo-release/gz_dartsim_vendor.git
-	branch = rolling
 [submodule "gazebo-release/dependencies/protobuf"]
 	path = gazebo-release/dependencies/protobuf
 	url = https://github.com/protocolbuffers/protobuf.git
@@ -801,4 +785,12 @@
 [submodule "ros-visualization/tango_icons_vendor"]
 	path = ros-visualization/tango_icons_vendor
 	url = https://github.com/ros-visualization/tango_icons_vendor.git
+	branch = kilted
+[submodule "ros2/rosidl_core"]
+	path = ros2/rosidl_core
+	url = https://github.com/ros2/rosidl_core
+	branch = kilted
+[submodule "ros2/rosidl_dynamic_typesupport"]
+	path = ros2/rosidl_dynamic_typesupport
+	url = https://github.com/ros2/rosidl_dynamic_typesupport.git
 	branch = kilted
