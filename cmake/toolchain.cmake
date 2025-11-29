@@ -87,6 +87,12 @@ if (NOT TARGET OpenMP::OpenMP_CXX)
     )
 endif()
 
+# Add explicit macOS Frameworks for OpenGL/CGL/Cocoa symbols (Fixes rviz_ogre_vendor on ARM64)
+# The symbols like _CGLDescribeRenderer and _CGLLockContext are in these frameworks.
+set(CMAKE_EXE_LINKER_FLAGS    "${CMAKE_EXE_LINKER_FLAGS} -framework OpenGL -framework Cocoa" CACHE STRING "Linker flags for Executables" FORCE)
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -framework OpenGL -framework Cocoa" CACHE STRING "Linker flags for Shared Libraries" FORCE)
+set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -framework OpenGL -framework Cocoa" CACHE STRING "Linker flags for Modules" FORCE)
+
 # macOS provides LAPACK and BLAS inside Accelerate framework
 set(BLAS_LIBRARIES "-framework Accelerate" CACHE STRING "BLAS libraries")
 set(LAPACK_LIBRARIES "-framework Accelerate" CACHE STRING "LAPACK libraries")
@@ -101,7 +107,7 @@ set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
 
 # Asio from Boost
 set(THIRDPARTY_Asio ON CACHE BOOL "Allow Thirdparty Asio" FORCE)
-set(Asio_INCLUDE_DIR "$ENV{HOME}/humble-ros2/src/ros-commondep/asio-1.10.8/asio/include" CACHE PATH "Asio include directory" FORCE)
+set(Asio_INCLUDE_DIR "$ENV{HOME}/kilted-ros2/src/ros-commondep/asio-1.10.8/asio/include" CACHE PATH "Asio include directory" FORCE)
 
 # Ensure Boost can be found without searching system paths first
 set(CMAKE_PREFIX_PATH "${BOOST_ROOT};${CMAKE_PREFIX_PATH}")
