@@ -522,10 +522,6 @@
 	path = ros-planning/dependencies/PickNickRobotics/cpp_polyfills
 	url = https://github.com/PickNikRobotics/cpp_polyfills.git
 	branch = main
-[submodule "ros-commondep/asio-1.10.8"]
-	path = ros-commondep/asio-1.10.8
-	url = https://github.com/chriskohlhoff/asio.git
-	branch = asio-1-10-branch
 [submodule "ros2_macos_sdk/libfranka"]
 	path = ros2_macos_sdk/libfranka
 	url = https://github.com/idesign0/id_libfranka.git
