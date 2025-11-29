@@ -40,7 +40,7 @@
 	branch = kilted
 [submodule "ros-planning/slam_toolbox"]
 	path = ros-planning/slam_toolbox
-	url = https://github.com/SteveMacenski/slam_toolbox.git
+	url = https://github.com/idesign0/id_slam_toolbox.git
 	branch = kilted
 [submodule "osrf/osrf_pycommon"]
 	path = osrf/osrf_pycommon
@@ -725,3 +725,79 @@
 	path = gazebo-release/gz_dartsim_vendor
 	url = https://github.com/gazebo-release/gz_dartsim_vendor.git
 	branch = rolling
+[submodule "gazebo-release/dependencies/protobuf"]
+	path = gazebo-release/dependencies/protobuf
+	url = https://github.com/protocolbuffers/protobuf.git
+	branch = v32.0
+[submodule "ros-visualization/rqt_plot"]
+	path = ros-visualization/rqt_plot
+	url = https://github.com/ros-visualization/rqt_plot.git
+	branch = kilted
+[submodule "ros-visualization/rqt_publisher"]
+	path = ros-visualization/rqt_publisher
+	url = https://github.com/ros-visualization/rqt_publisher.git
+	branch = kilted
+[submodule "ros-visualization/interactive_markers"]
+	path = ros-visualization/interactive_markers
+	url = https://github.com/ros-visualization/interactive_markers.git
+	branch = kilted
+[submodule "ros-visualization/python_qt_binding"]
+	path = ros-visualization/python_qt_binding
+	url = https://github.com/ros-visualization/python_qt_binding.git
+	branch = kilted
+[submodule "ros-visualization/qt_gui_core"]
+	path = ros-visualization/qt_gui_core
+	url = https://github.com/ros-visualization/qt_gui_core.git
+	branch = kilted
+[submodule "ros-visualization/rqt"]
+	path = ros-visualization/rqt
+	url = https://github.com/ros-visualization/rqt.git
+	branch = kilted
+[submodule "ros-visualization/rqt_action"]
+	path = ros-visualization/rqt_action
+	url = https://github.com/ros-visualization/rqt_action.git
+	branch = kilted
+[submodule "ros-visualization/rqt_bag"]
+	path = ros-visualization/rqt_bag
+	url = https://github.com/ros-visualization/rqt_bag.git
+	branch = kilted
+[submodule "ros-visualization/rqt_console"]
+	path = ros-visualization/rqt_console
+	url = https://github.com/ros-visualization/rqt_console.git
+	branch = kilted
+[submodule "ros-visualization/rqt_graph"]
+	path = ros-visualization/rqt_graph
+	url = https://github.com/ros-visualization/rqt_graph.git
+	branch = kilted
+[submodule "ros-visualization/rqt_msg"]
+	path = ros-visualization/rqt_msg
+	url = https://github.com/ros-visualization/rqt_msg.git
+	branch = kilted
+[submodule "ros-visualization/rqt_py_console"]
+	path = ros-visualization/rqt_py_console
+	url = https://github.com/ros-visualization/rqt_py_console.git
+	branch = kilted
+[submodule "ros-visualization/rqt_reconfigure"]
+	path = ros-visualization/rqt_reconfigure
+	url = https://github.com/ros-visualization/rqt_reconfigure.git
+	branch = kilted
+[submodule "ros-visualization/rqt_service_caller"]
+	path = ros-visualization/rqt_service_caller
+	url = https://github.com/ros-visualization/rqt_service_caller.git
+	branch = kilted
+[submodule "ros-visualization/rqt_shell"]
+	path = ros-visualization/rqt_shell
+	url = https://github.com/ros-visualization/rqt_shell.git
+	branch = kilted
+[submodule "ros-visualization/rqt_srv"]
+	path = ros-visualization/rqt_srv
+	url = https://github.com/ros-visualization/rqt_srv.git
+	branch = kilted
+[submodule "ros-visualization/rqt_topic"]
+	path = ros-visualization/rqt_topic
+	url = https://github.com/ros-visualization/rqt_topic.git
+	branch = kilted
+[submodule "ros-visualization/tango_icons_vendor"]
+	path = ros-visualization/tango_icons_vendor
+	url = https://github.com/ros-visualization/tango_icons_vendor.git
+	branch = kilted
