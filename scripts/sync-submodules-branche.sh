@@ -4,8 +4,11 @@ set -o pipefail
 
 MISSING_BRANCHES=()
 
-# --- 0. Determine main repo root ---
+# --- 0. Determine main repo root and set up temporary file ---
 MAIN_ROOT=$(git rev-parse --show-toplevel)
+TEMP_FILE=$(mktemp)
+# Capture submodule list to a temporary file
+git config -f "$MAIN_ROOT/.gitmodules" --get-regexp path > "$TEMP_FILE"
 
 # --- 1. Initialization ---
 echo "Initializing and updating submodules..."
@@ -15,6 +18,8 @@ echo "-------------------------------------------------"
 # ----------------------------
 # 2. Loop through submodules (macOS-safe)
 # ----------------------------
+# Input redirection from a file guarantees the while loop runs in the parent shell, 
+# ensuring MISSING_BRANCHES array updates are persistent.
 while read -r key path; do
     branch=$(git config -f "$MAIN_ROOT/.gitmodules" submodule."$path".branch)
 
@@ -29,10 +34,12 @@ while read -r key path; do
         continue
     fi
 
+    # *** FIX 1: Added 'true' to ensure set -e doesn't exit on pushd failure ***
     pushd "$path" > /dev/null || { 
         echo "⚠️  Cannot enter '$path'"; 
         MISSING_BRANCHES+=("$path ($branch)"); 
         continue; 
+        true; 
     }
 
     # --- Branch Check ---
@@ -80,8 +87,11 @@ while read -r key path; do
 
     popd > /dev/null
 
-# Safe process substitution to loop over submodules
-done < <(git config -f "$MAIN_ROOT/.gitmodules" --get-regexp path)
+# *** FIX 2: Read from the temporary file ***
+done < "$TEMP_FILE"
+
+# Clean up the temporary file
+rm -f "$TEMP_FILE"
 
 # ----------------------------
 # 3. Summary
