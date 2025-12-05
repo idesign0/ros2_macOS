@@ -136,7 +136,7 @@
 	branch = master
 [submodule "ros2_control/ros2_control"]
 	path = ros2_control/ros2_control
-	url = https://github.com/ros-controls/ros2_control.git
+	url = https://github.com/idesign0/id_ros2_control.git
 	branch = kilted
 [submodule "ros2_control/ros2_controllers"]
 	path = ros2_control/ros2_controllers
@@ -241,10 +241,6 @@
 [submodule "ros2/rosidl_typesupport_fastrtps"]
 	path = ros2/rosidl_typesupport_fastrtps
 	url = https://github.com/ros2/rosidl_typesupport_fastrtps.git
-	branch = kilted
-[submodule "ros2/orocos_kdl_vendor"]
-	path = ros2/orocos_kdl_vendor
-	url = https://github.com/ros2/orocos_kdl_vendor.git
 	branch = kilted
 [submodule "ros2/rosidl_defaults"]
 	path = ros2/rosidl_defaults
@@ -366,10 +362,6 @@
 	path = ros2/rosidl_runtime_py
 	url = https://github.com/ros2/rosidl_runtime_py.git
 	branch = kilted
-[submodule "ros2/pybind11_vendor"]
-	path = ros2/pybind11_vendor
-	url = https://github.com/ros2/pybind11_vendor.git
-	branch = kilted
 [submodule "ros2/libyaml_vendor"]
 	path = ros2/libyaml_vendor
 	url = https://github.com/ros2/libyaml_vendor.git
@@ -408,7 +400,7 @@
 	branch = ros2-devel
 [submodule "gzsim/gz_ros2_control"]
 	path = gzsim/gz_ros2_control
-	url = https://github.com/ros-controls/gz_ros2_control.git
+	url = https://github.com/idesign0/id_gz_ros2_control.git
 	branch = kilted
 [submodule "gzsim/actuator_msgs"]
 	path = gzsim/actuator_msgs
@@ -436,7 +428,7 @@
 	branch = ros2
 [submodule "moveit/moveit_task_constructor"]
 	path = moveit/moveit_task_constructor
-	url = https://github.com/ros-planning/moveit_task_constructor.git
+	url = https://github.com/idesign0/id_moveit_task_constructor.git
 	branch = ros2
 [submodule "moveit/geometric_shapes"]
 	path = moveit/geometric_shapes
@@ -565,7 +557,7 @@
 [submodule "ros-perception/perception_pcl"]
 	path = ros-perception/perception_pcl
 	url = https://github.com/ros-perception/perception_pcl.git
-	branch = kilted
+	branch = ros2
 [submodule "ros-perception/pcl_msgs"]
 	path = ros-perception/pcl_msgs
 	url = https://github.com/ros-perception/pcl_msgs.git
@@ -794,3 +786,46 @@
 	path = gazebo-release/gz_dartsim_vendor
 	url = https://github.com/gazebo-release/gz_dartsim_vendor.git
 	branch = rolling
+[submodule "ros2/rosidl_dynamic_typesupport_fastrtps"]
+	path = ros2/rosidl_dynamic_typesupport_fastrtps
+	url = https://github.com/ros2/rosidl_dynamic_typesupport_fastrtps
+	branch = kilted
+[submodule "ros2_control/dependencies/pal_statistics"]
+	path = ros2_control/dependencies/pal_statistics
+	url = https://github.com/pal-robotics/pal_statistics.git
+	branch = ros2-devel
+[submodule "ros-perception/point_cloud_transport"]
+	path = ros-perception/point_cloud_transport
+	url = https://github.com/ros-perception/point_cloud_transport.git
+	branch = kilted
+[submodule "ros-simulation/simulation_interfaces"]
+	path = ros-simulation/simulation_interfaces
+	url = https://github.com/ros-simulation/simulation_interfaces.git
+	branch = kilted
+[submodule "ros-planning/dependencies/BehaviorTree.CPP"]
+	path = ros-planning/dependencies/BehaviorTree.CPP
+	url = https://github.com/BehaviorTree/BehaviorTree.CPP.git
+[submodule "ros2/orocos_kdl_vendor"]
+	path = ros2/orocos_kdl_vendor
+	url = https://github.com/ros2/orocos_kdl_vendor.git
+	branch = kilted
+[submodule "ros2/pybind11_vendor"]
+	path = ros2/pybind11_vendor
+	url = https://github.com/ros2/pybind11_vendor.git
+	branch = kilted
+[submodule "moveit/dependencies/osqp"]
+	path = moveit/dependencies/osqp
+	url = https://github.com/osqp/osqp.git
+	branch = v0.6.0
+[submodule "moveit/dependencies/ros-industrial/stomp"]
+	path = moveit/dependencies/ros-industrial/stomp
+	url = https://github.com/ros-industrial/stomp.git
+	branch = main
+[submodule "moveit/dependencies/ros-industrial/ros_industrial_cmake_boilerplate"]
+	path = moveit/dependencies/ros-industrial/ros_industrial_cmake_boilerplate
+	url = https://github.com/ros-industrial/ros_industrial_cmake_boilerplate.git
+	branch = master
+[submodule "ros2/pybind11"]
+	path = ros2/pybind11
+	url = https://github.com/pybind/pybind11
+	branch = v2.11
