@@ -701,7 +701,7 @@
 [submodule "gazebo-release/dependencies/protobuf"]
 	path = gazebo-release/dependencies/protobuf
 	url = https://github.com/protocolbuffers/protobuf.git
-	branch = v32.0
+	branch = v32.1
 [submodule "ros-visualization/rqt_plot"]
 	path = ros-visualization/rqt_plot
 	url = https://github.com/ros-visualization/rqt_plot.git

@@ -15,15 +15,24 @@ set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 set(ROS_WORKSPACE_INSTALL "$ENV{HOME}/kilted-ros2/install")
 list(APPEND CMAKE_PREFIX_PATH "${ROS_WORKSPACE_INSTALL}")
 
+# --- Force System Python 3.11 ---
+set(PYTHON_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 interpreter" FORCE)
+set(Python3_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 executable" FORCE)
+set(Python3_ROOT_DIR "/Library/Frameworks/Python.framework/Versions/3.11" CACHE PATH "Python3 root directory" FORCE)
+
+# Optional: if you want CMake to locate headers & libs too
+set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib" CACHE FILEPATH "Python 3.11 library" FORCE)
+set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
+
 # Ceres
 set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
 
 # --- yaml-cpp from ROS 2 kilted install ---
+set(yaml-cpp_DIR "$ENV{HOME}/kilted-ros2/install/yaml_cpp_vendor/opt/yaml_cpp_vendor/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config dir")
 set(YAML_CPP_INCLUDE_DIRS
     "$ENV{HOME}/kilted-ros2/install/yaml_cpp_vendor/opt/yaml_cpp_vendor/include"
     CACHE PATH "yaml-cpp include dir")
-
 set(YAML_CPP_LIBRARIES
     "$ENV{HOME}/kilted-ros2/install/yaml_cpp_vendor/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib"
     CACHE FILEPATH "yaml-cpp library")
