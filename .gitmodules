@@ -716,7 +716,7 @@
 	branch = kilted
 [submodule "ros-visualization/python_qt_binding"]
 	path = ros-visualization/python_qt_binding
-	url = https://github.com/ros-visualization/python_qt_binding.git
+	url = https://github.com/idesign0/id_python_qt_binding.git
 	branch = kilted
 [submodule "ros-visualization/qt_gui_core"]
 	path = ros-visualization/qt_gui_core
