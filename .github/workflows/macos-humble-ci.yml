@@ -25,6 +25,11 @@ jobs:
         git submodule sync --recursive
         git submodule update --init --recursive
 
+    - name: Sync submodules branches
+      run: |
+        chmod +x scripts/sync-submodules-branch.sh
+        ./scripts/sync-submodules-branch.sh
+
     # --------------------------------------------------
     # Homebrew
     # --------------------------------------------------
