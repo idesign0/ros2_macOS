@@ -2,7 +2,7 @@ name: macOS ROS 2 Humble CI (Apple Silicon)
 
 on:
   push:
-    branches: [ kilted, humble ]
+    branches: [humble]
   pull_request:
   workflow_dispatch:
 
