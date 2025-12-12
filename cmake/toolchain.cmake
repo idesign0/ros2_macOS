@@ -24,18 +24,75 @@ set(Python3_ROOT_DIR "/Library/Frameworks/Python.framework/Versions/3.11" CACHE 
 set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib" CACHE FILEPATH "Python 3.11 library" FORCE)
 set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
 
+# Boost
+# Path to your custom Boost installation
+set(BOOST_ROOT "$ENV{HOME}/kilted-ros2/src/ros-commondep/boost-1.89" CACHE PATH "Boost root")
+set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
+set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
+
+# Asio from Boost
+set(THIRDPARTY_Asio ON CACHE BOOL "Allow Thirdparty Asio" FORCE)
+
+# Ensure Boost can be found without searching system paths first
+set(CMAKE_PREFIX_PATH "${BOOST_ROOT};${CMAKE_PREFIX_PATH}")
+
+# Force modern CMake Boost behavior
+set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Don't search system paths for Boost")
+set(Boost_NO_BOOST_CMAKE OFF CACHE BOOL "Allow BoostConfig.cmake if present")
+
+# Make sure CMake uses your Boost include & lib paths
+set(Boost_INCLUDE_DIRS "${BOOST_INCLUDEDIR}" CACHE PATH "Boost include dirs" FORCE)
+set(Boost_LIBRARY_DIRS "${BOOST_LIBRARYDIR}" CACHE PATH "Boost library dir" FORCE)
+
+# Force include + lib dirs globally
+include_directories(SYSTEM ${BOOST_INCLUDEDIR})
+link_directories(${BOOST_LIBRARYDIR})
+
+# Globally enable deprecated Boost Timer API
+add_definitions(-DBOOST_TIMER_ENABLE_DEPRECATED)
+
+# Python-specific paths
+set(Boost_PYTHON_LIBRARY "${BOOST_LIBRARYDIR}/libboost_python311.dylib" CACHE FILEPATH "Boost Python library")
+set(Boost_PYTHON_INCLUDE_DIR "${BOOST_INCLUDEDIR}" CACHE PATH "Boost Python include dir")
+
+# Optional: force CMake to find Boost in these directories
+set(CMAKE_PREFIX_PATH "${BOOST_ROOT}/lib/cmake/Boost-1.89.0;${CMAKE_PREFIX_PATH}" CACHE PATH "Boost CMake path")
+
+# --- RPATH settings for macOS ---
+set(CMAKE_MACOSX_RPATH ON)
+set(CMAKE_SKIP_RPATH FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# Base rpath: relative to executable for merged install
+set(BASE_RPATH "@loader_path/../lib")
+
+# Append your custom Boost library path
+list(APPEND BASE_RPATH "${BOOST_LIBRARYDIR}")
+
+# Apply to build and install
+set(CMAKE_BUILD_RPATH "${BASE_RPATH}")
+set(CMAKE_INSTALL_RPATH "${BASE_RPATH}")
+
 # Ceres
 set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
 
-# --- yaml-cpp from ROS 2 kilted install ---
-set(yaml-cpp_DIR "$ENV{HOME}/kilted-ros2/install/yaml_cpp_vendor/opt/yaml_cpp_vendor/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config dir")
+# --- yaml-cpp from Kilted ROS 2 (opt/ vendor install) ---
+set(yaml-cpp_DIR
+    "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/lib/cmake/yaml-cpp"
+    CACHE PATH "yaml-cpp config directory"
+)
+
 set(YAML_CPP_INCLUDE_DIRS
-    "$ENV{HOME}/kilted-ros2/install/yaml_cpp_vendor/opt/yaml_cpp_vendor/include"
-    CACHE PATH "yaml-cpp include dir")
+    "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/include"
+    CACHE PATH "yaml-cpp include directory"
+)
+
 set(YAML_CPP_LIBRARIES
-    "$ENV{HOME}/kilted-ros2/install/yaml_cpp_vendor/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib"
-    CACHE FILEPATH "yaml-cpp library")
+    "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib"
+    CACHE FILEPATH "yaml-cpp library"
+)
 
 # Use the paths
 include_directories(${YAML_CPP_INCLUDE_DIRS})
@@ -126,39 +183,7 @@ set(LAPACK_LIBRARIES "-framework Accelerate" CACHE STRING "LAPACK libraries")
 
 # Paths related to dependencies used at build time (absolute or relative)
 
-# Boost
-# Path to your custom Boost installation
-set(BOOST_ROOT "$ENV{HOME}/kilted-ros2/src/ros-commondep/boost-1.89" CACHE PATH "Boost root")
-set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
-set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
 
-# Asio from Boost
-set(THIRDPARTY_Asio ON CACHE BOOL "Allow Thirdparty Asio" FORCE)
-
-# Ensure Boost can be found without searching system paths first
-set(CMAKE_PREFIX_PATH "${BOOST_ROOT};${CMAKE_PREFIX_PATH}")
-
-# Force modern CMake Boost behavior
-set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Don't search system paths for Boost")
-set(Boost_NO_BOOST_CMAKE OFF CACHE BOOL "Allow BoostConfig.cmake if present")
-
-# Make sure CMake uses your Boost include & lib paths
-set(Boost_INCLUDE_DIRS "${BOOST_INCLUDEDIR}" CACHE PATH "Boost include dirs" FORCE)
-set(Boost_LIBRARY_DIRS "${BOOST_LIBRARYDIR}" CACHE PATH "Boost library dir" FORCE)
-
-# Force include + lib dirs globally
-include_directories(SYSTEM ${BOOST_INCLUDEDIR})
-link_directories(${BOOST_LIBRARYDIR})
-
-# Globally enable deprecated Boost Timer API
-add_definitions(-DBOOST_TIMER_ENABLE_DEPRECATED)
-
-# Python-specific paths
-set(Boost_PYTHON_LIBRARY "${BOOST_LIBRARYDIR}/libboost_python311.dylib" CACHE FILEPATH "Boost Python library")
-set(Boost_PYTHON_INCLUDE_DIR "${BOOST_INCLUDEDIR}" CACHE PATH "Boost Python include dir")
-
-# Optional: force CMake to find Boost in these directories
-set(CMAKE_PREFIX_PATH "${BOOST_ROOT}/lib/cmake/Boost-1.89.0;${CMAKE_PREFIX_PATH}" CACHE PATH "Boost CMake path")
 
 # Google Benchmark paths (Homebrew)
 set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/google-benchmark;${CMAKE_PREFIX_PATH}")
