@@ -626,9 +626,6 @@
 	path = ros-planning/spatio_temporal_voxel_layer
 	url = https://github.com/idesign0/spatio_temporal_voxel_layer.git
 	branch = humble
-[submodule "ros-simulation/webots/webots_ros2"]
-	path = ros-simulation/webots/webots_ros2
-	url = https://github.com/cyberbotics/webots_ros2.git
 [submodule "ros-visualization/interactive_markers"]
 	path = ros-visualization/interactive_markers
 	url = https://github.com/ros-visualization/interactive_markers.git
@@ -665,14 +662,6 @@
 	path = ros-visualization/rqt_msg
 	url = https://github.com/ros-visualization/rqt_msg.git
 	branch = humble
-[submodule "ros-visualization/rqt_plot"]
-	path = ros-visualization/rqt_plot
-	url = https://github.com/ros-visualization/rqt_plot.git
-	branch = humble
-[submodule "ros-visualization/rqt_publisher"]
-	path = ros-visualization/rqt_publisher
-	url = https://github.com/ros-visualization/rqt_publisher.git
-	branch = humble
 [submodule "ros-visualization/rqt_py_console"]
 	path = ros-visualization/rqt_py_console
 	url = https://github.com/ros-visualization/rqt_py_console.git
@@ -696,4 +685,16 @@
 [submodule "ros-visualization/rqt_topic"]
 	path = ros-visualization/rqt_topic
 	url = https://github.com/ros-visualization/rqt_topic.git
+	branch = humble
+[submodule "ros-visualization/rqt_plot"]
+	path = ros-visualization/rqt_plot
+	url = https://github.com/ros-visualization/rqt_plot.git
+	branch = humble
+[submodule "ros-visualization/rqt_publisher"]
+	path = ros-visualization/rqt_publisher
+	url = https://github.com/ros-visualization/rqt_publisher.git
+	branch = humble
+[submodule "ros-simulation/webots/webots_ros2"]
+	path = ros-simulation/webots/webots_ros2
+	url = https://github.com/cyberbotics/webots_ros2.git
 	branch = humble
