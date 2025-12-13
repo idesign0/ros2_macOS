@@ -255,6 +255,14 @@ Install Gazebo Harmonic using Homebrew by running:
 brew tap osrf/simulation
 brew install gz-harmonic
 ```
+> ⚠️ **Note (Xcode compatibility)**  
+> Some users have reported installation or build errors when installing **Gazebo Harmonic** with **Xcode 16.2**, typically due to missing or incompatible Metal / rendering toolchain components.
+>  
+> **Workaround:**  
+> - Install and build `gz-harmonic` using the **latest available Xcode**.  
+> - After Gazebo is installed successfully, you can **switch back to Xcode 16.2** for building and running **ROS 2**.
+>  
+> This is not ideal; I will try to make the entire setup work cleanly with the latest Xcode in a future update.
 
 ### 2. 🔨 Build
 ```bash
