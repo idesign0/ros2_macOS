@@ -138,7 +138,6 @@ jobs:
       shell: bash
       run: |
         set -e
-        source venv/bin/activate
         export MY_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
 
         colcon build \
