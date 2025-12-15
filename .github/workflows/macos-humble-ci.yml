@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: macos-14
+    env:
+      CI_BUILD: TRUE
     timeout-minutes: 360
 
     steps:
@@ -48,15 +50,44 @@ jobs:
     # --------------------------------------------------
     # Homebrew
     # --------------------------------------------------
+    # --------------------------------------------------
+    # Cache Homebrew Prefix
+    # --------------------------------------------------
+    - name: Cache Homebrew directories
+      uses: actions/cache@v4
+      id: cache-brew
+      with:
+        # Cache the entire Homebrew installation prefix
+        path: /opt/homebrew
+        
+        # Key based on OS, a version identifier (v1), and a hash of your Homebrew installation script.
+        # If install_brew_packages.sh changes (e.g., package versions updated), the cache is invalidated.
+        key: ${{ runner.os }}-brew-v1-${{ hashFiles('brew-packages/install_brew_packages.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-brew-v1-
+
+    # --------------------------------------------------
+    # Homebrew: Conditional Install
+    # --------------------------------------------------
+    # We only run the brew update/install steps if the cache was NOT a hit.
     - name: Update Homebrew
+      if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
         brew update
-        brew install graphviz
+        brew install graphviz 
 
     - name: Install Homebrew packages
+      if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
         chmod +x brew-packages/install_brew_packages.sh
+        # This script runs only when the cache key is invalid (i.e., new packages or versions)
         ./brew-packages/install_brew_packages.sh
+
+    - name: Use Cached Homebrew (if hit)
+      if: steps.cache-brew.outputs.cache-hit == 'true'
+      run: |
+        echo "Homebrew cache hit. Skipping installation steps."
+        echo "/opt/homebrew/bin" >> $GITHUB_PATH
 
     # --------------------------------------------------
     # Python 3.11 (SYSTEM Python, NOT Homebrew)
