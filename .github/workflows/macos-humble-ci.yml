@@ -74,7 +74,7 @@ jobs:
       if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
         brew update
-        brew install graphviz 
+        brew install graphviz eigen@3
 
     - name: Install Homebrew packages
       if: steps.cache-brew.outputs.cache-hit != 'true'
@@ -88,6 +88,24 @@ jobs:
       run: |
         echo "Homebrew cache hit. Skipping installation steps."
         echo "/opt/homebrew/bin" >> $GITHUB_PATH
+    
+    # --------------------------------------------------
+    # Homebrew: Unlink packages we do NOT want picked up
+    # --------------------------------------------------
+    - name: Unlink unwanted Homebrew packages
+      run: |
+        set +e
+
+        echo "Unlinking Homebrew packages to avoid accidental usage..."
+
+        brew unlink boost || true
+        brew unlink boost-python3 || true
+        brew unlink xtensor || true
+        brew unlink xdm || true
+        brew unlink xtl || true
+        brew unlink qt || true
+
+        echo "Homebrew unlink step completed."
 
     # --------------------------------------------------
     # Python 3.11 (SYSTEM Python, NOT Homebrew)

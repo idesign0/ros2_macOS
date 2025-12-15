@@ -726,3 +726,7 @@
 	path = ament/uncrustify_vendor
 	url = https://github.com/ament/uncrustify_vendor.git
 	branch = humble
+[submodule "gzsim/gz-cmake"]
+	path = gzsim/gz-cmake
+	url = https://github.com/gazebosim/gz-cmake.git
+	branch = gz-cmake4
