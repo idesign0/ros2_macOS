@@ -47,7 +47,9 @@ jobs:
     # Homebrew
     # --------------------------------------------------
     - name: Update Homebrew
-      run: brew update
+      run: |
+        brew update
+        brew install graphviz
 
     - name: Install Homebrew packages
       run: |
