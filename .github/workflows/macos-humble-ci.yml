@@ -56,6 +56,23 @@ jobs:
         chmod +x brew-packages/install_brew_packages.sh
         ./brew-packages/install_brew_packages.sh
 
+    - name: Unlink Homebrew Python and other conflicting packages
+      run: |
+        echo "Unlinking all Homebrew Python versions..."
+        # Find all installed python@* packages and unlink them
+        for pkg in $(brew list --formula | grep "^python@"); do
+          echo "Unlinking $pkg"
+          brew unlink $pkg || true # '|| true' allows the workflow to continue if a package is not linked
+        done
+        
+        echo "Unlinking specific conflicting packages..."
+        brew unlink boost || true
+        brew unlink xtensor || true
+        brew unlink xdm || true
+        brew unlink xtl || true
+        brew unlink qt || true
+        brew unlink boost-python3 || true
+
     # --------------------------------------------------
     # Python 3.11
     # --------------------------------------------------
