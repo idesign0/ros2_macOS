@@ -809,10 +809,6 @@
 	path = ros2/orocos_kdl_vendor
 	url = https://github.com/ros2/orocos_kdl_vendor.git
 	branch = kilted
-[submodule "ros2/pybind11_vendor"]
-	path = ros2/pybind11_vendor
-	url = https://github.com/ros2/pybind11_vendor.git
-	branch = kilted
 [submodule "moveit/dependencies/osqp"]
 	path = moveit/dependencies/osqp
 	url = https://github.com/osqp/osqp.git
@@ -825,7 +821,3 @@
 	path = moveit/dependencies/ros-industrial/ros_industrial_cmake_boilerplate
 	url = https://github.com/ros-industrial/ros_industrial_cmake_boilerplate.git
 	branch = master
-[submodule "ros2/pybind11"]
-	path = ros2/pybind11
-	url = https://github.com/pybind/pybind11
-	branch = v2.11

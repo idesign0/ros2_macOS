@@ -317,3 +317,6 @@ set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${GLOG_LIBRARY}")
 set(PCL_CONVERSIONS_INCLUDE_DIR "$ENV{HOME}/kilted-ros2/src/ros-perception/perception_pcl/pcl_conversions/include")
 # Export for downstream packages
 set(pcl_conversions_INCLUDE_DIRS "${PCL_CONVERSIONS_INCLUDE_DIR}" CACHE PATH "PCL Conversions include dirs" FORCE)
+
+# --- pybind11 vendor package ---
+set(pybind11_DIR "$ENV{HOME}/kilted-ros2/install/opt/pybind11_vendor/share/cmake/pybind11" CACHE PATH "Path to pybind11_vendor CMake config" FORCE)
