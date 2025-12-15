@@ -33,7 +33,7 @@
 [submodule "ros-planning/dependencies/BehaviorTree.CPP"]
 	path = ros-planning/dependencies/BehaviorTree.CPP
 	url = https://github.com/BehaviorTree/BehaviorTree.CPP.git
-	branch = ros2-3.1.1
+	branch = master
 [submodule "ros-planning/navigation_msgs"]
 	path = ros-planning/navigation_msgs
 	url = https://github.com/ros-planning/navigation_msgs.git
