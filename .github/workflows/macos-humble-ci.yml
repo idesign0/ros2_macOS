@@ -27,8 +27,8 @@ jobs:
 
     - name: Sync submodules branches
       run: |
-        chmod +x scripts/sync-submodules-branch.sh
-        ./scripts/sync-submodules-branch.sh
+        chmod +x scripts/sync-submodules-branches.sh
+        ./scripts/sync-submodules-branches.sh
 
     # --------------------------------------------------
     # Homebrew

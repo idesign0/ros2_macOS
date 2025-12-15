@@ -1,6 +1,7 @@
 #!/bin/bash
 
-INPUT_FILE="matched_packages.txt"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INPUT_FILE="$SCRIPT_DIR/matched_packages.txt"
 
 if [[ ! -f $INPUT_FILE ]]; then
   echo "File '$INPUT_FILE' not found!"
