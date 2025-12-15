@@ -698,3 +698,31 @@
 	path = ros-simulation/webots/webots_ros2
 	url = https://github.com/cyberbotics/webots_ros2.git
 	branch = humble
+[submodule "ament/ament_cmake"]
+	path = ament/ament_cmake
+	url = https://github.com/ament/ament_cmake.git
+	branch = humble
+[submodule "ament/ament_index"]
+	path = ament/ament_index
+	url = https://github.com/ament/ament_index.git
+	branch = humble
+[submodule "ament/ament_lint"]
+	path = ament/ament_lint
+	url = https://github.com/ament/ament_lint.git
+	branch = humble
+[submodule "ament/ament_package"]
+	path = ament/ament_package
+	url = https://github.com/ament/ament_package.git
+	branch = humble
+[submodule "ament/google_benchmark_vendor"]
+	path = ament/google_benchmark_vendor
+	url = https://github.com/ament/google_benchmark_vendor.git
+	branch = humble
+[submodule "ament/googletest"]
+	path = ament/googletest
+	url = https://github.com/ament/googletest.git
+	branch = humble
+[submodule "ament/uncrustify_vendor"]
+	path = ament/uncrustify_vendor
+	url = https://github.com/ament/uncrustify_vendor.git
+	branch = humble
