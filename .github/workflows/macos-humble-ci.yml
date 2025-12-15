@@ -20,10 +20,25 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Sync & update submodules
-      run: |
-        git submodule sync --recursive
-        git submodule update --init --recursive
+    - name: Cache all submodules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ros2/**/*
+          ros-planning/**/*
+          moveit/**/*
+          gazebo-release/**/*
+          ros-visualization/**/*
+          ros-drivers/**/*
+          ros-perception/**/*
+          ros-commondep/**/*
+          ros2_macos_sdk/**/*
+          eclipse-iceoryx/**/*
+          eclipse-cyclonedds/**/*
+          gzsim/**/*
+        key: ${{ runner.os }}-ros2-submodules-${{ hashFiles('.gitmodules') }}
+        restore-keys: |
+          ${{ runner.os }}-ros2-submodules-
 
     - name: Sync submodules branches
       run: |
