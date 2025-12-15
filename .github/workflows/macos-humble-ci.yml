@@ -104,8 +104,6 @@ jobs:
 
     - name: Setup Python virtual environment
       run: |
-        python3 -m venv venv
-        source venv/bin/activate
         python3 -m pip install --upgrade pip
         python3 -m pip install -U \
           --config-settings="--global-option=build_ext" \
@@ -146,7 +144,7 @@ jobs:
         colcon build \
           --symlink-install \
           --executor parallel \
-          --parallel-workers 4 \
+          --parallel-workers \
           --packages-ignore \
             qt_gui_cpp \
             rqt_gui_cpp \
@@ -154,7 +152,6 @@ jobs:
           --cmake-args \
             -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE} \
             -DCMAKE_BUILD_TYPE=Release \
-          --event-handlers console_direct+ \
           --continue-on-error
 
     # --------------------------------------------------
