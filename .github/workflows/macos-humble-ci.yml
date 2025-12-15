@@ -100,9 +100,8 @@ jobs:
       shell: bash
       run: |
         set -e
-        export CMAKE_BUILD_PARALLEL_LEVEL=4
-        export MAKEFLAGS="-j4"
         export MY_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
+        source venv/bin/activate
 
         colcon build \
           --symlink-install \
