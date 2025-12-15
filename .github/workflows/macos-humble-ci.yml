@@ -143,7 +143,6 @@ jobs:
         colcon build \
           --symlink-install \
           --executor parallel \
-          --parallel-workers \
           --packages-ignore \
             qt_gui_cpp \
             rqt_gui_cpp \
