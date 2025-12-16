@@ -1,30 +1,30 @@
 #!/bin/bash
-set -euo pipefail
+set -u 
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INPUT_FILE="$SCRIPT_DIR/matched_packages.txt"
 
 while IFS= read -r line || [[ -n "$line" ]]; do
-  # Skip empty or comment lines
   [[ -z "$line" || "$line" =~ ^# ]] && continue
 
-  # First column = formula name
   pkg="${line%% *}"
-
   echo "🔍 Processing: $pkg"
 
-  # Skip if formula does not exist
+  # Check formula existence
   if ! brew info "$pkg" >/dev/null 2>&1; then
     echo "⚠️  Unknown formula, skipping: $pkg"
     continue
   fi
 
-  # Install if missing
-  if brew list --formula | grep -qx "$pkg"; then
+  # Correct install check
+  if brew list --formula "$pkg" >/dev/null 2>&1; then
     echo "✔️  $pkg already installed"
   else
     echo "⬇️  Installing $pkg"
-    brew install "$pkg"
+    brew install "$pkg" || {
+      echo "❌ Failed to install $pkg"
+      exit 1
+    }
   fi
 
 done < "$INPUT_FILE"
