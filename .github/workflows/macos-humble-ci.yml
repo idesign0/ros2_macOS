@@ -48,95 +48,119 @@ jobs:
         ./scripts/sync-submodules-branches.sh
 
     # --------------------------------------------------
-    # Homebrew
-    # --------------------------------------------------
-    # --------------------------------------------------
-    # Cache Homebrew Prefix
+    # Homebrew Caching/Installation
     # --------------------------------------------------
     - name: Cache Homebrew directories
       uses: actions/cache@v4
       id: cache-brew
       with:
-        # Cache the entire Homebrew installation prefix
         path: /opt/homebrew
-        
-        # Key based on OS, a version identifier (v1), and a hash of your Homebrew installation script.
-        # If install_brew_packages.sh changes (e.g., package versions updated), the cache is invalidated.
+        # Key based on OS, version, and hash of your installation script
         key: ${{ runner.os }}-brew-v1-${{ hashFiles('brew-packages/install_brew_packages.sh') }}
         restore-keys: |
           ${{ runner.os }}-brew-v1-
 
-    # --------------------------------------------------
-    # Homebrew: Conditional Install
-    # --------------------------------------------------
-    # We only run the brew update/install steps if the cache was NOT a hit.
-    - name: Update Homebrew
+    # Homebrew: Conditional Install (runs only on cache miss)
+    - name: Update Homebrew and Install Base Packages
       if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
         brew update
+        # Install taps and base packages required before the main install script runs
         brew tap osrf/simulation
         brew install graphviz eigen@3
 
-    - name: Install Homebrew packages
+    - name: Install Homebrew packages via script
       if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
         chmod +x brew-packages/install_brew_packages.sh
-        # This script runs only when the cache key is invalid (i.e., new packages or versions)
         ./brew-packages/install_brew_packages.sh
 
-    - name: Use Cached Homebrew (if hit)
-      if: steps.cache-brew.outputs.cache-hit == 'true'
+    # --------------------------------------------------
+    # Homebrew: Set PATH (ALWAYS run)
+    # --------------------------------------------------
+    # Ensure /opt/homebrew/bin is in the PATH for all subsequent steps, regardless of cache hit/miss.
+    - name: Set Homebrew PATH
       run: |
-        echo "Homebrew cache hit. Skipping installation steps."
         echo "/opt/homebrew/bin" >> $GITHUB_PATH
+        # The 'Use Cached Homebrew' step is now redundant and removed.
     
     # --------------------------------------------------
-    # Homebrew: Unlink packages we do NOT want picked up
+    # Homebrew: Unlink packages (ALWAYS run)
     # --------------------------------------------------
     - name: Unlink unwanted Homebrew packages
       run: |
         set +e
-
         echo "Unlinking Homebrew packages to avoid accidental usage..."
-
         brew unlink boost || true
         brew unlink boost-python3 || true
         brew unlink xtensor || true
         brew unlink xdm || true
         brew unlink xtl || true
         brew unlink qt || true
-
         echo "Homebrew unlink step completed."
 
     # --------------------------------------------------
-    # Python 3.11 (SYSTEM Python, NOT Homebrew)
+    # Python 3.11 Setup (SYSTEM Python, NOT Homebrew)
     # --------------------------------------------------
     - name: Setup Python 3.11
       uses: actions/setup-python@v5
+      id: setup-python
       with:
         python-version: "3.11"
+        # Use built-in pip cache
+        cache: 'pip' 
 
-    - name: Verify Python
-      run: |
-        which python3
-        python3 --version
+    # --------------------------------------------------
+    # Cache Python Virtual Environment
+    # --------------------------------------------------
+    - name: Cache Python Venv and Dependencies
+      uses: actions/cache@v4
+      id: cache-venv
+      with:
+        path: venv
+        # Key based on OS, Python version, and hash of the dependency definitions.
+        # If your 'pip install' command changes, this cache will miss.
+        key: ${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-deps-v1-${{ hashFiles('brew-packages/install_brew_packages.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-deps-v1-
 
-    - name: Setup Python virtual environment
+    # --------------------------------------------------
+    # Python Virtual Environment: Conditional Setup
+    # --------------------------------------------------
+    - name: Setup and Install Python virtual environment
       run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip install -U \
-          --config-settings="--global-option=build_ext" \
-          --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
-          --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
-          argcomplete catkin_pkg colcon-common-extensions coverage \
-          cryptography empy==3.3.4 flake8 flake8-blind-except==0.1.1 \
-          flake8-builtins flake8-class-newline flake8-comprehensions \
-          flake8-deprecated flake8-docstrings flake8-import-order \
-          flake8-quotes importlib-metadata lark==1.1.1 lxml \
-          matplotlib mock mypy==0.931 netifaces nose pep8 psutil \
-          pydocstyle pydot pygraphviz pyparsing==2.4.7 \
-          pytest-mock rosdep rosdistro setuptools==59.6.0 \
-          vcstool typeguard
+        # Use the 'venv' directory for a local, cacheable virtual environment
+        VENV_DIR="${GITHUB_WORKSPACE}/venv"
+        
+        # Condition to check if cache was a miss
+        if [ "${{ steps.cache-venv.outputs.cache-hit }}" != "true" ]; then
+          echo "Python Venv cache missed. Installing dependencies..."
+          python3 -m venv "$VENV_DIR"
+          source "$VENV_DIR/bin/activate"
+          
+          python3 -m pip install --upgrade pip
+          
+          # The entire massive pip install command runs ONLY on a cache miss
+          python3 -m pip install -U \
+            --config-settings="--global-option=build_ext" \
+            --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
+            --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
+            argcomplete catkin_pkg colcon-common-extensions coverage \
+            cryptography empy==3.3.4 flake8 flake8-blind-except==0.1.1 \
+            flake8-builtins flake8-class-newline flake8-comprehensions \
+            flake8-deprecated flake8-docstrings flake8-import-order \
+            flake8-quotes importlib-metadata lark==1.1.1 lxml \
+            matplotlib mock mypy==0.931 netifaces nose pep8 psutil \
+            pydocstyle pydot pygraphviz pyparsing==2.4.7 \
+            pytest-mock rosdep rosdistro setuptools==59.6.0 \
+            vcstool typeguard
+        else
+          echo "Python Venv cache hit. Activating existing venv."
+        fi
+        
+        # ALWAYS activate the venv and add its bin directory to PATH for all subsequent steps
+        source "$VENV_DIR/bin/activate"
+        echo "$VENV_DIR/bin" >> $GITHUB_PATH
 
     # --------------------------------------------------
     # Environment
@@ -160,6 +184,7 @@ jobs:
       shell: bash
       run: |
         set -e
+        source "$GITHUB_WORKSPACE/venv/bin/activate" # Ensure venv is active for colcon
         export MY_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
 
         colcon build \
