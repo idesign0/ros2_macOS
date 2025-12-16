@@ -144,7 +144,7 @@ jobs:
       run: |
         echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> $GITHUB_ENV
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
-        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5)" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5):$(brew --prefix eigen@3)/share/eigen3/cmake" >> $GITHUB_ENV
         echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
         echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=${GITHUB_WORKSPACE}/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
@@ -167,9 +167,9 @@ jobs:
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests \
           --cmake-args \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBOOST_ROOT=${GITHUB_WORKSPACE}/src/ros-commondep/boost-1.89 \
-            -DBOOST_INCLUDEDIR=${GITHUB_WORKSPACE}/src/ros-commondep/boost-1.89/include \
-            -DBOOST_LIBRARYDIR=${GITHUB_WORKSPACE}/src/ros-commondep/boost-1.89/lib \
+            -DBOOST_ROOT=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89 \
+            -DBOOST_INCLUDEDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/include \
+            -DBOOST_LIBRARYDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/lib \
             -DBoost_NO_SYSTEM_PATHS=ON \
             -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE} \
           --continue-on-error
