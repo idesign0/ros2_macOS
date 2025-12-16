@@ -59,6 +59,11 @@ jobs:
         key: ${{ runner.os }}-brew-v1-${{ hashFiles('brew-packages/install_brew_packages.sh') }}
         restore-keys: |
           ${{ runner.os }}-brew-v1-
+    
+    - name: Configure Homebrew parallelism
+      run: |
+        echo "HOMEBREW_MAKE_JOBS=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
+        echo "HOMEBREW_CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
 
     # Homebrew: Conditional Install (runs only on cache miss)
     - name: Update Homebrew and Install Base Packages
