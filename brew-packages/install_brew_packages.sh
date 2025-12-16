@@ -26,7 +26,7 @@ echo "---"
 PACKAGE_NAMES_ONLY="${PACKAGE_NAMES_ARRAY[*]}"
 
 # 3. Fetch the tap info for ALL packages ONCE
-echo "⏳ Fetching tap information for all packages (may take a moment)..."
+echo "⏳ Fetching information for all packages (may take a moment)..."
 FORMULA_INFO_ALL=$(brew info $PACKAGE_NAMES_ONLY 2>/dev/null || true)
 
 echo "✅ Homebrew status preloaded."
@@ -43,28 +43,6 @@ for pkg in "${PACKAGE_NAMES_ARRAY[@]}"; do
     echo "✔️  $pkg already installed"
     continue
   fi
-
-  # --- OPTIMIZED TAP DETECTION ---
-  # Search the preloaded info for the current package's details
-  # Adding || true to prevent the script from exiting if grep/tail fails unexpectedly
-  package_info_snippet=$(echo "$FORMULA_INFO_ALL" | grep -E -A 1 "^$pkg: " | tail -n 1 || true) 
-
-  # Check if the snippet contains the 'From:' pattern
-  if [[ "$package_info_snippet" =~ "From: ([^[:space:]]+)" ]]; then
-    tap="${BASH_REMATCH[1]%/Formula/*}"
-    
-    # Check if tap is already present. Adding || true here just in case.
-    if ! brew tap | grep -qx "$tap" || true; then 
-      echo "🔗 Adding tap: $tap for $pkg"
-      
-      if brew tap "$tap"; then
-        echo "   -> Tap added successfully."
-      else
-        echo "❌ Warning: Failed to add tap $tap. Installation of $pkg may fail. Continuing..."
-      fi
-    fi
-  fi
-
   packages+=("$pkg")
 done
 

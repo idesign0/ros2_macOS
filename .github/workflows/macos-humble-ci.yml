@@ -74,6 +74,7 @@ jobs:
       if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
         brew update
+        brew tap osrf/simulation
         brew install graphviz eigen@3
 
     - name: Install Homebrew packages
