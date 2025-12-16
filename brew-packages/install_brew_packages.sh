@@ -46,15 +46,11 @@ for pkg in "${PACKAGE_NAMES_ARRAY[@]}"; do
   packages+=("$pkg")
 done
 
-# Install all remaining packages at once
-if [ "${#packages[@]}" -gt 0 ]; then
-  echo "⬇️  Installing ${#packages[@]} formulas: ${packages[*]}"
-  brew install --formula "${packages[@]}"
-else
-  # --- ADDED BLOCK FOR CLARITY ---
-  echo "---"
-  echo "🎉 SUCCESS! All ${PACKAGE_COUNT} formulas from the list were already installed."
-  echo "---"
-fi
+for pkg in "${packages[@]}"; do
+    echo "🔹 Installing $pkg..."
+    brew install "$pkg" || {
+        echo "⚠️ Warning: Failed to install $pkg, continuing..."
+    }
+done
 
 echo "✅ Done"
