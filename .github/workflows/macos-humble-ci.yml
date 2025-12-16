@@ -100,68 +100,34 @@ jobs:
         echo "Homebrew unlink step completed."
 
     # --------------------------------------------------
-    # Python 3.11 Setup (SYSTEM Python, NOT Homebrew)
+    # Python 3.11 (SYSTEM Python, NOT Homebrew)
     # --------------------------------------------------
     - name: Setup Python 3.11
       uses: actions/setup-python@v5
-      id: setup-python
       with:
         python-version: "3.11"
-        # Use built-in pip cache
-        cache: 'pip' 
 
-    # --------------------------------------------------
-    # Cache Python Virtual Environment
-    # --------------------------------------------------
-    - name: Cache Python Venv and Dependencies
-      uses: actions/cache@v4
-      id: cache-venv
-      with:
-        path: venv
-        # Key based on OS, Python version, and hash of the dependency definitions.
-        # If your 'pip install' command changes, this cache will miss.
-        key: ${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-deps-v1-${{ hashFiles('brew-packages/install_brew_packages.sh') }}
-        restore-keys: |
-          ${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-deps-v1-
-
-    # --------------------------------------------------
-    # Python Virtual Environment: Conditional Setup
-    # --------------------------------------------------
-    - name: Setup and Install Python virtual environment
+    - name: Verify Python
       run: |
-        # Use the 'venv' directory for a local, cacheable virtual environment
-        VENV_DIR="${GITHUB_WORKSPACE}/venv"
-        
-        # Condition to check if cache was a miss
-        if [ "${{ steps.cache-venv.outputs.cache-hit }}" != "true" ]; then
-          echo "Python Venv cache missed. Installing dependencies..."
-          python3 -m venv "$VENV_DIR"
-          source "$VENV_DIR/bin/activate"
-          
-          python3 -m pip install --upgrade pip
-          
-          # The entire massive pip install command runs ONLY on a cache miss
-          python3 -m pip install -U \
-            --config-settings="--global-option=build_ext" \
-            --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
-            --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
-            argcomplete catkin_pkg colcon-common-extensions coverage \
-            cryptography empy==3.3.4 flake8 flake8-blind-except==0.1.1 \
-            flake8-builtins flake8-class-newline flake8-comprehensions \
-            flake8-deprecated flake8-docstrings flake8-import-order \
-            flake8-quotes importlib-metadata lark==1.1.1 lxml \
-            matplotlib mock mypy==0.931 netifaces nose pep8 psutil \
-            pydocstyle pydot pygraphviz pyparsing==2.4.7 \
-            pytest-mock rosdep rosdistro setuptools==59.6.0 \
-            vcstool typeguard
-        else
-          echo "Python Venv cache hit. Activating existing venv."
-        fi
-        
-        # ALWAYS activate the venv and add its bin directory to PATH for all subsequent steps
-        source "$VENV_DIR/bin/activate"
-        echo "$VENV_DIR/bin" >> $GITHUB_PATH
+        which python3
+        python3 --version
 
+    - name: Install Python dependencies (system Python)
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -U \
+          --config-settings="--global-option=build_ext" \
+          --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
+          --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
+          argcomplete catkin_pkg colcon-common-extensions coverage \
+          cryptography empy==3.3.4 flake8 flake8-blind-except==0.1.1 \
+          flake8-builtins flake8-class-newline flake8-comprehensions \
+          flake8-deprecated flake8-docstrings flake8-import-order \
+          flake8-quotes importlib-metadata lark==1.1.1 lxml \
+          matplotlib mock mypy==0.931 netifaces nose pep8 psutil \
+          pydocstyle pydot pygraphviz pyparsing==2.4.7 \
+          pytest-mock rosdep rosdistro setuptools==59.6.0 \
+          vcstool typeguard
     # --------------------------------------------------
     # Environment
     # --------------------------------------------------
