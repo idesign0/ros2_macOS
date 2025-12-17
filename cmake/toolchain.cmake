@@ -104,104 +104,90 @@ set(PCL_CONVERSIONS_INCLUDE_DIR "$ENV{HOME}/humble-ros2/src/ros-perception/perce
 set(pcl_conversions_INCLUDE_DIRS "${PCL_CONVERSIONS_INCLUDE_DIR}" CACHE PATH "PCL Conversions include dirs" FORCE)
 set(pybind11_DIR "$ENV{HOME}/humble-ros2/install/opt/pybind11_vendor/share/cmake/pybind11" CACHE PATH "Path to pybind11_vendor CMake config" FORCE)
 
-
-# --- HOMEBREW-SPECIFIC DEPENDENCIES (Skipped in CI) ---
-# This block is only executed if the CI_BUILD environment variable is NOT set.
-if(NOT $ENV{CI_BUILD})
-    message(STATUS "Toolchain: Homebrew detected or CI_BUILD not set. Enabling Homebrew paths in /opt/homebrew.")
-
-    # --- OpenMP (libomp) ---
-    set(OpenMP_INCLUDE_DIR "/opt/homebrew/opt/libomp/include")
-    set(OpenMP_LIB_DIR "/opt/homebrew/opt/libomp/lib")
-    include_directories(SYSTEM "${OpenMP_INCLUDE_DIR}")
-    set(OpenMP_CXX_LIB_NAMES "omp" CACHE STRING "")
-    set(OpenMP_C_LIB_NAMES "omp" CACHE STRING "")
-    set(OpenMP_CXX_FLAGS "-Xclang -fopenmp" CACHE STRING "")
-    set(OpenMP_C_FLAGS   "-Xclang -fopenmp" CACHE STRING "")
-    set(OpenMP_omp_LIBRARY "${OpenMP_LIB_DIR}/libomp.dylib" CACHE STRING "")
-    if (NOT TARGET OpenMP::OpenMP_CXX)
-        add_library(OpenMP::OpenMP_CXX INTERFACE IMPORTED)
-        set_target_properties(OpenMP::OpenMP_CXX PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${OpenMP_INCLUDE_DIR}"
-            INTERFACE_LINK_LIBRARIES "-L${OpenMP_LIB_DIR};-lomp"
-            INTERFACE_COMPILE_OPTIONS "-Xclang;-fopenmp"
-        )
-    endif()
-
-    # --- Google Benchmark, CLI11, CSparse, GDAL (Prefix/Includes) ---
-    set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/google-benchmark;${CMAKE_PREFIX_PATH}")
-    set(CLI11_INCLUDE_DIRS "/opt/homebrew/include" CACHE PATH "CLI11 include path" FORCE)
-    include_directories(SYSTEM ${CLI11_INCLUDE_DIRS})
-    set(CSPARSE_INCLUDE_DIR "/opt/homebrew/include/suitesparse")
-    set(CSPARSE_LIBRARY "/opt/homebrew/lib/libsuitesparse.dylib")
-    set(GDAL_CONFIG_BIN "/opt/homebrew/bin/gdal-config" CACHE FILEPATH "Path to Homebrew gdal-config utility." FORCE)
-    set(ENV{GDAL_CONFIG} ${GDAL_CONFIG_BIN})
-    set(CMAKE_PREFIX_PATH 
-        "/opt/homebrew/opt/gdal;${CMAKE_PREFIX_PATH}" CACHE STRING "Prefix paths" FORCE)
-
-    # --- Qt5/Qt6 ---
-    set(Qt5_DIR "/opt/homebrew/opt/qt@5/lib/cmake/Qt5" CACHE PATH "Qt5 CMake path")
-    set(QT5_PREFIX "/opt/homebrew/opt/qt@5" CACHE PATH "Qt5 prefix path")
-    set(Qt6_DIR "/opt/homebrew/opt/qt/lib/cmake/Qt6" CACHE PATH "Qt6 CMake path")
-    set(QT6_PREFIX "/opt/homebrew/opt/qt" CACHE PATH "Qt6 prefix path")
-    set(CMAKE_PREFIX_PATH "${QT6_PREFIX}/lib/cmake;${QT5_PREFIX}/lib/cmake;${CMAKE_PREFIX_PATH}" CACHE PATH "Qt CMake paths" FORCE)
-    set(ENV{PATH} "${QT6_PREFIX}/bin:${QT5_PREFIX}/bin:$ENV{PATH}")
-    set(CMAKE_FIND_FRAMEWORK LAST)
-
-    # --- OpenGL/GLEW/GLUT for Qt/Ogre ---
-    set(_GL_INCDIRS "/opt/homebrew/include" CACHE STRING "")
-    set(_qt5gui_OPENGL_INCLUDE_DIR "/opt/homebrew/include/GL" CACHE PATH "")
-    set(Qt5Gui_OPENGL_IMPLEMENTATION GL CACHE STRING "")
-    set(Qt5Gui_OPENGL_LIBRARIES "/opt/homebrew/lib/libGL.dylib" CACHE FILEPATH "")
-    set(GLEW_INCLUDE_DIR "/opt/homebrew/opt/glew/include" CACHE PATH "GLEW include directory")
-    set(GLEW_LIBRARY "/opt/homebrew/opt/glew/lib/libGLEW.dylib" CACHE FILEPATH "GLEW library")
-    set(GLUT_INCLUDE_DIR "/opt/homebrew/opt/freeglut/include" CACHE PATH "GLUT/FreeGLUT include directory")
-    set(GLUT_LIBRARY "/opt/homebrew/lib/libglut.dylib" CACHE FILEPATH "GLUT/FreeGLUT library")
-    set(GLEW_INCLUDE_DIRS ${GLEW_INCLUDE_DIR} CACHE INTERNAL "")
-    set(GLEW_LIBRARIES ${GLEW_LIBRARY} CACHE INTERNAL "")
-    set(GLUT_INCLUDE_DIRS ${GLUT_INCLUDE_DIR} CACHE INTERNAL "")
-    set(GLUT_LIBRARIES ${GLUT_LIBRARY} CACHE INTERNAL "")
-    set(SYSTEM_GL_INCLUDE_DIR ${GLEW_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS} CACHE INTERNAL "")
-    set(SYSTEM_GL_LIBRARIES ${GLEW_LIBRARIES} ${GLUT_LIBRARIES} CACHE INTERNAL "")
-    set(OGRE_FRAMEWORKS "-framework OpenGL")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OGRE_FRAMEWORKS}" CACHE STRING "Link OpenGL framework for Ogre" FORCE)
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OGRE_FRAMEWORKS}" CACHE STRING "Link OpenGL framework for Ogre" FORCE)
-
-    # --- TinyXML2 (Homebrew fix for Gazebo vendors) ---
-    if (NOT TARGET tinyxml2::tinyxml2)
-        add_library(tinyxml2::tinyxml2 INTERFACE IMPORTED)
-        set_target_properties(tinyxml2::tinyxml2 PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "/opt/homebrew/include"
-            INTERFACE_LINK_LIBRARIES "/opt/homebrew/lib/libtinyxml2.dylib"
-        )
-    endif()
-    if (NOT TARGET TINYXML2::TINYXML2)
-        add_library(TINYXML2::TINYXML2 INTERFACE IMPORTED)
-        set_target_properties(TINYXML2::TINYXML2 PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "/opt/homebrew/include"
-            INTERFACE_LINK_LIBRARIES "/opt/homebrew/lib/libtinyxml2.dylib"
-        )
-    endif()
-
-    # --- Eigen (Homebrew) ---
-    set(EIGEN3_INCLUDE_DIR "/opt/homebrew/include/eigen3" CACHE PATH "Eigen3 include directory" FORCE)
-    include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
-    set(CMAKE_PREFIX_PATH "/opt/homebrew/include/eigen3;${CMAKE_PREFIX_PATH}" CACHE STRING "CMake prefix path" FORCE)
-
-    # --- Google glog (Homebrew) ---
-    # NOTE: This section caused your original error.
-    set(GLOG_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "glog include path" FORCE)
-    set(GLOG_LIBRARY "/opt/homebrew/lib/libglog.dylib" CACHE FILEPATH "glog library" FORCE)
-    include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
-    # Append glog library to all targets' linker flags
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GLOG_LIBRARY}")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GLOG_LIBRARY}")
-    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${GLOG_LIBRARY}")
-
-else()
-    message(STATUS "Toolchain: CI_BUILD is set. Skipping all Homebrew dependencies in /opt/homebrew.")
-    # For CI, you might need to ensure certain variables are empty or point to system libs if the Homebrew versions 
-    # are required, but for glog, skipping the linker flags should fix the 'no such file' error.
+# --- OpenMP (libomp) ---
+set(OpenMP_INCLUDE_DIR "/opt/homebrew/opt/libomp/include")
+set(OpenMP_LIB_DIR "/opt/homebrew/opt/libomp/lib")
+include_directories(SYSTEM "${OpenMP_INCLUDE_DIR}")
+set(OpenMP_CXX_LIB_NAMES "omp" CACHE STRING "")
+set(OpenMP_C_LIB_NAMES "omp" CACHE STRING "")
+set(OpenMP_CXX_FLAGS "-Xclang -fopenmp" CACHE STRING "")
+set(OpenMP_C_FLAGS   "-Xclang -fopenmp" CACHE STRING "")
+set(OpenMP_omp_LIBRARY "${OpenMP_LIB_DIR}/libomp.dylib" CACHE STRING "")
+if (NOT TARGET OpenMP::OpenMP_CXX)
+    add_library(OpenMP::OpenMP_CXX INTERFACE IMPORTED)
+    set_target_properties(OpenMP::OpenMP_CXX PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${OpenMP_INCLUDE_DIR}"
+        INTERFACE_LINK_LIBRARIES "-L${OpenMP_LIB_DIR};-lomp"
+        INTERFACE_COMPILE_OPTIONS "-Xclang;-fopenmp"
+    )
 endif()
 
-# --- END OF TOOLCHAIN.CMAKE ---
+# --- Google Benchmark, CLI11, CSparse, GDAL (Prefix/Includes) ---
+set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/google-benchmark;${CMAKE_PREFIX_PATH}")
+set(CLI11_INCLUDE_DIRS "/opt/homebrew/include" CACHE PATH "CLI11 include path" FORCE)
+include_directories(SYSTEM ${CLI11_INCLUDE_DIRS})
+set(CSPARSE_INCLUDE_DIR "/opt/homebrew/include/suitesparse")
+set(CSPARSE_LIBRARY "/opt/homebrew/lib/libsuitesparse.dylib")
+set(GDAL_CONFIG_BIN "/opt/homebrew/bin/gdal-config" CACHE FILEPATH "Path to Homebrew gdal-config utility." FORCE)
+set(ENV{GDAL_CONFIG} ${GDAL_CONFIG_BIN})
+set(CMAKE_PREFIX_PATH 
+    "/opt/homebrew/opt/gdal;${CMAKE_PREFIX_PATH}" CACHE STRING "Prefix paths" FORCE)
+
+# --- Qt5/Qt6 ---
+set(Qt5_DIR "/opt/homebrew/opt/qt@5/lib/cmake/Qt5" CACHE PATH "Qt5 CMake path")
+set(QT5_PREFIX "/opt/homebrew/opt/qt@5" CACHE PATH "Qt5 prefix path")
+set(Qt6_DIR "/opt/homebrew/opt/qt/lib/cmake/Qt6" CACHE PATH "Qt6 CMake path")
+set(QT6_PREFIX "/opt/homebrew/opt/qt" CACHE PATH "Qt6 prefix path")
+set(CMAKE_PREFIX_PATH "${QT6_PREFIX}/lib/cmake;${QT5_PREFIX}/lib/cmake;${CMAKE_PREFIX_PATH}" CACHE PATH "Qt CMake paths" FORCE)
+set(ENV{PATH} "${QT6_PREFIX}/bin:${QT5_PREFIX}/bin:$ENV{PATH}")
+set(CMAKE_FIND_FRAMEWORK LAST)
+
+# --- OpenGL/GLEW/GLUT for Qt/Ogre ---
+set(_GL_INCDIRS "/opt/homebrew/include" CACHE STRING "")
+set(_qt5gui_OPENGL_INCLUDE_DIR "/opt/homebrew/include/GL" CACHE PATH "")
+set(Qt5Gui_OPENGL_IMPLEMENTATION GL CACHE STRING "")
+set(Qt5Gui_OPENGL_LIBRARIES "/opt/homebrew/lib/libGL.dylib" CACHE FILEPATH "")
+set(GLEW_INCLUDE_DIR "/opt/homebrew/opt/glew/include" CACHE PATH "GLEW include directory")
+set(GLEW_LIBRARY "/opt/homebrew/opt/glew/lib/libGLEW.dylib" CACHE FILEPATH "GLEW library")
+set(GLUT_INCLUDE_DIR "/opt/homebrew/opt/freeglut/include" CACHE PATH "GLUT/FreeGLUT include directory")
+set(GLUT_LIBRARY "/opt/homebrew/lib/libglut.dylib" CACHE FILEPATH "GLUT/FreeGLUT library")
+set(GLEW_INCLUDE_DIRS ${GLEW_INCLUDE_DIR} CACHE INTERNAL "")
+set(GLEW_LIBRARIES ${GLEW_LIBRARY} CACHE INTERNAL "")
+set(GLUT_INCLUDE_DIRS ${GLUT_INCLUDE_DIR} CACHE INTERNAL "")
+set(GLUT_LIBRARIES ${GLUT_LIBRARY} CACHE INTERNAL "")
+set(SYSTEM_GL_INCLUDE_DIR ${GLEW_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS} CACHE INTERNAL "")
+set(SYSTEM_GL_LIBRARIES ${GLEW_LIBRARIES} ${GLUT_LIBRARIES} CACHE INTERNAL "")
+set(OGRE_FRAMEWORKS "-framework OpenGL")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OGRE_FRAMEWORKS}" CACHE STRING "Link OpenGL framework for Ogre" FORCE)
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OGRE_FRAMEWORKS}" CACHE STRING "Link OpenGL framework for Ogre" FORCE)
+
+# --- TinyXML2 (Homebrew fix for Gazebo vendors) ---
+if (NOT TARGET tinyxml2::tinyxml2)
+    add_library(tinyxml2::tinyxml2 INTERFACE IMPORTED)
+    set_target_properties(tinyxml2::tinyxml2 PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "/opt/homebrew/include"
+        INTERFACE_LINK_LIBRARIES "/opt/homebrew/lib/libtinyxml2.dylib"
+    )
+endif()
+if (NOT TARGET TINYXML2::TINYXML2)
+    add_library(TINYXML2::TINYXML2 INTERFACE IMPORTED)
+    set_target_properties(TINYXML2::TINYXML2 PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "/opt/homebrew/include"
+        INTERFACE_LINK_LIBRARIES "/opt/homebrew/lib/libtinyxml2.dylib"
+    )
+endif()
+
+# --- Eigen (Homebrew) ---
+set(EIGEN3_INCLUDE_DIR "/opt/homebrew/include/eigen3" CACHE PATH "Eigen3 include directory" FORCE)
+include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
+set(CMAKE_PREFIX_PATH "/opt/homebrew/include/eigen3;${CMAKE_PREFIX_PATH}" CACHE STRING "CMake prefix path" FORCE)
+
+# --- Google glog (Homebrew) ---
+# NOTE: This section caused your original error.
+set(GLOG_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "glog include path" FORCE)
+set(GLOG_LIBRARY "/opt/homebrew/lib/libglog.dylib" CACHE FILEPATH "glog library" FORCE)
+include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
+# Append glog library to all targets' linker flags
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GLOG_LIBRARY}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GLOG_LIBRARY}")
+set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${GLOG_LIBRARY}")

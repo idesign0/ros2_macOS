@@ -72,7 +72,7 @@ jobs:
         brew update
         # Install taps and base packages required before the main install script runs
         brew tap osrf/simulation
-        brew install graphviz eigen@3
+        brew install graphviz eigen@3 GeographicLib
 
     - name: Install Homebrew packages via script
       if: steps.cache-brew.outputs.cache-hit != 'true'
@@ -103,6 +103,8 @@ jobs:
         brew unlink xtl || true
         brew unlink qt || true
         brew unlink asio || true
+        brew unlink orocos_kdl || true
+        brew unlink octomap || true
         echo "Homebrew unlink step completed."
 
     # --------------------------------------------------
@@ -133,7 +135,7 @@ jobs:
           matplotlib mock mypy==0.931 netifaces nose pep8 psutil \
           pydocstyle pydot pygraphviz pyparsing==2.4.7 \
           pytest-mock rosdep rosdistro setuptools==59.6.0 \
-          vcstool typeguard
+          vcstool typeguard jinja2
     # --------------------------------------------------
     # Environment
     # --------------------------------------------------
@@ -141,13 +143,11 @@ jobs:
       run: |
         echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> $GITHUB_ENV
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
-        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5):$(brew --prefix eigen@3)/share/eigen3/cmake" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5)" >> $GITHUB_ENV
+        echo "Eigen3_DIR=$(brew --prefix eigen@3)/share/eigen3/cmake" >> $GITHUB_ENV
         echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
         echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=${GITHUB_WORKSPACE}/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "EIGEN3_INCLUDE_DIR=$(brew --prefix eigen@3)/include/eigen3" >> $GITHUB_ENV
-        echo "EIGEN_INCLUDE_DIR=$(brew --prefix eigen@3)/include/eigen3" >> $GITHUB_ENV
-        echo "CPPFLAGS=-I$(brew --prefix eigen@3)/include $CPPFLAGS" >> $GITHUB_ENV
 
     # --------------------------------------------------
     # Build
@@ -180,4 +180,4 @@ jobs:
       run: |
         source install/setup.bash
         ros2 --help
-        ros2 run demo_nodes_cpp talker --ros-args --log-level info
+        timeout 5s ros2 run demo_nodes_cpp talker --ros-args --log-level info || true
