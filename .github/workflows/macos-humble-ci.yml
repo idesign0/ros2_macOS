@@ -103,7 +103,6 @@ jobs:
         brew unlink xtl || true
         brew unlink qt || true
         brew unlink asio || true
-        brew unlink orocos_kdl || true
         brew unlink octomap || true
         echo "Homebrew unlink step completed."
 
@@ -141,10 +140,13 @@ jobs:
     # --------------------------------------------------
     - name: Setup build environment
       run: |
+        EIGEN_ROOT=$(brew --prefix eigen@3)
+        QT_ROOT=$(brew --prefix qt@5)
+
         echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> $GITHUB_ENV
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
-        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5)" >> $GITHUB_ENV
-        echo "Eigen3_DIR=$(brew --prefix eigen@3)/share/eigen3/cmake" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=${GITHUB_WORKSPACE}/install:${QT_ROOT}:${EIGEN_ROOT}/share/eigen3/cmake" >> $GITHUB_ENV
+        echo "Eigen3_DIR=${EIGEN_ROOT}/share/eigen3/cmake" >> $GITHUB_ENV
         echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
         echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=${GITHUB_WORKSPACE}/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
@@ -168,7 +170,6 @@ jobs:
             -DBOOST_ROOT=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89 \
             -DBOOST_INCLUDEDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/include \
             -DBOOST_LIBRARYDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/lib \
-            -DBoost_NO_SYSTEM_PATHS=ON \
             -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE} || true
 
     # --------------------------------------------------
