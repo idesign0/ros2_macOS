@@ -104,13 +104,30 @@ jobs:
         brew unlink qt || true
         brew unlink asio || true
 
-        # MUST be uninstalled (version mismatch breaks vendor builds)
-        if brew list --formula | grep -q "^orocos_kdl$"; then
-          brew uninstall --ignore-dependencies orocos_kdl
-        fi
-
         echo "Homebrew cleanup completed."
 
+        # Homebrew: Uninstall conflicting packages (vendor override)
+    # --------------------------------------------------
+    - name: Uninstall conflicting Homebrew packages
+      run: |
+        set +e
+        echo "Uninstalling Homebrew packages that conflict with vendor builds..."
+
+        if brew list --versions orocos-kdl >/dev/null 2>&1; then
+          echo "Removing Homebrew orocos-kdl (version mismatch with vendor)..."
+          brew uninstall --ignore-dependencies orocos-kdl
+        else
+          echo "orocos-kdl not installed"
+        fi
+
+        if brew list --versions octomap >/dev/null 2>&1; then
+          echo "Removing Homebrew octomap (MoveIt / geometric_shapes conflict)..."
+          brew uninstall --ignore-dependencies octomap
+        else
+          echo "octomap not installed"
+        fi
+
+        echo "Homebrew uninstall step completed."
     # --------------------------------------------------
     # Python 3.11 (SYSTEM Python, NOT Homebrew)
     # --------------------------------------------------
