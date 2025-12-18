@@ -95,7 +95,9 @@ jobs:
     - name: Unlink unwanted Homebrew packages
       run: |
         set +e
-        echo "Unlinking Homebrew packages to avoid accidental usage..."
+        echo "Cleaning conflicting Homebrew packages..."
+
+        # Unlink (headers/libs stay but are not active)
         brew unlink boost || true
         brew unlink boost-python3 || true
         brew unlink xtensor || true
@@ -103,8 +105,13 @@ jobs:
         brew unlink xtl || true
         brew unlink qt || true
         brew unlink asio || true
-        brew unlink octomap || true
-        echo "Homebrew unlink step completed."
+
+        # MUST be uninstalled (version mismatch breaks vendor builds)
+        if brew list --formula | grep -q "^orocos_kdl$"; then
+          brew uninstall --ignore-dependencies orocos_kdl
+        fi
+
+        echo "Homebrew cleanup completed."
 
     # --------------------------------------------------
     # Python 3.11 (SYSTEM Python, NOT Homebrew)
@@ -140,13 +147,11 @@ jobs:
     # --------------------------------------------------
     - name: Setup build environment
       run: |
-        EIGEN_ROOT=$(brew --prefix eigen@3)
         QT_ROOT=$(brew --prefix qt@5)
 
         echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> $GITHUB_ENV
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
-        echo "CMAKE_PREFIX_PATH=${GITHUB_WORKSPACE}/install:${QT_ROOT}:${EIGEN_ROOT}/share/eigen3/cmake" >> $GITHUB_ENV
-        echo "Eigen3_DIR=${EIGEN_ROOT}/share/eigen3/cmake" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=${GITHUB_WORKSPACE}/install:${QT_ROOT}" >> $GITHUB_ENV
         echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
         echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=${GITHUB_WORKSPACE}/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
