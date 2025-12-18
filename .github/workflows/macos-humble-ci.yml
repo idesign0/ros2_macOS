@@ -69,7 +69,6 @@ jobs:
     - name: Update Homebrew and Install Base Packages
       if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
-        brew update
         # Install taps and base packages required before the main install script runs
         brew tap osrf/simulation
         brew install graphviz eigen@3 GeographicLib
@@ -87,7 +86,6 @@ jobs:
     - name: Set Homebrew PATH
       run: |
         echo "/opt/homebrew/bin" >> $GITHUB_PATH
-        # The 'Use Cached Homebrew' step is now redundant and removed.
     
     # --------------------------------------------------
     # Homebrew: Unlink packages (ALWAYS run)
