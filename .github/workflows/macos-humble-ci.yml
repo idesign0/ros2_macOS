@@ -218,6 +218,7 @@ jobs:
         colcon build \
           --symlink-install \
           --executor parallel \
+          --cmake-clean-cache \
           --continue-on-error \
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests octomap-distribution \
           --cmake-args \
