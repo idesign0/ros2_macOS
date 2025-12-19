@@ -127,6 +127,13 @@ jobs:
           echo "octomap not installed"
         fi
 
+        if brew list --versions pybind11 >/dev/null 2>&1; then
+          echo "Removing Homebrew octomap (MoveIt / moveit_tast_constructor_core conflict)..."
+          brew uninstall --ignore-dependencies pybind11
+        else
+          echo "octomap not installed"
+        fi
+
         echo "Homebrew uninstall step completed."
     # --------------------------------------------------
     # Python 3.11 (SYSTEM Python, NOT Homebrew)
@@ -212,7 +219,7 @@ jobs:
           --symlink-install \
           --executor parallel \
           --continue-on-error \
-          --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests \
+          --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests octomap-distribution \
           --cmake-args \
             -DCMAKE_BUILD_TYPE=Release \
             -DBOOST_ROOT=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89 \
