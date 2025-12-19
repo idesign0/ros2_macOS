@@ -196,7 +196,7 @@ jobs:
 
         colcon build \
           --symlink-install \
-          --packages-select octomap \
+          --packages-select octomap-distribution \
           --cmake-args \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE}
