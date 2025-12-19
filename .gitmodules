@@ -452,7 +452,7 @@
 	branch = humble
 [submodule "moveit/geometric_shapes"]
 	path = moveit/geometric_shapes
-	url = https://github.com/idesign0/id_geometric_shapes.git
+	url = https://github.com/moveit/geometric_shapes.git
 	branch = ros2
 [submodule "moveit/srdfdom"]
 	path = moveit/srdfdom

@@ -170,15 +170,43 @@ jobs:
         echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
         echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=${GITHUB_WORKSPACE}/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-
+    # --------------------------------------------------
+    # Cache ROS workspace (build / install / log)
+    # --------------------------------------------------
+    - name: Cache ROS 2 workspace
+      uses: actions/cache@v4
+      id: cache-ros
+      with:
+        path: |
+          ${GITHUB_WORKSPACE}/build
+          ${GITHUB_WORKSPACE}/install
+          ${GITHUB_WORKSPACE}/log
+        key: ${{ runner.os }}-ros2-humble-${{ github.ref }}
+        restore-keys: |
+          ${{ runner.os }}-ros2-humble-
     # --------------------------------------------------
     # Build
     # --------------------------------------------------
+    - name: Build octomap first
+      shell: bash
+      run: |
+        export MY_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
+        export CMAKE_TOOLCHAIN_FILE="${MY_TOOLCHAIN_FILE}"
+        export CMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/install:$CMAKE_PREFIX_PATH"
+
+        colcon build \
+          --symlink-install \
+          --packages-select octomap \
+          --cmake-args \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE}
+
     - name: Build full ROS 2 workspace
       shell: bash
       continue-on-error: true
       run: |
         export MY_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
+        export CMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/install:$CMAKE_PREFIX_PATH"
 
         colcon build \
           --symlink-install \
@@ -190,14 +218,13 @@ jobs:
             -DBOOST_ROOT=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89 \
             -DBOOST_INCLUDEDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/include \
             -DBOOST_LIBRARYDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/lib \
-            -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE} || true
+            -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE}
 
     # --------------------------------------------------
     # Sanity check
     # --------------------------------------------------
     - name: Source workspace & sanity check
       shell: bash
-      continue-on-error: true
       run: |
         source install/setup.bash
         ros2 --help
