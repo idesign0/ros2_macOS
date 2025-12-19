@@ -220,6 +220,14 @@ jobs:
             -DBOOST_LIBRARYDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/lib \
             -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE}
 
+    - name: Save ROS workspace cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${GITHUB_WORKSPACE}/build
+          ${GITHUB_WORKSPACE}/install
+          ${GITHUB_WORKSPACE}/log
+        key: ${{ runner.os }}-ros2-humble-${{ github.ref }}
     # --------------------------------------------------
     # Sanity check
     # --------------------------------------------------
