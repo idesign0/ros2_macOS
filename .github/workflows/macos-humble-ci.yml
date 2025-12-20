@@ -201,8 +201,8 @@ jobs:
           --symlink-install \
           --packages-select octomap-distribution \
           --cmake-args \
-            -DPython3_FIND_FRAMEWORK=NEVER
-            -DPython3_FIND_STRATEGY=LOCATION
+            -DPython3_FIND_FRAMEWORK=NEVER \
+            -DPython3_FIND_STRATEGY=LOCATION \
             -DPython3_EXECUTABLE=${Python3_EXECUTABLE} \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE}
@@ -222,7 +222,7 @@ jobs:
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests octomap-distribution \
           --cmake-args \
             -DPython3_EXECUTABLE=${Python3_EXECUTABLE} \
-            -DPython3_FIND_FRAMEWORK=NEVER
+            -DPython3_FIND_FRAMEWORK=NEVER \
             -DPython3_FIND_STRATEGY=LOCATION \
             -DCMAKE_BUILD_TYPE=Release \
             -DBOOST_ROOT=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89 \
