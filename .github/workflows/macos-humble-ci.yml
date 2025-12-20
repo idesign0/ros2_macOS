@@ -188,17 +188,17 @@ jobs:
     # --------------------------------------------------
     # Cache ROS workspace (build / install / log)
     # --------------------------------------------------
-    - name: Cache ROS 2 workspace
-      uses: actions/cache@v4
-      id: cache-ros
-      with:
-        path: |
-          ${GITHUB_WORKSPACE}/build
-          ${GITHUB_WORKSPACE}/install
-          ${GITHUB_WORKSPACE}/log
-        key: ${{ runner.os }}-ros2-humble-${{ github.ref }}
-        restore-keys: |
-          ${{ runner.os }}-ros2-humble-
+    # - name: Cache ROS 2 workspace
+    #   uses: actions/cache@v4
+    #   id: cache-ros
+    #   with:
+    #     path: |
+    #       ${GITHUB_WORKSPACE}/build
+    #       ${GITHUB_WORKSPACE}/install
+    #       ${GITHUB_WORKSPACE}/log
+    #     key: ${{ runner.os }}-ros2-humble-${{ github.ref }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-ros2-humble-
     # --------------------------------------------------
     # Build
     # --------------------------------------------------
