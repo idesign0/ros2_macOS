@@ -148,6 +148,14 @@ jobs:
         which python3
         python3 --version
 
+    - name: Force CMake to use Python 3.10
+      run: |
+        PY=$(which python3)
+        echo "Using Python: $PY"
+        echo "Python3_EXECUTABLE=$PY" >> $GITHUB_ENV
+        echo "COLCON_PYTHON_EXECUTABLE=$PY" >> $GITHUB_ENV
+        echo "AMENT_PYTHON_EXECUTABLE=$PY" >> $GITHUB_ENV
+
     - name: Install Python dependencies (system Python)
       run: |
         python3 -m pip install --upgrade pip
@@ -205,6 +213,7 @@ jobs:
           --symlink-install \
           --packages-select octomap-distribution \
           --cmake-args \
+            -DPython3_EXECUTABLE=${Python3_EXECUTABLE} \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE}
 
@@ -222,6 +231,7 @@ jobs:
           --continue-on-error \
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests octomap-distribution \
           --cmake-args \
+            -DPython3_EXECUTABLE=${Python3_EXECUTABLE} \
             -DCMAKE_BUILD_TYPE=Release \
             -DBOOST_ROOT=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89 \
             -DBOOST_INCLUDEDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/include \
