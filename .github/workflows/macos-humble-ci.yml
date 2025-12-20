@@ -136,19 +136,19 @@ jobs:
 
         echo "Homebrew uninstall step completed."
     # --------------------------------------------------
-    # Python 3.10 (SYSTEM Python, NOT Homebrew)
+    # Python 3.11 (SYSTEM Python, NOT Homebrew)
     # --------------------------------------------------
-    - name: Setup Python 3.10
+    - name: Setup Python 3.11
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
+        python-version: "3.11"
 
     - name: Verify Python
       run: |
         which python3
         python3 --version
 
-    - name: Force CMake to use Python 3.10
+    - name: Force CMake to use Python 3.11
       run: |
         PY=$(which python3)
         echo "Using Python: $PY"
@@ -186,10 +186,22 @@ jobs:
         echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=${GITHUB_WORKSPACE}/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
     # --------------------------------------------------
+    # Cache ROS workspace (build / install / log)
+    # --------------------------------------------------
+    - name: Cache ROS 2 workspace
+      uses: actions/cache@v4
+      id: cache-ros
+      with:
+        path: |
+          ${GITHUB_WORKSPACE}/build
+          ${GITHUB_WORKSPACE}/install
+          ${GITHUB_WORKSPACE}/log
+        key: ${{ runner.os }}-ros2-humble-${{ github.ref }}
+        restore-keys: |
+          ${{ runner.os }}-ros2-humble-
+    # --------------------------------------------------
     # Build
     # --------------------------------------------------
-    - name: Remove previous build artifacts
-      run: rm -rf build install log
     - name: Build octomap first
       shell: bash
       run: |
@@ -201,9 +213,9 @@ jobs:
           --symlink-install \
           --packages-select octomap-distribution \
           --cmake-args \
+            -DPython3_EXECUTABLE=${Python3_EXECUTABLE} \
             -DPython3_FIND_FRAMEWORK=NEVER \
             -DPython3_FIND_STRATEGY=LOCATION \
-            -DPython3_EXECUTABLE=${Python3_EXECUTABLE} \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE}
 
@@ -222,13 +234,22 @@ jobs:
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests octomap-distribution \
           --cmake-args \
             -DPython3_EXECUTABLE=${Python3_EXECUTABLE} \
+            -DCMAKE_BUILD_TYPE=Release \
             -DPython3_FIND_FRAMEWORK=NEVER \
             -DPython3_FIND_STRATEGY=LOCATION \
-            -DCMAKE_BUILD_TYPE=Release \
             -DBOOST_ROOT=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89 \
             -DBOOST_INCLUDEDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/include \
             -DBOOST_LIBRARYDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/lib \
             -DCMAKE_TOOLCHAIN_FILE=${MY_TOOLCHAIN_FILE}
+
+    - name: Save ROS workspace cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${GITHUB_WORKSPACE}/build
+          ${GITHUB_WORKSPACE}/install
+          ${GITHUB_WORKSPACE}/log
+        key: ${{ runner.os }}-ros2-humble-${{ github.ref }}
     # --------------------------------------------------
     # Sanity check
     # --------------------------------------------------
