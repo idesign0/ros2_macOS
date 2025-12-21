@@ -132,17 +132,21 @@ jobs:
     # --------------------------------------------------
     # Force python3 -> Homebrew Python 3.10 (shim)
     # --------------------------------------------------
-    - name: Force python3 alias to Homebrew Python 3.10
+    - name: Force python3 to Homebrew 3.10
+      shell: bash
       run: |
-        mkdir -p ${GITHUB_WORKSPACE}/python-shim
+        # Prepend Homebrew Python 3.10 to PATH
+        export PATH="/opt/homebrew/opt/python@3.10/bin:$PATH"
 
-        ln -sf /opt/homebrew/opt/python@3.10/bin/python3.10 \
-               ${GITHUB_WORKSPACE}/python-shim/python3
+        # Make alias for python3
+        alias python3=/opt/homebrew/opt/python@3.10/bin/python3.10
 
-        echo "${GITHUB_WORKSPACE}/python-shim" >> $GITHUB_PATH
-
+        # Verify
         which python3
         python3 --version
+
+        # Needed for subsequent commands in this step
+        python3 -m pip install --upgrade pip
 
     # --------------------------------------------------
     # Export Python env for colcon & CMake
