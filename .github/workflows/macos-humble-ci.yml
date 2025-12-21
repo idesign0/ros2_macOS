@@ -98,7 +98,7 @@ jobs:
 
     - name: Export Python env for colcon
       run: |
-        PY=/opt/homebrew/opt/python@3.10/bin/python3
+        PY=/opt/homebrew/opt/python@3.10/bin/python3.10
         echo "Python3_EXECUTABLE=$PY" >> $GITHUB_ENV
         echo "COLCON_PYTHON_EXECUTABLE=$PY" >> $GITHUB_ENV
         echo "AMENT_PYTHON_EXECUTABLE=$PY" >> $GITHUB_ENV
@@ -108,8 +108,8 @@ jobs:
     # --------------------------------------------------
     - name: Install Python dependencies
       run: |
-        /opt/homebrew/opt/python@3.10/bin/python3 -m pip install --upgrade pip
-        /opt/homebrew/opt/python@3.10/bin/python3 -m pip install -U \
+        /opt/homebrew/opt/python@3.10/bin/python3.10 -m pip install --upgrade pip
+        /opt/homebrew/opt/python@3.10/bin/python3.10 -m pip install -U \
           --config-settings="--global-option=build_ext" \
           --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
           --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
