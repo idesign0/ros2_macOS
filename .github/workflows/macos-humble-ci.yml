@@ -130,6 +130,30 @@ jobs:
         echo "Homebrew uninstall step completed."
 
     # --------------------------------------------------
+    # Homebrew: Uninstall/unlink all other Python versions
+    # --------------------------------------------------
+    - name: Cleanup all other Python versions
+      shell: bash
+      run: |
+        echo "Cleaning all Python versions except python@3.10"
+
+        # Unlink/uninstall other Homebrew Pythons
+        for pkg in $(brew list --versions | grep -E '^python' | awk '{print $1}'); do
+          if [ "$pkg" != "python@3.10" ]; then
+            echo "Unlinking/uninstalling $pkg"
+            brew unlink $pkg || true
+            brew uninstall --ignore-dependencies $pkg || true
+          fi
+        done
+
+        # Remove framework/system Python paths from PATH
+        export PATH=$(echo $PATH | tr ':' '\n' | grep -v '/Library/Frameworks/Python.framework/Versions' | paste -sd ':' -)
+
+        # Verify only Python 3.10 is active
+        which python3
+        python3 --version
+
+    # --------------------------------------------------
     # Force python3 -> Homebrew Python 3.10 (shim)
     # --------------------------------------------------
     - name: Force python3 to Homebrew 3.10
