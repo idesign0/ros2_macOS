@@ -730,3 +730,7 @@
 	path = gzsim/gz-cmake
 	url = https://github.com/gazebosim/gz-cmake.git
 	branch = gz-cmake4
+[submodule "ros2/joint_state_publisher"]
+	path = ros2/joint_state_publisher
+	url = https://github.com/ros/joint_state_publisher.git
+	branch = ros2
