@@ -18,7 +18,7 @@ jobs:
 
     steps:
     # --------------------------------------------------
-    # Checkout
+    # Checkout repository
     # --------------------------------------------------
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -26,9 +26,6 @@ jobs:
         submodules: false
         fetch-depth: 0
 
-    # --------------------------------------------------
-    # Cache git submodules
-    # --------------------------------------------------
     - name: Cache git submodules
       uses: actions/cache@v4
       with:
@@ -84,17 +81,12 @@ jobs:
         ./brew-packages/install_brew_packages.sh
 
     # --------------------------------------------------
-    # Force Homebrew Python 3.10
+    # Force Python 3.10 usage
     # --------------------------------------------------
-    - name: Set Homebrew PATH (Python 3.10 first)
+    - name: Use Python 3.10
       run: |
-        echo "/opt/homebrew/opt/python@3.10/bin" >> $GITHUB_PATH
-        echo "/opt/homebrew/bin" >> $GITHUB_PATH
-
-    - name: Verify Python 3.10 (NO framework)
-      run: |
-        echo "/opt/homebrew/opt/python@3.10/bin" >> $GITHUB_PATH
         export PATH="/opt/homebrew/opt/python@3.10/bin:$PATH"
+        echo "/opt/homebrew/opt/python@3.10/bin" >> $GITHUB_PATH
         which python3
         python3 --version
         python3 - <<EOF
@@ -104,7 +96,7 @@ jobs:
         print("framework:", sysconfig.get_config_var("PYTHONFRAMEWORK"))
         EOF
 
-    - name: Export Python env (hard pin)
+    - name: Export Python env for colcon
       run: |
         PY=/opt/homebrew/opt/python@3.10/bin/python3
         echo "Python3_EXECUTABLE=$PY" >> $GITHUB_ENV
@@ -112,12 +104,12 @@ jobs:
         echo "AMENT_PYTHON_EXECUTABLE=$PY" >> $GITHUB_ENV
 
     # --------------------------------------------------
-    # Python deps (brew python)
+    # Python dependencies
     # --------------------------------------------------
     - name: Install Python dependencies
       run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip install -U \
+        /opt/homebrew/opt/python@3.10/bin/python3 -m pip install --upgrade pip
+        /opt/homebrew/opt/python@3.10/bin/python3 -m pip install -U \
           --config-settings="--global-option=build_ext" \
           --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
           --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
@@ -132,12 +124,11 @@ jobs:
           vcstool typeguard jinja2
 
     # --------------------------------------------------
-    # Environment
+    # Setup environment variables
     # --------------------------------------------------
     - name: Setup build environment
       run: |
         QT_ROOT=$(brew --prefix qt@5)
-
         echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> $GITHUB_ENV
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
         echo "CMAKE_PREFIX_PATH=${GITHUB_WORKSPACE}/install:${QT_ROOT}" >> $GITHUB_ENV
@@ -145,6 +136,7 @@ jobs:
         echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
         echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=${GITHUB_WORKSPACE}/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+
     # --------------------------------------------------
     # Cache ROS workspace
     # --------------------------------------------------
@@ -160,7 +152,7 @@ jobs:
           ${{ runner.os }}-ros2-humble-
 
     # --------------------------------------------------
-    # Build
+    # Build octomap first
     # --------------------------------------------------
     - name: Build octomap first
       shell: bash
@@ -176,6 +168,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
 
+    # --------------------------------------------------
+    # Build full workspace
+    # --------------------------------------------------
     - name: Build full workspace
       shell: bash
       continue-on-error: true
