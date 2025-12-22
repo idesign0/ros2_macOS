@@ -261,8 +261,8 @@ jobs:
           --symlink-install \
           --packages-select octomap-distribution \
           --cmake-args \
-            -DPython_EXECUTABLE=${Python_EXECUTABLE} \
-            -DPython3_EXECUTABLE=${Python3_EXECUTABLE} \
+            -DPython_EXECUTABLE=/opt/homebrew/opt/python@3.10/bin/python3.10 \
+            -DPython3_EXECUTABLE=/opt/homebrew/opt/python@3.10/bin/python3.10 \
             -DPython3_FIND_FRAMEWORK=NEVER \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
@@ -283,8 +283,8 @@ jobs:
           --continue-on-error \
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests octomap-distribution \
           --cmake-args \
-            -DPython_EXECUTABLE=${Python_EXECUTABLE} \
-            -DPython3_EXECUTABLE=${Python3_EXECUTABLE} \
+            -DPython_EXECUTABLE=$/opt/homebrew/opt/python@3.10/bin/python3.10 \
+            -DPython3_EXECUTABLE=/opt/homebrew/opt/python@3.10/bin/python3.10 \
             -DPython3_FIND_FRAMEWORK=NEVER \
             -DCMAKE_BUILD_TYPE=Release \
             -DBOOST_ROOT=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89 \
