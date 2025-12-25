@@ -24,39 +24,39 @@ set(Python3_ROOT_DIR "/Library/Frameworks/Python.framework/Versions/3.11" CACHE 
 set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib" CACHE FILEPATH "Python 3.11 library" FORCE)
 set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
 
-# Boost
-# Path to your custom Boost installation
-set(BOOST_ROOT "$ENV{HOME}/kilted-ros2/src/ros-commondep/boost-1.89" CACHE PATH "Boost root")
-set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
-set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
+# Check the package/project name
+if("${CMAKE_PROJECT_NAME}" STREQUAL "kinematics_interface_pinocchio")
+    message(STATUS "Using system Brew Boost for ${CMAKE_PROJECT_NAME}")
+    # Let CMake find system Boost (via brew)
+    set(Boost_NO_SYSTEM_PATHS OFF CACHE BOOL "Allow system Boost" FORCE)
+else()
+    message(STATUS "Using custom CMake Boost for ${CMAKE_PROJECT_NAME}")
 
-# Asio from Boost
-set(THIRDPARTY_Asio ON CACHE BOOL "Allow Thirdparty Asio" FORCE)
+    # Path to your custom Boost installation
+    set(BOOST_ROOT "$ENV{HOME}/kilted-ros2/src/ros-commondep/boost-1.89" CACHE PATH "Boost root")
+    set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
+    set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
 
-# Ensure Boost can be found without searching system paths first
-set(CMAKE_PREFIX_PATH "${BOOST_ROOT};${CMAKE_PREFIX_PATH}")
+    # Ensure Boost can be found without searching system paths first
+    set(CMAKE_PREFIX_PATH "${BOOST_ROOT};${CMAKE_PREFIX_PATH}")
 
-# Force modern CMake Boost behavior
-set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Don't search system paths for Boost")
-set(Boost_NO_BOOST_CMAKE OFF CACHE BOOL "Allow BoostConfig.cmake if present")
+    # Force modern CMake Boost behavior
+    set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Don't search system paths for Boost")
+    set(Boost_NO_BOOST_CMAKE OFF CACHE BOOL "Allow BoostConfig.cmake if present")
 
-# Make sure CMake uses your Boost include & lib paths
-set(Boost_INCLUDE_DIRS "${BOOST_INCLUDEDIR}" CACHE PATH "Boost include dirs" FORCE)
-set(Boost_LIBRARY_DIRS "${BOOST_LIBRARYDIR}" CACHE PATH "Boost library dir" FORCE)
+    # Make sure CMake uses your Boost include & lib paths
+    set(Boost_INCLUDE_DIRS "${BOOST_INCLUDEDIR}" CACHE PATH "Boost include dirs" FORCE)
+    set(Boost_LIBRARY_DIRS "${BOOST_LIBRARYDIR}" CACHE PATH "Boost library dir" FORCE)
 
-# Force include + lib dirs globally
-include_directories(SYSTEM ${BOOST_INCLUDEDIR})
-link_directories(${BOOST_LIBRARYDIR})
+    include_directories(SYSTEM ${BOOST_INCLUDEDIR})
+    link_directories(${BOOST_LIBRARYDIR})
 
-# Globally enable deprecated Boost Timer API
-add_definitions(-DBOOST_TIMER_ENABLE_DEPRECATED)
+    # Python-specific paths
+    set(Boost_PYTHON_LIBRARY "${BOOST_LIBRARYDIR}/libboost_python311.dylib" CACHE FILEPATH "Boost Python library")
+    set(Boost_PYTHON_INCLUDE_DIR "${BOOST_INCLUDEDIR}" CACHE PATH "Boost Python include dir")
+endif()
 
-# Python-specific paths
-set(Boost_PYTHON_LIBRARY "${BOOST_LIBRARYDIR}/libboost_python311.dylib" CACHE FILEPATH "Boost Python library")
-set(Boost_PYTHON_INCLUDE_DIR "${BOOST_INCLUDEDIR}" CACHE PATH "Boost Python include dir")
 
-# Optional: force CMake to find Boost in these directories
-set(CMAKE_PREFIX_PATH "${BOOST_ROOT}/lib/cmake/Boost-1.89.0;${CMAKE_PREFIX_PATH}" CACHE PATH "Boost CMake path")
 
 # --- RPATH settings for macOS ---
 set(CMAKE_MACOSX_RPATH ON)
@@ -78,21 +78,16 @@ set(CMAKE_INSTALL_RPATH "${BASE_RPATH}")
 set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
 
-# --- yaml-cpp from Kilted ROS 2 (opt/ vendor install) ---
-set(yaml-cpp_DIR
-    "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/lib/cmake/yaml-cpp"
-    CACHE PATH "yaml-cpp config directory"
-)
+# --- yaml-cpp from Kilted ROS 2 (opt/vendor install) ---
+set(yaml-cpp_DIR "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config directory")
 
-set(YAML_CPP_INCLUDE_DIRS
-    "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/include"
-    CACHE PATH "yaml-cpp include directory"
-)
+# Make sure CMake uses this directory
+list(APPEND CMAKE_PREFIX_PATH "${yaml-cpp_DIR}")
 
-set(YAML_CPP_LIBRARIES
-    "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib"
-    CACHE FILEPATH "yaml-cpp library"
-)
+# Optionally, set include dirs and library explicitly
+set(YAML_CPP_INCLUDE_DIRS "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/include" CACHE PATH "yaml-cpp include directory")
+set(YAML_CPP_LIBRARIES "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
+
 
 # Use the paths
 include_directories(${YAML_CPP_INCLUDE_DIRS})
@@ -150,6 +145,9 @@ set(CMAKE_USE_WIN32_THREADS_INIT 0)
 set(CMAKE_USE_PTHREADS_INIT 1)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
+# Asio FastDDS fix
+set(THIRDPARTY_Asio ON CACHE BOOL "Allow Thirdparty Asio" FORCE)
+
 # OpenMP for Apple Clang
 set(OpenMP_INCLUDE_DIR "/opt/homebrew/opt/libomp/include")
 set(OpenMP_LIB_DIR "/opt/homebrew/opt/libomp/lib")
@@ -198,22 +196,6 @@ set(CSPARSE_LIBRARY "/opt/homebrew/lib/libsuitesparse.dylib")
 
 # Ceres
 set(Ceres_DIR "$ENV{HOME}/kilted-ros2/install/ceres-solver/lib/cmake/Ceres" CACHE PATH "")
-
-# ProtoBuf
-set(PROTOBUF_INSTALL_PATH 
-    "$ENV{HOME}/kilted-ros2/install/protobuf" 
-    CACHE PATH "Installation path for source-built Protobuf" FORCE)
-
-# Set the CMAKE_PREFIX_PATH to prioritize the source install over Homebrew
-set(CMAKE_PREFIX_PATH 
-    "${PROTOBUF_INSTALL_PATH};${CMAKE_PREFIX_PATH}")
-
-# Explicitly add the include directory to the system path
-include_directories(SYSTEM "${PROTOBUF_INSTALL_PATH}/include")
-
-# Explicitly set the variables that packages like gz-msgs will search for
-set(PROTOBUF_INCLUDE_DIR "${PROTOBUF_INSTALL_PATH}/include" CACHE PATH "Protobuf Include Dir" FORCE)
-set(PROTOBUF_LIBRARY "${PROTOBUF_INSTALL_PATH}/lib/libprotobuf.dylib" CACHE FILEPATH "Protobuf Library" FORCE)
 
 # 1. Set the GDAL_CONFIG variable (often found in /opt/homebrew/bin)
 set(GDAL_CONFIG_BIN "/opt/homebrew/bin/gdal-config" CACHE FILEPATH "Path to Homebrew gdal-config utility." FORCE)

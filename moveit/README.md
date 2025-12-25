@@ -17,7 +17,7 @@ pip install ruckig==0.8.4
 
 ### 1. Build 
 ```bash
-cd ~/humble-ros2
+cd ~/kilted-ros2
 colcon build \
   --symlink-install \
   --base-paths src/moveit/  \
@@ -51,7 +51,7 @@ source ~/.zshrc
 Before running the tutorials on macOS, you must preload the MoveIt capabilities plugin manually:
 
 ```bash
-export DYLD_INSERT_LIBRARIES=$HOME/humble-ros2/install/moveit_ros_move_group/lib/libmoveit_move_group_default_capabilities.dylib
+export DYLD_INSERT_LIBRARIES=$HOME/kilted-ros2/install/moveit_ros_move_group/lib/libmoveit_move_group_default_capabilities.dylib
 ```
 >⚠️ Note:
 >On macOS, use: DYLD_INSERT_LIBRARIES,

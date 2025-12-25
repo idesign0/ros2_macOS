@@ -1,29 +1,56 @@
 #!/bin/bash
+set -euo pipefail
 
-INPUT_FILE="matched_packages.txt"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+INPUT_FILE="$SCRIPT_DIR/matched_packages.txt"
 
-if [[ ! -f $INPUT_FILE ]]; then
-  echo "File '$INPUT_FILE' not found!"
-  exit 1
-fi
+echo "🔄 Preloading Homebrew status for faster checks..."
 
-MATCHED_COUNT=$(wc -l < "$INPUT_FILE")
-echo "🚀 Starting Homebrew install for $MATCHED_COUNT packages from $INPUT_FILE..."
-echo "💡 Press CTRL+C anytime to cancel."
+# 1. Fetch the list of ALL currently installed formulas ONCE
+INSTALLED_FORMULAS=$(brew list --formula 2>/dev/null || echo "")
 
-trap 'echo -e "\n❌ Installation interrupted. Exiting..."; exit 1' SIGINT
-
-while read -r line; do
-  # Extract package name and optional version
-  pkg=$(echo "$line" | awk '{print $1}')
-  version=$(echo "$line" | awk '{print $2}')
-  
-  if brew list --versions "$pkg" > /dev/null 2>&1; then
-    echo "✔️ $pkg is already installed."
-  else
-    echo "⬇️ Installing $pkg ..."
-    brew install "$pkg"
-  fi
+# --- 2. Clean up package names and provide progress feedback ---
+PACKAGE_NAMES_ARRAY=()
+while IFS= read -r line; do
+    pkg=$(echo "$line" | awk '{print $1}')
+    [[ -z "$pkg" || "$pkg" =~ ^# ]] && continue
+    PACKAGE_NAMES_ARRAY+=("$pkg")
 done < "$INPUT_FILE"
 
-echo "✅ All packages processed."
+PACKAGE_COUNT=${#PACKAGE_NAMES_ARRAY[@]}
+
+echo "---"
+echo "🔍 Found ${PACKAGE_COUNT} unique formulas to process."
+echo "---"
+
+PACKAGE_NAMES_ONLY="${PACKAGE_NAMES_ARRAY[*]}"
+
+# 3. Fetch the tap info for ALL packages ONCE
+echo "⏳ Fetching information for all packages (may take a moment)..."
+FORMULA_INFO_ALL=$(brew info $PACKAGE_NAMES_ONLY 2>/dev/null || true)
+
+echo "✅ Homebrew status preloaded."
+echo "--------------------------------------------------------"
+
+echo "📦 Starting formula check and installation queue..."
+
+packages=()
+for pkg in "${PACKAGE_NAMES_ARRAY[@]}"; do
+  
+  # --- OPTIMIZED CHECK: Check if formula is already installed ---
+  # CRITICAL: This grep must not fail the script if the package isn't found in the list.
+  if echo "$INSTALLED_FORMULAS" | grep -w -q "$pkg"; then
+    echo "✔️  $pkg already installed"
+    continue
+  fi
+  packages+=("$pkg")
+done
+
+for pkg in "${packages[@]}"; do
+    echo "🔹 Installing $pkg..."
+    brew install "$pkg" || {
+        echo "⚠️ Warning: Failed to install $pkg, continuing..."
+    }
+done
+
+echo "✅ Done"

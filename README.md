@@ -75,8 +75,8 @@ This guide will walk you through:
 First, create your ROS 2 workspace and clone this repository into the `src` folder:
 
 ```bash
-mkdir -p ~/humble-ros2/src
-cd ~/humble-ros2/src
+mkdir -p ~/kilted-ros2/src
+cd ~/kilted-ros2/src
 git clone -b humble https://github.com/idesign0/ros2_macOS.git .
 ```
 After cloning, run:
@@ -100,7 +100,7 @@ brew doctor
 and now, Go back to the root of your workspace and run the Homebrew packages installation script:
 
 ```bash
-cd ~/humble-ros2
+cd ~/kilted-ros2
 ./brew-packages/install_brew_packages.sh
 ```
 This script installs essential tools and libraries needed for building ROS 2 Humble on macOS ARM64.
@@ -147,7 +147,7 @@ brew unlink boost boost-pytnon3 xtensor xdm xtl qt
   ```bash
  # Minimum required CMake policy version and C++ standard
 export CMAKE_POLICY_VERSION_MINIMUM=3.5
-export MY_TOOLCHAIN_FILE="$HOME/humble-ros2/src/cmake/toolchain.cmake"
+export MY_TOOLCHAIN_FILE="$HOME/kilted-ros2/src/cmake/toolchain.cmake"
 
 # Qt 5 paths (Homebrew)
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:$(brew --prefix qt@5)"
@@ -165,10 +165,10 @@ export OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3
 
 # Gazebo Harmonic environment variables
 export GZ_VERSION=harmonic
-export GZ_SIM_SYSTEM_PLUGIN_PATH=~/humble-ros2/install/gz_ros2_control/lib/
+export GZ_SIM_SYSTEM_PLUGIN_PATH=~/kilted-ros2/install/gz_ros2_control/lib/
 
 # Source ROS 2 workspace setup script
-source ~/humble-ros2/install/setup.zsh
+source ~/kilted-ros2/install/setup.zsh
 
 # Source your overlay workspace setup script
 source ~/ros2_ws/install/setup.zsh
@@ -258,7 +258,7 @@ brew install gz-harmonic
 
 ### 2. 🔨 Build
 ```bash
-cd ~/humble-ros2
+cd ~/kilted-ros2
 ```
 > ⚠️ **Note:**  
 > The build process might require several attempts to complete successfully,  

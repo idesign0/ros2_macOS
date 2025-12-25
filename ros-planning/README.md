@@ -33,7 +33,7 @@ This script installs essential tools and libraries needed for building ROS 2 Hum
 This build focuses on nav2 and related packages only.
 
 ```bash
-cd ~/humble-ros2
+cd ~/kilted-ros2
 colcon build \
   --symlink-install \
   --base-paths src/ros-planning/  \

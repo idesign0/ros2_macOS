@@ -432,7 +432,7 @@
 	branch = ros2
 [submodule "moveit/geometric_shapes"]
 	path = moveit/geometric_shapes
-	url = https://github.com/moveit/geometric_shapes.git
+	url = https://github.com/idesign0/id_geometric_shapes.git
 	branch = ros2
 [submodule "moveit/srdfdom"]
 	path = moveit/srdfdom
@@ -809,10 +809,6 @@
 	path = ros2/orocos_kdl_vendor
 	url = https://github.com/ros2/orocos_kdl_vendor.git
 	branch = kilted
-[submodule "moveit/dependencies/osqp"]
-	path = moveit/dependencies/osqp
-	url = https://github.com/osqp/osqp.git
-	branch = v0.6.0
 [submodule "moveit/dependencies/ros-industrial/stomp"]
 	path = moveit/dependencies/ros-industrial/stomp
 	url = https://github.com/ros-industrial/stomp.git
@@ -821,3 +817,11 @@
 	path = moveit/dependencies/ros-industrial/ros_industrial_cmake_boilerplate
 	url = https://github.com/ros-industrial/ros_industrial_cmake_boilerplate.git
 	branch = master
+[submodule "ros2/joint_state_publisher"]
+	path = ros2/joint_state_publisher
+	url = https://github.com/ros/joint_state_publisher.git
+	branch = ros2
+[submodule "moveit/dependencies/osqp_vendor"]
+	path = moveit/dependencies/osqp_vendor
+	url = https://github.com/tier4/osqp_vendor.git
+	branch = main
