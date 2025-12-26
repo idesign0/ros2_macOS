@@ -102,9 +102,11 @@ jobs:
     # --------------------------------------------------
     - name: Python 3.11
       run: |
+        echo "/Library/Frameworks/Python.framework/Versions/3.11/bin" >> $GITHUB_PATH
         which python3
         python3 --version
         
+        python3 -m pip install --upgrade pip --break-system-packages
         python3 -m pip install -U \
           --break-system-packages \
           --config-settings="--global-option=build_ext" \
@@ -117,8 +119,7 @@ jobs:
           importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
           nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
           pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard
-      env:
-        PATH: /Library/Frameworks/Python.framework/Versions/3.11/bin:${{ env.PATH }}
+
     # --------------------------------------------------
     # Environment
     # --------------------------------------------------
