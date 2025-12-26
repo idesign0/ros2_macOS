@@ -825,3 +825,7 @@
 	path = moveit/dependencies/osqp_vendor
 	url = https://github.com/tier4/osqp_vendor.git
 	branch = main
+[submodule "ros2/pybind11_vendor"]
+	path = ros2/pybind11_vendor
+	url = https://github.com/ros2/pybind11_vendor.git
+	branch = kilted
