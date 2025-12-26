@@ -1,30 +1,12 @@
-# ROS 2 Humble + MoveIt2 + Gazebo Harmonic Setup on macOS (Apple Silicon)
+# ROS 2 Kilted + MoveIt2 + Gazebo Ionic Setup on macOS (Apple Silicon)
 
-This repository provides a streamlined setup for running **ROS 2 Humble** and **Gazebo Sim Harmonic** on **macOS with Apple Silicon (M1/M2/M3)**. ROS 2 is built from source with macOS patches, and Gazebo is installed via Homebrew.
-
----
-## New Packages Added
-
-This setup now includes the following additional submodules:
-
-- **Livox SDK (Livox-SDK2)**: `ros2_macos_sdk/livox_sdk` ([GitHub link](https://github.com/Livox-SDK/Livox-SDK2.git)) - branch: master  
-- **Livox ROS Driver 2**: `ros-drivers/livox_ros_driver2` ([GitHub link](https://github.com/idesign0/id_livox_ros_driver2.git)) - branch: master  
-- **Event Camera software stack**: `ros-perception/ros-event-camera/`  
-  - `event_camera_msgs` ([GitHub link](https://github.com/ros-event-camera/event_camera_msgs.git)) - branch: humble  
-  - `event_camera_codecs` ([GitHub link](https://github.com/ros-event-camera/event_camera_codecs.git)) - branch: humble  
-  - `event_camera_renderer` ([GitHub link](https://github.com/idesign0/event_camera_renderer.git)) - branch: humble  
-  - `event_camera_tools` ([GitHub link](https://github.com/idesign0/event_camera_tools.git)) - branch: master  
-  - `dependencies/dvs_msgs` ([GitHub link](https://github.com/ros-event-camera/dvs_msgs.git)) - branch: ros2  
-  - `dependencies/prophesee_event_msgs` ([GitHub link](https://github.com/ros-event-camera/prophesee_event_msgs.git)) - branch: ros2  
-- **Spatio-temporal voxel layer**: `ros-planning/spatio_temporal_voxel_layer` ([GitHub link](https://github.com/idesign0/spatio_temporal_voxel_layer.git)) - branch: humble  
-- **Webots ROS2**: `ros-simulation/webots/webots_ros2` ([GitHub link](https://github.com/cyberbotics/webots_ros2.git))
-    > ⚠️ Note: To use this package, installation of the Webots simulator is required. See [Webots official site](https://cyberbotics.com) for installation instructions.   
+This repository provides a streamlined setup for running **ROS 2 Humble** and **Gazebo Sim Ionic** on **macOS with Apple Silicon (M1/M2/M3)**. ROS 2 is built from source with macOS patches, and Gazebo is built from source.
 
 ---
 
 ## ✅ What's Included
 
-This repository provides a full build of **ROS 2 Humble** from source for **ARM64 macOS**, including core packages and key frameworks such as:
+This repository provides a full build of **ROS 2 Kilted** from source for **ARM64 macOS**, including core packages and key frameworks such as:
 
 - **ament** build system  
 - **backward_ros** for stack tracing  
@@ -55,10 +37,12 @@ This repository provides a full build of **ROS 2 Humble** from source for **ARM6
 - **SLAM_toolbox** (`ros-planning/`)  
 
 Additionally, this setup includes:  
-- **Gazebo Harmonic** installed via Homebrew  
+- **Gazebo Ionic** built from source.  
 - macOS-specific fixes and configurations  
 - A clean, tested installation process and environment 
 
+> ⚠️ **Note:**
+> Webot, Drivers and SDKs still require some adjustments for Kilted and will be updated soon.
 ---
 
 ## 📦 ROS 2 macOS Prerequisites
@@ -77,7 +61,7 @@ First, create your ROS 2 workspace and clone this repository into the `src` fold
 ```bash
 mkdir -p ~/kilted-ros2/src
 cd ~/kilted-ros2/src
-git clone -b humble https://github.com/idesign0/ros2_macOS.git .
+git clone -b kilted https://github.com/idesign0/ros2_macOS.git .
 ```
 After cloning, run:
 ```bash
@@ -103,7 +87,7 @@ and now, Go back to the root of your workspace and run the Homebrew packages ins
 cd ~/kilted-ros2
 ./brew-packages/install_brew_packages.sh
 ```
-This script installs essential tools and libraries needed for building ROS 2 Humble on macOS ARM64.
+This script installs essential tools and libraries needed for building ROS 2 Kilted on macOS ARM64.
 
 You can verify or manually install additional required packages with this command (these should already be installed by the script, but it’s good to double-check):
 
@@ -115,16 +99,16 @@ pyqt@5 python qt@5 sip spdlog tinyxml2
 
 unlink some brew packages:
 ```bash
-brew unlink boost boost-pytnon3 xtensor xdm xtl qt
+brew unlink boost boost-pytnon3 xtensor xdm xtl qt osqp pybind11 orocos-kdl asio pybind11
 ```
 
 ### 3️⃣ Official ROS 2 macOS Prerequisites
 
-  This section covers the essential setup steps to prepare your macOS environment for building ROS 2 Humble.
+  This section covers the essential setup steps to prepare your macOS environment for building ROS 2 Kilted.
   
   #### 1️⃣ Install Xcode 16.2
   
-  ROS 2 Humble requires **Xcode 16.2** for a successful build.
+  ROS 2 Kilted requires **Xcode 16.2** for a successful build.
   
   - Download Xcode 16.2 from the [Apple Developer website](https://xcodereleases.com).  
   - Install Xcode 16.2.  
@@ -145,9 +129,12 @@ brew unlink boost boost-pytnon3 xtensor xdm xtl qt
   To ensure ROS 2 and its dependencies work correctly on your macOS system, add the following environment variables and aliases to your shell configuration (`~/.zshrc` or `~/.bash_profile`):
   
   ```bash
- # Minimum required CMake policy version and C++ standard
+# --- Load completion system early ---
+autoload -Uz compinit
+compinit
+
+# Minimum required CMake policy version and C++ standard
 export CMAKE_POLICY_VERSION_MINIMUM=3.5
-export MY_TOOLCHAIN_FILE="$HOME/kilted-ros2/src/cmake/toolchain.cmake"
 
 # Qt 5 paths (Homebrew)
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:$(brew --prefix qt@5)"
@@ -163,27 +150,31 @@ alias pip3.11="python3.11 -m pip"
 # OpenSSL root directory (Homebrew)
 export OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3
 
-# Gazebo Harmonic environment variables
-export GZ_VERSION=harmonic
-export GZ_SIM_SYSTEM_PLUGIN_PATH=~/kilted-ros2/install/gz_ros2_control/lib/
+# Gazebo ionic variables
+export GZ_VERSION=ionic
+export GZ_SIM_SYSTEM_PLUGIN_PATH=~/kilted-ros2/install/lib/
+export GZ_BUILD_FROM_SOURCE=1
+export GZ_RELAX_VERSION_MATCH=1
 
-# Source ROS 2 workspace setup script
+# sourcing
+source ~/gz-ionic/install/setup.zsh
 source ~/kilted-ros2/install/setup.zsh
-
-# Source your overlay workspace setup script
 source ~/ros2_ws/install/setup.zsh
+
+# Set the desired RMW implementation for the ROS 2 build environment.
+# Alternative common option: export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI='<CycloneDDS><Domain><Discovery><ParticipantIndex>none</ParticipantIndex></Discovery></Domain></CycloneDDS>'
 
 # Enable Python argcomplete for colcon
 eval "$(register-python-argcomplete colcon)"
 export PATH="$HOME/bin:$PATH"
   ```
-  > - **Please uncomment these lines after:**
-  >   1. You have installed **Gazebo Harmonic** and verified it works correctly, and you have successfully built all ROS 2 packages without errors.
-  >   2. You have created and built your **separate overlay workspace** (`ros2_ws`).
-  >   3. **$MY_TOOLCHAIN_FILE** path should be set properly so **toolchain.cmake** can be access during the build.
-  > 
-  > This ensures that your environment is properly configured only once the related components are ready, avoiding errors during the initial setup.
-  
+> ***Recommendation:***  
+  Select the DDS implementation based on the primary workload:
+ > - Use **CycloneDDS** when running **Navigation2** (Legacy Support)
+ > - Use **Fast DDS** when working with **MoveIt 2** and **Gazebo ROS**
+  ```
   #### 3️⃣ Install Additional Python Packages
   
   Use `python3 -m pip` (instead of just `pip`) to avoid confusion between Python 2 and Python 3 installations.
@@ -216,7 +207,7 @@ which pip
     flake8-docstrings flake8-import-order flake8-quotes \
     importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
     nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
-    pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard
+    pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard 
   ```
   
   #### 4️⃣ Disable System Integrity Protection (SIP) if necessary
@@ -245,16 +236,23 @@ which pip
 
 ## 🛠️ Installation Steps
 
-Follow these steps to install Gazebo Harmonic and build ROS 2 from source.
+Follow these steps to install Gazebo Ionic and build ROS 2 from source.
 
-### 1. Install Gazebo Harmonic
+### 1. Install Gazebo Ionic (from source)
 
-Install Gazebo Harmonic using Homebrew by running:
+Gazebo Ionic is built **from source** on macOS to avoid dependency and ABI mismatches introduced by Homebrew—most notably **protobuf**.
 
-```bash
-brew tap osrf/simulation
-brew install gz-harmonic
-```
+Clone and build Gazebo Ionic using the instructions provided in the following repository:
+
+👉 https://github.com/idesign0/gz-macOS/tree/ionic
+
+This repository includes:
+- Gazebo Ionic and required GZ libraries as submodules
+- A source-built protobuf version compatible with `gz-msgs11`
+- macOS-specific patches and configuration for Apple Silicon
+
+> **Note**  
+> Homebrew currently installs a newer protobuf version that is ABI-incompatible with Gazebo Ionic. This causes build failures in `gz-msgs11`, `gz-fuel-tools10`, and `ros_gz_bridge`. Building everything from source ensures a consistent protobuf runtime across the entire stack.
 
 ### 2. 🔨 Build
 ```bash
@@ -267,11 +265,12 @@ cd ~/kilted-ros2
 
 ```bash
 colcon build \
-  --symlink-install \
-  --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests  \
+  --packages-ignore qt_gui_cpp rqt_gui_cpp python_orocos_kdl_vendor \
   --executor parallel \
   --parallel-workers $(sysctl -n hw.ncpu) \
-  --cmake-args -DCMAKE_TOOLCHAIN_FILE=$MY_TOOLCHAIN_FILE
+  --cmake-args -DCMAKE_TOOLCHAIN_FILE=$(pwd)/src/cmake/toolchain.cmake \
+  --continue-on-error \
+  --merge-install
 ```
 source:
 ```bash
@@ -279,10 +278,7 @@ source ~/.zshrc
 ```
 
 What does each option mean?
-- `--symlink-install`  
-  Uses symlinks for installed files instead of copying — useful for faster iterative development.
-
-- `--packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests`  
+- `--packages-ignore qt_gui_cpp rqt_gui_cpp python_orocos_kdl_vendor`  
   Skips these two packages known to have macOS issues. See: [ros2/ros2#1139](https://github.com/ros2/ros2/issues/1139)
 
 - `--executor parallel`  
@@ -290,6 +286,12 @@ What does each option mean?
 
 - `--parallel-workers $(sysctl -n hw.ncpu)`  
   Sets the number of parallel jobs to your CPU core count (maximizing build speed).
+
+- `--merge-install`
+  Installs all packages into a single merged install space instead of separate per-package directories. This simplifies library discovery and linking on macOS and avoids RPATH and dependency resolution issues, especially when building large stacks like ROS 2 and Gazebo.
+
+- `--continue-on-error`
+  Continues building remaining packages even if one package fails, allowing you to identify multiple build issues in a single run instead of stopping at the first failure.
 
 ---
 
@@ -300,22 +302,8 @@ Right now, I have no issues completing the build with more than **499** packages
 This section will be constantly updated based on user feedback. Below are some of the most common errors I have faced so far:
 
 ### Errors:
-1. **Case sensitivity issues in Gazebo cmake target files** (e.g., `tinyxml2::tinyxml2` vs `TINYXML2::TINYXML2`)  
-    These errors occur due to capitalization mismatches in Homebrew-installed Gazebo cmake files.  
-    You will need to manually edit the respective cmake files (e.g., `gz-msgs10-targets.cmake`, `gz-gui8-targets.cmake`) to use the correct lowercase target names.
-    
-    Specifically, replace occurrences of `TINYXML2::TINYXML2` with `tinyxml2::tinyxml2` (and similar uppercase target names) to lowercase versions.
-    
-    - `open /opt/homebrew/Cellar/gz-gui/8.4.0_6/lib/cmake/gz-gui8/gz-gui8-targets.cmake`
-    - `open /opt/homebrew/Cellar/gz-msgs10/10.3.2_4/lib/cmake/gz-msgs10/gz-msgs10-targets.cmake`
-    
 
-    > **Note:**  
-    > Open the file based on the location shown in your error output, as versions and paths may differ.
-
----
-
-2. **ModuleNotFoundError: No module named 'some_library'**
+1. **ModuleNotFoundError: No module named 'some_library'**
    This error occurs when Python packages are missing during runtime. Simply install the missing python-package with:
 
    ```bash
@@ -324,7 +312,7 @@ This section will be constantly updated based on user feedback. Below are some o
 
 ---
 
-3. **Missing `Config.cmake` Files**
+2. **Missing `Config.cmake` Files**
 
     Sometimes during the build you may encounter errors complaining about missing `SomeLibraryConfig.cmake` files.
     
@@ -358,5 +346,5 @@ This section will be constantly updated based on user feedback. Below are some o
 
 After building and setting up your environment, verify your ROS 2 installation by running the basic talker and listener example.
 
-For detailed instructions and examples, please refer to the official ROS 2 Humble macOS development setup guide:  
-[ROS 2 Humble macOS Development Setup — Talker and Listener Example](https://docs.ros.org/en/humble/Installation/Alternatives/macOS-Development-Setup.html#id8)
+For detailed instructions and examples, please refer to the official ROS 2 Kilted macOS development setup guide:  
+[ROS 2 Kilted macOS Development Setup — Talker and Listener Example](https://docs.ros.org/en/kilted/Installation/Alternatives/macOS-Development-Setup.html#id8)
