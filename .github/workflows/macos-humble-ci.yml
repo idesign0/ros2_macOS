@@ -11,9 +11,6 @@ jobs:
     runs-on: macos-14
     env:
       CI_BUILD: TRUE
-      Python3_FIND_FRAMEWORK: NEVER
-      Python3_FIND_STRATEGY: LOCATION
-      CMAKE_FIND_FRAMEWORK: NEVER
     timeout-minutes: 360
 
     steps:
@@ -110,7 +107,7 @@ jobs:
         python3 --version
 
     - name: Upgrade pip
-      run: python3 -m pip install --upgrade pip
+      run: python3 -m pip install --upgrade pip --break-system-packages
 
     - name: Install Python dependencies
       run: |
@@ -136,20 +133,6 @@ jobs:
         echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5)" >> $GITHUB_ENV
         echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
         echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib/" >> $GITHUB_ENV
-
-    # --------------------------------------------------
-    # Cache ROS workspace
-    # --------------------------------------------------
-    - name: Cache ROS workspace
-      uses: actions/cache@v4
-      with:
-        path: |
-          build
-          install
-          log
-        key: ${{ runner.os }}-ros2-humble-${{ github.ref }}
-        restore-keys: |
-          ${{ runner.os }}-ros2-humble-
 
     # --------------------------------------------------
     # Build full workspace
