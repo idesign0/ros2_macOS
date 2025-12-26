@@ -69,7 +69,6 @@ jobs:
       run: |
         brew tap osrf/simulation
         brew install \
-          python@3.10 \
           graphviz \
           eigen@3 \
           GeographicLib
@@ -96,137 +95,47 @@ jobs:
         brew unlink xtl || true
         brew unlink qt || true
         brew unlink asio || true
+        brew unlink orocos-kdl || true
+        brew unlink octomap || true
 
         echo "Homebrew cleanup completed."
 
-        # Homebrew: Uninstall conflicting packages (vendor override)
     # --------------------------------------------------
-    - name: Uninstall conflicting Homebrew packages
+    # Python 3.11
+    # --------------------------------------------------
+    - name: Verify Python 3.11
       run: |
-        set +e
-        echo "Uninstalling Homebrew packages that conflict with vendor builds..."
-
-        if brew list --versions orocos-kdl >/dev/null 2>&1; then
-          echo "Removing Homebrew orocos-kdl (version mismatch with vendor)..."
-          brew uninstall --ignore-dependencies orocos-kdl
-        else
-          echo "orocos-kdl not installed"
-        fi
-
-        if brew list --versions octomap >/dev/null 2>&1; then
-          echo "Removing Homebrew octomap (MoveIt / geometric_shapes conflict)..."
-          brew uninstall --ignore-dependencies octomap
-        else
-          echo "octomap not installed"
-        fi
-        
-        echo "Homebrew uninstall step completed."
-
-    # --------------------------------------------------
-    # Homebrew: Uninstall/unlink all other Python versions
-    # --------------------------------------------------
-    - name: Cleanup all other Python versions
-      shell: bash
-      run: |
-        echo "Cleaning all Python versions except python@3.10"
-
-        # Unlink/uninstall other Homebrew Pythons
-        for pkg in $(brew list --versions | grep -E '^python' | awk '{print $1}'); do
-          if [ "$pkg" != "python@3.10" ]; then
-            echo "Unlinking/uninstalling $pkg"
-            brew unlink $pkg || true
-            brew uninstall --ignore-dependencies $pkg || true
-          fi
-        done
-
-        # Remove framework/system Python paths from PATH
-        export PATH=$(echo $PATH | tr ':' '\n' | grep -v '/Library/Frameworks/Python.framework/Versions' | paste -sd ':' -)
-
-        # Verify only Python 3.10 is active
+        export PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
         which python3
         python3 --version
 
-    # --------------------------------------------------
-    # Force python3 -> Homebrew Python 3.10 (shim)
-    # --------------------------------------------------
-    - name: Force python3 to Homebrew 3.10
-      shell: bash
-      run: |
-        # Prepend Homebrew Python 3.10 to PATH
-        export PATH="/opt/homebrew/opt/python@3.10/bin:$PATH"
+    - name: Upgrade pip
+      run: python3 -m pip install --upgrade pip
 
-        # Make alias for python3
-        alias python3=/opt/homebrew/opt/python@3.10/bin/python3.10
-
-        # Verify
-        which python3
-        python3 --version
-
-        # Needed for subsequent commands in this step
-        python3 -m pip install --upgrade pip
-
-    # --------------------------------------------------
-    # Export Python env for colcon & CMake
-    # --------------------------------------------------
-    - name: Export Python env for colcon & CMake
-      run: |
-        PY=/opt/homebrew/opt/python@3.10/bin/python3.10
-
-        echo "Python_EXECUTABLE=$PY" >> $GITHUB_ENV
-        echo "Python3_EXECUTABLE=$PY" >> $GITHUB_ENV
-        echo "COLCON_PYTHON_EXECUTABLE=$PY" >> $GITHUB_ENV
-        echo "AMENT_PYTHON_EXECUTABLE=$PY" >> $GITHUB_ENV
-
-        echo "Python_FIND_FRAMEWORK=NEVER" >> $GITHUB_ENV
-        echo "Python3_FIND_FRAMEWORK=NEVER" >> $GITHUB_ENV
-
-    # --------------------------------------------------
-    # Python dependencies (Homebrew Python 3.10)
-    # --------------------------------------------------
     - name: Install Python dependencies
       run: |
-        /opt/homebrew/opt/python@3.10/bin/python3.10 -m pip install --upgrade pip
-        /opt/homebrew/opt/python@3.10/bin/python3.10 -m pip install -U \
+        python3 -m pip install -U \
           --config-settings="--global-option=build_ext" \
           --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
           --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
           argcomplete catkin_pkg colcon-common-extensions coverage \
-          cryptography empy==3.3.4 flake8 flake8-blind-except==0.1.1 \
-          flake8-builtins flake8-class-newline flake8-comprehensions \
-          flake8-deprecated flake8-docstrings flake8-import-order \
-          flake8-quotes importlib-metadata lark==1.1.1 lxml \
-          matplotlib mock mypy==0.931 netifaces nose pep8 psutil \
-          pydocstyle pydot pygraphviz pyparsing==2.4.7 \
-          pytest-mock rosdep rosdistro setuptools==59.6.0 \
-          vcstool typeguard jinja2
+          cryptography empy==3.3.4 flake8 flake8-blind-except==0.1.1 flake8-builtins \
+          flake8-class-newline flake8-comprehensions flake8-deprecated \
+          flake8-docstrings flake8-import-order flake8-quotes \
+          importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
+          nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
+          pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard
 
     # --------------------------------------------------
-    # Backup: install catkin_pkg into framework Python
-    # --------------------------------------------------
-    - name: Install catkin_pkg into framework Python (fallback)
-      run: |
-        FW_PY=/Library/Frameworks/Python.framework/Versions/3.11/bin/python3
-
-        if [ -x "$FW_PY" ]; then
-          echo "Installing catkin_pkg into framework Python"
-          $FW_PY -m pip install --user catkin_pkg
-        else
-          echo "Framework Python not found, skipping"
-        fi
-
-    # --------------------------------------------------
-    # Setup environment variables
+    # Environment
     # --------------------------------------------------
     - name: Setup build environment
       run: |
-        QT_ROOT=$(brew --prefix qt@5)
         echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> $GITHUB_ENV
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
-        echo "CMAKE_PREFIX_PATH=${GITHUB_WORKSPACE}/install:${QT_ROOT}" >> $GITHUB_ENV
-        echo "DYLD_LIBRARY_PATH=${GITHUB_WORKSPACE}/install/lib" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5)" >> $GITHUB_ENV
         echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
-        echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib" >> $GITHUB_ENV
-        echo "DYLD_LIBRARY_PATH=${GITHUB_WORKSPACE}/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib/" >> $GITHUB_ENV
 
     # --------------------------------------------------
     # Cache ROS workspace
@@ -243,24 +152,6 @@ jobs:
           ${{ runner.os }}-ros2-humble-
 
     # --------------------------------------------------
-    # Build octomap first
-    # --------------------------------------------------
-    - name: Build octomap first
-      shell: bash
-      run: |
-        export CMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
-
-        colcon build \
-          --symlink-install \
-          --packages-select octomap-distribution \
-          --cmake-args \
-            -DPython_EXECUTABLE=/opt/homebrew/opt/python@3.10/bin/python3.10 \
-            -DPython3_EXECUTABLE=/opt/homebrew/opt/python@3.10/bin/python3.10 \
-            -DPython3_FIND_FRAMEWORK=NEVER \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-
-    # --------------------------------------------------
     # Build full workspace
     # --------------------------------------------------
     - name: Build full workspace
@@ -270,20 +161,12 @@ jobs:
         export CMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
 
         colcon build \
-          --symlink-install \
           --executor parallel \
-          --cmake-clean-cache \
+          --parallel-workers $(sysctl -n hw.ncpu) \
           --continue-on-error \
-          --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests octomap-distribution \
+          --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests \
           --cmake-args \
-            -DPython_EXECUTABLE=$/opt/homebrew/opt/python@3.10/bin/python3.10 \
-            -DPython3_EXECUTABLE=/opt/homebrew/opt/python@3.10/bin/python3.10 \
-            -DPython3_FIND_FRAMEWORK=NEVER \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBOOST_ROOT=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89 \
-            -DBOOST_INCLUDEDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/include \
-            -DBOOST_LIBRARYDIR=${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/lib \
-            -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+          -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
 
     # --------------------------------------------------
     # Sanity check
