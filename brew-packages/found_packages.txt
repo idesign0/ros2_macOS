@@ -1,5 +1,5 @@
 
- Ceres 2.1.0 QUIET 
+ ... COMPONENTS <components>
  PCL REQUIRED 
  PkgConfig 
 "${_dep}" QUIET
@@ -9,11 +9,14 @@
 "${rmw_implementation}" QUIET
 "${rmw_implementation}" REQUIRED
 "@RMW_IMPLEMENTATION@" REQUIRED
+${${PACKAGE_NAME}_dependency_args}
+${${PACKAGE_NAME}_find_package_args}
 ${ARGN}
 ${ARGV}
 ${Dependency} REQUIRED
-${PACKAGE_NAME} QUIET NO_MODULE
 ${PACKAGE} REQUIRED 
+${PKG_NAME} ${PROJECT_VERSION_FULL_NO_SUFFIX} EXACT \\\${gz_package_quiet} \\\${gz_package_required}
+${PKG_NAME} ${PROJECT_VERSION_FULL_NO_SUFFIX} EXACT \\\${gz_package_quiet} \\\${gz_package_required} COMPONENTS ${gz_add_component_DEPENDS_ON_COMPONENTS}
 ${PROJECT_NAME}
 ${PROJECT_NAME}_testing
 ${PROJECT_NAME}_testutils REQUIRED
@@ -35,6 +38,10 @@ ${rmw_implementation} REQUIRED
 ...
 //; s/
 <dependency> REQUIRED
+@PKG_NAME@
+@PKG_NAME@ COMPONENTS @component_name@
+@PKG_NAME@ COMPONENTS all
+@PKG_NAME@-${component} @PROJECT_VERSION_FULL_NO_SUFFIX@ EXACT ${gz_package_quiet}
 @dep REQUIRED
 Asio CONFIG QUIET
 Asio QUIET
@@ -71,11 +78,14 @@ Boost REQUIRED thread
 Boost REQUIRED thread date_time system filesystem
 Boost..
 Bullet 2.87 REQUIRED
+Bullet MODULE ${gz_quiet_arg}
 Bullet REQUIRED
 CHOLMOD REQUIRED
+CPPZMQ
 CSparse REQUIRED
 CUDA REQUIRED
-CURL CONFIG QUIET NO_CMAKE_FIND_ROOT_PATH
+CURL ${GzCURL_FIND_VERSION} ${gz_quiet_arg}
+CURL CONFIG QUIET
 CURL QUIET
 CURL REQUIRED
 CXSparse
@@ -84,7 +94,6 @@ Catch 2.13.9
 Catch2 3.6.0 REQUIRED
 Ceres
 Ceres 1.2.3 REQUIRED
-Ceres 2.1.0 QUIET
 Ceres COMPONENTS <XXX>
 Ceres COMPONENTS XXX YYY
 Ceres HINTS ${CERES_DIR_HINTS}
@@ -100,22 +109,23 @@ CycloneDDS CXX REQUIRED
 CycloneDDS QUIET CONFIG
 CycloneDDS REQUIRED
 CycloneDDS-CXX CONFIG REQUIRED
+DL
+DL REQUIRED
 Doxygen
 Doxygen 1.8 COMPONENTS doxygen
 Doxygen REQUIRED
 ECM REQUIRED NO_MODULE
+EIGEN3 [VERSION <major>[.<minor>[.<patch>]]]
 Eigen ${CERES_EIGEN_VERSION} QUIET
 Eigen REQUIRED
 Eigen3
-Eigen3 ${Eigen3_FIND_VERSION} NO_MODULE QUIET
+Eigen3 ${EIGEN3_FIND_VERSION} CONFIG
 Eigen3 3.1.2
 Eigen3 3.2.7 QUIET
 Eigen3 3.2.7 QUIET CONFIG
 Eigen3 3.3 REQUIRED
-Eigen3 3.3.0 REQUIRED
 Eigen3 CONFIG
 Eigen3 CONFIG QUIET
-Eigen3 CONFIG QUIET NO_CMAKE_FIND_ROOT_PATH
 Eigen3 QUIET NO_MODULE
 Eigen3 REQUIRED
 Eigen3 REQUIRED CONFIG
@@ -124,8 +134,6 @@ EpollShim
 FastRTPS 2.6.2 REQUIRED MODULE
 FastRTPS MODULE
 FastRTPS REQUIRED MODULE
-FlatBuffers CONFIG REQUIRED QUIET NO_CMAKE_FIND_ROOT_PATH
-Flatbuffers CONFIG QUIET NO_CMAKE_FIND_ROOT_PATH
 Flatbuffers NAMES Flatbuffers FlatBuffers
 Flatbuffers REQUIRED
 Foo REQUIRED
@@ -154,8 +162,16 @@ Git
 Git QUIET
 Glog
 Glog QUIET
+GzCURL
+GzOGRE
+GzOGRE2
+GzOGRENext
+GzOGRENext COMPONENTS HlmsPbs HlmsUnlit Overlay
+GzOGRENext VERSION 2 COMPONENTS HlmsPbs HlmsUnlit Overlay
+GzOGRENext VERSION 3 COMPONENTS HlmsPbs HlmsUnlit Overlay
+GzOGRENext VERSION 3.0 COMPONENTS HlmsPbs HlmsUnlit Overlay
 IFADDRS QUIET
-KissIcp REQUIRED
+JSONCPP
 LAPACK QUIET
 LAPACK REQUIRED
 Lcov
@@ -165,7 +181,6 @@ Matlab COMPONENTS MX_LIBRARY MAT_LIBRARY REQUIRED
 MetavisionSDK COMPONENTS driver REQUIRED
 OCTOMAP REQUIRED
 OGRE REQUIRED NO_SYSTEM_ENVIRONMENT_PATH
-OPENMP REQUIRED
 OSMesa REQUIRED
 Open3D HINTS ${CMAKE_INSTALL_PREFIX}/CMake
 Open3D HINTS ${CMAKE_INSTALL_PREFIX}/lib/cmake
@@ -186,9 +201,8 @@ OpenSSL QUIET
 OpenSSL REQUIRED
 OpenSplice COMPONENTS kernel sac REQUIRED
 OpenVDB REQUIRED
+OptiX
 OusterSDK REQUIRED
-OusterSDK REQUIRED COMPONENTS Shared
-OusterSDK REQUIRED COMPONENTS Static
 PATCH
 PCL REQUIRED
 PCL REQUIRED COMPONENTS common
@@ -197,27 +211,33 @@ PCL REQUIRED QUIET COMPONENTS common io
 PCL REQUIRED QUIET COMPONENTS core common features filters io segmentation surface
 PNG REQUIRED
 Pcap REQUIRED
+Pcap REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}
 Perl REQUIRED
 PkgConfig
 PkgConfig QUIET
 PkgConfig REQUIRED
 Poco COMPONENTS ${Poco_FIND_COMPONENTS} CONFIG QUIET
 Poco REQUIRED COMPONENTS Foundation
+Poco REQUIRED COMPONENTS Foundation Net
 Poco REQUIRED COMPONENTS Net Foundation
+Protobuf ${GzProtobuf_FIND_VERSION}
+Protobuf ${GzProtobuf_FIND_VERSION} QUIET CONFIG
 Protobuf REQUIRED
 PySide2 QUIET
 Pybind11Internal
-Python ${PYTHON_VER} EXACT REQUIRED COMPONENTS Development
 Python 3.6 COMPONENTS Interpreter Development REQUIRED
 Python COMPONENTS Interpreter
 Python COMPONENTS Interpreter Development
 Python REQUIRED COMPONENTS Interpreter Development
 Python3
+Python3 ${GZ_PYTHON_VERSION} QUIET
 Python3 ${Python3_VERSION} REQUIRED COMPONENTS Interpreter Development
 Python3 3.8 REQUIRED
 Python3 COMPONENTS Interpreter
 Python3 COMPONENTS Interpreter Development
+Python3 COMPONENTS Interpreter Development NumPy REQUIRED
 Python3 COMPONENTS Interpreter Development REQUIRED
+Python3 COMPONENTS Interpreter REQUIRED
 Python3 QUIET COMPONENTS Interpreter
 Python3 REQUIRED COMPONENTS Development
 Python3 REQUIRED COMPONENTS Development NumPy
@@ -241,7 +261,6 @@ PythonLibsNew ${PYBIND11_PYTHON_VERSION} MODULE REQUIRED ${_pybind11_quiet}
 QHULL REQUIRED
 Qt4 REQUIRED
 Qt5 ${rviz_QT_VERSION} REQUIRED Core Widgets
-Qt5 COMPONENTS Gui REQUIRED
 Qt5 REQUIRED COMPONENTS Core Gui Widgets Test Concurrent
 Qt5 REQUIRED COMPONENTS Core Widgets
 Qt5 REQUIRED COMPONENTS Widgets
@@ -260,15 +279,15 @@ SQLite3
 SQLite3 CONFIG QUIET
 SQLite3 QUIET
 SQLite3 REQUIRED
+SQLite3 [VERSION <major>[.<minor>[.<patch>]]]
 SWIG QUIET
 Shiboken2 QUIET
-Sophus REQUIRED
+SomePackage
 Sphinx QUIET
 Sphinx REQUIRED
 Sphinx REQUIRED breathe
 SuiteSparse
 TBB
-TBB CONFIG REQUIRED
 TBB QUIET
 TBB REQUIRED
 TBB REQUIRED NO_CMAKE_PACKAGE_REGISTRY
@@ -280,6 +299,7 @@ Threads REQUIRED
 TinyXML
 TinyXML CONFIG QUIET
 TinyXML REQUIRED
+TinyXML2
 TinyXML2 CONFIG QUIET
 TinyXML2 QUIET
 TinyXML2 REQUIRED
@@ -290,9 +310,12 @@ WaylandProtocols 1.15 REQUIRED
 WaylandScanner REQUIRED
 X11 REQUIRED
 XKBCommon REQUIRED
+YAML
+ZIP
 ZLIB REQUIRED
-ZMQ
 ZeroMQ
+ZeroMQ ${ZeroMQ_FIND_VERSION} QUIET CONFIG
+ZeroMQ REQUIRED
 ZeroMQ VERSION 4 REQUIRED PRIVATE
 [^
 action_msgs QUIET
@@ -303,6 +326,7 @@ ament_cmake QUIET
 ament_cmake QUIET REQUIRED
 ament_cmake REQUIRED
 ament_cmake_auto REQUIRED
+ament_cmake_black REQUIRED
 ament_cmake_clang_format REQUIRED
 ament_cmake_clang_tidy REQUIRED
 ament_cmake_copyright
@@ -351,6 +375,7 @@ ament_lint_auto
 ament_lint_auto QUIET
 ament_lint_auto REQUIRED
 angles REQUIRED
+assimp CONFIG QUIET
 assimp QUIET
 assimp REQUIRED
 assimp REQUIRED QUIET
@@ -359,6 +384,7 @@ backward_ros REQUIRED
 behaviortree_cpp_v3
 behaviortree_cpp_v3 REQUIRED
 behaviortree_ros2 REQUIRED
+benchmark
 benchmark QUIET
 benchmark REQUIRED
 bond REQUIRED
@@ -403,11 +429,14 @@ controller_manager REQUIRED
 controller_manager_msgs REQUIRED
 costmap_queue REQUIRED
 cpptoml REQUIRED
+cppzmq
+cppzmq REQUIRED
 curl REQUIRED PATHS "${curl_DIR}" NO_MODULE NO_DEFAULT_PATH
 cv_bridge REQUIRED
 cyclonedds_cmake_module REQUIRED
 diagnostic_msgs REQUIRED
 diagnostic_updater REQUIRED
+dlfcn-win32
 doctest            REQUIRED
 dwb_core REQUIRED
 dwb_msgs REQUIRED
@@ -433,7 +462,6 @@ fastrtps_cmake_module REQUIRED
 fcl REQUIRED
 filters CONFIG REQUIRED
 flatbuffers REQUIRED
-fmt
 fmt QUIET
 fmt REQUIRED
 foonathan_memory REQUIRED
@@ -448,18 +476,31 @@ geographic_msgs REQUIRED
 geometric_shapes REQUIRED
 geometry_msgs REQUIRED
 gflags
+glad QUIET
+glad REQUIRED
 glfw3 3.3 QUIET
 glfw3 3.3 REQUIRED
 glfw3 CONFIG REQUIRED
 glfw3 REQUIRED
 glog
 gmock_vendor QUIET
+googletest QUIET
 gps_msgs REQUIRED
 graph_msgs REQUIRED
 gtest_vendor QUIET
 gtest_vendor REQUIRED
+gz-<project>
+gz-c_no_deps PRIVATE REQUIRED
+gz-c_no_deps REQUIRED EXTRA_ARGS NAMES gz-c_no_deps
+gz-c_no_deps_static REQUIRED
+gz-cmake# REQUIRED
 gz-cmake4 4.1.0 REQUIRED
 gz-cmake4 REQUIRED
+gz-comp_deps REQUIRED COMPONENTS child
+gz-comp_deps REQUIRED COMPONENTS child parent
+gz-comp_deps REQUIRED COMPONENTS parent child
+gz-find_config
+gz-find_config CONFIG
 gz-math7 REQUIRED
 gz-msgs10 REQUIRED
 gz-msgs11 REQUIRED
@@ -504,15 +545,19 @@ image_transport REQUIRED
 interactive_markers REQUIRED
 joint_limits_interface REQUIRED
 joint_trajectory_controller REQUIRED
+jsoncpp CONFIG QUIET
+jsoncpp REQUIRED
 kdl_parser REQUIRED
 keyboard_handler REQUIRED
 kinematics_interface_kdl REQUIRED
 laser_geometry REQUIRED
 launch_testing_ament_cmake
 launch_testing_ament_cmake REQUIRED
+lexy REQUIRED
 libcurl_vendor REQUIRED
 libstatistics_collector REQUIRED
 libtins CONFIG QUIET
+libtins QUIET
 libtins REQUIRED
 libyaml_vendor REQUIRED
 lifecycle_msgs REQUIRED
@@ -521,6 +566,8 @@ map_msgs REQUIRED
 mcap_vendor REQUIRED
 message_filters REQUIRED
 mimick_vendor REQUIRED
+minicoro REQUIRED
+minitrace REQUIRED
 moveit_common REQUIRED
 moveit_core REQUIRED
 moveit_msgs REQUIRED
@@ -598,6 +645,7 @@ pybind11 2.6 REQUIRED
 pybind11 2.9 EXACT CONFIG REQUIRED
 pybind11 CONFIG
 pybind11 CONFIG REQUIRED
+pybind11 MODULE REQUIRED
 pybind11 QUIET
 pybind11 REQUIRED
 pybind11 REQUIRED CONFIG
@@ -639,7 +687,6 @@ rmw_fastrtps_cpp QUIET
 rmw_fastrtps_shared_cpp REQUIRED
 rmw_implementation REQUIRED
 rmw_implementation_cmake REQUIRED
-robinMap CONFIG REQUIRED PATHS ${CMAKE_CURRENT_LIST_DIR}/cmake
 ros1_bridge QUIET
 ros2_control_cmake REQUIRED
 ros2_control_test_assets REQUIRED
@@ -676,9 +723,7 @@ rosidl_typesupport_fastrtps_cpp REQUIRED
 rosidl_typesupport_interface REQUIRED
 rosidl_typesupport_introspection_c REQUIRED
 rosidl_typesupport_introspection_cpp REQUIRED
-roslaunch
 roslaunch REQUIRED
-roslint REQUIRED
 rostest
 rostest REQUIRED
 rsl 1.1.0 EXACT REQUIRED
@@ -722,6 +767,8 @@ tf2_kdl REQUIRED
 tf2_msgs REQUIRED
 tf2_ros REQUIRED
 tf2_sensor_msgs REQUIRED
+tinyxml2 QUIET CONFIG
+tinyxml2 REQUIRED
 tinyxml2_vendor REQUIRED
 tinyxml_vendor QUIET
 tl_expected REQUIRED
@@ -730,8 +777,6 @@ tlsf_cpp
 trac_ik_kinematics_plugin QUIET
 tracetools REQUIRED
 trajectory_msgs REQUIRED
-tsl-robin-map CONFIG QUIET NO_CMAKE_FIND_ROOT_PATH
-tsl-robin-map CONFIG REQUIRED
 turtelsim REQUIRED
 unique_identifier_msgs REQUIRED
 ur_client_library
@@ -744,6 +789,7 @@ ur_msgs REQUIRED
 ur_robot_driver REQUIRED
 urdf REQUIRED
 urdf_parser_plugin REQUIRED
+urdfdom ${find_version} QUIET
 urdfdom REQUIRED
 urdfdom_headers 1.0 REQUIRED
 urdfdom_headers REQUIRED
@@ -751,8 +797,6 @@ velodyne_msgs REQUIRED
 vision_msgs REQUIRED
 visualization_msgs REQUIRED
 warehouse_ros REQUIRED
-webots_ros2_driver REQUIRED
-webots_ros2_msgs REQUIRED
 xacro REQUIRED
 xsimd
 xsimd ${xsimd_REQUIRED_VERSION} REQUIRED
@@ -763,6 +807,7 @@ xtensor REQUIRED CONFIG
 xtl ${xtl_REQUIRED_VERSION} REQUIRED
 xtl REQUIRED
 xtl REQUIRED CONFIG
+yaml ${YAML_FIND_VERSION} CONFIG QUIET
 yaml-cpp CONFIG REQUIRED QUIET
 yaml-cpp QUIET
 yaml-cpp QUIET NO_CMAKE_PACKAGE_REGISTRY
@@ -770,3 +815,4 @@ yaml_cpp_vendor REQUIRED
 zstd 1.4.4 QUIET
 zstd REQUIRED
 zstd_vendor REQUIRED
+~

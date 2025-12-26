@@ -119,14 +119,7 @@ jobs:
         else
           echo "octomap not installed"
         fi
-
-        if brew list --versions pybind11 >/dev/null 2>&1; then
-          echo "Removing Homebrew octomap (MoveIt / moveit_tast_constructor_core conflict)..."
-          brew uninstall --ignore-dependencies pybind11
-        else
-          echo "octomap not installed"
-        fi
-
+        
         echo "Homebrew uninstall step completed."
 
     # --------------------------------------------------
