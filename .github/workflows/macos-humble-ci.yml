@@ -100,24 +100,13 @@ jobs:
     # --------------------------------------------------
     # Python 3.11
     # --------------------------------------------------
-    - name: Verify Python 3.11
+    - name: Python 3.11
       run: |
-        export PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
         which python3
         python3 --version
-
-    - name: Setup Python venv
-      run: |
-        python3 -m venv ~/ros2_venv
-        source ~/ros2_venv/bin/activate
-        python -m pip install --upgrade pip
-        which python
-        python --version
-
-    - name: Install Python dependencies
-      run: |
-        source ~/ros2_venv/bin/activate
+        
         python3 -m pip install -U \
+          --break-system-packages \
           --config-settings="--global-option=build_ext" \
           --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
           --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
@@ -128,7 +117,8 @@ jobs:
           importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
           nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
           pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard
-
+      env:
+        PATH: /Library/Frameworks/Python.framework/Versions/3.11/bin:${{ env.PATH }}
     # --------------------------------------------------
     # Environment
     # --------------------------------------------------
