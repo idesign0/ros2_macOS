@@ -27,6 +27,7 @@ set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/inclu
 set(BOOST_ROOT "$ENV{HOME}/humble-ros2/src/ros-commondep/boost-1.89" CACHE PATH "Boost root")
 set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
 set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
+set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Force Boost to use BOOST_ROOT" FORCE)
 set(THIRDPARTY_Asio ON CACHE BOOL "Allow Thirdparty Asio" FORCE)
 list(APPEND CMAKE_PREFIX_PATH "${BOOST_ROOT}")
 set(Boost_INCLUDE_DIRS "${BOOST_INCLUDEDIR}" CACHE PATH "Boost include dirs" FORCE)
