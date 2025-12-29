@@ -177,9 +177,8 @@ if (NOT TARGET TINYXML2::TINYXML2)
 endif()
 
 # --- Eigen (Homebrew) ---
-set(EIGEN3_INCLUDE_DIR "/opt/homebrew/opt/eigen@3/include/eigen3" CACHE PATH "Eigen3 include directory" FORCE)
-include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
-set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen@3/include/eigen3;${CMAKE_PREFIX_PATH}" CACHE STRING "CMake prefix path" FORCE)
+set(Eigen3_DIR "/opt/homebrew/opt/eigen@3/share/eigen3/cmake" CACHE PATH "")
+list(PREPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen@3")
 
 # --- Google glog (Homebrew) ---
 # NOTE: This section caused your original error.
