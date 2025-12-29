@@ -216,7 +216,7 @@ which pip
     flake8-docstrings flake8-import-order flake8-quotes \
     importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
     nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
-    pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard
+    pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard jinja2
   ```
   
   #### 4️⃣ Disable System Integrity Protection (SIP) if necessary

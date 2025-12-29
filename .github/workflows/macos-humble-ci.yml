@@ -120,7 +120,7 @@ jobs:
           flake8-docstrings flake8-import-order flake8-quotes \
           importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
           nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
-          pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard
+          pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard jinja2
 
     # --------------------------------------------------
     # Environment
@@ -148,7 +148,9 @@ jobs:
           --continue-on-error \
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests \
           --cmake-args \
-          -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
+          -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+          -DCMAKE_POLICY_DEFAULT_CMP0167=OLD \
+          -DCMAKE_POLICY_DEFAULT_CMP0144=OLD
 
     # --------------------------------------------------
     # Sanity check
