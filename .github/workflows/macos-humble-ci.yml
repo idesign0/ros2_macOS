@@ -94,6 +94,7 @@ jobs:
         brew unlink asio || true
         brew unlink orocos-kdl || true
         brew unlink octomap || true
+        brew unlink eigen || true
 
         echo "Homebrew cleanup completed."
 
@@ -149,9 +150,8 @@ jobs:
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests \
           --cmake-args \
           -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
-          -DCMAKE_POLICY_DEFAULT_CMP0167=OLD \
-          -DCMAKE_POLICY_DEFAULT_CMP0144=OLD
-
+          -DCMAKE_POLICY_DEFAULT_CMP0144=NEW \
+          -DCMAKE_POLICY_DEFAULT_CMP0167=OLD
     # --------------------------------------------------
     # Sanity check
     # --------------------------------------------------

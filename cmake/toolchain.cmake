@@ -177,9 +177,9 @@ if (NOT TARGET TINYXML2::TINYXML2)
 endif()
 
 # --- Eigen (Homebrew) ---
-set(EIGEN3_INCLUDE_DIR "/opt/homebrew/include/eigen3" CACHE PATH "Eigen3 include directory" FORCE)
+set(EIGEN3_INCLUDE_DIR "/opt/homebrew/opt/eigen@3/include/eigen3" CACHE PATH "Eigen3 include directory" FORCE)
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
-set(CMAKE_PREFIX_PATH "/opt/homebrew/include/eigen3;${CMAKE_PREFIX_PATH}" CACHE STRING "CMake prefix path" FORCE)
+set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen@3/include/eigen3;${CMAKE_PREFIX_PATH}" CACHE STRING "CMake prefix path" FORCE)
 
 # --- Google glog (Homebrew) ---
 # NOTE: This section caused your original error.
@@ -190,3 +190,6 @@ include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GLOG_LIBRARY}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GLOG_LIBRARY}")
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${GLOG_LIBRARY}")
+
+# --- OctoMap (Disable octovis subproject) ---
+set(BUILD_OCTOVIS_SUBPROJECT OFF CACHE BOOL "Disable building octovis subproject" FORCE)
