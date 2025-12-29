@@ -177,13 +177,34 @@ if (NOT TARGET TINYXML2::TINYXML2)
     )
 endif()
 
-# --- Eigen (Homebrew) ---
-set(Eigen3_DIR "/opt/homebrew/opt/eigen@3/share/eigen3/cmake" CACHE PATH "Force Eigen3 dir" FORCE)
-set(EIGEN3_INCLUDE_DIR "/opt/homebrew/opt/eigen@3/include/eigen3" CACHE PATH "Force Eigen3 include" FORCE)
-set(Eigen3_INCLUDE_DIRS "${EIGEN3_INCLUDE_DIR}" CACHE PATH "" FORCE)
-set(EIGEN3_ROOT "/opt/homebrew/opt/eigen@3" CACHE PATH "Root hint for Eigen3" FORCE)
-include_directories(SYSTEM "/opt/homebrew/opt/eigen@3/include/eigen3")
-set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen@3;${CMAKE_PREFIX_PATH}")
+# --- Eigen (Homebrew) - Forced for VTK/PCL Compatibility ---
+# Define the correct paths
+set(EIGEN_ROOT_PATH "/opt/homebrew/opt/eigen@3")
+set(EIGEN_INCLUDE_PATH "${EIGEN_ROOT_PATH}/include/eigen3")
+
+# Force variables that VTK's FindEigen3.cmake script expects
+set(Eigen3_DIR "${EIGEN_ROOT_PATH}/share/eigen3/cmake" CACHE PATH "Force Eigen3 dir" FORCE)
+set(EIGEN3_ROOT "${EIGEN_ROOT_PATH}" CACHE PATH "Root hint for Eigen3" FORCE)
+set(EIGEN3_INCLUDE_DIR "${EIGEN_INCLUDE_PATH}" CACHE PATH "Force Eigen3 include" FORCE)
+set(Eigen3_INCLUDE_DIRS "${EIGEN_INCLUDE_PATH}" CACHE PATH "Force Eigen3 include" FORCE)
+set(EIGEN3_INCLUDE_DIRS "${EIGEN_INCLUDE_PATH}" CACHE PATH "Force Eigen3 include" FORCE)
+
+# Mark as FOUND to prevent VTK from running its own broken search
+set(Eigen3_FOUND TRUE CACHE BOOL "Force Eigen3 Found" FORCE)
+set(EIGEN3_FOUND TRUE CACHE BOOL "Force Eigen3 Found" FORCE)
+
+# Manually create the Target if it doesn't exist
+# This is the most robust way to fix "missing: /opt/homebrew/include/..."
+if(NOT TARGET Eigen3::Eigen)
+    add_library(Eigen3::Eigen INTERFACE IMPORTED)
+    set_target_properties(Eigen3::Eigen PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${EIGEN_INCLUDE_PATH}"
+    )
+endif()
+
+# Inject into global paths
+include_directories(SYSTEM "${EIGEN_INCLUDE_PATH}")
+list(PREPEND CMAKE_PREFIX_PATH "${EIGEN_ROOT_PATH}")
 
 # --- Google glog (Homebrew) ---
 # NOTE: This section caused your original error.
