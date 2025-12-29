@@ -206,22 +206,31 @@ include_directories(SYSTEM "${EIGEN_PARENT_INCLUDE_PATH}")
 
 list(PREPEND CMAKE_PREFIX_PATH "${EIGEN_ROOT_PATH}")
 
-# --- Force FCL to use the correct Eigen path ---
-set(fcl_FOUND TRUE CACHE BOOL "" FORCE)
-set(FCL_FOUND TRUE CACHE BOOL "" FORCE)
-set(fcl_INCLUDE_DIRS "/opt/homebrew/include;/opt/homebrew/opt/eigen@3/include/eigen3" CACHE PATH "" FORCE)
-set(fcl_LIBRARIES "/opt/homebrew/lib/libfcl.dylib" CACHE FILEPATH "" FORCE)
+# --- Force FCL and libccd to use correct paths ---
+# Define paths for libccd (usually installed via Homebrew)
+set(CCD_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "" FORCE)
+set(CCD_LIBRARY "/opt/homebrew/lib/libccd.dylib" CACHE FILEPATH "" FORCE)
 
+# Force FCL variables
+set(fcl_FOUND TRUE CACHE BOOL "Satisfy find_package(fcl)" FORCE)
+set(FCL_FOUND TRUE CACHE BOOL "Satisfy find_package(FCL)" FORCE)
+set(fcl_INCLUDE_DIRS "/opt/homebrew/include;/opt/homebrew/opt/eigen@3/include/eigen3" CACHE PATH "" FORCE)
+set(fcl_LIBRARIES "/opt/homebrew/lib/libfcl.dylib;${CCD_LIBRARY}" CACHE FILEPATH "" FORCE)
+
+# Define the fcl target with the FULL PATH to libccd
 if(NOT TARGET fcl)
     add_library(fcl INTERFACE IMPORTED)
     set_target_properties(fcl PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "/opt/homebrew/include;/opt/homebrew/opt/eigen@3/include/eigen3"
-        INTERFACE_LINK_LIBRARIES "/opt/homebrew/lib/libfcl.dylib;ccd"
+        # We use the absolute path to libccd here so the linker doesn't have to "guess"
+        INTERFACE_LINK_LIBRARIES "/opt/homebrew/lib/libfcl.dylib;${CCD_LIBRARY}"
     )
 endif()
 
+# Add Homebrew lib to link directories globally as a safety net
+link_directories(/opt/homebrew/lib)
+
 # --- Google glog (Homebrew) ---
-# NOTE: This section caused your original error.
 set(GLOG_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "glog include path" FORCE)
 set(GLOG_LIBRARY "/opt/homebrew/lib/libglog.dylib" CACHE FILEPATH "glog library" FORCE)
 include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
