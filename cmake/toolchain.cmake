@@ -1,5 +1,12 @@
 message(WARN " Toolchain.cmake is being used.")
 
+# --- DYNAMIC PATH DETECTION (Local vs CI) ---
+if("$ENV{CI_BUILD}" STREQUAL "TRUE")
+    set(WORKSPACE_ROOT "$ENV{GITHUB_WORKSPACE}")
+else()
+    set(WORKSPACE_ROOT "$ENV{HOME}/humble-ros2")
+endif()
+
 # --- CORE CONFIGURATION (Applicable to Local and CI) ---
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -13,7 +20,7 @@ set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 
 # Make sure all workspace-installed packages are visible
-set(ROS_WORKSPACE_INSTALL "$ENV{HOME}/humble-ros2/install")
+set(ROS_WORKSPACE_INSTALL "${WORKSPACE_ROOT}/install")
 list(APPEND CMAKE_PREFIX_PATH "${ROS_WORKSPACE_INSTALL}")
 
 # --- Force System Python 3.11 ---
@@ -24,7 +31,7 @@ set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpy
 set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
 
 # Boost (Custom ROS 2 build, not Homebrew)
-set(BOOST_ROOT "$ENV{HOME}/humble-ros2/src/ros-commondep/boost-1.89" CACHE PATH "Boost root")
+set(BOOST_ROOT "${WORKSPACE_ROOT}/src/ros-commondep/boost-1.89" CACHE PATH "Boost root")
 set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
 set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
 set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Force Boost to use BOOST_ROOT" FORCE)
@@ -52,9 +59,9 @@ set(CMAKE_INSTALL_RPATH "${BASE_RPATH}")
 # Ceres, yaml-cpp, PCL Conversions, pybind11 (Non-Homebrew/Vendor dependencies)
 set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
-set(yaml-cpp_DIR "$ENV{HOME}/humble-ros2/install/opt/yaml_cpp_vendor/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config directory")
-set(YAML_CPP_INCLUDE_DIRS "$ENV{HOME}/humble-ros2/install/opt/yaml_cpp_vendor/include" CACHE PATH "yaml-cpp include directory")
-set(YAML_CPP_LIBRARIES "$ENV{HOME}/humble-ros2/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
+set(yaml-cpp_DIR "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config directory")
+set(YAML_CPP_INCLUDE_DIRS "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/include" CACHE PATH "yaml-cpp include directory")
+set(YAML_CPP_LIBRARIES "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
 include_directories(${YAML_CPP_INCLUDE_DIRS})
 set(CMAKE_EXE_LINKER_FLAGS "${backward_ros_full_path_LIBRARIES} ${CMAKE_EXE_LINKER_FLAGS}" CACHE STRING "Linker flags" FORCE)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -100,9 +107,9 @@ set(ROS_EDITION "ROS2" CACHE STRING "ROS edition")
 set(ROS_VERSION "2" CACHE STRING "ROS Version")
 set(KILTED_ROS "kilted" CACHE STRING "ROS 2 kilted")
 set(ROS_DISTRO "humble" CACHE STRING "ROS 2 Distro")
-set(PCL_CONVERSIONS_INCLUDE_DIR "$ENV{HOME}/humble-ros2/src/ros-perception/perception_pcl/pcl_conversions/include")
+set(PCL_CONVERSIONS_INCLUDE_DIR "${WORKSPACE_ROOT}/src/ros-perception/perception_pcl/pcl_conversions/include")
 set(pcl_conversions_INCLUDE_DIRS "${PCL_CONVERSIONS_INCLUDE_DIR}" CACHE PATH "PCL Conversions include dirs" FORCE)
-set(pybind11_DIR "$ENV{HOME}/humble-ros2/install/opt/pybind11_vendor/share/cmake/pybind11" CACHE PATH "Path to pybind11_vendor CMake config" FORCE)
+set(pybind11_DIR "${WORKSPACE_ROOT}/install/opt/pybind11_vendor/share/cmake/pybind11" CACHE PATH "Path to pybind11_vendor CMake config" FORCE)
 
 # --- OpenMP (libomp) ---
 set(OpenMP_INCLUDE_DIR "/opt/homebrew/opt/libomp/include")
