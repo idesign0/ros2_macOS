@@ -146,15 +146,11 @@ jobs:
         colcon build \
           --executor parallel \
           --parallel-workers $(sysctl -n hw.ncpu) \
+          --cmake-clean-cache \
           --continue-on-error \
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests \
           --cmake-args \
-          -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \
-          -DBOOST_ROOT="${HOME}/humble-ros2/src/ros-commondep/boost-1.89" \
-          -DBoost_DIR="${HOME}/humble-ros2/src/ros-commondep/boost-1.89/lib/cmake/Boost-1.89.0" \
-          -DBOOST_INCLUDEDIR="${HOME}/humble-ros2/src/ros-commondep/boost-1.89/include" \
-          -DBOOST_LIBRARYDIR="${HOME}/humble-ros2/src/ros-commondep/boost-1.89/lib" \
-          -DBoost_NO_SYSTEM_PATHS=ON          
+          -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \       
     # --------------------------------------------------
     # Sanity check
     # --------------------------------------------------
