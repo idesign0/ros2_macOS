@@ -118,6 +118,17 @@ unlink some brew packages:
 brew unlink boost boost-pytnon3 xtensor xdm xtl qt eigen
 ```
 
+Eigen3 Symlinks (Critical):
+
+Currently, Homebrew installs Eigen into versioned folders (like `eigen(5)` or `eigen@3`). However, the majority of ROS 2 and MoveIt packages are hard-coded to look for a directory named exactly `eigen3`. 
+
+To ensure a smooth build and avoid "Eigen/Core not found" errors, you **must** create a symbolic link to map the Homebrew installation to the path expected by the compiler.
+
+```bash
+# Link versioned eigen@3 to the 'eigen3' path expected by ROS packages
+sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
+```
+
 ### 3️⃣ Official ROS 2 macOS Prerequisites
 
   This section covers the essential setup steps to prepare your macOS environment for building ROS 2 Humble.

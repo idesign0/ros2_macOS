@@ -69,6 +69,9 @@ jobs:
           graphviz \
           eigen@3 \
           GeographicLib
+      
+        # Symlink eigen3 for standard discovery
+        sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
 
     - name: Install Homebrew packages via script
       if: steps.cache-brew.outputs.cache-hit != 'true'
@@ -94,7 +97,6 @@ jobs:
         brew unlink asio || true
         brew unlink orocos-kdl || true
         brew unlink octomap || true
-        brew unlink eigen || true
 
         echo "Homebrew cleanup completed."
 

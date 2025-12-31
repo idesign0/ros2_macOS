@@ -184,58 +184,11 @@ if (NOT TARGET TINYXML2::TINYXML2)
     )
 endif()
 
-# --- Eigen (Homebrew) - Forced for VTK/PCL Compatibility ---
-set(EIGEN_ROOT_PATH "/opt/homebrew/opt/eigen@3")
-# We include both the versioned folder and the parent folder to satisfy 
-# both #include <Eigen/Core> and #include <eigen3/Eigen/Core>
-set(EIGEN_INCLUDE_PATH "${EIGEN_ROOT_PATH}/include/eigen3")
-set(EIGEN_PARENT_INCLUDE_PATH "${EIGEN_ROOT_PATH}/include")
-
-set(Eigen3_DIR "${EIGEN_ROOT_PATH}/share/eigen3/cmake" CACHE PATH "Force Eigen3 dir" FORCE)
-set(EIGEN3_ROOT "${EIGEN_ROOT_PATH}" CACHE PATH "Root hint for Eigen3" FORCE)
-set(EIGEN3_INCLUDE_DIR "${EIGEN_INCLUDE_PATH}" CACHE PATH "" FORCE)
-set(Eigen3_INCLUDE_DIRS "${EIGEN_INCLUDE_PATH}" CACHE PATH "" FORCE)
-set(EIGEN3_INCLUDE_DIRS "${EIGEN_INCLUDE_PATH}" CACHE PATH "" FORCE)
-
-set(Eigen3_FOUND TRUE CACHE BOOL "" FORCE)
-set(EIGEN3_FOUND TRUE CACHE BOOL "" FORCE)
-
-if(NOT TARGET Eigen3::Eigen)
-    add_library(Eigen3::Eigen INTERFACE IMPORTED)
-    set_target_properties(Eigen3::Eigen PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${EIGEN_INCLUDE_PATH};${EIGEN_PARENT_INCLUDE_PATH}"
-    )
-endif()
-
-# This is the key fix for the fatal error:
-include_directories(SYSTEM "${EIGEN_INCLUDE_PATH}")
-include_directories(SYSTEM "${EIGEN_PARENT_INCLUDE_PATH}")
-
-list(PREPEND CMAKE_PREFIX_PATH "${EIGEN_ROOT_PATH}")
-
-# --- Force FCL and libccd to use correct paths ---
-# Define paths for libccd (usually installed via Homebrew)
-set(CCD_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "" FORCE)
-set(CCD_LIBRARY "/opt/homebrew/lib/libccd.dylib" CACHE FILEPATH "" FORCE)
-
-# Force FCL variables
-set(fcl_FOUND TRUE CACHE BOOL "Satisfy find_package(fcl)" FORCE)
-set(FCL_FOUND TRUE CACHE BOOL "Satisfy find_package(FCL)" FORCE)
-set(fcl_INCLUDE_DIRS "/opt/homebrew/include;/opt/homebrew/opt/eigen@3/include/eigen3" CACHE PATH "" FORCE)
-set(fcl_LIBRARIES "/opt/homebrew/lib/libfcl.dylib;${CCD_LIBRARY}" CACHE FILEPATH "" FORCE)
-
-# Define the fcl target with the FULL PATH to libccd
-if(NOT TARGET fcl)
-    add_library(fcl INTERFACE IMPORTED)
-    set_target_properties(fcl PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "/opt/homebrew/include;/opt/homebrew/opt/eigen@3/include/eigen3"
-        # We use the absolute path to libccd here so the linker doesn't have to "guess"
-        INTERFACE_LINK_LIBRARIES "/opt/homebrew/lib/libfcl.dylib;${CCD_LIBRARY}"
-    )
-endif()
-
-# Add Homebrew lib to link directories globally as a safety net
-link_directories(/opt/homebrew/lib)
+# --- Eigen (Homebrew) ---
+# With the symlink 'sudo ln -s /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3'
+# standard discovery now works.
+set(Eigen3_DIR "/opt/homebrew/opt/eigen@3/share/eigen3/cmake" CACHE PATH "" FORCE)
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen@3")
 
 # --- Google glog (Homebrew) ---
 set(GLOG_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "glog include path" FORCE)
@@ -248,3 +201,18 @@ set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${GLOG_LIBRARY}")
 
 # --- OctoMap (Disable octovis subproject) ---
 set(BUILD_OCTOVIS_SUBPROJECT OFF CACHE BOOL "Disable building octovis subproject" FORCE)
+
+# --- MoveIt Task Constructor: Prioritize internal pybind11 headers to avoid Homebrew conflicts ---
+if(PROJECT_NAME STREQUAL "moveit_task_constructor_core")
+    set(MTC_PYBIND_INTERNAL "${CMAKE_CURRENT_SOURCE_DIR}/python/pybind11/include")
+    
+    # Ensure headers exist before injecting
+    if(EXISTS "${MTC_PYBIND_INTERNAL}")
+        message(STATUS "Toolchain: Prioritizing internal MTC pybind11 headers")
+        include_directories(BEFORE SYSTEM "${MTC_PYBIND_INTERNAL}")
+        
+        # Prevent FindPackage from accidentally pulling in the Homebrew version
+        set(pybind11_DIR "${MTC_PYBIND_INTERNAL}" CACHE PATH "" FORCE)
+        set(pybind11_FOUND TRUE)
+    endif()
+endif()
