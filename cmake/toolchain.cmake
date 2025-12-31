@@ -1,7 +1,7 @@
 message(WARN " Toolchain.cmake is being used.")
 
 # --- DYNAMIC PATH DETECTION (Local vs CI) ---
-if("$ENV{CI_BUILD}" STREQUAL "TRUE")
+if(CI_BUILD OR "$ENV{CI_BUILD}" STREQUAL "TRUE")
     set(WORKSPACE_ROOT "$ENV{GITHUB_WORKSPACE}")
 else()
     set(WORKSPACE_ROOT "$ENV{HOME}/humble-ros2")

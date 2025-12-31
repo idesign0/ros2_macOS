@@ -150,7 +150,8 @@ jobs:
           --continue-on-error \
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests \
           --cmake-args \
-          -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \       
+          -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \
+          -DCI_BUILD=TRUE       
     # --------------------------------------------------
     # Sanity check
     # --------------------------------------------------
