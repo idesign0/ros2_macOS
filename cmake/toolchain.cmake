@@ -1,11 +1,31 @@
 message(WARN " Toolchain.cmake is being used.")
 
-# --- DYNAMIC PATH DETECTION (Local vs CI) ---
-if(CI_BUILD OR "$ENV{CI_BUILD}" STREQUAL "TRUE")
+# --- Detect if we are running in CI or local ---
+if(DEFINED ENV{CI_BUILD} AND "$ENV{CI_BUILD}" STREQUAL "TRUE")
+    set(IS_CI TRUE)
+    message(STATUS "CI environment detected")
+else()
+    set(IS_CI FALSE)
+    message(STATUS "Local environment detected")
+endif()
+
+# --- Set workspace root ---
+if(IS_CI)
     set(WORKSPACE_ROOT "$ENV{GITHUB_WORKSPACE}")
 else()
-    set(WORKSPACE_ROOT "$ENV{HOME}/humble-ros2")
+    set(WORKSPACE_ROOT "$ENV{HOME}/kilted-ros2")
 endif()
+
+# --- Helper macro for src/ paths ---
+macro(WORKSPACE_PATH result_path relative_path)
+    if(IS_CI)
+        # CI: skip src/
+        set(${result_path} "${WORKSPACE_ROOT}/${relative_path}" PARENT_SCOPE)
+    else()
+        # Local: include src/
+        set(${result_path} "${WORKSPACE_ROOT}/src/${relative_path}" PARENT_SCOPE)
+    endif()
+endmacro()
 
 # --- CORE CONFIGURATION (Applicable to Local and CI) ---
 # Set C++ standard
@@ -31,7 +51,7 @@ set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpy
 set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
 
 # Boost (Custom ROS 2 build, not Homebrew)
-set(BOOST_ROOT "${WORKSPACE_ROOT}/src/ros-commondep/boost-1.89" CACHE PATH "Boost root")
+WORKSPACE_PATH(BOOST_ROOT "ros-commondep/boost-1.89")
 set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
 set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
 set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Force Boost to use BOOST_ROOT" FORCE)
@@ -107,9 +127,8 @@ set(ROS_EDITION "ROS2" CACHE STRING "ROS edition")
 set(ROS_VERSION "2" CACHE STRING "ROS Version")
 set(KILTED_ROS "kilted" CACHE STRING "ROS 2 kilted")
 set(ROS_DISTRO "humble" CACHE STRING "ROS 2 Distro")
-set(PCL_CONVERSIONS_INCLUDE_DIR "${WORKSPACE_ROOT}/src/ros-perception/perception_pcl/pcl_conversions/include")
+WORKSPACE_PATH(PCL_CONVERSIONS_INCLUDE_DIR "ros-perception/perception_pcl/pcl_conversions/include")
 set(pcl_conversions_INCLUDE_DIRS "${PCL_CONVERSIONS_INCLUDE_DIR}" CACHE PATH "PCL Conversions include dirs" FORCE)
-set(pybind11_DIR "${WORKSPACE_ROOT}/install/opt/pybind11_vendor/share/cmake/pybind11" CACHE PATH "Path to pybind11_vendor CMake config" FORCE)
 
 # --- OpenMP (libomp) ---
 set(OpenMP_INCLUDE_DIR "/opt/homebrew/opt/libomp/include")
