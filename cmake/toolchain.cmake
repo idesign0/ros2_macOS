@@ -1,5 +1,32 @@
 message(WARN " Toolchain.cmake is being used.")
 
+# --- Detect if we are running in CI or local ---
+if(DEFINED ENV{CI_BUILD} AND "$ENV{CI_BUILD}" STREQUAL "TRUE")
+    set(IS_CI TRUE)
+    message(STATUS "CI environment detected")
+else()
+    set(IS_CI FALSE)
+    message(STATUS "Local environment detected")
+endif()
+
+# --- Set workspace root ---
+if(IS_CI)
+    set(WORKSPACE_ROOT "$ENV{GITHUB_WORKSPACE}")
+else()
+    set(WORKSPACE_ROOT "$ENV{HOME}/kilted-ros2")
+endif()
+
+# --- Helper macro for src/ paths ---
+macro(WORKSPACE_PATH result_path relative_path)
+    if(IS_CI)
+        # CI: skip src/
+        set(${result_path} "${WORKSPACE_ROOT}/${relative_path}")
+    else()
+        # Local: include src/
+        set(${result_path} "${WORKSPACE_ROOT}/src/${relative_path}")
+    endif()
+endmacro()
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -33,7 +60,7 @@ else()
     message(STATUS "Using custom CMake Boost for ${CMAKE_PROJECT_NAME}")
 
     # Path to your custom Boost installation
-    set(BOOST_ROOT "$ENV{HOME}/kilted-ros2/src/ros-commondep/boost-1.89" CACHE PATH "Boost root")
+    WORKSPACE_PATH(BOOST_ROOT "ros-commondep/boost-1.89")
     set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
     set(BOOST_LIBRARYDIR "${BOOST_ROOT}/lib" CACHE PATH "Boost lib")
 
@@ -296,9 +323,6 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GLOG_LIBRARY}")
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${GLOG_LIBRARY}")
 
 # --- PCL Conversions ---
-set(PCL_CONVERSIONS_INCLUDE_DIR "$ENV{HOME}/kilted-ros2/src/ros-perception/perception_pcl/pcl_conversions/include")
+WORKSPACE_PATH(PCL_CONVERSIONS_INCLUDE_DIR "ros-perception/perception_pcl/pcl_conversions/include")
 # Export for downstream packages
 set(pcl_conversions_INCLUDE_DIRS "${PCL_CONVERSIONS_INCLUDE_DIR}" CACHE PATH "PCL Conversions include dirs" FORCE)
-
-# --- pybind11 vendor package ---
-set(pybind11_DIR "$ENV{HOME}/kilted-ros2/install/opt/pybind11_vendor/share/cmake/pybind11" CACHE PATH "Path to pybind11_vendor CMake config" FORCE)
