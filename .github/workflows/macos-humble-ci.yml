@@ -144,8 +144,6 @@ jobs:
       continue-on-error: true
       run: |
         export CMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
-        export CMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/src/ros-commondep/boost-1.89:${CMAKE_PREFIX_PATH}"
-        export BOOST_ROOT="${GITHUB_WORKSPACE}/src/ros-commondep/boost-1.89"
 
         colcon build \
           --executor parallel \
