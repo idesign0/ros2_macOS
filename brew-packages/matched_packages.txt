@@ -258,6 +258,7 @@ postgresql@14 14.18
 pre-commit 4.2.0
 proj 9.7.1
 pugixml 1.15
+pybind11 3.0.1_1
 pyqt@5 5.15.11
 python@3.10 3.10.19_1
 python@3.11 3.11.14_1
