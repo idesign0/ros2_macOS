@@ -20,10 +20,10 @@ endif()
 macro(WORKSPACE_PATH result_path relative_path)
     if(IS_CI)
         # CI: skip src/
-        set(${result_path} "${WORKSPACE_ROOT}/${relative_path}" PARENT_SCOPE)
+        set(${result_path} "${WORKSPACE_ROOT}/${relative_path}")
     else()
         # Local: include src/
-        set(${result_path} "${WORKSPACE_ROOT}/src/${relative_path}" PARENT_SCOPE)
+        set(${result_path} "${WORKSPACE_ROOT}/src/${relative_path}")
     endif()
 endmacro()
 
