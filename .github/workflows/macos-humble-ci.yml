@@ -155,6 +155,7 @@ jobs:
           --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests \
           --cmake-args \
           -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \
+          -DBOOST_ROOT="${BOOST_ROOT}" \
           -DCI_BUILD=TRUE       
     # --------------------------------------------------
     # Sanity check
