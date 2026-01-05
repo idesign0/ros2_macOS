@@ -62,16 +62,17 @@ jobs:
     # Homebrew install
     # --------------------------------------------------
     - name: Update Homebrew and install base packages
-      if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
         brew tap osrf/simulation
         brew install \
           graphviz \
           eigen@3 \
           GeographicLib
+      
+        # Symlink eigen3 for standard discovery
+        sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
 
     - name: Install Homebrew packages via script
-      if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
         chmod +x brew-packages/install_brew_packages.sh
         ./brew-packages/install_brew_packages.sh
@@ -145,7 +146,8 @@ jobs:
           --executor parallel \
           --parallel-workers $(sysctl -n hw.ncpu) \
           --continue-on-error \
-          --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests \
+          --packages-ignore qt_gui_cpp rqt_gui_cpp \
+          --cmake-clean-cache \
           --cmake-args \
           -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
 
