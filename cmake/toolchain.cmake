@@ -1,7 +1,7 @@
 message(WARN " Toolchain.cmake is being used.")
 
 # --- Detect if we are running in CI or local ---
-if(DEFINED ENV{CI_BUILD} AND "$ENV{CI_BUILD}" STREQUAL "TRUE")
+if(CI_BUILD OR "$ENV{CI_BUILD}" STREQUAL "TRUE")
     set(IS_CI TRUE)
     message(STATUS "CI environment detected")
 else()
@@ -13,7 +13,7 @@ endif()
 if(IS_CI)
     set(WORKSPACE_ROOT "$ENV{GITHUB_WORKSPACE}")
 else()
-    set(WORKSPACE_ROOT "$ENV{HOME}/kilted-ros2")
+    set(WORKSPACE_ROOT "$ENV{HOME}/humble-ros2")
 endif()
 
 # --- Helper macro for src/ paths ---
