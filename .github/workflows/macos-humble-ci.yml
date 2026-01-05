@@ -62,7 +62,6 @@ jobs:
     # Homebrew install
     # --------------------------------------------------
     - name: Update Homebrew and install base packages
-      if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
         brew tap osrf/simulation
         brew install \
@@ -74,7 +73,6 @@ jobs:
         sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
 
     - name: Install Homebrew packages via script
-      if: steps.cache-brew.outputs.cache-hit != 'true'
       run: |
         chmod +x brew-packages/install_brew_packages.sh
         ./brew-packages/install_brew_packages.sh
