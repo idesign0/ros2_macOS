@@ -39,7 +39,7 @@ set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 
 # Make sure all workspace-installed packages are visible
-set(ROS_WORKSPACE_INSTALL "$ENV{HOME}/kilted-ros2/install")
+set(ROS_WORKSPACE_INSTALL "$ENV{WORKSPACE_ROOT}/install")
 list(APPEND CMAKE_PREFIX_PATH "${ROS_WORKSPACE_INSTALL}")
 
 # --- Force System Python 3.11 ---
@@ -106,14 +106,14 @@ set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
 
 # --- yaml-cpp from Kilted ROS 2 (opt/vendor install) ---
-set(yaml-cpp_DIR "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config directory")
+set(yaml-cpp_DIR "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config directory")
 
 # Make sure CMake uses this directory
 list(APPEND CMAKE_PREFIX_PATH "${yaml-cpp_DIR}")
 
 # Optionally, set include dirs and library explicitly
-set(YAML_CPP_INCLUDE_DIRS "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/include" CACHE PATH "yaml-cpp include directory")
-set(YAML_CPP_LIBRARIES "$ENV{HOME}/kilted-ros2/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
+set(YAML_CPP_INCLUDE_DIRS "$ENV{WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/include" CACHE PATH "yaml-cpp include directory")
+set(YAML_CPP_LIBRARIES "$ENV{WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
 
 
 # Use the paths
@@ -220,9 +220,6 @@ include_directories(SYSTEM ${CLI11_INCLUDE_DIRS})
 # CSparse paths (Homebrew)
 set(CSPARSE_INCLUDE_DIR "/opt/homebrew/include/suitesparse")
 set(CSPARSE_LIBRARY "/opt/homebrew/lib/libsuitesparse.dylib")
-
-# Ceres
-set(Ceres_DIR "$ENV{HOME}/kilted-ros2/install/ceres-solver/lib/cmake/Ceres" CACHE PATH "")
 
 # 1. Set the GDAL_CONFIG variable (often found in /opt/homebrew/bin)
 set(GDAL_CONFIG_BIN "/opt/homebrew/bin/gdal-config" CACHE FILEPATH "Path to Homebrew gdal-config utility." FORCE)
