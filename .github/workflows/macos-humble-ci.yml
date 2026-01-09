@@ -67,7 +67,8 @@ jobs:
         brew install \
           graphviz \
           eigen@3 \
-          GeographicLib
+          GeographicLib \
+          gz-transport13
       
         # Symlink eigen3 for standard discovery
         sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
@@ -95,6 +96,7 @@ jobs:
         brew unlink asio || true
         brew unlink orocos-kdl || true
         brew unlink octomap || true
+        brew unlink yaml-cpp || true
 
         echo "Homebrew cleanup completed."
 

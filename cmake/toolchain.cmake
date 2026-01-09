@@ -112,6 +112,8 @@ add_compile_options(
         -Wno-error=unused-private-field
         -Wno-error=sign-conversion
         -Wno-error=format
+        -Wno-error=deprecated-declarations
+        -Wno-error=sign-conversion
  )
 
 set(CMAKE_MACOSX_RPATH ON)
