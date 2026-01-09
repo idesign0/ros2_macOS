@@ -301,10 +301,10 @@ if (NOT TARGET TINYXML2::TINYXML2)
 endif()
 
 # --- Eigen (Homebrew) ---
-# Ensure CMake can find Eigen headers
-set(EIGEN3_INCLUDE_DIR "/opt/homebrew/include/eigen3" CACHE PATH "Eigen3 include directory" FORCE)
-include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
-set(CMAKE_PREFIX_PATH "/opt/homebrew/include/eigen3;${CMAKE_PREFIX_PATH}" CACHE STRING "CMake prefix path" FORCE)
+# With the symlink 'sudo ln -s /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3'
+# standard discovery now works.
+set(Eigen3_DIR "/opt/homebrew/opt/eigen@3/share/eigen3/cmake" CACHE PATH "" FORCE)
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen@3")
 
 # --- Google glog (Homebrew) ---
 set(GLOG_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "glog include path" FORCE)
