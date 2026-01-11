@@ -265,7 +265,7 @@ cd ~/kilted-ros2
 
 ```bash
 colcon build \
-  --packages-ignore qt_gui_cpp rqt_gui_cpp python_orocos_kdl_vendor \
+  --packages-ignore qt_gui_cpp rqt_gui_cpp pal_carbon_collector \
   --executor parallel \
   --parallel-workers $(sysctl -n hw.ncpu) \
   --cmake-args -DCMAKE_TOOLCHAIN_FILE=$(pwd)/src/cmake/toolchain.cmake \

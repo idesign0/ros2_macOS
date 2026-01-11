@@ -147,7 +147,7 @@ jobs:
           --parallel-workers $(sysctl -n hw.ncpu) \
           --cmake-clean-cache \
           --continue-on-error \
-          --packages-ignore qt_gui_cpp rqt_gui_cpp \
+          --packages-ignore qt_gui_cpp rqt_gui_cpp pal_carbon_collector \
           --cmake-args \
           -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \
           -DCI_BUILD=TRUE     
