@@ -39,7 +39,7 @@ set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 
 # Make sure all workspace-installed packages are visible
-set(ROS_WORKSPACE_INSTALL "$ENV{WORKSPACE_ROOT}/install")
+set(ROS_WORKSPACE_INSTALL "${WORKSPACE_ROOT}/install")
 list(APPEND CMAKE_PREFIX_PATH "${ROS_WORKSPACE_INSTALL}")
 
 # --- Force System Python 3.11 ---
@@ -56,6 +56,7 @@ if("${CMAKE_PROJECT_NAME}" STREQUAL "kinematics_interface_pinocchio")
     message(STATUS "Using system Brew Boost for ${CMAKE_PROJECT_NAME}")
     # Let CMake find system Boost (via brew)
     set(Boost_NO_SYSTEM_PATHS OFF CACHE BOOL "Allow system Boost" FORCE)
+    set(Boost_NO_BOOST_CMAKE OFF CACHE BOOL "" FORCE)
 else()
     message(STATUS "Using custom CMake Boost for ${CMAKE_PROJECT_NAME}")
 
@@ -104,19 +105,23 @@ set(CMAKE_INSTALL_RPATH "${BASE_RPATH}")
 # Ceres
 set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
+set(Ceres_DIR "${WORKSPACE_ROOT}/install/lib/cmake/Ceres" CACHE PATH "Ceres Solver CMake path" FORCE)
 
 # --- yaml-cpp from Kilted ROS 2 (opt/vendor install) ---
-set(yaml-cpp_DIR "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config directory")
+# Path to the vendor install prefix
+set(YAML_CPP_PREFIX "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor" CACHE PATH "yaml-cpp vendor prefix")
 
-# Make sure CMake uses this directory
-list(APPEND CMAKE_PREFIX_PATH "${yaml-cpp_DIR}")
+# Make CMake find the config
+list(APPEND CMAKE_PREFIX_PATH "${YAML_CPP_PREFIX}")
 
-# Optionally, set include dirs and library explicitly
-set(YAML_CPP_INCLUDE_DIRS "$ENV{WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/include" CACHE PATH "yaml-cpp include directory")
-set(YAML_CPP_LIBRARIES "$ENV{WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
+# Config file directory
+set(yaml-cpp_DIR "${YAML_CPP_PREFIX}/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config directory")
 
+# Explicit include dirs and library (optional)
+set(YAML_CPP_INCLUDE_DIRS "${YAML_CPP_PREFIX}/include" CACHE PATH "yaml-cpp include directory")
+set(YAML_CPP_LIBRARIES "${YAML_CPP_PREFIX}/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
 
-# Use the paths
+# Make headers visible globally (optional)
 include_directories(${YAML_CPP_INCLUDE_DIRS})
 
 # Backward ROS
