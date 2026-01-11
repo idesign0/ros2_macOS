@@ -553,7 +553,7 @@
 [submodule "ros-drivers/ouster-ros"]
 	path = ros-drivers/ouster-ros
 	url = https://github.com/ouster-lidar/ouster-ros.git
-	branch = master
+	branch = kilted-devel
 [submodule "ros-perception/perception_pcl"]
 	path = ros-perception/perception_pcl
 	url = https://github.com/ros-perception/perception_pcl.git
@@ -793,7 +793,7 @@
 [submodule "ros2_control/dependencies/pal_statistics"]
 	path = ros2_control/dependencies/pal_statistics
 	url = https://github.com/pal-robotics/pal_statistics.git
-	branch = ros2-devel
+	branch = humble-devel
 [submodule "ros-perception/point_cloud_transport"]
 	path = ros-perception/point_cloud_transport
 	url = https://github.com/ros-perception/point_cloud_transport.git
