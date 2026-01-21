@@ -229,29 +229,6 @@ which pip
     nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
     pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard jinja2
   ```
-  
-  #### 4️⃣ Disable System Integrity Protection (SIP) if necessary
-  
-  macOS versions 10.11 and later have System Integrity Protection (SIP) enabled by default,  
-  which restricts the use of environment variables like `DYLD_LIBRARY_PATH` that ROS 2 relies on to locate shared libraries during runtime.
-  
-  ---
-  
-  ##### Why SIP and ROS 2 don’t always work well together
-  
-  System Integrity Protection is a macOS security feature designed to prevent unauthorized modification of critical system files and processes—even by root users.
-  
-  ROS 2 depends on environment variables such as `DYLD_LIBRARY_PATH` to find its dynamic libraries at runtime. However, SIP **blocks these environment variables from being inherited by ROS 2 processes**, causing failures in loading necessary shared libraries.
-  
-  This results in ROS 2 nodes crashing or failing to launch properly.
-  
-  Because SIP restricts this dynamic linking behavior, temporarily disabling SIP is often necessary during ROS 2 development on macOS.
-  
-  ---
-  
-  If you encounter issues related to dynamic library loading, you may need to temporarily **disable SIP**.  
-  Please refer to Apple’s official documentation or the ROS 2 macOS setup guide for instructions on disabling and re-enabling SIP safely. [ROS 2 macOS Setup - Disable SIP](https://developer.apple.com/library/archive/documentation/Security/Conceptual/System_Integrity_Protection_Guide/ConfiguringSystemIntegrityProtection/ConfiguringSystemIntegrityProtection.html)
-  
   ---
 
 ## 🛠️ Installation Steps
