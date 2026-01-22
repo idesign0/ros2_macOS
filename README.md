@@ -101,7 +101,7 @@ and now, Go back to the root of your workspace and run the Homebrew packages ins
 
 ```bash
 cd ~/humble-ros2
-./brew-packages/install_brew_packages.sh
+./src/brew-packages/install_brew_packages.sh
 ```
 This script installs essential tools and libraries needed for building ROS 2 Humble on macOS ARM64.
 
@@ -179,10 +179,10 @@ export GZ_VERSION=harmonic
 export GZ_SIM_SYSTEM_PLUGIN_PATH=~/humble-ros2/install/gz_ros2_control/lib/
 
 # Source ROS 2 workspace setup script
-source ~/humble-ros2/install/setup.zsh
+# source ~/humble-ros2/install/setup.zsh
 
 # Source your overlay workspace setup script
-source ~/ros2_ws/install/setup.zsh
+# source ~/ros2_ws/install/setup.zsh
 
 # Enable Python argcomplete for colcon
 eval "$(register-python-argcomplete colcon)"
