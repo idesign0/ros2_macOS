@@ -169,7 +169,11 @@ export CYCLONEDDS_URI='<CycloneDDS><Domain><Discovery><ParticipantIndex>none</Pa
 # Enable Python argcomplete for colcon
 eval "$(register-python-argcomplete colcon)"
 export PATH="$HOME/bin:$PATH"
-
+```
+> ***Recommendation:***  
+  Select the DDS implementation based on the primary workload:
+> - Use **CycloneDDS** when running **Navigation2** (Legacy Support)
+> - Use **Fast DDS** when working with **MoveIt 2** and **Gazebo ROS**
   #### 3️⃣ Install Additional Python Packages
   
   Use `python3 -m pip` (instead of just `pip`) to avoid confusion between Python 2 and Python 3 installations.
@@ -183,10 +187,6 @@ which python3
 which pip
 >> /Library/Frameworks/Python.framework/Versions/3.11/bin/pip
   ```
-> ***Recommendation:***  
-  Select the DDS implementation based on the primary workload:
-> - Use **CycloneDDS** when running **Navigation2** (Legacy Support)
-> - Use **Fast DDS** when working with **MoveIt 2** and **Gazebo ROS**
   First, upgrade `pip`:
   
   ```bash
