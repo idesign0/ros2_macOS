@@ -85,7 +85,7 @@ and now, Go back to the root of your workspace and run the Homebrew packages ins
 
 ```bash
 cd ~/kilted-ros2
-./brew-packages/install_brew_packages.sh
+./src/brew-packages/install_brew_packages.sh
 ```
 This script installs essential tools and libraries needed for building ROS 2 Kilted on macOS ARM64.
 
@@ -157,9 +157,9 @@ export GZ_BUILD_FROM_SOURCE=1
 export GZ_RELAX_VERSION_MATCH=1
 
 # sourcing
-source ~/gz-ionic/install/setup.zsh
-source ~/kilted-ros2/install/setup.zsh
-source ~/ros2_ws/install/setup.zsh
+#source ~/gz-ionic/install/setup.zsh
+#source ~/kilted-ros2/install/setup.zsh
+#source ~/ros2_ws/install/setup.zsh
 
 # Set the desired RMW implementation for the ROS 2 build environment.
 # Alternative common option: export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
