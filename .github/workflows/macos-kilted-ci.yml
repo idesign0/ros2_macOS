@@ -63,7 +63,6 @@ jobs:
     # --------------------------------------------------
     - name: Update Homebrew and install base packages
       run: |
-        brew tap osrf/simulation
         brew install \
           graphviz \
           eigen@3 \
