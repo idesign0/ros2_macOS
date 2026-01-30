@@ -67,6 +67,7 @@ jobs:
         brew install \
           graphviz \
           eigen@3 \
+          eigen \ 
           GeographicLib
       
         # Symlink eigen3 for standard discovery
@@ -141,6 +142,7 @@ jobs:
       continue-on-error: true
       run: |
         export CMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
+        export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
         colcon build \
           --executor parallel \
