@@ -156,7 +156,7 @@ export PATH="$HOME/bin:$PATH"
   Select the DDS implementation based on the primary workload:
 > - Use **CycloneDDS** when running **Navigation2** (Legacy Support)
 > - Use **Fast DDS** when working with **MoveIt 2** and **Gazebo ROS**
-  #### 3️⃣ Install Additional Python Packages
+  #### 2️⃣ Install Additional Python Packages
   
   Use `python3 -m pip` (instead of just `pip`) to avoid confusion between Python 2 and Python 3 installations.
   
