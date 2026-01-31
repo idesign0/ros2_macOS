@@ -53,10 +53,12 @@ set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/inclu
 
 # Check the package/project name
 if("${CMAKE_PROJECT_NAME}" STREQUAL "kinematics_interface_pinocchio")
-    message(STATUS "Using system Brew Boost for ${CMAKE_PROJECT_NAME}")
-    # Let CMake find system Boost (via brew)
-    set(Boost_NO_SYSTEM_PATHS OFF CACHE BOOL "Allow system Boost" FORCE)
-    set(Boost_NO_BOOST_CMAKE OFF CACHE BOOL "" FORCE)
+    message(STATUS "Stitching Boost and Boost-Python for ${CMAKE_PROJECT_NAME}")
+    set(Boost_INCLUDE_DIR "/opt/homebrew/opt/boost/include" CACHE PATH "" FORCE)
+    # Explicitly map the Python 3.14 library path you just found
+    set(Boost_PYTHON314_LIBRARY_RELEASE "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
+    set(Boost_PYTHON314_LIBRARY_DEBUG "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
+    set(Boost_NO_SYSTEM_PATHS OFF CACHE BOOL "" FORCE)
 else()
     message(STATUS "Using custom CMake Boost for ${CMAKE_PROJECT_NAME}")
 
