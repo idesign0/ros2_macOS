@@ -33,6 +33,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
 
+# --- block /usr/local/ completely ---
+set(CMAKE_IGNORE_PATH
+  /usr/local
+)
+
+# --- ensure correct stdlib ---
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+
 # Setting all the Build Tests Off
 set(BUILD_TESTING OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
@@ -167,6 +175,7 @@ add_compile_options(
         -Wno-error=unused-private-field
         -Wno-error=sign-conversion
         -Wno-error=format
+        -Wno-error=missing-template-arg-list-after-template-kw
  )
 
 # macOS specific linker
