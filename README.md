@@ -106,25 +106,7 @@ brew unlink boost boost-pytnon3 xtensor xdm xtl qt osqp orocos-kdl asio
 
   This section covers the essential setup steps to prepare your macOS environment for building ROS 2 Kilted.
   
-  #### 1️⃣ Install Xcode 16.2
-  
-  ROS 2 Kilted requires **Xcode 16.2** for a successful build.
-  
-  - Download Xcode 16.2 from the [Apple Developer website](https://xcodereleases.com).  
-  - Install Xcode 16.2.  
-  - Set Xcode 16.2 as the active developer directory by running:
-  
-  ```bash
-  sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
-  xcodebuild -version
-  ```
-  Expected Output:
-  ```
-  Xcode 16.2
-  Build version 16C5032a
-  ```
-  
-  #### 2️⃣ Setup Some Environment Variables
+  #### 1️⃣ Setup Some Environment Variables
   
   To ensure ROS 2 and its dependencies work correctly on your macOS system, add the following environment variables and aliases to your shell configuration (`~/.zshrc` or `~/.bash_profile`):
   
