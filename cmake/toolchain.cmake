@@ -339,3 +339,18 @@ set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${GLOG_LIBRARY}")
 WORKSPACE_PATH(PCL_CONVERSIONS_INCLUDE_DIR "ros-perception/perception_pcl/pcl_conversions/include")
 # Export for downstream packages
 set(pcl_conversions_INCLUDE_DIRS "${PCL_CONVERSIONS_INCLUDE_DIR}" CACHE PATH "PCL Conversions include dirs" FORCE)
+
+# --- MoveIt Task Constructor: Prioritize internal pybind11 headers to avoid Homebrew conflicts ---
+if(PROJECT_NAME STREQUAL "moveit_task_constructor_core")
+    set(MTC_PYBIND_INTERNAL "${CMAKE_CURRENT_SOURCE_DIR}/python/pybind11/include")
+    
+    # Ensure headers exist before injecting
+    if(EXISTS "${MTC_PYBIND_INTERNAL}")
+        message(STATUS "Toolchain: Prioritizing internal MTC pybind11 headers")
+        include_directories(BEFORE SYSTEM "${MTC_PYBIND_INTERNAL}")
+        
+        # Prevent FindPackage from accidentally pulling in the Homebrew version
+        set(pybind11_DIR "${MTC_PYBIND_INTERNAL}" CACHE PATH "" FORCE)
+        set(pybind11_FOUND TRUE)
+    endif()
+endif()
