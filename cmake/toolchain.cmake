@@ -114,6 +114,7 @@ add_compile_options(
         -Wno-error=format
         -Wno-error=deprecated-declarations
         -Wno-error=sign-conversion
+        -Wno-error=missing-template-arg-list-after-template-kw
  )
 
 set(CMAKE_MACOSX_RPATH ON)
