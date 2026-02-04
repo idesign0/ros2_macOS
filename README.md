@@ -3,24 +3,6 @@
 This repository provides a streamlined setup for running **ROS 2 Humble** and **Gazebo Sim Harmonic** on **macOS with Apple Silicon (M1/M2/M3)**. ROS 2 is built from source with macOS patches, and Gazebo is installed via Homebrew.
 
 ---
-## New Packages Added
-
-This setup now includes the following additional submodules:
-
-- **Livox SDK (Livox-SDK2)**: `ros2_macos_sdk/livox_sdk` ([GitHub link](https://github.com/Livox-SDK/Livox-SDK2.git)) - branch: master  
-- **Livox ROS Driver 2**: `ros-drivers/livox_ros_driver2` ([GitHub link](https://github.com/idesign0/id_livox_ros_driver2.git)) - branch: master  
-- **Event Camera software stack**: `ros-perception/ros-event-camera/`  
-  - `event_camera_msgs` ([GitHub link](https://github.com/ros-event-camera/event_camera_msgs.git)) - branch: humble  
-  - `event_camera_codecs` ([GitHub link](https://github.com/ros-event-camera/event_camera_codecs.git)) - branch: humble  
-  - `event_camera_renderer` ([GitHub link](https://github.com/idesign0/event_camera_renderer.git)) - branch: humble  
-  - `event_camera_tools` ([GitHub link](https://github.com/idesign0/event_camera_tools.git)) - branch: master  
-  - `dependencies/dvs_msgs` ([GitHub link](https://github.com/ros-event-camera/dvs_msgs.git)) - branch: ros2  
-  - `dependencies/prophesee_event_msgs` ([GitHub link](https://github.com/ros-event-camera/prophesee_event_msgs.git)) - branch: ros2  
-- **Spatio-temporal voxel layer**: `ros-planning/spatio_temporal_voxel_layer` ([GitHub link](https://github.com/idesign0/spatio_temporal_voxel_layer.git)) - branch: humble  
-- **Webots ROS2**: `ros-simulation/webots/webots_ros2` ([GitHub link](https://github.com/cyberbotics/webots_ros2.git))
-    > ⚠️ Note: To use this package, installation of the Webots simulator is required. See [Webots official site](https://cyberbotics.com) for installation instructions.   
-
----
 
 ## ✅ What's Included
 
