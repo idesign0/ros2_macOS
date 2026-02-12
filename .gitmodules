@@ -826,3 +826,7 @@
 	path = ros2/pybind11_vendor
 	url = https://github.com/ros2/pybind11_vendor.git
 	branch = kilted
+[submodule "ros/backward-cpp"]
+	path = ros/backward-cpp
+	url = https://github.com/bombela/backward-cpp.git
+	branch = master
