@@ -14,10 +14,6 @@
 	path = ros-planning/dependencies/robot_localization
 	url = https://github.com/cra-ros-pkg/robot_localization.git
 	branch = kilted-devel
-[submodule "ros-planning/dependencies/behaviortree_cpp_v3-release"]
-	path = ros-planning/dependencies/behaviortree_cpp_v3-release
-    url = https://github.com/idesign0/id_behaviortree_cpp_v3-release.git
-	branch = 3.8.7-macOS-fix-dhruv
 [submodule "ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK"]
 	path = ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK
 	url = https://github.com/ROBOTIS-GIT/DynamixelSDK.git
