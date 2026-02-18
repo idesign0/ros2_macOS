@@ -100,7 +100,7 @@ unlink some brew packages:
 brew unlink boost boost-pytnon3 xtensor xdm xtl qt eigen
 ```
 
-Eigen3 Symlinks (Critical):
+#### Eigen3 Symlinks (Critical):
 
 Currently, Homebrew installs Eigen into versioned folders (like `eigen(5)` or `eigen@3`). However, the majority of ROS 2 and MoveIt packages are hard-coded to look for a directory named exactly `eigen3`. 
 
