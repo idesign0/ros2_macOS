@@ -678,3 +678,7 @@
 	path = ros2/joint_state_publisher
 	url = https://github.com/ros/joint_state_publisher.git
 	branch = ros2
+[submodule "ros-visualization/tango_icons_vendor"]
+	path = ros-visualization/tango_icons_vendor
+	url = https://github.com/ros-visualization/tango_icons_vendor.git
+	branch = humble
