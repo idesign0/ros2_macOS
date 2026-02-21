@@ -1,4 +1,4 @@
-# ROS 2 Kilted + MoveIt2 + Gazebo Ionic Setup on macOS (Apple Silicon)
+# ROS 2 Kilted + MoveIt2 + Nav2 + Gazebo Ionic Setup on macOS (Apple Silicon)
 
 This repository provides a streamlined setup for running **ROS 2 Humble** and **Gazebo Sim Ionic** on **macOS with Apple Silicon (M1/M2/M3)**. ROS 2 is built from source with macOS patches, and Gazebo is built from source.
 
