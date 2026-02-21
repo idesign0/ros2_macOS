@@ -310,3 +310,37 @@ After building and setting up your environment, verify your ROS 2 installation b
 
 For detailed instructions and examples, please refer to the official ROS 2 Kilted macOS development setup guide:  
 [ROS 2 Kilted macOS Development Setup — Talker and Listener Example](https://docs.ros.org/en/kilted/Installation/Alternatives/macOS-Development-Setup.html#id8)
+
+## 🚀 Project Demos & Integration Gallery
+
+This section showcases the core capabilities of the workspace, specifically highlighting the successful implementation of ROS 2, MoveIt2, and Nav2 on **macOS**.
+
+### 1. ROS 2 ↔ Gazebo Integration
+Seamless communication and synchronization between the ROS 2 transport layer and the Gazebo simulation engine. 
+
+* **Key Features:** Clock synchronization, sensor data bridge, and joint state broadcasting.
+* **[View Full Demo on LinkedIn](https://www.linkedin.com/posts/classy29_ros2-ros-robotics-activity-7403848396744110080-IDUQ?utm_source=share&utm_medium=member_desktop&rcm=ACoAACDnI-UBIj7r5BhM-eVhnjDAOHOyP7x5-k8)**
+
+![ros2-gz-demo](https://github.com/user-attachments/assets/6e4eeeaf-ac1a-4bb1-8472-6e8bf16a7792)
+
+---
+
+### 2. MoveIt2 Motion Planning (macOS Native)
+Advanced manipulation and motion planning. Achieving stable visualization and execution of MoveIt2 on macOS ARM64/Intel architecture.
+
+* **Key Features:** Inverse Kinematics (IK) solving, collision checking, and trajectory execution.
+* **[View Full Demo on LinkedIn](https://www.linkedin.com/posts/classy29_ros2-ros-moveit2-activity-7404628200003194885-OY06?utm_source=share&utm_medium=member_desktop&rcm=ACoAACDnI-UBIj7r5BhM-eVhnjDAOHOyP7x5-k8)**
+
+![moveit2-macos](https://github.com/user-attachments/assets/3b57bf14-19c1-4b4b-85c5-b4712c6a6cda)
+
+---
+
+### 3. Nav2 Navigation Stack
+Autonomous navigation, global/local pathfinding, and obstacle avoidance visualized in RViz2.
+
+* **Key Features:** Costmap generation, SLAM integration, and behavior tree-based navigation.
+* **[View Full Demo on LinkedIn](https://www.linkedin.com/posts/classy29_ros2-ros-navigation2-activity-7409757575837036544-vJtq?utm_source=share&utm_medium=member_desktop&rcm=ACoAACDnI-UBIj7r5BhM-eVhnjDAOHOyP7x5-k8)**
+
+![nav2-stack-macos](https://github.com/user-attachments/assets/6beb3794-2877-425b-999b-b7b592c54500)
+
+---
