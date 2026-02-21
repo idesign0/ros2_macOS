@@ -53,6 +53,9 @@ Before running the tutorials on macOS, you must preload the MoveIt capabilities 
 ```bash
 export DYLD_INSERT_LIBRARIES=$HOME/humble-ros2/install/moveit_ros_move_group/lib/libmoveit_move_group_default_capabilities.dylib
 ```
+> **Update:** This manual preload should no longer be required if you are using the latest update of this fork which will be done automatically when you clone my repo :). The `move_group` binary has been updated to explicitly link these libraries, resolving the RPath issue natively. I am keeping this instruction here as a fallback just in case.
+> 
+> **Technical Details:** See [MoveIt 2 Issue #3688](https://github.com/moveit/moveit2/issues/3688).
 >⚠️ Note:
 >On macOS, use: DYLD_INSERT_LIBRARIES,
 >On Linux, use: LD_PRELOAD
