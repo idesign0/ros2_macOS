@@ -154,10 +154,6 @@
 	path = ros2_control/kinematics_interface
 	url = https://github.com/ros-controls/kinematics_interface.git
 	branch = master
-[submodule "ros-drivers/ackermann_msgs"]
-	path = ros-drivers/ackermann_msgs
-	url = https://github.com/ros-drivers/ackermann_msgs.git
-	branch = ros2
 [submodule "ros-tooling/libstatistics_collector"]
 	path = ros-tooling/libstatistics_collector
 	url = https://github.com/ros-tooling/libstatistics_collector.git
@@ -510,46 +506,6 @@
 	path = ros-planning/dependencies/PickNickRobotics/cpp_polyfills
 	url = https://github.com/PickNikRobotics/cpp_polyfills.git
 	branch = main
-[submodule "ros2_macos_sdk/libfranka"]
-	path = ros2_macos_sdk/libfranka
-	url = https://github.com/idesign0/id_libfranka.git
-	branch = main
-[submodule "ros2_macos_sdk/ur_client_lib"]
-	path = ros2_macos_sdk/ur_client_lib
-	url = https://github.com/idesign0/id_Universal_Robots_Client_Library
-	branch = master
-[submodule "ros-drivers/ur_ros2_driver"]
-	path = ros-drivers/ur_ros2_driver
-	url = https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver
-	branch = main
-[submodule "ros-drivers/ur_msgs"]
-	path = ros-drivers/ur_msgs
-	url = https://github.com/ros-industrial/ur_msgs.git
-	branch = kilted-devel
-[submodule "ros-drivers/franka_ros2"]
-	path = ros-drivers/franka_ros2
-	branch = humble
-	url = https://github.com/frankarobotics/franka_ros2.git
-[submodule "ros-drivers/DynamixelInterfaces/dynamixel_interfaces"]
-	path = ros-drivers/DynamixelInterfaces/dynamixel_interfaces
-	url = https://github.com/ROBOTIS-GIT/dynamixel_interfaces
-	branch = main
-[submodule "ros-drivers/DynamixelInterfaces/dynamixel_hardware_interface"]
-	path = ros-drivers/DynamixelInterfaces/dynamixel_hardware_interface
-	url = https://github.com/ROBOTIS-GIT/dynamixel_hardware_interface
-	branch = main
-[submodule "ros2_macos_sdk/librealsense"]
-	path = ros2_macos_sdk/librealsense
-	url = https://github.com/IntelRealSense/librealsense.git
-	branch = master
-[submodule "ros-drivers/realsense-ros"]
-	path = ros-drivers/realsense-ros
-	url = https://github.com/IntelRealSense/realsense-ros
-	branch = ros2-master
-[submodule "ros-drivers/ouster-ros"]
-	path = ros-drivers/ouster-ros
-	url = https://github.com/ouster-lidar/ouster-ros.git
-	branch = kilted-devel
 [submodule "ros-perception/perception_pcl"]
 	path = ros-perception/perception_pcl
 	url = https://github.com/ros-perception/perception_pcl.git
@@ -558,18 +514,6 @@
 	path = ros-perception/pcl_msgs
 	url = https://github.com/ros-perception/pcl_msgs.git
 	branch = ros2
-[submodule "ros-drivers/velodyne"]
-	path = ros-drivers/velodyne
-	url = https://github.com/ros-drivers/velodyne.git
-	branch = ros2
-[submodule "ros2_macos_sdk/livox_sdk"]
-	path = ros2_macos_sdk/livox_sdk
-	url = https://github.com/Livox-SDK/Livox-SDK2.git
-	branch = master
-[submodule "ros-drivers/livox_ros_driver2"]
-	path = ros-drivers/livox_ros_driver2
-	url = https://github.com/idesign0/id_livox_ros_driver2.git
-	branch = master
 [submodule "ros-perception/ros-event-camera/event_camera_msgs"]
 	path = ros-perception/ros-event-camera/event_camera_msgs
 	url = https://github.com/ros-event-camera/event_camera_msgs.git
@@ -598,10 +542,6 @@
 	path = ros-planning/spatio_temporal_voxel_layer
 	url = https://github.com/idesign0/spatio_temporal_voxel_layer.git
 	branch = kilted
-[submodule "ros-simulation/webots/webots_ros2"]
-	path = ros-simulation/webots/webots_ros2
-	url = https://github.com/cyberbotics/webots_ros2.git
-	branch = master
 [submodule "ament/ament_cmake"]
 	path = ament/ament_cmake
 	url = https://github.com/ament/ament_cmake.git

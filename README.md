@@ -21,11 +21,8 @@ This repository provides a full build of **ROS 2 Kilted** from source for **ARM6
   - UR Client Library, DynamixelSDK, librealsense, libfranka, **Livox SDK**
 - **ros-perception**, including:
   - PCL perception tools
-  - **Event Camera software stack**: `event_camera_msgs`, `event_camera_codecs`, `event_camera_renderer`, `event_camera_tools`, `dvs_msgs`, `prophesee_event_msgs`
 - **ros-planning**, including:
   - `navigation_msgs`, `moveit2`, `SLAM_toolbox`, `spatio_temporal_voxel_layer`
-- **ros-simulation**, including:
-  - `webots_ros2`
 - **ros-teleop** tools  
 - **ros-tooling** utilities  
 - **ros-visualization** tools  
@@ -41,8 +38,6 @@ Additionally, this setup includes:
 - macOS-specific fixes and configurations  
 - A clean, tested installation process and environment 
 
-> ⚠️ **Note:**
-> Webot, Drivers and SDKs still require some adjustments for Kilted and will be updated soon.
 ---
 
 ## 📦 ROS 2 macOS Prerequisites
