@@ -223,7 +223,8 @@ colcon build \
   --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests  \
   --executor parallel \
   --parallel-workers $(sysctl -n hw.ncpu) \
-  --cmake-args -DCMAKE_TOOLCHAIN_FILE=$MY_TOOLCHAIN_FILE
+  --cmake-args -DCMAKE_TOOLCHAIN_FILE=$MY_TOOLCHAIN_FILE \
+  --merge-install
 ```
 source:
 ```bash
