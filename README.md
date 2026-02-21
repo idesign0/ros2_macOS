@@ -219,11 +219,11 @@ cd ~/humble-ros2
 
 ```bash
 colcon build \
-  --symlink-install \
   --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests  \
   --executor parallel \
   --parallel-workers $(sysctl -n hw.ncpu) \
-  --cmake-args -DCMAKE_TOOLCHAIN_FILE=$MY_TOOLCHAIN_FILE \
+  --cmake-args -DCMAKE_TOOLCHAIN_FILE=$(pwd)/src/cmake/toolchain.cmake \
+  --continue-on-error \
   --merge-install
 ```
 source:
@@ -232,9 +232,6 @@ source ~/.zshrc
 ```
 
 What does each option mean?
-- `--symlink-install`  
-  Uses symlinks for installed files instead of copying — useful for faster iterative development.
-
 - `--packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests`  
   Skips these two packages known to have macOS issues. See: [ros2/ros2#1139](https://github.com/ros2/ros2/issues/1139)
 
@@ -243,6 +240,12 @@ What does each option mean?
 
 - `--parallel-workers $(sysctl -n hw.ncpu)`  
   Sets the number of parallel jobs to your CPU core count (maximizing build speed).
+
+- `--merge-install`
+  Installs all packages into a single merged install space instead of separate per-package directories. This simplifies library discovery and linking on macOS and avoids RPATH and dependency resolution issues, especially when building large stacks like ROS 2 and Gazebo.
+
+- `--continue-on-error`
+  Continues building remaining packages even if one package fails, allowing you to identify multiple build issues in a single run instead of stopping at the first failure.
 
 ---
 
