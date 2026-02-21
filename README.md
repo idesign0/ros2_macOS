@@ -256,22 +256,8 @@ Right now, I have no issues completing the build with more than **499** packages
 This section will be constantly updated based on user feedback. Below are some of the most common errors I have faced so far:
 
 ### Errors:
-1. **Case sensitivity issues in Gazebo cmake target files** (e.g., `tinyxml2::tinyxml2` vs `TINYXML2::TINYXML2`)  
-    These errors occur due to capitalization mismatches in Homebrew-installed Gazebo cmake files.  
-    You will need to manually edit the respective cmake files (e.g., `gz-msgs10-targets.cmake`, `gz-gui8-targets.cmake`) to use the correct lowercase target names.
-    
-    Specifically, replace occurrences of `TINYXML2::TINYXML2` with `tinyxml2::tinyxml2` (and similar uppercase target names) to lowercase versions.
-    
-    - `open /opt/homebrew/Cellar/gz-gui/8.4.0_6/lib/cmake/gz-gui8/gz-gui8-targets.cmake`
-    - `open /opt/homebrew/Cellar/gz-msgs10/10.3.2_4/lib/cmake/gz-msgs10/gz-msgs10-targets.cmake`
-    
 
-    > **Note:**  
-    > Open the file based on the location shown in your error output, as versions and paths may differ.
-
----
-
-2. **ModuleNotFoundError: No module named 'some_library'**
+1. **ModuleNotFoundError: No module named 'some_library'**
    This error occurs when Python packages are missing during runtime. Simply install the missing python-package with:
 
    ```bash
@@ -280,7 +266,7 @@ This section will be constantly updated based on user feedback. Below are some o
 
 ---
 
-3. **Missing `Config.cmake` Files**
+2. **Missing `Config.cmake` Files**
 
     Sometimes during the build you may encounter errors complaining about missing `SomeLibraryConfig.cmake` files.
     
@@ -316,3 +302,39 @@ After building and setting up your environment, verify your ROS 2 installation b
 
 For detailed instructions and examples, please refer to the official ROS 2 Humble macOS development setup guide:  
 [ROS 2 Humble macOS Development Setup — Talker and Listener Example](https://docs.ros.org/en/humble/Installation/Alternatives/macOS-Development-Setup.html#id8)
+
+---
+
+## 🚀 Project Demos & Integration Gallery
+
+This section showcases the core capabilities of the workspace, specifically highlighting the successful implementation of ROS 2, MoveIt2, and Nav2 on **macOS**.
+
+### 1. ROS 2 ↔ Gazebo Integration
+Seamless communication and synchronization between the ROS 2 transport layer and the Gazebo simulation engine. 
+
+* **Key Features:** Clock synchronization, sensor data bridge, and joint state broadcasting.
+* **[View Full Demo on LinkedIn](https://www.linkedin.com/posts/classy29_ros2-ros-robotics-activity-7403848396744110080-IDUQ?utm_source=share&utm_medium=member_desktop&rcm=ACoAACDnI-UBIj7r5BhM-eVhnjDAOHOyP7x5-k8)**
+
+![ros2-gz-demo](https://github.com/user-attachments/assets/6e4eeeaf-ac1a-4bb1-8472-6e8bf16a7792)
+
+---
+
+### 2. MoveIt2 Motion Planning (macOS Native)
+Advanced manipulation and motion planning. Achieving stable visualization and execution of MoveIt2 on macOS ARM64/Intel architecture.
+
+* **Key Features:** Inverse Kinematics (IK) solving, collision checking, and trajectory execution.
+* **[View Full Demo on LinkedIn](https://www.linkedin.com/posts/classy29_ros2-ros-moveit2-activity-7404628200003194885-OY06?utm_source=share&utm_medium=member_desktop&rcm=ACoAACDnI-UBIj7r5BhM-eVhnjDAOHOyP7x5-k8)**
+
+![moveit2-macos](https://github.com/user-attachments/assets/3b57bf14-19c1-4b4b-85c5-b4712c6a6cda)
+
+---
+
+### 3. Nav2 Navigation Stack
+Autonomous navigation, global/local pathfinding, and obstacle avoidance visualized in RViz2.
+
+* **Key Features:** Costmap generation, SLAM integration, and behavior tree-based navigation.
+* **[View Full Demo on LinkedIn](https://www.linkedin.com/posts/classy29_ros2-ros-navigation2-activity-7409757575837036544-vJtq?utm_source=share&utm_medium=member_desktop&rcm=ACoAACDnI-UBIj7r5BhM-eVhnjDAOHOyP7x5-k8)**
+
+![nav2-stack-macos](https://github.com/user-attachments/assets/6beb3794-2877-425b-999b-b7b592c54500)
+
+---
