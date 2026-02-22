@@ -128,7 +128,7 @@ jobs:
     # --------------------------------------------------
     - name: Clone gz-macOS
       run: |
-        git clone https://github.com/idesign0/gz-macOS.git -b ionic external_gz
+        git clone https://github.com/idesign0/gz-macOS.git -b ionic
 
     # --------------------------------------------------
     # Build External Gazebo Workspace
@@ -136,8 +136,6 @@ jobs:
     - name: Build External Gazebo
       shell: bash
       run: |
-        cd external_gz
-        # Ensure we are in the right directory for the local boost reference
         colcon build \
           --packages-select protobuf \
           --executor parallel \
