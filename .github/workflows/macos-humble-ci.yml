@@ -137,17 +137,6 @@ jobs:
         git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b harmonic .
         cd ..
         colcon build \
-          --packages-select protobuf \
-          --executor parallel \
-          --parallel-workers $(sysctl -n hw.ncpu) \
-          --cmake-args -DBUILD_TESTING=OFF \
-                  -DCMAKE_BUILD_TYPE=Release \
-                  -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
-          --merge-install \
-          --continue-on-error
-
-        colcon build \
-          --packages-ignore protobuf \
           --executor parallel \
           --parallel-workers $(sysctl -n hw.ncpu) \
           --cmake-args \
