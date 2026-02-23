@@ -134,7 +134,7 @@ jobs:
         # Create the specific directory structure you requested
         mkdir -p gz-harmonic/src
         cd gz-harmonic/src
-        git clone https://github.com/idesign0/gz-macOS.git -b harmonic .
+        git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b harmonic .
         cd ..
         colcon build \
           --packages-select protobuf \
