@@ -126,28 +126,44 @@ jobs:
           pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard jinja2
 
     # --------------------------------------------------
-    # Clone External Gazebo (gz-macOS)
-    # --------------------------------------------------
-    - name: Clone gz-macOS
-      run: |
-        git clone https://github.com/idesign0/gz-macOS.git -b harmonic
-
-    # --------------------------------------------------
     # Build External Gazebo Workspace
     # --------------------------------------------------
     - name: Build External Gazebo
       shell: bash
       run: |
+        # Create the specific directory structure you requested
+        mkdir -p gz-harmonic/src
+        cd gz-harmonic/src
+        git clone https://github.com/idesign0/gz-macOS.git -b harmonic .
+        cd ..
         colcon build \
+          --packages-select protobuf \
           --executor parallel \
           --parallel-workers $(sysctl -n hw.ncpu) \
+          --cmake-args -DBUILD_TESTING=OFF \
+                  -DCMAKE_BUILD_TYPE=Release \
+                  -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
           --merge-install \
+          --continue-on-error
+
+        colcon build \
+          --packages-ignore protobuf \
+          --executor parallel \
+          --parallel-workers $(sysctl -n hw.ncpu) \
           --cmake-args \
               -DBUILD_TESTING=OFF \
               -DCMAKE_BUILD_TYPE=Release \
               -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
-              -DCMAKE_MACOSX_RPATH=ON \
-              -DCMAKE_INSTALL_NAME_DIR=$(pwd)/install/lib
+              -DCMAKE_MACOSX_RPATH=FALSE \
+              -DCMAKE_INSTALL_NAME_DIR=$(pwd)/install/lib \
+          --merge-install \
+          --continue-on-error
+
+        # EXPORT TO GITHUB_ENV: This replaces "sourcing" for future steps
+        echo "GZ_INSTALL_DIR=${{ github.workspace }}/gz-harmonic/install" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=${{ github.workspace }}/gz-harmonic/install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
+        echo "DYLD_LIBRARY_PATH=${{ github.workspace }}/gz-harmonic/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "PATH=${{ github.workspace }}/gz-harmonic/install/bin:$PATH" >> $GITHUB_ENV
 
     # --------------------------------------------------
     # Environment
@@ -156,8 +172,7 @@ jobs:
       run: |
         echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> $GITHUB_ENV
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
-        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5):${{ github.workspace }}/install" >> $GITHUB_ENV
-        echo "source ${{ github.workspace }}/install/setup.bash" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5):$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
         echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
         echo "GZ_SIM_SYSTEM_PLUGIN_PATH=${GITHUB_WORKSPACE}/install/gz_ros2_control/lib/" >> $GITHUB_ENV
 
@@ -168,6 +183,7 @@ jobs:
       shell: bash
       continue-on-error: true
       run: |
+        export CMAKE_PREFIX_PATH="${GZ_INSTALL_DIR}:${CMAKE_PREFIX_PATH}"
         export CMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
 
         colcon build \
