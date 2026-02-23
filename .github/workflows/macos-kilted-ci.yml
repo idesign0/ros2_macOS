@@ -132,7 +132,7 @@ jobs:
         # Create the specific directory structure you requested
         mkdir -p gz-ionic/src
         cd gz-ionic/src
-        git clone https://github.com/idesign0/gz-macOS.git -b ionic .
+        git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b ionic .
         cd ..
         colcon build \
           --packages-select protobuf \
