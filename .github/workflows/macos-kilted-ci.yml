@@ -95,7 +95,6 @@ jobs:
         brew unlink asio || true
         brew unlink orocos-kdl || true
         brew unlink protobuf || true
-        brew unlink octomap || true
 
         echo "Homebrew cleanup completed."
 
