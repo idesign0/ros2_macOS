@@ -634,10 +634,6 @@
 	path = gazebo-release/gz_ogre_next_vendor
 	url = https://github.com/gazebo-release/gz_ogre_next_vendor.git
 	branch = kilted
-[submodule "gazebo-release/dependencies/protobuf"]
-	path = gazebo-release/dependencies/protobuf
-	url = https://github.com/protocolbuffers/protobuf.git
-	branch = v32.1
 [submodule "ros-visualization/rqt_plot"]
 	path = ros-visualization/rqt_plot
 	url = https://github.com/ros-visualization/rqt_plot.git
