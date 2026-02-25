@@ -82,14 +82,14 @@ This script installs essential tools and libraries needed for building ROS 2 Kil
 You can verify or manually install additional required packages with this command (these should already be installed by the script, but it’s good to double-check):
 
 ```bash
-brew install asio assimp bison bullet cmake console_bridge cppcheck \
-cunit eigen freetype graphviz opencv openssl orocos-kdl pcre poco \
+brew install assimp bison bullet cmake console_bridge cppcheck \
+cunit eigen freetype graphviz opencv openssl pcre poco \
 pyqt@5 python qt@5 sip spdlog tinyxml2
 ```
 
 unlink some brew packages:
 ```bash
-brew unlink boost boost-pytnon3 xtensor xdm xtl qt osqp orocos-kdl asio
+brew unlink boost boost-pytnon3 xtensor xdm xtl qt osqp orocos-kdl asio ceres protobuf
 ```
 
 #### Eigen3 Symlinks (Critical):
