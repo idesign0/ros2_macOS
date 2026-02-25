@@ -78,29 +78,6 @@ jobs:
         ./brew-packages/install_brew_packages.sh
 
     # --------------------------------------------------
-    # Homebrew: Unlink packages (ALWAYS run)
-    # --------------------------------------------------
-    - name: Unlink unwanted Homebrew packages
-      run: |
-        set +e
-        echo "Cleaning conflicting Homebrew packages..."
-
-        # Unlink (headers/libs stay but are not active)
-        brew unlink boost || true
-        brew unlink boost-python3 || true
-        brew unlink xtensor || true
-        brew unlink xdm || true
-        brew unlink xtl || true
-        brew unlink qt || true
-        brew unlink asio || true
-        brew unlink orocos-kdl || true
-        brew unlink protobuf || true
-        brew unlink ceres || true
-        brew unlink osqp || true
-
-        echo "Homebrew clean-up completed."
-
-    # --------------------------------------------------
     # Python 3.11
     # --------------------------------------------------
     - name: Python 3.11
@@ -147,6 +124,7 @@ jobs:
         cd gz-ionic/src
         git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b ionic .
         cd ..
+        brew unlink protobuf || true
         colcon build \
           --packages-select protobuf \
           --executor parallel \
@@ -176,6 +154,29 @@ jobs:
         echo "CMAKE_PREFIX_PATH=${{ github.workspace }}/gz-ionic/install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=${{ github.workspace }}/gz-ionic/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
         echo "PATH=${{ github.workspace }}/gz-ionic/install/bin:$PATH" >> $GITHUB_ENV
+
+    # --------------------------------------------------
+    # Homebrew: Unlink packages (ALWAYS run)
+    # --------------------------------------------------
+    - name: Unlink unwanted Homebrew packages
+      run: |
+        set +e
+        echo "Cleaning conflicting Homebrew packages..."
+
+        # Unlink (headers/libs stay but are not active)
+        brew unlink boost || true
+        brew unlink boost-python3 || true
+        brew unlink xtensor || true
+        brew unlink xdm || true
+        brew unlink xtl || true
+        brew unlink qt || true
+        brew unlink asio || true
+        brew unlink orocos-kdl || true
+        brew unlink protobuf || true
+        brew unlink ceres || true
+        brew unlink osqp || true
+
+        echo "Homebrew clean-up completed."
 
     # --------------------------------------------------
     # Build full workspace
