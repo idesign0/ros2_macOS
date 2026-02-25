@@ -89,7 +89,7 @@ pyqt@5 python qt@5 sip spdlog tinyxml2
 
 unlink some brew packages:
 ```bash
-brew unlink boost boost-pytnon3 xtensor xdm xtl qt eigen
+brew unlink boost boost-pytnon3 xtensor xdm xtl qt asio orocos-kdl yaml-cpp
 ```
 
 #### Eigen3 Symlinks (Critical):

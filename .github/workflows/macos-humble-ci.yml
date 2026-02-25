@@ -79,27 +79,6 @@ jobs:
         ./brew-packages/install_brew_packages.sh
 
     # --------------------------------------------------
-    # Homebrew: Unlink packages (ALWAYS run)
-    # --------------------------------------------------
-    - name: Unlink unwanted Homebrew packages
-      run: |
-        set +e
-        echo "Cleaning conflicting Homebrew packages..."
-
-        # Unlink (headers/libs stay but are not active)
-        brew unlink boost || true
-        brew unlink boost-python3 || true
-        brew unlink xtensor || true
-        brew unlink xdm || true
-        brew unlink xtl || true
-        brew unlink qt || true
-        brew unlink asio || true
-        brew unlink orocos-kdl || true
-        brew unlink yaml-cpp || true
-
-        echo "Homebrew cleanup completed."
-
-    # --------------------------------------------------
     # Python 3.11
     # --------------------------------------------------
     - name: Python 3.11
@@ -165,6 +144,27 @@ jobs:
         echo "DYLD_LIBRARY_PATH=${{ github.workspace }}/gz-harmonic/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
         echo "PATH=${{ github.workspace }}/gz-harmonic/install/bin:$PATH" >> $GITHUB_ENV
 
+    # --------------------------------------------------
+    # Homebrew: Unlink packages (ALWAYS run)
+    # --------------------------------------------------
+    - name: Unlink unwanted Homebrew packages
+      run: |
+        set +e
+        echo "Cleaning conflicting Homebrew packages..."
+
+        # Unlink (headers/libs stay but are not active)
+        brew unlink boost || true
+        brew unlink boost-python3 || true
+        brew unlink xtensor || true
+        brew unlink xdm || true
+        brew unlink xtl || true
+        brew unlink qt || true
+        brew unlink asio || true
+        brew unlink orocos-kdl || true
+        brew unlink yaml-cpp || true
+
+        echo "Homebrew cleanup completed."
+        
     # --------------------------------------------------
     # Build full workspace
     # --------------------------------------------------
