@@ -514,22 +514,6 @@
 	path = ros-perception/pcl_msgs
 	url = https://github.com/ros-perception/pcl_msgs.git
 	branch = ros2
-[submodule "ros-perception/ros-event-camera/event_camera_msgs"]
-	path = ros-perception/ros-event-camera/event_camera_msgs
-	url = https://github.com/ros-event-camera/event_camera_msgs.git
-	branch = 1.1.6
-[submodule "ros-perception/ros-event-camera/event_camera_codecs"]
-	path = ros-perception/ros-event-camera/event_camera_codecs
-	url = https://github.com/ros-event-camera/event_camera_codecs.git
-	branch = master
-[submodule "ros-perception/ros-event-camera/event_camera_renderer"]
-	path = ros-perception/ros-event-camera/event_camera_renderer
-	url = https://github.com/idesign0/event_camera_renderer.git
-	branch = 1.1.6
-[submodule "ros-perception/ros-event-camera/event_camera_tools"]
-	path = ros-perception/ros-event-camera/event_camera_tools
-	url = https://github.com/idesign0/event_camera_tools.git
-	branch = master
 [submodule "ros-perception/ros-event-camera/dependencies/dvs_msgs"]
 	path = ros-perception/ros-event-camera/dependencies/dvs_msgs
 	url = https://github.com/ros-event-camera/dvs_msgs.git
