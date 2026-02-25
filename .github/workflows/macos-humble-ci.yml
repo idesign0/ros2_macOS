@@ -123,6 +123,7 @@ jobs:
         # Create the specific directory structure you requested
         mkdir -p gz-harmonic/src
         cd gz-harmonic/src
+        brew link protobuf
         git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b harmonic .
         cd ..
         brew link protobuf || true
