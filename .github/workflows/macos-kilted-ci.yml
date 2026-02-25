@@ -184,7 +184,6 @@ jobs:
       run: |
         export CMAKE_PREFIX_PATH="${GZ_INSTALL_DIR}:${CMAKE_PREFIX_PATH}"
         export CMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
-        export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
         colcon build \
           --executor parallel \
