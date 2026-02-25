@@ -159,6 +159,7 @@ jobs:
           --continue-on-error
 
         # EXPORT TO GITHUB_ENV: This replaces "sourcing" for future steps
+        touch gz-ionic/src/COLCON_IGNORE
         echo "GZ_INSTALL_DIR=${{ github.workspace }}/gz-harmonic/install" >> $GITHUB_ENV
         echo "CMAKE_PREFIX_PATH=${{ github.workspace }}/gz-harmonic/install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
         echo "DYLD_LIBRARY_PATH=${{ github.workspace }}/gz-harmonic/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
