@@ -68,7 +68,7 @@ jobs:
           graphviz \
           eigen@3 \
           GeographicLib \
-          gz-transport13 gz-utils3 gz-msgs11 gz-sim8
+          protobuf
       
         # Symlink eigen3 for standard discovery
         sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
