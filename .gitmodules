@@ -750,3 +750,7 @@
 	path = ros/backward-cpp
 	url = https://github.com/bombela/backward-cpp.git
 	branch = master
+[submodule "ros-drivers/ackermann_msgs"]
+	path = ros-drivers/ackermann_msgs
+	url = https://github.com/ros-drivers/ackermann_msgs.git
+	branch = ros2

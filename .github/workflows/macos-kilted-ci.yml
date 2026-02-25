@@ -95,8 +95,9 @@ jobs:
         brew unlink asio || true
         brew unlink orocos-kdl || true
         brew unlink protobuf || true
+        brew unlink ceres || true
 
-        echo "Homebrew cleanup completed."
+        echo "Homebrew clean-up completed."
 
     # --------------------------------------------------
     # Python 3.11
