@@ -125,6 +125,7 @@ jobs:
         cd gz-harmonic/src
         git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b harmonic .
         cd ..
+        brew link protobuf || true
         colcon build \
           --executor parallel \
           --parallel-workers $(sysctl -n hw.ncpu) \
