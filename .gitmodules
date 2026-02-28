@@ -406,10 +406,6 @@
 	path = gzsim/ros_gz
 	url = https://github.com/gazebosim/ros_gz.git
 	branch = humble
-[submodule "gzsim/gz-transport"]
-	path = gzsim/gz-transport
-	url = https://github.com/gazebosim/gz-transport.git
-	branch = gz-transport14
 [submodule "gzsim/gps_umd"]
 	path = gzsim/gps_umd
 	url = https://github.com/swri-robotics/gps_umd.git
@@ -654,10 +650,6 @@
 	path = ament/uncrustify_vendor
 	url = https://github.com/ament/uncrustify_vendor.git
 	branch = humble
-[submodule "gzsim/gz-cmake"]
-	path = gzsim/gz-cmake
-	url = https://github.com/gazebosim/gz-cmake.git
-	branch = gz-cmake4
 [submodule "ros2/joint_state_publisher"]
 	path = ros2/joint_state_publisher
 	url = https://github.com/ros/joint_state_publisher.git
@@ -666,3 +658,7 @@
 	path = ros-visualization/tango_icons_vendor
 	url = https://github.com/ros-visualization/tango_icons_vendor.git
 	branch = humble
+[submodule "ros-drivers/ackermann_msgs"]
+	path = ros-drivers/ackermann_msgs
+	url = https://github.com/ros-drivers/ackermann_msgs.git
+	branch = ros2
