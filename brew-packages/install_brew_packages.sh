@@ -46,11 +46,16 @@ for pkg in "${PACKAGE_NAMES_ARRAY[@]}"; do
   packages+=("$pkg")
 done
 
-for pkg in "${packages[@]}"; do
-    echo "🔹 Installing $pkg..."
-    brew install "$pkg" || {
-        echo "⚠️ Warning: Failed to install $pkg, continuing..."
-    }
-done
+# Only enter the loop if there is actually something in the array
+if [ ${#packages[@]:-0} -gt 0 ]; then
+    for pkg in "${packages[@]}"; do
+        echo "🔹 Installing $pkg..."
+        brew install "$pkg" || {
+            echo "⚠️ Warning: Failed to install $pkg, continuing..."
+        }
+    done
+else
+    echo "✅ No new packages to install."
+fi
 
 echo "✅ Done"
