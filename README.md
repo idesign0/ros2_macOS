@@ -44,6 +44,17 @@ This guide will walk you through:
 - Installing required build tools (`colcon`, `vcstool`, etc.)
 - Creating the ROS 2 workspace structure
 
+## ⚡ One-Step Installation (Recommended)
+
+To automate the entire setup—including dependency installation, repository cloning, and the full workspace build—copy and paste the following command into your terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/idesign0/ros2_macOS/humble/scripts/ros2_mac_build.zsh -o build.zsh && chmod +x build.zsh && ./build.zsh
+```
+
+## 🛠️ Manual Installation (Step-by-Step)
+
+
 ### 1️⃣ Setup ROS 2 Workspace and Clone Repository
 
 First, create your ROS 2 workspace and clone this repository into the `src` folder:
