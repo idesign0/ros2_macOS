@@ -44,6 +44,16 @@ This guide will walk you through:
 - Installing required build tools (`colcon`, `vcstool`, etc.)
 - Creating the ROS 2 workspace structure
 
+## ⚡ One-Step Installation (Recommended)
+
+To automate the entire setup—including dependency installation, repository cloning, and the full workspace build—copy and paste the following command into your terminal:
+
+```bash
+curl -fsSL [https://raw.githubusercontent.com/idesign0/ros2_macOS/kilted/scripts/ros2_mac_build.zsh](https://raw.githubusercontent.com/idesign0/ros2_macOS/kilted/scripts/ros2_mac_build.zsh) -o build.zsh && chmod +x build.zsh && ./build.zsh
+```
+
+## 🛠️ Manual Installation (Step-by-Step)
+
 ### 1️⃣ Setup ROS 2 Workspace and Clone Repository
 
 First, create your ROS 2 workspace and clone this repository into the `src` folder:
@@ -177,6 +187,8 @@ which pip
   ```
   Then, install the required Python packages with the appropriate build flags and paths:
   ```bash
+  python3 -m pip install --upgrade pip wheel
+  python3 -m pip install "setuptools>=61.0,<70.0"
   python3 -m pip install -U \
     --config-settings="--global-option=build_ext" \
     --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
@@ -187,7 +199,7 @@ which pip
     flake8-docstrings flake8-import-order flake8-quotes \
     importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
     nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
-    pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard 
+    pytest-mock rosdep rosdistro vcstool typeguard 
   ```
   ---
   
