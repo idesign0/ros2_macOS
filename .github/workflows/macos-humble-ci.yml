@@ -68,7 +68,6 @@ jobs:
           graphviz \
           eigen@3 \
           GeographicLib \
-          protobuf
       
         # Symlink eigen3 for standard discovery
         sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
@@ -123,21 +122,33 @@ jobs:
         # Create the specific directory structure you requested
         mkdir -p gz-harmonic/src
         cd gz-harmonic/src
-        brew link protobuf
         git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b harmonic .
         cd ..
-        brew link protobuf || true
+        
+        brew unlink protobuf || true
+
         colcon build \
-          --executor parallel \
-          --parallel-workers $(sysctl -n hw.ncpu) \
-          --cmake-args \
-              -DBUILD_TESTING=OFF \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
-              -DCMAKE_MACOSX_RPATH=FALSE \
-              -DCMAKE_INSTALL_NAME_DIR=$(pwd)/install/lib \
-          --merge-install \
-          --continue-on-error
+            --packages-select protobuf \
+            --executor parallel \
+            --parallel-workers $(sysctl -n hw.ncpu) \
+            --cmake-args -DBUILD_TESTING=OFF \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
+            --merge-install \
+            --continue-on-error
+
+        colcon build \
+            --packages-ignore protobuf \
+            --executor parallel \
+            --parallel-workers $(sysctl -n hw.ncpu) \
+            --cmake-args \
+                -DBUILD_TESTING=OFF \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
+                -DCMAKE_MACOSX_RPATH=FALSE \
+                -DCMAKE_INSTALL_NAME_DIR=$(pwd)/install/lib \
+            --merge-install \
+            --continue-on-error
 
         # EXPORT TO GITHUB_ENV: This replaces "sourcing" for future steps
         touch src/COLCON_IGNORE

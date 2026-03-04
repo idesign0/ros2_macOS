@@ -116,15 +116,31 @@ $PIP install -U \
 echo "🔥 Building Gazebo ($GZ_BRANCH)..."
 cd "$ROOT_DIR/$GZ_WORKSPACE"
 
-# NO SUDO HERE - brew link must run as user
-brew link protobuf || true
+# NO SUDO HERE - brew unlink must run as user
+brew unlink protobuf || true
 
-colcon build --executor parallel \
-  --parallel-workers "$NPROC" \
-  --cmake-args -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release \
-  -DBOOST_ROOT="$(pwd)/src/dependencies/boost-1.89" \
-  -DCMAKE_MACOSX_RPATH=FALSE -DCMAKE_INSTALL_NAME_DIR="$(pwd)/install/lib" \
-  --merge-install --continue-on-error
+colcon build \
+    --packages-select protobuf \
+    --executor parallel \
+    --parallel-workers $(sysctl -n hw.ncpu) \
+    --cmake-args -DBUILD_TESTING=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
+    --merge-install \
+    --continue-on-error
+
+colcon build \
+    --packages-ignore protobuf \
+    --executor parallel \
+    --parallel-workers $(sysctl -n hw.ncpu) \
+    --cmake-args \
+        -DBUILD_TESTING=OFF \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
+        -DCMAKE_MACOSX_RPATH=FALSE \
+        -DCMAKE_INSTALL_NAME_DIR=$(pwd)/install/lib \
+    --merge-install \
+    --continue-on-error
 
 # 5. Build Main Workspace
 echo "🛠️ Finalizing Full Workspace Build..."
