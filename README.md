@@ -125,7 +125,6 @@ sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eige
   ```bash
  # Minimum required CMake policy version and C++ standard
 export CMAKE_POLICY_VERSION_MINIMUM=3.5
-export MY_TOOLCHAIN_FILE="$HOME/humble-ros2/src/cmake/toolchain.cmake"
 
 # Qt 5 paths (Homebrew)
 export CMAKE_PREFIX_PATH="$CMAKE_PREFIX_PATH:$(brew --prefix qt@5)"
@@ -158,7 +157,6 @@ export PATH="$HOME/bin:$PATH"
   > - **Please uncomment these lines after:**
   >   1. You have installed **Gazebo Harmonic** and verified it works correctly, and you have successfully built all ROS 2 packages without errors.
   >   2. You have created and built your **separate overlay workspace** (`ros2_ws`).
-  >   3. **$MY_TOOLCHAIN_FILE** path should be set properly so **toolchain.cmake** can be access during the build.
   > 
   > This ensures that your environment is properly configured only once the related components are ready, avoiding errors during the initial setup.
   
