@@ -1,8 +1,8 @@
-name: macOS ROS 2 Kilted CI (Apple Silicon)
+name: macOS ROS 2 jazzy CI (Apple Silicon)
 
 on:
   push:
-    branches: [kilted]
+    branches: [jazzy]
   pull_request:
   workflow_dispatch:
 

@@ -1,4 +1,15 @@
-# ROS 2 Kilted + MoveIt2 + Nav2 + Gazebo Ionic Setup on macOS (Apple Silicon)
+> [!CAUTION]
+> **WORK IN PROGRESS: ROS 2 JAZZY JALISCO MIGRATION**
+>
+> This repository is currently undergoing a major transition from **ROS 2 Humble** to **ROS 2 Jazzy Jalisco**. 
+> 
+> * **Current State:** The `.gitmodules` and repository lists have been updated for **Jazzy**, but the build instructions and automated scripts below still refer to **Humble**.
+> * **Stability:** Build failures are expected on macOS (Apple Silicon) until the patching process for Jazzy is finalized.
+> * **Documentation:** The README content below is **OUTDATED** and will be updated once the Jazzy + MoveIt2 + Gazebo Ionic stack is verified.
+>
+> **Proceed with caution if you are attempting a Jazzy build!**
+
+# ROS 2 jazzy + MoveIt2 + Nav2 + Gazebo Ionic Setup on macOS (Apple Silicon)
 
 This repository provides a streamlined setup for running **ROS 2 Humble** and **Gazebo Sim Ionic** on **macOS with Apple Silicon (M1/M2/M3)**. ROS 2 is built from source with macOS patches, and Gazebo is built from source.
 
@@ -6,7 +17,7 @@ This repository provides a streamlined setup for running **ROS 2 Humble** and **
 
 ## ✅ What's Included
 
-This repository provides a full build of **ROS 2 Kilted** from source for **ARM64 macOS**, including core packages and key frameworks such as:
+This repository provides a full build of **ROS 2 jazzy** from source for **ARM64 macOS**, including core packages and key frameworks such as:
 
 - **ament** build system  
 - **backward_ros** for stack tracing  
@@ -49,7 +60,7 @@ This guide will walk you through:
 To automate the entire setup—including dependency installation, repository cloning, and the full workspace build—copy and paste the following command into your terminal:
 
 ```bash
-curl -fsSL [https://raw.githubusercontent.com/idesign0/ros2_macOS/kilted/scripts/ros2_mac_build.zsh](https://raw.githubusercontent.com/idesign0/ros2_macOS/kilted/scripts/ros2_mac_build.zsh) -o build.zsh && chmod +x build.zsh && ./build.zsh
+curl -fsSL [https://raw.githubusercontent.com/idesign0/ros2_macOS/jazzy/scripts/ros2_mac_build.zsh](https://raw.githubusercontent.com/idesign0/ros2_macOS/jazzy/scripts/ros2_mac_build.zsh) -o build.zsh && chmod +x build.zsh && ./build.zsh
 ```
 
 ## 🛠️ Manual Installation (Step-by-Step)
@@ -59,9 +70,9 @@ curl -fsSL [https://raw.githubusercontent.com/idesign0/ros2_macOS/kilted/scripts
 First, create your ROS 2 workspace and clone this repository into the `src` folder:
 
 ```bash
-mkdir -p ~/kilted-ros2/src
-cd ~/kilted-ros2/src
-git clone -b kilted https://github.com/idesign0/ros2_macOS.git .
+mkdir -p ~/jazzy-ros2/src
+cd ~/jazzy-ros2/src
+git clone -b jazzy https://github.com/idesign0/ros2_macOS.git .
 ```
 After cloning, run:
 ```bash
@@ -84,10 +95,10 @@ brew doctor
 and now, Go back to the root of your workspace and run the Homebrew packages installation script:
 
 ```bash
-cd ~/kilted-ros2
+cd ~/jazzy-ros2
 ./src/brew-packages/install_brew_packages.sh
 ```
-This script installs essential tools and libraries needed for building ROS 2 Kilted on macOS ARM64.
+This script installs essential tools and libraries needed for building ROS 2 jazzy on macOS ARM64.
 
 You can verify or manually install additional required packages with this command (these should already be installed by the script, but it’s good to double-check):
 
@@ -115,7 +126,7 @@ sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eige
 
 ### 3️⃣ Official ROS 2 macOS Prerequisites
 
-  This section covers the essential setup steps to prepare your macOS environment for building ROS 2 Kilted.
+  This section covers the essential setup steps to prepare your macOS environment for building ROS 2 jazzy.
   
   #### 1️⃣ Setup Some Environment Variables
   
@@ -145,13 +156,13 @@ export OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3
 
 # Gazebo ionic variables
 export GZ_VERSION=ionic
-export GZ_SIM_SYSTEM_PLUGIN_PATH=~/kilted-ros2/install/lib/
+export GZ_SIM_SYSTEM_PLUGIN_PATH=~/jazzy-ros2/install/lib/
 export GZ_BUILD_FROM_SOURCE=1
 export GZ_RELAX_VERSION_MATCH=1
 
 # sourcing
 #source ~/gz-ionic/install/setup.zsh
-#source ~/kilted-ros2/install/setup.zsh
+#source ~/jazzy-ros2/install/setup.zsh
 #source ~/ros2_ws/install/setup.zsh
 
 # Set the desired RMW implementation for the ROS 2 build environment.
@@ -230,7 +241,7 @@ This repository includes:
 
 ### 2. 🔨 Build
 ```bash
-cd ~/kilted-ros2
+cd ~/jazzy-ros2
 ```
 > ⚠️ **Note:**  
 > The build process might require several attempts to complete successfully,  
@@ -320,8 +331,8 @@ This section will be constantly updated based on user feedback. Below are some o
 
 After building and setting up your environment, verify your ROS 2 installation by running the basic talker and listener example.
 
-For detailed instructions and examples, please refer to the official ROS 2 Kilted macOS development setup guide:  
-[ROS 2 Kilted macOS Development Setup — Talker and Listener Example](https://docs.ros.org/en/kilted/Installation/Alternatives/macOS-Development-Setup.html#id8)
+For detailed instructions and examples, please refer to the official ROS 2 jazzy macOS development setup guide:  
+[ROS 2 jazzy macOS Development Setup — Talker and Listener Example](https://docs.ros.org/en/jazzy/Installation/Alternatives/macOS-Development-Setup.html#id8)
 
 ## 🚀 Project Demos & Integration Gallery
 

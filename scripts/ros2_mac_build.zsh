@@ -3,15 +3,15 @@
 # ==============================================================================
 # CONFIGURATION
 # ==============================================================================
-DISTRO="kilted" # "kilted" or "humble"
+DISTRO="jazzy" # "jazzy" or "humble"
 
 MAIN_REPO_URL="https://github.com/idesign0/ros2_macOS.git"
 GZ_REPO_URL="https://github.com/idesign0/gz-macOS.git"
 # Get CPU count once to avoid syntax errors in loops
 NPROC=$(sysctl -n hw.ncpu)
 
-if [ "$DISTRO" == "kilted" ]; then
-    MAIN_BRANCH="kilted"
+if [ "$DISTRO" == "jazzy" ]; then
+    MAIN_BRANCH="jazzy"
     GZ_BRANCH="ionic"
 else
     MAIN_BRANCH="humble"

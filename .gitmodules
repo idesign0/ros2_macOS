@@ -13,11 +13,11 @@
 [submodule "ros-planning/dependencies/robot_localization"]
 	path = ros-planning/dependencies/robot_localization
 	url = https://github.com/cra-ros-pkg/robot_localization.git
-	branch = kilted-devel
+	branch = jazzy-devel
 [submodule "ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK"]
 	path = ros-planning/dependencies/ROBOTIS-GIT/DynamixelSDK
 	url = https://github.com/ROBOTIS-GIT/DynamixelSDK.git
-	branch = humble
+	branch = jazzy
 [submodule "ros-planning/dependencies/geographiclib"]
 	path = ros-planning/dependencies/geographiclib
 	url = https://github.com/geographiclib/geographiclib.git
@@ -25,11 +25,11 @@
 [submodule "ros-planning/navigation_msgs"]
 	path = ros-planning/navigation_msgs
 	url = https://github.com/ros-planning/navigation_msgs.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-planning/slam_toolbox"]
 	path = ros-planning/slam_toolbox
 	url = https://github.com/idesign0/id_slam_toolbox.git
-	branch = kilted
+	branch = jazzy
 [submodule "osrf/osrf_pycommon"]
 	path = osrf/osrf_pycommon
 	url = https://github.com/osrf/osrf_pycommon.git
@@ -37,7 +37,7 @@
 [submodule "osrf/osrf_testing_tools_cpp"]
 	path = osrf/osrf_testing_tools_cpp
 	url = https://github.com/osrf/osrf_testing_tools_cpp.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros/eigen_stl_containers"]
 	path = ros/eigen_stl_containers
 	url = https://github.com/ros/eigen_stl_containers.git
@@ -45,7 +45,7 @@
 [submodule "ros/ros_tutorials"]
 	path = ros/ros_tutorials
 	url = https://github.com/ros/ros_tutorials.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros/bond_core"]
 	path = ros/bond_core
 	url = https://github.com/ros/bond_core.git
@@ -53,19 +53,19 @@
 [submodule "ros/resource_retriever"]
 	path = ros/resource_retriever
 	url = https://github.com/ros/resource_retriever.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros/kdl_parser"]
 	path = ros/kdl_parser
 	url = https://github.com/ros/kdl_parser.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros/pluginlib"]
 	path = ros/pluginlib
 	url = https://github.com/ros/pluginlib.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros/urdfdom_headers"]
 	path = ros/urdfdom_headers
 	url = https://github.com/ros/urdfdom_headers.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros/backward_ros"]
 	path = ros/backward_ros
 	url = https://github.com/idesign0/id_backward_ros-release
@@ -73,7 +73,7 @@
 [submodule "ros/urdfdom"]
 	path = ros/urdfdom
 	url = https://github.com/ros/urdfdom.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros/xacro"]
 	path = ros/xacro
 	url = https://github.com/ros/xacro.git
@@ -85,7 +85,7 @@
 [submodule "ros/robot_state_publisher"]
 	path = ros/robot_state_publisher
 	url = https://github.com/ros/robot_state_publisher.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros/diagnostics"]
 	path = ros/diagnostics
 	url = https://github.com/ros/diagnostics.git
@@ -93,15 +93,15 @@
 [submodule "ros/ros_environment"]
 	path = ros/ros_environment
 	url = https://github.com/ros/ros_environment.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros/class_loader"]
 	path = ros/class_loader
 	url = https://github.com/ros/class_loader.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-perception/laser_geometry"]
 	path = ros-perception/laser_geometry
 	url = https://github.com/ros-perception/laser_geometry.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-perception/wg-perception/object_recognition_msgs"]
 	path = ros-perception/wg-perception/object_recognition_msgs
 	url = https://github.com/wg-perception/object_recognition_msgs.git
@@ -109,11 +109,11 @@
 [submodule "ros-perception/vision_msgs"]
 	path = ros-perception/vision_msgs
 	url = https://github.com/ros-perception/vision_msgs.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-perception/image_common"]
 	path = ros-perception/image_common
 	url = https://github.com/ros-perception/image_common.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_cmake2_vendor"]
 	path = gazebo-release/gz_cmake2_vendor
 	url = https://github.com/gazebo-release/gz_cmake2_vendor.git
@@ -133,15 +133,15 @@
 [submodule "ros2_control/ros2_control"]
 	path = ros2_control/ros2_control
 	url = https://github.com/idesign0/id_ros2_control.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2_control/ros2_controllers"]
 	path = ros2_control/ros2_controllers
 	url = https://github.com/ros-controls/ros2_controllers.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2_control/realtime_tools"]
 	path = ros2_control/realtime_tools
 	url = https://github.com/ros-controls/realtime_tools.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2_control/control_msgs"]
 	path = ros2_control/control_msgs
 	url = https://github.com/ros-controls/control_msgs.git
@@ -149,7 +149,7 @@
 [submodule "ros2_control/control_toolbox"]
 	path = ros2_control/control_toolbox
 	url = https://github.com/ros-controls/control_toolbox.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2_control/kinematics_interface"]
 	path = ros2_control/kinematics_interface
 	url = https://github.com/ros-controls/kinematics_interface.git
@@ -157,31 +157,31 @@
 [submodule "ros-tooling/libstatistics_collector"]
 	path = ros-tooling/libstatistics_collector
 	url = https://github.com/ros-tooling/libstatistics_collector.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-tooling/keyboard_handler"]
 	path = ros-tooling/keyboard_handler
 	url = https://github.com/ros-tooling/keyboard_handler.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rclcpp"]
 	path = ros2/rclcpp
 	url = https://github.com/ros2/rclcpp.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rcl"]
 	path = ros2/rcl
 	url = https://github.com/ros2/rcl.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/ament_cmake_ros"]
 	path = ros2/ament_cmake_ros
 	url = https://github.com/ros2/ament_cmake_ros.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rmw_dds_common"]
 	path = ros2/rmw_dds_common
 	url = https://github.com/ros2/rmw_dds_common.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/example_interfaces"]
 	path = ros2/example_interfaces
 	url = https://github.com/ros2/example_interfaces.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/tinyxml_vendor"]
 	path = ros2/tinyxml_vendor
 	url = https://github.com/ros2/tinyxml_vendor.git
@@ -189,191 +189,191 @@
 [submodule "ros2/rcutils"]
 	path = ros2/rcutils
 	url = https://github.com/ros2/rcutils.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/message_filters"]
 	path = ros2/message_filters
 	url = https://github.com/ros2/message_filters.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rclpy"]
 	path = ros2/rclpy
 	url = https://github.com/ros2/rclpy.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/urdf"]
 	path = ros2/urdf
 	url = https://github.com/ros2/urdf.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/launch"]
 	path = ros2/launch
 	url = https://github.com/ros2/launch.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/performance_test_fixture"]
 	path = ros2/performance_test_fixture
 	url = https://github.com/ros2/performance_test_fixture.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rosidl_dds"]
 	path = ros2/rosidl_dds
 	url = https://github.com/ros2/rosidl_dds.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/launch_ros"]
 	path = ros2/launch_ros
 	url = https://github.com/ros2/launch_ros.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/console_bridge_vendor"]
 	path = ros2/console_bridge_vendor
 	url = https://github.com/ros2/console_bridge_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/tlsf"]
 	path = ros2/tlsf
 	url = https://github.com/ros2/tlsf.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rmw"]
 	path = ros2/rmw
 	url = https://github.com/ros2/rmw.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rosidl_typesupport_fastrtps"]
 	path = ros2/rosidl_typesupport_fastrtps
 	url = https://github.com/ros2/rosidl_typesupport_fastrtps.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rosidl_defaults"]
 	path = ros2/rosidl_defaults
 	url = https://github.com/ros2/rosidl_defaults.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/mimick_vendor"]
 	path = ros2/mimick_vendor
 	url = https://github.com/ros2/mimick_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rosidl_typesupport"]
 	path = ros2/rosidl_typesupport
 	url = https://github.com/ros2/rosidl_typesupport.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/ros_testing"]
 	path = ros2/ros_testing
 	url = https://github.com/ros2/ros_testing.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/eigen3_cmake_module"]
 	path = ros2/eigen3_cmake_module
 	url = https://github.com/ros2/eigen3_cmake_module.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/common_interfaces"]
 	path = ros2/common_interfaces
 	url = https://github.com/ros2/common_interfaces.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rmw_fastrtps"]
 	path = ros2/rmw_fastrtps
 	url = https://github.com/ros2/rmw_fastrtps.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/ros2cli_common_extensions"]
 	path = ros2/ros2cli_common_extensions
 	url = https://github.com/ros2/ros2cli_common_extensions.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rmw_implementation"]
 	path = ros2/rmw_implementation
 	url = https://github.com/ros2/rmw_implementation.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/examples"]
 	path = ros2/examples
 	url = https://github.com/ros2/examples.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/tinyxml2_vendor"]
 	path = ros2/tinyxml2_vendor
 	url = https://github.com/ros2/tinyxml2_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rosidl"]
 	path = ros2/rosidl
 	url = https://github.com/ros2/rosidl.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/geometry2"]
 	path = ros2/geometry2
 	url = https://github.com/idesign0/id_geometry2
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rcl_interfaces"]
 	path = ros2/rcl_interfaces
 	url = https://github.com/ros2/rcl_interfaces.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/ros2cli"]
 	path = ros2/ros2cli
 	url = https://github.com/ros2/ros2cli.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rosbag2"]
 	path = ros2/rosbag2
 	url = https://github.com/ros2/rosbag2.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/sros2"]
 	path = ros2/sros2
 	url = https://github.com/ros2/sros2.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/realtime_support"]
 	path = ros2/realtime_support
 	url = https://github.com/ros2/realtime_support.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/spdlog_vendor"]
 	path = ros2/spdlog_vendor
 	url = https://github.com/ros2/spdlog_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rmw_cyclonedds"]
 	path = ros2/rmw_cyclonedds
 	url = https://github.com/ros2/rmw_cyclonedds.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rviz"]
 	path = ros2/rviz
 	url = https://github.com/idesign0/id_rviz.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/system_tests"]
 	path = ros2/system_tests
 	url = https://github.com/ros2/system_tests.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rpyutils"]
 	path = ros2/rpyutils
 	url = https://github.com/ros2/rpyutils.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/test_interface_files"]
 	path = ros2/test_interface_files
 	url = https://github.com/ros2/test_interface_files.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rcpputils"]
 	path = ros2/rcpputils
 	url = https://github.com/ros2/rcpputils.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/yaml_cpp_vendor"]
 	path = ros2/yaml_cpp_vendor
 	url = https://github.com/ros2/yaml_cpp_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rcl_logging"]
 	path = ros2/rcl_logging
 	url = https://github.com/ros2/rcl_logging.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/python_cmake_module"]
 	path = ros2/python_cmake_module
 	url = https://github.com/ros2/python_cmake_module.git
-	branch = rolling
+	branch = jazzy
 [submodule "ros2/ros2_tracing"]
 	path = ros2/ros2_tracing
 	url = https://github.com/ros2/ros2_tracing.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rosidl_runtime_py"]
 	path = ros2/rosidl_runtime_py
 	url = https://github.com/ros2/rosidl_runtime_py.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/libyaml_vendor"]
 	path = ros2/libyaml_vendor
 	url = https://github.com/ros2/libyaml_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/unique_identifier_msgs"]
 	path = ros2/unique_identifier_msgs
 	url = https://github.com/ros2/unique_identifier_msgs.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/demos"]
 	path = ros2/demos
 	url = https://github.com/ros2/demos.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rosidl_python"]
 	path = ros2/rosidl_python
 	url = https://github.com/ros2/rosidl_python.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rmw_connextdds"]
 	path = ros2/rmw_connextdds
 	url = https://github.com/ros2/rmw_connextdds.git
-	branch = kilted
+	branch = jazzy
 [submodule "eclipse-iceoryx/iceoryx"]
 	path = eclipse-iceoryx/iceoryx
 	url = https://github.com/eclipse-iceoryx/iceoryx.git
@@ -385,7 +385,7 @@
 [submodule "gzsim/ros_gz"]
 	path = gzsim/ros_gz
 	url = https://github.com/gazebosim/ros_gz.git
-	branch = kilted
+	branch = jazzy
 [submodule "gzsim/gps_umd"]
 	path = gzsim/gps_umd
 	url = https://github.com/swri-robotics/gps_umd.git
@@ -393,7 +393,7 @@
 [submodule "gzsim/gz_ros2_control"]
 	path = gzsim/gz_ros2_control
 	url = https://github.com/idesign0/id_gz_ros2_control.git
-	branch = kilted
+	branch = jazzy
 [submodule "gzsim/actuator_msgs"]
 	path = gzsim/actuator_msgs
 	url = https://github.com/rudislabs/actuator_msgs.git
@@ -401,7 +401,7 @@
 [submodule "moveit/moveit2"]
 	path = moveit/moveit2
 	url = https://github.com/idesign0/id_moveit2.git
-	branch = kilted
+	branch = jazzy
 [submodule "moveit/OctoMap/octomap"]
 	path = moveit/OctoMap/octomap
 	url = https://github.com/OctoMap/octomap.git
@@ -469,15 +469,15 @@
 [submodule "eProsima/Fast-CDR"]
 	path = eProsima/Fast-CDR
 	url = https://github.com/eProsima/Fast-CDR.git
-	branch = 2.3.x
+	branch = 2.2.x
 [submodule "eProsima/Fast-DDS"]
 	path = eProsima/Fast-DDS
 	url = https://github.com/idesign0/id_Fast-DDS.git
-	branch = 3.2.x
+	branch = 2.14.x
 [submodule "ros-planning/navigation2"]
 	path = ros-planning/navigation2
 	url = https://github.com/idesign0/id_navigation2.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-planning/dependencies/vision_opencv"]
 	path = ros-planning/dependencies/vision_opencv
 	url = https://github.com/idesign0/id_vision_opencv.git
@@ -501,7 +501,7 @@
 [submodule "ros-planning/dependencies/rsl"]
 	path = ros-planning/dependencies/rsl
 	url = https://github.com/ros2-gbp/rsl-release.git
-	branch = release/kilted/rsl
+	branch = release/jazzy/rsl
 [submodule "ros-planning/dependencies/PickNickRobotics/cpp_polyfills"]
 	path = ros-planning/dependencies/PickNickRobotics/cpp_polyfills
 	url = https://github.com/PickNikRobotics/cpp_polyfills.git
@@ -517,187 +517,195 @@
 [submodule "ros-planning/spatio_temporal_voxel_layer"]
 	path = ros-planning/spatio_temporal_voxel_layer
 	url = https://github.com/idesign0/spatio_temporal_voxel_layer.git
-	branch = kilted
+	branch = jazzy
 [submodule "ament/ament_cmake"]
 	path = ament/ament_cmake
 	url = https://github.com/ament/ament_cmake.git
-	branch = kilted
+	branch = jazzy
 [submodule "ament/ament_index"]
 	path = ament/ament_index
 	url = https://github.com/ament/ament_index.git
-	branch = kilted
+	branch = jazzy
 [submodule "ament/ament_lint"]
 	path = ament/ament_lint
 	url = https://github.com/ament/ament_lint.git
-	branch = kilted
+	branch = jazzy
 [submodule "ament/ament_package"]
 	path = ament/ament_package
 	url = https://github.com/ament/ament_package.git
-	branch = kilted
+	branch = jazzy
 [submodule "ament/google_benchmark_vendor"]
 	path = ament/google_benchmark_vendor
 	url = https://github.com/ament/google_benchmark_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "ament/googletest"]
 	path = ament/googletest
 	url = https://github.com/ament/googletest.git
-	branch = kilted
+	branch = jazzy
+[submodule "ament/uncrustify_vendor"]
+	path = ament/uncrustify_vendor
+	url = https://github.com/ament/uncrustify_vendor.git
+	branch = jazzy
 [submodule "gazebo-release/gz_cmake_vendor"]
 	path = gazebo-release/gz_cmake_vendor
 	url = https://github.com/gazebo-release/gz_cmake_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_math_vendor"]
 	path = gazebo-release/gz_math_vendor
 	url = https://github.com/gazebo-release/gz_math_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_utils_vendor"]
 	path = gazebo-release/gz_utils_vendor
 	url = https://github.com/gazebo-release/gz_utils_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_common_vendor"]
 	path = gazebo-release/gz_common_vendor
 	url = https://github.com/gazebo-release/gz_common_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_fuel_tools_vendor"]
 	path = gazebo-release/gz_fuel_tools_vendor
 	url = https://github.com/gazebo-release/gz_fuel_tools_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_gui_vendor"]
 	path = gazebo-release/gz_gui_vendor
 	url = https://github.com/gazebo-release/gz_gui_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_launch_vendor"]
 	path = gazebo-release/gz_launch_vendor
 	url = https://github.com/gazebo-release/gz_launch_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_msgs_vendor"]
 	path = gazebo-release/gz_msgs_vendor
 	url = https://github.com/gazebo-release/gz_msgs_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_physics_vendor"]
 	path = gazebo-release/gz_physics_vendor
 	url = https://github.com/gazebo-release/gz_physics_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_plugin_vendor"]
 	path = gazebo-release/gz_plugin_vendor
 	url = https://github.com/gazebo-release/gz_plugin_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_rendering_vendor"]
 	path = gazebo-release/gz_rendering_vendor
 	url = https://github.com/gazebo-release/gz_rendering_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_sensors_vendor"]
 	path = gazebo-release/gz_sensors_vendor
 	url = https://github.com/gazebo-release/gz_sensors_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_sim_vendor"]
 	path = gazebo-release/gz_sim_vendor
 	url = https://github.com/gazebo-release/gz_sim_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_tools_vendor"]
 	path = gazebo-release/gz_tools_vendor
 	url = https://github.com/gazebo-release/gz_tools_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_transport_vendor"]
 	path = gazebo-release/gz_transport_vendor
 	url = https://github.com/gazebo-release/gz_transport_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/sdformat_vendor"]
 	path = gazebo-release/sdformat_vendor
 	url = https://github.com/gazebo-release/sdformat_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_ogre_next_vendor"]
 	path = gazebo-release/gz_ogre_next_vendor
 	url = https://github.com/gazebo-release/gz_ogre_next_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_plot"]
 	path = ros-visualization/rqt_plot
 	url = https://github.com/ros-visualization/rqt_plot.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_publisher"]
 	path = ros-visualization/rqt_publisher
 	url = https://github.com/ros-visualization/rqt_publisher.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/interactive_markers"]
 	path = ros-visualization/interactive_markers
 	url = https://github.com/ros-visualization/interactive_markers.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/python_qt_binding"]
 	path = ros-visualization/python_qt_binding
 	url = https://github.com/idesign0/id_python_qt_binding.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/qt_gui_core"]
 	path = ros-visualization/qt_gui_core
 	url = https://github.com/ros-visualization/qt_gui_core.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt"]
 	path = ros-visualization/rqt
 	url = https://github.com/ros-visualization/rqt.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_action"]
 	path = ros-visualization/rqt_action
 	url = https://github.com/ros-visualization/rqt_action.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_bag"]
 	path = ros-visualization/rqt_bag
 	url = https://github.com/ros-visualization/rqt_bag.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_console"]
 	path = ros-visualization/rqt_console
 	url = https://github.com/ros-visualization/rqt_console.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_graph"]
 	path = ros-visualization/rqt_graph
 	url = https://github.com/ros-visualization/rqt_graph.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_msg"]
 	path = ros-visualization/rqt_msg
 	url = https://github.com/ros-visualization/rqt_msg.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_py_console"]
 	path = ros-visualization/rqt_py_console
 	url = https://github.com/ros-visualization/rqt_py_console.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_reconfigure"]
 	path = ros-visualization/rqt_reconfigure
 	url = https://github.com/ros-visualization/rqt_reconfigure.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_service_caller"]
 	path = ros-visualization/rqt_service_caller
 	url = https://github.com/ros-visualization/rqt_service_caller.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_shell"]
 	path = ros-visualization/rqt_shell
 	url = https://github.com/ros-visualization/rqt_shell.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_srv"]
 	path = ros-visualization/rqt_srv
 	url = https://github.com/ros-visualization/rqt_srv.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/rqt_topic"]
 	path = ros-visualization/rqt_topic
 	url = https://github.com/ros-visualization/rqt_topic.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-visualization/tango_icons_vendor"]
 	path = ros-visualization/tango_icons_vendor
 	url = https://github.com/ros-visualization/tango_icons_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rosidl_core"]
 	path = ros2/rosidl_core
 	url = https://github.com/ros2/rosidl_core
-	branch = kilted
+	branch = jazzy
 [submodule "ros2/rosidl_dynamic_typesupport"]
 	path = ros2/rosidl_dynamic_typesupport
 	url = https://github.com/ros2/rosidl_dynamic_typesupport.git
-	branch = kilted
+	branch = jazzy
 [submodule "gazebo-release/gz_dartsim_vendor"]
 	path = gazebo-release/gz_dartsim_vendor
 	url = https://github.com/gazebo-release/gz_dartsim_vendor.git
-	branch = rolling
+	branch = jazzy
 [submodule "ros2/rosidl_dynamic_typesupport_fastrtps"]
 	path = ros2/rosidl_dynamic_typesupport_fastrtps
 	url = https://github.com/ros2/rosidl_dynamic_typesupport_fastrtps
-	branch = kilted
+	branch = jazzy
+[submodule "ros2-rust/rosidl_rust"]
+	path = ros2-rust/rosidl_rust
+	url = https://github.com/ros2-rust/rosidl_rust.git
+	branch = main
 [submodule "ros2_control/dependencies/pal_statistics"]
 	path = ros2_control/dependencies/pal_statistics
 	url = https://github.com/pal-robotics/pal_statistics.git
@@ -705,11 +713,11 @@
 [submodule "ros-perception/point_cloud_transport"]
 	path = ros-perception/point_cloud_transport
 	url = https://github.com/ros-perception/point_cloud_transport.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-simulation/simulation_interfaces"]
 	path = ros-simulation/simulation_interfaces
 	url = https://github.com/ros-simulation/simulation_interfaces.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros-planning/dependencies/BehaviorTree.CPP"]
 	path = ros-planning/dependencies/BehaviorTree.CPP
 	url = https://github.com/BehaviorTree/BehaviorTree.CPP.git
@@ -717,7 +725,7 @@
 [submodule "ros2/orocos_kdl_vendor"]
 	path = ros2/orocos_kdl_vendor
 	url = https://github.com/ros2/orocos_kdl_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "moveit/dependencies/ros-industrial/stomp"]
 	path = moveit/dependencies/ros-industrial/stomp
 	url = https://github.com/ros-industrial/stomp.git
@@ -737,7 +745,7 @@
 [submodule "ros2/pybind11_vendor"]
 	path = ros2/pybind11_vendor
 	url = https://github.com/ros2/pybind11_vendor.git
-	branch = kilted
+	branch = jazzy
 [submodule "ros/backward-cpp"]
 	path = ros/backward-cpp
 	url = https://github.com/bombela/backward-cpp.git

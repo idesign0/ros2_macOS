@@ -13,7 +13,7 @@ endif()
 if(IS_CI)
     set(WORKSPACE_ROOT "$ENV{GITHUB_WORKSPACE}")
 else()
-    set(WORKSPACE_ROOT "$ENV{HOME}/kilted-ros2")
+    set(WORKSPACE_ROOT "$ENV{HOME}/jazzy-ros2")
 endif()
 
 # --- Helper macro for src/ paths ---
@@ -117,7 +117,7 @@ set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
 set(Ceres_DIR "${WORKSPACE_ROOT}/install/lib/cmake/Ceres" CACHE PATH "Ceres Solver CMake path" FORCE)
 
-# --- yaml-cpp from Kilted ROS 2 (opt/vendor install) ---
+# --- yaml-cpp from jazzy ROS 2 (opt/vendor install) ---
 # Path to the vendor install prefix
 set(YAML_CPP_PREFIX "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor" CACHE PATH "yaml-cpp vendor prefix")
 
@@ -246,13 +246,6 @@ set(ENV{GDAL_CONFIG} ${GDAL_CONFIG_BIN})
 # 3. Add the Homebrew prefix for general finding (if not already there)
 set(CMAKE_PREFIX_PATH 
     "/opt/homebrew/opt/gdal;${CMAKE_PREFIX_PATH}" CACHE STRING "Prefix paths" FORCE)
-    
-#livox_ros_driver2
-set(PCL_ALL_IN_ONE_INSTALLER OFF CACHE BOOL "Disable bundled Boost" FORCE)
-set(ROS_EDITION "ROS2" CACHE STRING "ROS edition")
-set(ROS_VERSION "2" CACHE STRING "ROS Version")
-set(KILTED_ROS "kilted" CACHE STRING "ROS 2 kilted")
-set(ROS_DISTRO "kilted" CACHE STRING "ROS 2 Distro")
 
 # Qt5 path (for ROS packages)
 set(Qt5_DIR "/opt/homebrew/opt/qt@5/lib/cmake/Qt5" CACHE PATH "Qt5 CMake path")
