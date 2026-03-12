@@ -354,3 +354,9 @@ if(PROJECT_NAME STREQUAL "moveit_task_constructor_core")
         set(pybind11_FOUND TRUE)
     endif()
 endif()
+
+# Only force 'FOUND' to OFF for the vendor project itself
+if(CMAKE_PROJECT_NAME STREQUAL "orocos_kdl_vendor")
+    set(orocos_kdl_FOUND OFF CACHE BOOL "" FORCE)
+    set(FORCE_BUILD_VENDOR_PKG ON CACHE BOOL "" FORCE)
+endif()
