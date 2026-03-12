@@ -1,6 +1,4 @@
 
- PCL REQUIRED 
- PkgConfig 
 "${_dep}" QUIET
 "${_dep}" QUIET REQUIRED
 "${_logging_implementation}" REQUIRED
@@ -25,9 +23,7 @@ ${package_name} QUIET REQUIRED
 ${package}
 ${package} QUIET
 ${package} REQUIRED
-${package} REQUIRED QUIET
 ${pkg_dep} REQUIRED
-${pkg} REQUIRED
 ${rmw_implementation} REQUIRED
 ...
 //; s/
@@ -43,7 +39,6 @@ Backward
 Backward REQUIRED
 Boost
 Boost 1.56
-Boost COMPONENTS coroutine QUIET
 Boost COMPONENTS headers
 Boost QUIET
 Boost QUIET COMPONENTS headers
@@ -69,10 +64,9 @@ Bullet REQUIRED
 CHOLMOD REQUIRED
 CLI11 REQUIRED
 CSparse REQUIRED
+CTest
 CUDA QUIET
-CUDA REQUIRED
 CUDAToolkit QUIET
-CURL CONFIG QUIET
 CURL QUIET
 CURL REQUIRED
 Catch 2.13.2
@@ -96,7 +90,6 @@ CycloneDDS-CXX CONFIG REQUIRED
 Doxygen
 Doxygen 1.8 COMPONENTS doxygen
 Doxygen REQUIRED
-ECM REQUIRED NO_MODULE
 Eigen3
 Eigen3 ${CERES_EIGEN_VERSION} QUIET
 Eigen3 3.1.2
@@ -104,21 +97,12 @@ Eigen3 3.2.7 QUIET
 Eigen3 3.2.7 QUIET CONFIG
 Eigen3 3.3.4 REQUIRED NO_MODULE
 Eigen3 3.3.4...5 NO_MODULE
-Eigen3 CONFIG
 Eigen3 CONFIG QUIET
 Eigen3 QUIET NO_MODULE
 Eigen3 REQUIRED
 Eigen3 REQUIRED CONFIG
 Eigen3 REQUIRED NO_MODULE
-EpollShim
-Flatbuffers NAMES Flatbuffers FlatBuffers
-Flatbuffers REQUIRED
 Foo REQUIRED
-Franka
-Franka 0.13.0 REQUIRED
-Franka 0.13.2 REQUIRED
-Franka 0.13.3 REQUIRED
-Franka REQUIRED
 FreeGLUT REQUIRED
 Freetype
 Freetype QUIET
@@ -128,34 +112,23 @@ GLUT REQUIRED
 GRAPHICSMAGICKCPP REQUIRED
 GTest
 GTest 1.14.0 REQUIRED
-GTest CONFIG
-GTest CONFIG QUIET
 GTest CONFIG REQUIRED
-GTest MODULE QUIET
 GTest REQUIRED
 Gcov
 GeographicLib
 GeographicLib REQUIRED
 Git
-Git QUIET
 LAPACK QUIET
 LAPACK REQUIRED
 Lcov
 LibP11
 LibP11 REQUIRED
-Matlab COMPONENTS MX_LIBRARY MAT_LIBRARY REQUIRED
-MetavisionSDK COMPONENTS driver REQUIRED
 OGRE REQUIRED NO_SYSTEM_ENVIRONMENT_PATH
-OSMesa REQUIRED
-Open3D HINTS ${CMAKE_INSTALL_PREFIX}/CMake
-Open3D HINTS ${CMAKE_INSTALL_PREFIX}/lib/cmake
 OpenCV
 OpenCV REQUIRED
 OpenCV REQUIRED COMPONENTS calib3d core highgui imgproc
-OpenCV REQUIRED COMPONENTS core
 OpenCV REQUIRED COMPONENTS core highgui imgcodecs imgproc videoio
 OpenCV REQUIRED COMPONENTS core highgui imgproc videoio
-OpenGL
 OpenGL REQUIRED
 OpenMP
 OpenMP REQUIRED
@@ -165,42 +138,26 @@ OpenSSL REQUIRED
 OpenSplice COMPONENTS kernel sac REQUIRED
 OpenVDB 10 QUIET
 OpenVDB REQUIRED
-OusterSDK REQUIRED
 PATCH
-PCL REQUIRED
-PCL REQUIRED COMPONENTS common
 PCL REQUIRED COMPONENTS filters common
 PCL REQUIRED QUIET COMPONENTS common features filters io segmentation surface
 PCL REQUIRED QUIET COMPONENTS common io
-PNG REQUIRED
-Pcap REQUIRED
-Pcap REQUIRED HINTS ${CMAKE_CURRENT_LIST_DIR}
 Perl REQUIRED
 PkgConfig
 PkgConfig QUIET
 PkgConfig REQUIRED
-Poco COMPONENTS ${Poco_FIND_COMPONENTS} CONFIG QUIET
-Poco REQUIRED COMPONENTS Foundation
-Poco REQUIRED COMPONENTS Foundation Net
-Poco REQUIRED COMPONENTS Net Foundation
-Protobuf NO_MODULE
 PySide2 QUIET
-Pybind11Internal
 Python ${PYTHON_VERSION} COMPONENTS Interpreter Development REQUIRED
-Python 3.10 EXACT REQUIRED COMPONENTS Development
-Python 3.12 EXACT REQUIRED COMPONENTS Development
 Python 3.6 COMPONENTS Interpreter Development REQUIRED
 Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module
 Python COMPONENTS Interpreter
 Python COMPONENTS Interpreter Development
 Python REQUIRED COMPONENTS Interpreter
-Python REQUIRED COMPONENTS Interpreter Development
 Python3
 Python3 ${Python3_VERSION} REQUIRED COMPONENTS Interpreter Development
 Python3 3.8 REQUIRED
 Python3 COMPONENTS Interpreter
 Python3 COMPONENTS Interpreter Development
-Python3 COMPONENTS Interpreter Development NumPy REQUIRED
 Python3 COMPONENTS Interpreter Development REQUIRED
 Python3 COMPONENTS Interpreter REQUIRED
 Python3 QUIET COMPONENTS Interpreter
@@ -212,7 +169,6 @@ Python3 REQUIRED COMPONENTS Interpreter Development NumPy
 PythonExtra MODULE
 PythonInterp
 PythonInterp 3
-PythonInterp REQUIRED
 PythonLibs
 PythonLibs REQUIRED
 PythonLibsNew ${PYBIND11_PYTHON_VERSION} MODULE REQUIRED ${_pybind11_quiet}
@@ -237,7 +193,6 @@ SQLite3 QUIET
 SQLite3 REQUIRED
 SWIG QUIET
 Shiboken2 QUIET
-Sphinx REQUIRED
 Sphinx REQUIRED breathe
 TBB
 TBB QUIET
@@ -255,20 +210,13 @@ TinyXML2 QUIET
 TinyXML2 REQUIRED
 Vulkan
 Vulkan COMPONENTS glslc SPIRV-Tools
-Wayland REQUIRED Client Cursor Egl
-WaylandProtocols 1.15 REQUIRED
-WaylandScanner REQUIRED
 X11 REQUIRED
-XKBCommon REQUIRED
 XXX
-ZLIB
 ZLIB REQUIRED
-ZeroMQ
 ZeroMQ REQUIRED
 [^
-absl CONFIG
+absl REQUIRED
 absl REQUIRED 20240116
-absl REQUIRED CONFIG
 action_msgs QUIET
 action_msgs REQUIRED
 ament_cmake
@@ -276,7 +224,6 @@ ament_cmake QUIET
 ament_cmake QUIET REQUIRED
 ament_cmake REQUIRED
 ament_cmake_auto REQUIRED
-ament_cmake_black REQUIRED
 ament_cmake_clang_format REQUIRED
 ament_cmake_clang_tidy REQUIRED
 ament_cmake_copyright
@@ -332,7 +279,6 @@ assimp REQUIRED QUIET
 backward_ros QUIET
 backward_ros REQUIRED
 behaviortree_cpp REQUIRED
-behaviortree_cpp_v3
 benchmark 1.3 QUIET
 benchmark QUIET
 benchmark REQUIRED
@@ -381,11 +327,8 @@ boost_${dep_boost_wserialization} 1.89.0 EXACT CONFIG ${_BOOST_REQUIRED} ${_BOOS
 builtin_interfaces REQUIRED
 camera_calibration_parsers REQUIRED
 catkin
-catkin REQUIRED
 catkin REQUIRED COMPONENTS image_transport message_generation roscpp sensor_msgs std_msgs
-catkin REQUIRED COMPONENTS roslib
 catkin REQUIRED COMPONENTS rostest
-catkin REQUIRED COMPONENTS xyz
 chomp_motion_planner REQUIRED
 class_loader REQUIRED
 codecov
@@ -396,9 +339,9 @@ console_bridge REQUIRED
 console_bridge_vendor QUIET
 console_bridge_vendor REQUIRED
 control_msgs REQUIRED
+control_toolbox REQUIRED
 controller_interface REQUIRED
 controller_manager REQUIRED
-controller_manager_msgs REQUIRED
 costmap_queue REQUIRED
 cpptoml REQUIRED
 cppzmq
@@ -412,7 +355,6 @@ diagnostic_updater REQUIRED
 doctest            REQUIRED
 dwb_core REQUIRED
 dwb_msgs REQUIRED
-dynamixel_interfaces REQUIRED
 dynamixel_sdk REQUIRED
 dynamixel_sdk_custom_interfaces REQUIRED
 eigen3_cmake_module
@@ -426,18 +368,12 @@ fastcdr 2 REQUIRED CONFIG
 fastcdr REQUIRED
 fastcdr REQUIRED CONFIG
 fastdds 3 REQUIRED
-fastrtps REQUIRED
 fcl REQUIRED
 filters CONFIG REQUIRED
 flatbuffers REQUIRED
-fmt QUIET
 fmt REQUIRED
 foonathan_memory REQUIRED
-franka_hardware REQUIRED
-franka_msgs REQUIRED
-franka_semantic_components REQUIRED
 freetype CONFIG REQUIRED
-gRPC CONFIG REQUIRED
 generate_parameter_library REQUIRED
 generate_parameter_library_example REQUIRED
 geographic_msgs
@@ -445,14 +381,7 @@ geographic_msgs REQUIRED
 geometric_shapes REQUIRED
 geometry_msgs REQUIRED
 gflags REQUIRED PKGCONFIG gflags
-glad QUIET
-glad REQUIRED
-glfw3 3.3 QUIET
-glfw3 3.3 REQUIRED
-glfw3 CONFIG REQUIRED
-glfw3 REQUIRED
 gmock_vendor QUIET
-googletest QUIET
 gps_msgs REQUIRED
 graph_msgs REQUIRED
 gtest_vendor QUIET
@@ -478,6 +407,7 @@ gz_ogre_next_vendor REQUIRED
 gz_physics_vendor REQUIRED
 gz_plugin_vendor REQUIRED
 gz_rendering_vendor REQUIRED
+gz_ros2_control REQUIRED
 gz_sensors_vendor REQUIRED
 gz_sim_vendor
 gz_sim_vendor REQUIRED
@@ -500,33 +430,21 @@ iceoryx_posh_testing REQUIRED
 iceoryx_utils REQUIRED
 ignition-cmake2 QUIET
 ignition-gazebo2 2.1 QUIET REQUIRED
-ignition-gazebo3 REQUIRED
-ignition-gazebo5 REQUIRED
-ignition-gazebo6 REQUIRED
 ignition-math6 QUIET
-ignition-plugin1 REQUIRED
 ignition-rendering2 QUIET REQUIRED
 ignition-sensors2 QUIET REQUIRED
 image_transport REQUIRED
 interactive_markers REQUIRED
 joint_limits_interface REQUIRED
-joint_trajectory_controller REQUIRED
-jsoncpp
-jsoncpp CONFIG QUIET
-jsoncpp REQUIRED
 kdl_parser REQUIRED
 keyboard_handler REQUIRED
 kinematics_interface_kdl REQUIRED
 laser_geometry REQUIRED
 launch_testing_ament_cmake
 launch_testing_ament_cmake REQUIRED
-lexy REQUIRED
 libcurl_vendor REQUIRED
 liblz4_vendor REQUIRED
 libstatistics_collector REQUIRED
-libtins CONFIG QUIET
-libtins QUIET
-libtins REQUIRED
 libyaml_vendor REQUIRED
 lifecycle_msgs REQUIRED
 lz4 QUIET
@@ -537,7 +455,6 @@ message_filters REQUIRED
 mimick_vendor REQUIRED
 minicoro REQUIRED
 minitrace REQUIRED
-motion_primitives_controllers REQUIRED
 moveit_common REQUIRED
 moveit_core REQUIRED
 moveit_msgs REQUIRED
@@ -603,27 +520,19 @@ osrf_testing_tools_cpp
 osrf_testing_tools_cpp REQUIRED
 pa10_shadow_moveit_config QUIET
 panda_ikfast_plugin QUIET
-parameter_traits REQUIRED
 pcl_conversions REQUIRED
 pcl_msgs REQUIRED
 pendulum_msgs REQUIRED
 performance_test_fixture REQUIRED
-pinocchio REQUIRED
 pluginlib REQUIRED
 point_cloud_transport REQUIRED
 pr2_moveit_config_FOUND QUIET
-protobuf
-protobuf CONFIG
-protobuf CONFIG REQUIRED
 py_binding_tools REQUIRED
 pybind11
-pybind11 2.0 REQUIRED
-pybind11 2.10 REQUIRED
 pybind11 2.6 QUIET
 pybind11 2.9 EXACT CONFIG REQUIRED
 pybind11 CONFIG
 pybind11 CONFIG REQUIRED
-pybind11 MODULE REQUIRED
 pybind11 QUIET
 pybind11 REQUIRED
 pybind11 REQUIRED CONFIG
@@ -648,10 +557,7 @@ rclpy REQUIRED
 rcpputils REQUIRED
 rcutils
 rcutils REQUIRED
-realsense2 2.56
-realsense2 REQUIRED
-realsense2-gl 2.56
-realsense2_camera_msgs REQUIRED
+re2 REQUIRED
 realtime_tools REQUIRED
 resource_retriever REQUIRED
 rmw
@@ -668,7 +574,6 @@ robot_localization REQUIRED
 ros1_bridge QUIET
 ros2_control_cmake REQUIRED
 ros2_control_test_assets REQUIRED
-ros_environment REQUIRED
 ros_gz_bridge REQUIRED
 ros_gz_interfaces REQUIRED
 ros_industrial_cmake_boilerplate REQUIRED
@@ -709,9 +614,6 @@ rosidl_typesupport_fastrtps_cpp REQUIRED
 rosidl_typesupport_interface REQUIRED
 rosidl_typesupport_introspection_c REQUIRED
 rosidl_typesupport_introspection_cpp REQUIRED
-roslaunch
-roslaunch REQUIRED
-roslint REQUIRED
 rostest REQUIRED
 rsl 1.1.0 EXACT REQUIRED
 rsl REQUIRED
@@ -759,10 +661,10 @@ tf2_kdl REQUIRED
 tf2_msgs REQUIRED
 tf2_ros REQUIRED
 tf2_sensor_msgs REQUIRED
-tinyxml2 QUIET CONFIG
 tinyxml2 REQUIRED
 tinyxml2_vendor QUIET
 tinyxml2_vendor REQUIRED
+tl-expected REQUIRED
 tl_expected REQUIRED
 tlsf REQUIRED
 tlsf_cpp
@@ -773,27 +675,16 @@ turtelsim REQUIRED
 turtlesim_msgs REQUIRED
 type_description_interfaces REQUIRED
 unique_identifier_msgs REQUIRED
-ur_client_library
-ur_client_library REQUIRED
-ur_controllers REQUIRED
-ur_dashboard_msgs REQUIRED
-ur_description REQUIRED
 ur_kinematics QUIET
-ur_msgs REQUIRED
-ur_robot_driver REQUIRED
 urdf REQUIRED
 urdf_parser_plugin REQUIRED
 urdfdom REQUIRED
 urdfdom_headers 1.0 REQUIRED
 urdfdom_headers REQUIRED
-utf8_range CONFIG
-velodyne_msgs REQUIRED
 vision_msgs REQUIRED
 visualization_msgs REQUIRED
 warehouse_ros REQUIRED
 warehouse_ros_sqlite REQUIRED
-webots_ros2_driver REQUIRED
-webots_ros2_msgs REQUIRED
 xacro REQUIRED
 xsimd
 xsimd ${xsimd_REQUIRED_VERSION} REQUIRED
