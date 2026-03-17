@@ -117,7 +117,7 @@ echo "🔥 Building Gazebo ($GZ_BRANCH)..."
 cd "$ROOT_DIR/$GZ_WORKSPACE"
 
 # NO SUDO HERE - brew unlink must run as user
-brew unlink protobuf || true
+brew list --formula | grep -qw "protobuf" && brew unlink protobuf
 
 colcon build --packages-select protobuf --executor parallel \
   --parallel-workers "$NPROC" \
@@ -138,7 +138,14 @@ cd "$ROOT_DIR/$ROS2_WORKSPACE"
 
 echo "🧹 Unlinking conflicting packages (Running as $(whoami))..."
 # NO SUDO HERE
-brew unlink boost boost-python3 xtensor xdm xtl qt asio orocos-kdl protobuf ceres osqp || true
+for pkg in boost boost-python3 xtensor xdm xtl qt asio orocos-kdl protobuf ceres osqp; do
+    if brew list --formula | grep -q "^$pkg\$"; then
+        echo "Unlinking $pkg..."
+        brew unlink "$pkg"
+    else
+        echo "Skipping $pkg (not installed)"
+    fi
+done
 
 # Export build environment
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
