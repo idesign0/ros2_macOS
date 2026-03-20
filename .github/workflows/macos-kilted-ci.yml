@@ -173,7 +173,7 @@ jobs:
         brew unlink asio || true
         brew unlink orocos-kdl || true
         brew unlink protobuf || true
-        brew unlink ceres || true
+        brew unlink ceres-solver || true
         brew unlink osqp || true
 
         echo "Homebrew clean-up completed."
