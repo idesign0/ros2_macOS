@@ -7,7 +7,7 @@ grep -rho 'find_package([^)]*)' "$ROS2_SRC" | sed 's/find_package(//; s/)//' | s
 echo "Found $(wc -l < $HOME/kilted-ros2/src/brew-packages/found_packages.txt) unique packages."
 
 echo "Getting installed Homebrew formula packages with versions..."
-brew list --formula --versions > $HOME/kilted-ros2/src/brew-packages/brew_packages_versions.txt
+brew list --formula --versions > $HOME/kilted-ros2/src/brew-packages/matched_packages.txt
 echo "Homebrew packages list saved."
 
 echo "Matching ROS2 packages with Homebrew packages..."
