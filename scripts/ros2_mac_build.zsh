@@ -138,7 +138,7 @@ cd "$ROOT_DIR/$ROS2_WORKSPACE"
 
 echo "🧹 Unlinking conflicting packages (Running as $(whoami))..."
 # NO SUDO HERE
-brew unlink boost boost-python3 xtensor xdm xtl qt asio orocos-kdl protobuf ceres osqp || true
+brew unlink boost boost-python3 xtensor xdm xtl qt asio orocos-kdl protobuf ceres-solver osqp || true
 
 # Export build environment
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
