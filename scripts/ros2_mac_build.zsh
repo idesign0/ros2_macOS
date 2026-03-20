@@ -138,7 +138,7 @@ cd "$ROOT_DIR/$ROS2_WORKSPACE"
 
 echo "🧹 Unlinking conflicting packages (Running as $(whoami))..."
 # NO SUDO HERE
-for pkg in boost boost-python3 xtensor xdm xtl qt asio orocos-kdl protobuf ceres osqp; do
+for pkg in boost boost-python3 xtensor xdm xtl qt asio orocos-kdl protobuf ceres-solver osqp; do
     if brew list --formula | grep -q "^$pkg\$"; then
         echo "Unlinking $pkg..."
         brew unlink "$pkg"
