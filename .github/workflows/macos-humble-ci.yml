@@ -68,6 +68,7 @@ jobs:
           graphviz \
           eigen@3 \
           GeographicLib \
+          vtk
       
         # Symlink eigen3 for standard discovery
         sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3

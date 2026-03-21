@@ -71,7 +71,7 @@ fi
 
 # 3. Homebrew & Python Dependencies
 echo "🍺 Installing Homebrew packages (Running as $(whoami))..."
-brew install graphviz eigen@3 eigen GeographicLib openssl@3 qt@5 cmake wget python@3.11
+brew install graphviz eigen@3 eigen GeographicLib openssl@3 qt@5 cmake wget python@3.11 vtk
 
 BREW_SCRIPT="$ROOT_DIR/$ROS2_WORKSPACE/src/brew-packages/install_brew_packages.sh"
 if [ -f "$BREW_SCRIPT" ]; then
