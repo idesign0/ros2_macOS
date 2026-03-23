@@ -94,7 +94,7 @@ You can verify or manually install additional required packages with this comman
 ```bash
 brew install assimp bison bullet cmake console_bridge cppcheck \
 cunit eigen freetype graphviz opencv openssl pcre poco \
-pyqt@5 python qt@5 sip spdlog tinyxml2
+pyqt@5 python qt@5 sip spdlog tinyxml2 vtk
 ```
 
 unlink some brew packages:
