@@ -1,0 +1,40 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b7d36de7..1478b96d 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -187,7 +187,7 @@ option(WITH_OPENNI        "Include OpenNI support"               ON)
+ option(WITH_OPENNI2       "Include OpenNI2 support"              ON)
+ option(WITH_DC1394        "Include dc1394 support"               ON)
+ option(WITH_G2O           "Include g2o support"                  ON)
+-option(WITH_GTSAM         "Include GTSAM support"                ON)
++option(WITH_GTSAM         "Include GTSAM support"                OFF)
+ option(WITH_TORO          "Include TORO support"                 ON)
+ option(WITH_CERES         "Include Ceres support"                OFF)
+ option(WITH_MRPT          "Include MRPT support"                 ON)
+diff --git a/cmake_modules/FindG2O.cmake b/cmake_modules/FindG2O.cmake
+index ffc9c9a7..56732efa 100644
+--- a/cmake_modules/FindG2O.cmake
++++ b/cmake_modules/FindG2O.cmake
+@@ -97,16 +97,16 @@ IF(G2O_STUFF_LIBRARY AND G2O_CORE_LIBRARY AND G2O_INCLUDE_DIR AND G2O_CONFIG_FIL
+ 	${G2O_TYPES_SBA}
+         ${G2O_STUFF_LIBRARY})
+   
+-  IF(CSPARSE_FOUND)
+-     SET(G2O_INCLUDE_DIRS 
+-        ${G2O_INCLUDE_DIRS} 
++  IF(CSPARSE_FOUND AND G2O_SOLVER_CSPARSE AND G2O_SOLVER_CSPARSE_EXTENSION)
++     SET(G2O_INCLUDE_DIRS
++        ${G2O_INCLUDE_DIRS}
+         ${CSPARSE_INCLUDE_DIR})
+      SET(G2O_LIBRARIES
+-        ${G2O_LIBRARIES} 
+-	${G2O_SOLVER_CSPARSE} 
++        ${G2O_LIBRARIES}
++	${G2O_SOLVER_CSPARSE}
+ 	${G2O_SOLVER_CSPARSE_EXTENSION}
+ 	${CSPARSE_LIBRARY})
+-  ENDIF(CSPARSE_FOUND)
++  ENDIF()
+ 
+   IF(G2O_SOLVER_CHOLMOD)
+     SET(G2O_INCLUDE_DIRS 

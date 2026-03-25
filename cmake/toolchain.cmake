@@ -13,8 +13,12 @@ endif()
 if(IS_CI)
     set(WORKSPACE_ROOT "$ENV{GITHUB_WORKSPACE}")
 else()
-    set(WORKSPACE_ROOT "$ENV{HOME}/kilted-ros2")
+    # Derive workspace root from toolchain location: src/cmake/toolchain.cmake -> ../..
+    get_filename_component(WORKSPACE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 endif()
+
+# --- CMake policy compatibility for older packages ---
+set(CMAKE_POLICY_VERSION_MINIMUM "3.5" CACHE STRING "Minimum CMake policy version" FORCE)
 
 # --- Helper macro for src/ paths ---
 macro(WORKSPACE_PATH result_path relative_path)
@@ -41,6 +45,12 @@ set(CMAKE_IGNORE_PATH
 # --- ensure correct stdlib ---
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 
+# Add Homebrew library search paths to linker flags (ensures -L paths propagate to link phase)
+set(_HB_LINK_DIRS "-L/opt/homebrew/lib -L/opt/homebrew/opt/ffmpeg/lib -L/opt/homebrew/opt/theora/lib -L/opt/homebrew/opt/libogg/lib -L/opt/homebrew/opt/geos/lib -L/opt/homebrew/opt/proj/lib -L/opt/homebrew/opt/libspnav/lib -L/opt/homebrew/opt/zstd/lib -L/opt/homebrew/opt/zbar/lib -L/opt/homebrew/opt/google-benchmark/lib -L/opt/homebrew/opt/gstreamer/lib -L/opt/homebrew/opt/aravis/lib -L/opt/homebrew/opt/yaml-cpp/lib")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_HB_LINK_DIRS}" CACHE STRING "" FORCE)
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${_HB_LINK_DIRS}" CACHE STRING "" FORCE)
+set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${_HB_LINK_DIRS}" CACHE STRING "" FORCE)
+
 # Setting all the Build Tests Off
 set(BUILD_TESTING OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
@@ -50,14 +60,30 @@ set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 set(ROS_WORKSPACE_INSTALL "${WORKSPACE_ROOT}/install")
 list(APPEND CMAKE_PREFIX_PATH "${ROS_WORKSPACE_INSTALL}")
 
+# --- Gazebo workspace install (set via env GZ_INSTALL_DIR from build.zsh) ---
+if(DEFINED ENV{GZ_INSTALL_DIR} AND NOT "$ENV{GZ_INSTALL_DIR}" STREQUAL "")
+    set(GZ_INSTALL_PREFIX "$ENV{GZ_INSTALL_DIR}")
+else()
+    # Fallback: derive from workspace root (sibling gz-ionic directory)
+    get_filename_component(GZ_INSTALL_PREFIX "${WORKSPACE_ROOT}/../gz-ionic/install" ABSOLUTE)
+endif()
+if(EXISTS "${GZ_INSTALL_PREFIX}")
+    list(APPEND CMAKE_PREFIX_PATH "${GZ_INSTALL_PREFIX}")
+    message(STATUS "Gazebo install dir: ${GZ_INSTALL_PREFIX}")
+endif()
+
 # --- Force System Python 3.11 ---
+# The /Library/Frameworks stub only has bin/; real headers+libs live under Homebrew
 set(PYTHON_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 interpreter" FORCE)
 set(Python3_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 executable" FORCE)
-set(Python3_ROOT_DIR "/Library/Frameworks/Python.framework/Versions/3.11" CACHE PATH "Python3 root directory" FORCE)
+set(Python3_ROOT_DIR "/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11" CACHE PATH "Python3 root directory" FORCE)
 
-# Optional: if you want CMake to locate headers & libs too
-set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib" CACHE FILEPATH "Python 3.11 library" FORCE)
-set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
+# Headers & libs from the real Homebrew framework location
+set(PYTHON_INCLUDE_DIR "/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
+set(PYTHON_LIBRARY "/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib" CACHE FILEPATH "Python 3.11 library" FORCE)
+set(Python3_INCLUDE_DIR "${PYTHON_INCLUDE_DIR}" CACHE PATH "Python3 include dir" FORCE)
+set(Python3_LIBRARY "${PYTHON_LIBRARY}" CACHE FILEPATH "Python3 library" FORCE)
+set(Python3_NumPy_INCLUDE_DIR "/opt/homebrew/lib/python3.11/site-packages/numpy/_core/include" CACHE PATH "NumPy include dir" FORCE)
 
 # Check the package/project name
 if("${CMAKE_PROJECT_NAME}" STREQUAL "kinematics_interface_pinocchio")
@@ -113,25 +139,29 @@ set(CMAKE_BUILD_RPATH "${BASE_RPATH}")
 set(CMAKE_INSTALL_RPATH "${BASE_RPATH}")
 
 # Ceres
-set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
+set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
-set(Ceres_DIR "${WORKSPACE_ROOT}/install/lib/cmake/Ceres" CACHE PATH "Ceres Solver CMake path" FORCE)
+set(Ceres_DIR "/opt/homebrew/Cellar/ceres-solver/2.2.0_6/lib/cmake/Ceres" CACHE PATH "Ceres Solver CMake path" FORCE)
 
-# --- yaml-cpp from Kilted ROS 2 (opt/vendor install) ---
-# Path to the vendor install prefix
-set(YAML_CPP_PREFIX "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor" CACHE PATH "yaml-cpp vendor prefix")
+# METIS (required by Ceres via SuiteSparse, keg-only in Homebrew)
+set(METIS_INCLUDE_DIR "/opt/homebrew/opt/metis/include" CACHE PATH "METIS include dir" FORCE)
+set(METIS_LIBRARY "/opt/homebrew/opt/metis/lib/libmetis.dylib" CACHE FILEPATH "METIS library" FORCE)
+set(METIS_LIBRARY_RELEASE "/opt/homebrew/opt/metis/lib/libmetis.dylib" CACHE FILEPATH "METIS release library" FORCE)
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/metis")
 
-# Make CMake find the config
+# --- Standalone ASIO (unlinked from Homebrew) ---
+set(ASIO_INCLUDE_DIRS "/opt/homebrew/opt/asio/include" CACHE PATH "Standalone ASIO include dir" FORCE)
+set(ASIO_INCLUDE_DIR "/opt/homebrew/opt/asio/include" CACHE PATH "Standalone ASIO include dir" FORCE)
+set(asio_INCLUDE_DIR "/opt/homebrew/opt/asio/include" CACHE PATH "Standalone ASIO include dir" FORCE)
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/asio")
+list(APPEND CMAKE_INCLUDE_PATH "/opt/homebrew/opt/asio/include")
+
+# --- yaml-cpp (use Homebrew since vendor doesn't install on macOS) ---
+set(YAML_CPP_PREFIX "/opt/homebrew/opt/yaml-cpp" CACHE PATH "yaml-cpp prefix")
 list(APPEND CMAKE_PREFIX_PATH "${YAML_CPP_PREFIX}")
-
-# Config file directory
 set(yaml-cpp_DIR "${YAML_CPP_PREFIX}/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config directory")
-
-# Explicit include dirs and library (optional)
 set(YAML_CPP_INCLUDE_DIRS "${YAML_CPP_PREFIX}/include" CACHE PATH "yaml-cpp include directory")
 set(YAML_CPP_LIBRARIES "${YAML_CPP_PREFIX}/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
-
-# Make headers visible globally (optional)
 include_directories(${YAML_CPP_INCLUDE_DIRS})
 
 # Backward ROS
@@ -151,6 +181,9 @@ string(REPLACE "-Werror" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 # 2. Force the new, modified flags into the CMake cache
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "Modified CXX flags without -Werror" FORCE)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "Modified C flags without -Werror" FORCE)
+
+# glog 0.7.1+ requires GLOG_USE_GLOG_EXPORT to be defined before including glog headers
+add_definitions(-DGLOG_USE_GLOG_EXPORT)
 
 # Ruckig/MoveIt fix: Undefine the macro that causes linking errors with Ruckig Community Edition
 set(BUILD_CLOUD_CLIENT OFF CACHE BOOL "Disable cloud client")
@@ -176,6 +209,10 @@ add_compile_options(
         -Wno-error=sign-conversion
         -Wno-error=format
         -Wno-error=missing-template-arg-list-after-template-kw
+        -Wno-unknown-warning-option
+        -Wno-error=unknown-warning-option
+        -Wno-error=#warnings
+        -Wno-error=deprecated-declarations
  )
 
 # macOS specific linker
@@ -244,8 +281,10 @@ set(GDAL_CONFIG_BIN "/opt/homebrew/bin/gdal-config" CACHE FILEPATH "Path to Home
 set(ENV{GDAL_CONFIG} ${GDAL_CONFIG_BIN})
 
 # 3. Add the Homebrew prefix for general finding (if not already there)
-set(CMAKE_PREFIX_PATH 
-    "/opt/homebrew/opt/gdal;${CMAKE_PREFIX_PATH}" CACHE STRING "Prefix paths" FORCE)
+# /opt/homebrew is needed so find_package(absl CONFIG) works for protobuf's abseil dependency
+# GZ_INSTALL_PREFIX must come BEFORE /opt/homebrew so we pick up gz-ionic's protobuf/sdformat first
+set(CMAKE_PREFIX_PATH
+    "${GZ_INSTALL_PREFIX};/opt/homebrew;/opt/homebrew/opt/gdal;/opt/homebrew/opt/opencv;${CMAKE_PREFIX_PATH}" CACHE STRING "Prefix paths" FORCE)
     
 #livox_ros_driver2
 set(PCL_ALL_IN_ONE_INSTALLER OFF CACHE BOOL "Disable bundled Boost" FORCE)
@@ -276,6 +315,9 @@ set(_GL_INCDIRS "/opt/homebrew/include" CACHE STRING "")
 set(_qt5gui_OPENGL_INCLUDE_DIR "/opt/homebrew/include/GL" CACHE PATH "")
 set(Qt5Gui_OPENGL_IMPLEMENTATION GL CACHE STRING "")
 set(Qt5Gui_OPENGL_LIBRARIES "/opt/homebrew/lib/libGL.dylib" CACHE FILEPATH "")
+
+# --- OpenCV (Homebrew) ---
+set(OpenCV_DIR "/opt/homebrew/opt/opencv/lib/cmake/opencv4" CACHE PATH "OpenCV cmake config" FORCE)
 
 # moveit_ros_perception
 # Toolchain for macOS Homebrew OpenGL dependencies
@@ -316,24 +358,75 @@ if (NOT TARGET TINYXML2::TINYXML2)
     )
 endif()
 
+# --- Additional Homebrew library search paths ---
+# Many ROS packages use pkg-config or FindXXX to locate libraries.
+# On macOS with Homebrew, keg-only and regular libs need explicit paths.
+# CMAKE_LIBRARY_PATH works at find_library() time (more reliable than link_directories in toolchains)
+list(APPEND CMAKE_LIBRARY_PATH
+    /opt/homebrew/lib
+    /opt/homebrew/opt/ffmpeg/lib
+    /opt/homebrew/opt/theora/lib
+    /opt/homebrew/opt/libogg/lib
+    /opt/homebrew/opt/geos/lib
+    /opt/homebrew/opt/proj/lib
+    /opt/homebrew/opt/libspnav/lib
+    /opt/homebrew/opt/zstd/lib
+    /opt/homebrew/opt/zbar/lib
+    /opt/homebrew/opt/google-benchmark/lib
+    /opt/homebrew/opt/gstreamer/lib
+    /opt/homebrew/opt/aravis/lib
+)
+list(APPEND CMAKE_INCLUDE_PATH
+    /opt/homebrew/include
+    /opt/homebrew/opt/ffmpeg/include
+    /opt/homebrew/opt/zbar/include
+    /opt/homebrew/opt/gstreamer/include/gstreamer-1.0
+    /opt/homebrew/opt/aravis/include/aravis-0.8
+    /opt/homebrew/opt/libspnav/include
+    /opt/homebrew/opt/theora/include
+    /opt/homebrew/opt/proj/include
+    /opt/homebrew/opt/geos/include
+)
+# Also set PKG_CONFIG_PATH so pkg-config can find .pc files
+set(ENV{PKG_CONFIG_PATH} "/opt/homebrew/opt/ffmpeg/lib/pkgconfig:/opt/homebrew/opt/theora/lib/pkgconfig:/opt/homebrew/opt/libogg/lib/pkgconfig:/opt/homebrew/opt/geos/lib/pkgconfig:/opt/homebrew/opt/proj/lib/pkgconfig:/opt/homebrew/opt/zstd/lib/pkgconfig:/opt/homebrew/opt/zbar/lib/pkgconfig:/opt/homebrew/opt/gstreamer/lib/pkgconfig:/opt/homebrew/opt/aravis/lib/pkgconfig:/opt/homebrew/opt/google-benchmark/lib/pkgconfig:/opt/homebrew/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+# link_directories for linking stage
+link_directories(
+    /opt/homebrew/lib
+    /opt/homebrew/opt/ffmpeg/lib
+    /opt/homebrew/opt/theora/lib
+    /opt/homebrew/opt/libogg/lib
+    /opt/homebrew/opt/geos/lib
+    /opt/homebrew/opt/proj/lib
+    /opt/homebrew/opt/libspnav/lib
+    /opt/homebrew/opt/zstd/lib
+    /opt/homebrew/opt/zbar/lib
+    /opt/homebrew/opt/google-benchmark/lib
+    /opt/homebrew/opt/gstreamer/lib
+    /opt/homebrew/opt/aravis/lib
+)
+
 # --- Eigen (Homebrew) ---
-# With the symlink 'sudo ln -s /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3'
-# standard discovery now works.
-set(Eigen3_DIR "/opt/homebrew/opt/eigen@3/share/eigen3/cmake" CACHE PATH "" FORCE)
-list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen@3")
+# Use Eigen 5.0.1 (Homebrew's current eigen) — Ceres was compiled against it.
+# Eigen 5 is the successor to Eigen 3.4 with compatible API.
+set(Eigen3_DIR "/opt/homebrew/opt/eigen/share/eigen3/cmake" CACHE PATH "" FORCE)
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen")
+# Eigen 5 Config only provides the Eigen3::Eigen target. Set legacy variables
+# for packages that use ${EIGEN3_INCLUDE_DIRS} or ${EIGEN3_INCLUDE_DIR}.
+set(EIGEN3_INCLUDE_DIRS "/opt/homebrew/opt/eigen/include/eigen3" CACHE PATH "Eigen3 include dir" FORCE)
+set(EIGEN3_INCLUDE_DIR "/opt/homebrew/opt/eigen/include/eigen3" CACHE PATH "Eigen3 include dir" FORCE)
+include_directories(SYSTEM "/opt/homebrew/opt/eigen/include/eigen3")
 
-# --- Google glog (Homebrew) ---
-set(GLOG_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "glog include path" FORCE)
-set(GLOG_LIBRARY "/opt/homebrew/lib/libglog.dylib" CACHE FILEPATH "glog library" FORCE)
+# --- Google glog ---
+# glog is needed by nav2_constrained_smoother, slam_toolbox (via Ceres public API).
+# Even though local Ceres uses miniglog, downstream packages that include
+# Ceres headers may pull in glog. Provide the cmake config path so that
+# find_package(glog) succeeds and sets correct compile definitions.
+set(glog_DIR "/opt/homebrew/opt/glog/lib/cmake/glog" CACHE PATH "glog cmake config" FORCE)
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/glog")
 
-# Add include directory globally
-include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
-
-# Append glog library to all targets' linker flags
-# This ensures Ceres symbols (used in nav2_constrained_smoother) are found
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GLOG_LIBRARY}")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GLOG_LIBRARY}")
-set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${GLOG_LIBRARY}")
+# --- urdfdom (explicit path for downstream MoveIt packages) ---
+set(urdfdom_DIR "${WORKSPACE_ROOT}/install/lib/urdfdom/cmake" CACHE PATH "urdfdom cmake config" FORCE)
+set(urdfdom_headers_DIR "${WORKSPACE_ROOT}/install/lib/urdfdom_headers/cmake" CACHE PATH "urdfdom_headers cmake config" FORCE)
 
 # --- PCL Conversions ---
 WORKSPACE_PATH(PCL_CONVERSIONS_INCLUDE_DIR "ros-perception/perception_pcl/pcl_conversions/include")

@@ -1,0 +1,87 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a5f0c44..337b1ee 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -78,19 +78,8 @@ elseif ()
+ 	endif ()
+ endif ()
+ 
+-# enable C++11 support.
+-if (CMAKE_VERSION VERSION_LESS "3.1")
+-	if (MSVC)
+-		message(FATAL_ERROR "CMake version 3.1 or later is required to compile ${PROJECT_NAME} with Microsoft Visual C++")
+-	endif ()
+-	if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+-		set (CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
+-	else ()
+-		set (CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+-	endif ()
+-else ()
+-	set (CMAKE_CXX_STANDARD 11)
+-endif ()
++# enable C++17 support (Eigen 5 requires at least C++14).
++set (CMAKE_CXX_STANDARD 17)
+ 
+ #======================== External Dependencies ===============================
+ 
+@@ -169,11 +158,8 @@ set(USE_OPEN_MP TRUE CACHE BOOL "Set to FALSE to not use OpenMP")
+ if (USE_OPEN_MP)
+ 	find_package(OpenMP)
+ 	if (OPENMP_FOUND)
+-		target_compile_options(${LIB_NAME} PRIVATE -fopenmp ${OpenMP_CXX_FLAGS})
+ 		target_compile_definitions(${LIB_NAME} PRIVATE HAVE_OPENMP)
+-		if (CMAKE_COMPILER_IS_GNUCC)
+-			target_link_libraries(${LIB_NAME} PUBLIC gomp)
+-		endif()
++		target_link_libraries(${LIB_NAME} PUBLIC OpenMP::OpenMP_CXX)
+ 	endif()
+ endif ()
+ 
+diff --git a/nabo/kdtree_cpu.cpp b/nabo/kdtree_cpu.cpp
+index cb1f8d1..a54b99f 100644
+--- a/nabo/kdtree_cpu.cpp
++++ b/nabo/kdtree_cpu.cpp
+@@ -31,6 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #include "nabo_private.h"
+ #include "index_heap.h"
++#include <cassert>
+ #include <iostream>
+ #include <stdexcept>
+ #include <limits>
+diff --git a/nabo/kdtree_opencl.cpp b/nabo/kdtree_opencl.cpp
+index 5a9fee2..fb1345f 100644
+--- a/nabo/kdtree_opencl.cpp
++++ b/nabo/kdtree_opencl.cpp
+@@ -33,6 +33,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #include "nabo_private.h"
+ #include "index_heap.h"
++#include <cassert>
+ #include <iostream>
+ #include <sstream>
+ #include <fstream>
+diff --git a/tests/knnshow.cpp b/tests/knnshow.cpp
+index 6f4d3fc..c612378 100644
+--- a/tests/knnshow.cpp
++++ b/tests/knnshow.cpp
+@@ -30,6 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+ 
+ #include "nabo/nabo.h"
++#include <cassert>
+ #include <iostream>
+ #include <fstream>
+ #include <stdexcept>
+diff --git a/tests/knnvalidate.cpp b/tests/knnvalidate.cpp
+index 2430249..2a7dcc4 100644
+--- a/tests/knnvalidate.cpp
++++ b/tests/knnvalidate.cpp
+@@ -32,6 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "nabo/nabo.h"
+ #include "helpers.h"
+ //#include "experimental/nabo_experimental.h"
++#include <cassert>
+ #include <iostream>
+ #include <fstream>
+ #include <stdexcept>

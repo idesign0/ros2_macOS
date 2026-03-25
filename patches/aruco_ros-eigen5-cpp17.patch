@@ -1,0 +1,26 @@
+diff --git a/aruco/CMakeLists.txt b/aruco/CMakeLists.txt
+index ee3c69a..72a1641 100644
+--- a/aruco/CMakeLists.txt
++++ b/aruco/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ cmake_minimum_required(VERSION 3.8)
+ project(aruco)
+ 
+-set(CMAKE_CXX_STANDARD 11) # C++11...
++set(CMAKE_CXX_STANDARD 17) # C++17 (Eigen 5 requires at least C++14)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON) #...is required...
+ set(CMAKE_CXX_EXTENSIONS ON) #...with compiler extensions like gnu++11
+ string(REPLACE "-Werror=shadow" "" NEW_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+diff --git a/aruco_ros/src/aruco_ros_utils.cpp b/aruco_ros/src/aruco_ros_utils.cpp
+index c501b61..696e4f7 100644
+--- a/aruco_ros/src/aruco_ros_utils.cpp
++++ b/aruco_ros/src/aruco_ros_utils.cpp
+@@ -8,7 +8,7 @@
+ #else
+ #include "cv_bridge/cv_bridge.h"
+ #endif
+-#include "opencv4/opencv2/calib3d.hpp"
++#include "opencv2/calib3d.hpp"
+ #include "rclcpp/logging.hpp"
+ #include "tf2/transform_datatypes.h"
+ 

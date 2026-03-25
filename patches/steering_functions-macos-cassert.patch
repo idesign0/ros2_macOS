@@ -1,0 +1,12 @@
+diff --git a/src/hc_cc_state_space/hc_cc_state_space.cpp b/src/hc_cc_state_space/hc_cc_state_space.cpp
+index a8e1533..bd4c019 100644
+--- a/src/hc_cc_state_space/hc_cc_state_space.cpp
++++ b/src/hc_cc_state_space/hc_cc_state_space.cpp
+@@ -15,6 +15,7 @@
+ *  limitations under the License.
+ ***********************************************************************/
+ 
++#include <cassert>
+ #include <cmath>
+ 
+ #include "steering_functions/hc_cc_state_space/hc_cc_state_space.hpp"

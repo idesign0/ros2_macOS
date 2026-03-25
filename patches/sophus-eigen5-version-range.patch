@@ -1,0 +1,13 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 0ea5b90..a241e50 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -54,7 +54,7 @@ endif()
+ # defined by a parent project including Sophus via `add_subdirectory`.)
+ 
+ if(NOT TARGET Eigen3::Eigen)
+-  find_package(Eigen3 3.3.0 REQUIRED)
++  find_package(Eigen3 3.3.0...5.99 REQUIRED)
+ endif()
+ 
+ if(NOT TARGET fmt::fmt)

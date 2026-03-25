@@ -1,0 +1,12 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 036fe29..9852774 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -11,6 +11,7 @@ ament_vendor(pybind11_json_vendor
+   SATISFIED ${pybind11_json_FOUND}
+   VCS_URL https://github.com/pybind/pybind11_json.git
+   VCS_VERSION 0.2.11
++  CMAKE_ARGS -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+ )
+ 
+ ament_package()

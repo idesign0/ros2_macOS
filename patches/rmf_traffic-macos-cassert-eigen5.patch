@@ -1,0 +1,67 @@
+diff --git a/rmf_traffic/src/rmf_traffic/blockade/geometry.cpp b/rmf_traffic/src/rmf_traffic/blockade/geometry.cpp
+index 049351e..d69a999 100644
+--- a/rmf_traffic/src/rmf_traffic/blockade/geometry.cpp
++++ b/rmf_traffic/src/rmf_traffic/blockade/geometry.cpp
+@@ -17,6 +17,7 @@
+ 
+ #include "geometry.hpp"
+ 
++#include <cassert>
+ #include <cmath>
+ 
+ namespace rmf_traffic {
+diff --git a/rmf_traffic/thirdparty/fcl/CMakeLists.txt b/rmf_traffic/thirdparty/fcl/CMakeLists.txt
+index 3d76235..cb2c112 100644
+--- a/rmf_traffic/thirdparty/fcl/CMakeLists.txt
++++ b/rmf_traffic/thirdparty/fcl/CMakeLists.txt
+@@ -156,11 +156,11 @@ set(PKG_CONFIG_USE_CMAKE_PREFIX_PATH ON)
+ #
+ # If Eigen3 is not found, manually set the cache variable EIGEN3_INCLUDE_DIR
+ #===============================================================================
+-find_package(Eigen3 3.0.5 QUIET CONFIG)
++find_package(Eigen3 3.0.5...5.99 QUIET CONFIG)
+ 
+ # If Eigen3Config.cmake is not found, use the FindEigen3.cmake module
+ if(NOT Eigen3_FOUND)
+-  find_package(Eigen3 3.0.5 QUIET MODULE)
++  find_package(Eigen3 3.0.5...5.99 QUIET MODULE)
+   set(Eigen3_FOUND ON)
+ endif()
+ 
+diff --git a/rmf_traffic/thirdparty/fcl/include/fcl/common/types.h b/rmf_traffic/thirdparty/fcl/include/fcl/common/types.h
+index 892e2b0..1d41e2c 100644
+--- a/rmf_traffic/thirdparty/fcl/include/fcl/common/types.h
++++ b/rmf_traffic/thirdparty/fcl/include/fcl/common/types.h
+@@ -38,6 +38,7 @@
+ #ifndef FCL_DATA_TYPES_H
+ #define FCL_DATA_TYPES_H
+ 
++#include <cassert>
+ #include <cstddef>
+ #include <cstdint>
+ #include <vector>
+diff --git a/rmf_traffic/thirdparty/fcl/include/fcl/geometry/shape/convex-inl.h b/rmf_traffic/thirdparty/fcl/include/fcl/geometry/shape/convex-inl.h
+index 10adc69..c50b53f 100644
+--- a/rmf_traffic/thirdparty/fcl/include/fcl/geometry/shape/convex-inl.h
++++ b/rmf_traffic/thirdparty/fcl/include/fcl/geometry/shape/convex-inl.h
+@@ -39,6 +39,7 @@
+ #ifndef FCL_SHAPE_CONVEX_INL_H
+ #define FCL_SHAPE_CONVEX_INL_H
+ 
++#include <cassert>
+ #include <map>
+ #include <set>
+ #include <utility>
+diff --git a/rmf_traffic/thirdparty/fcl/include/fcl/math/motion/taylor_model/taylor_model-inl.h b/rmf_traffic/thirdparty/fcl/include/fcl/math/motion/taylor_model/taylor_model-inl.h
+index 861f72d..a239104 100644
+--- a/rmf_traffic/thirdparty/fcl/include/fcl/math/motion/taylor_model/taylor_model-inl.h
++++ b/rmf_traffic/thirdparty/fcl/include/fcl/math/motion/taylor_model/taylor_model-inl.h
+@@ -41,6 +41,8 @@
+ #ifndef FCL_CCD_TAYLOR_MODEL_INL_H
+ #define FCL_CCD_TAYLOR_MODEL_INL_H
+ 
++#include <cassert>
++
+ #include "fcl/math/motion/taylor_model/taylor_model.h"
+ 
+ namespace fcl

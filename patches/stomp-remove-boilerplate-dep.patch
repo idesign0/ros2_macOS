@@ -1,0 +1,88 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 8aa64f3..312b651 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,9 +1,8 @@
+-cmake_minimum_required(VERSION 3.6.0)
++cmake_minimum_required(VERSION 3.10.0)
++project(stomp VERSION 0.1.2 LANGUAGES CXX)
+ 
+-# Extract package name and version
+-find_package(ros_industrial_cmake_boilerplate REQUIRED)
+-extract_package_metadata(pkg)
+-project(${pkg_extracted_name} VERSION ${pkg_extracted_version} LANGUAGES CXX)
++include(CMakePackageConfigHelpers)
++include(GNUInstallDirs)
+ 
+ if(NOT DEFINED BUILD_SHARED_LIBS)
+   set(BUILD_SHARED_LIBS ON)
+@@ -28,22 +27,32 @@ else()
+   endif()
+ endif()
+ 
++# Set C++ standard
++set(CMAKE_CXX_STANDARD 11)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++
+ # Declare a C++ library
+ add_library(${PROJECT_NAME} src/stomp.cpp src/utils.cpp)
+ target_link_libraries(${PROJECT_NAME} Eigen3::Eigen console_bridge::console_bridge)
+-target_cxx_version(${PROJECT_NAME} PUBLIC VERSION 11)
++target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
+ target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+                                                   "$<INSTALL_INTERFACE:include>")
+ 
+ add_executable(${PROJECT_NAME}_example examples/stomp_example.cpp)
+ target_link_libraries(${PROJECT_NAME}_example ${PROJECT_NAME})
+-target_cxx_version(${PROJECT_NAME}_example PUBLIC VERSION 11)
++target_compile_features(${PROJECT_NAME}_example PUBLIC cxx_std_11)
+ target_include_directories(${PROJECT_NAME}_example PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/examples>"
+                                                           "$<INSTALL_INTERFACE:examples>")
+ 
+-configure_package(NAMESPACE stomp TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_example)
++# Install targets
++install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_example
++  EXPORT stomp-targets
++  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
++  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
++  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
++)
+ 
+-# Mark cpp header files for installation
++# Install headers
+ install(
+   DIRECTORY include/${PROJECT_NAME}
+   DESTINATION include
+@@ -51,8 +60,31 @@ install(
+   PATTERN "*.h"
+   PATTERN ".svn" EXCLUDE)
+ 
++# Generate and install config files
++install(EXPORT stomp-targets
++  NAMESPACE stomp::
++  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
++)
++
++configure_package_config_file(
++  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/stomp-config.cmake.in"
++  "${CMAKE_CURRENT_BINARY_DIR}/stomp-config.cmake"
++  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
++)
++
++write_basic_package_version_file(
++  "${CMAKE_CURRENT_BINARY_DIR}/stomp-config-version.cmake"
++  VERSION ${PROJECT_VERSION}
++  COMPATIBILITY AnyNewerVersion
++)
++
++install(FILES
++  "${CMAKE_CURRENT_BINARY_DIR}/stomp-config.cmake"
++  "${CMAKE_CURRENT_BINARY_DIR}/stomp-config-version.cmake"
++  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
++)
++
+ if(STOMP_ENABLE_TESTING)
+   enable_testing()
+-  add_run_tests_target(ENABLE ${STOMP_ENABLE_RUN_TESTING})
+   add_subdirectory(test)
+ endif()

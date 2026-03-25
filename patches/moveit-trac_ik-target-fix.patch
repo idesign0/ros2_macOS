@@ -1,0 +1,425 @@
+diff --git a/cmake/toolchain.cmake b/cmake/toolchain.cmake
+index 1de3b4a8..ffa046c2 100644
+--- a/cmake/toolchain.cmake
++++ b/cmake/toolchain.cmake
+@@ -13,9 +13,13 @@ endif()
+ if(IS_CI)
+     set(WORKSPACE_ROOT "$ENV{GITHUB_WORKSPACE}")
+ else()
+-    set(WORKSPACE_ROOT "$ENV{HOME}/kilted-ros2")
++    # Derive workspace root from toolchain location: src/cmake/toolchain.cmake -> ../..
++    get_filename_component(WORKSPACE_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+ endif()
+ 
++# --- CMake policy compatibility for older packages ---
++set(CMAKE_POLICY_VERSION_MINIMUM "3.5" CACHE STRING "Minimum CMake policy version" FORCE)
++
+ # --- Helper macro for src/ paths ---
+ macro(WORKSPACE_PATH result_path relative_path)
+     if(IS_CI)
+@@ -41,6 +45,12 @@ set(CMAKE_IGNORE_PATH
+ # --- ensure correct stdlib ---
+ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+ 
++# Add Homebrew library search paths to linker flags (ensures -L paths propagate to link phase)
++set(_HB_LINK_DIRS "-L/opt/homebrew/lib -L/opt/homebrew/opt/ffmpeg/lib -L/opt/homebrew/opt/theora/lib -L/opt/homebrew/opt/libogg/lib -L/opt/homebrew/opt/geos/lib -L/opt/homebrew/opt/proj/lib -L/opt/homebrew/opt/libspnav/lib -L/opt/homebrew/opt/zstd/lib -L/opt/homebrew/opt/zbar/lib -L/opt/homebrew/opt/google-benchmark/lib -L/opt/homebrew/opt/gstreamer/lib -L/opt/homebrew/opt/aravis/lib -L/opt/homebrew/opt/yaml-cpp/lib")
++set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_HB_LINK_DIRS}" CACHE STRING "" FORCE)
++set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${_HB_LINK_DIRS}" CACHE STRING "" FORCE)
++set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${_HB_LINK_DIRS}" CACHE STRING "" FORCE)
++
+ # Setting all the Build Tests Off
+ set(BUILD_TESTING OFF CACHE BOOL "Disable building tests" FORCE)
+ set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
+@@ -50,14 +60,30 @@ set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
+ set(ROS_WORKSPACE_INSTALL "${WORKSPACE_ROOT}/install")
+ list(APPEND CMAKE_PREFIX_PATH "${ROS_WORKSPACE_INSTALL}")
+ 
++# --- Gazebo workspace install (set via env GZ_INSTALL_DIR from build.zsh) ---
++if(DEFINED ENV{GZ_INSTALL_DIR} AND NOT "$ENV{GZ_INSTALL_DIR}" STREQUAL "")
++    set(GZ_INSTALL_PREFIX "$ENV{GZ_INSTALL_DIR}")
++else()
++    # Fallback: derive from workspace root (sibling gz-ionic directory)
++    get_filename_component(GZ_INSTALL_PREFIX "${WORKSPACE_ROOT}/../gz-ionic/install" ABSOLUTE)
++endif()
++if(EXISTS "${GZ_INSTALL_PREFIX}")
++    list(APPEND CMAKE_PREFIX_PATH "${GZ_INSTALL_PREFIX}")
++    message(STATUS "Gazebo install dir: ${GZ_INSTALL_PREFIX}")
++endif()
++
+ # --- Force System Python 3.11 ---
++# The /Library/Frameworks stub only has bin/; real headers+libs live under Homebrew
+ set(PYTHON_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 interpreter" FORCE)
+ set(Python3_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 executable" FORCE)
+-set(Python3_ROOT_DIR "/Library/Frameworks/Python.framework/Versions/3.11" CACHE PATH "Python3 root directory" FORCE)
++set(Python3_ROOT_DIR "/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11" CACHE PATH "Python3 root directory" FORCE)
+ 
+-# Optional: if you want CMake to locate headers & libs too
+-set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib" CACHE FILEPATH "Python 3.11 library" FORCE)
+-set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
++# Headers & libs from the real Homebrew framework location
++set(PYTHON_INCLUDE_DIR "/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
++set(PYTHON_LIBRARY "/opt/homebrew/opt/python@3.11/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib" CACHE FILEPATH "Python 3.11 library" FORCE)
++set(Python3_INCLUDE_DIR "${PYTHON_INCLUDE_DIR}" CACHE PATH "Python3 include dir" FORCE)
++set(Python3_LIBRARY "${PYTHON_LIBRARY}" CACHE FILEPATH "Python3 library" FORCE)
++set(Python3_NumPy_INCLUDE_DIR "/opt/homebrew/lib/python3.11/site-packages/numpy/_core/include" CACHE PATH "NumPy include dir" FORCE)
+ 
+ # Check the package/project name
+ if("${CMAKE_PROJECT_NAME}" STREQUAL "kinematics_interface_pinocchio")
+@@ -113,25 +139,29 @@ set(CMAKE_BUILD_RPATH "${BASE_RPATH}")
+ set(CMAKE_INSTALL_RPATH "${BASE_RPATH}")
+ 
+ # Ceres
+-set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
++set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE)
+ set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
+-set(Ceres_DIR "${WORKSPACE_ROOT}/install/lib/cmake/Ceres" CACHE PATH "Ceres Solver CMake path" FORCE)
+-
+-# --- yaml-cpp from Kilted ROS 2 (opt/vendor install) ---
+-# Path to the vendor install prefix
+-set(YAML_CPP_PREFIX "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor" CACHE PATH "yaml-cpp vendor prefix")
+-
+-# Make CMake find the config
++set(Ceres_DIR "/opt/homebrew/Cellar/ceres-solver/2.2.0_6/lib/cmake/Ceres" CACHE PATH "Ceres Solver CMake path" FORCE)
++
++# METIS (required by Ceres via SuiteSparse, keg-only in Homebrew)
++set(METIS_INCLUDE_DIR "/opt/homebrew/opt/metis/include" CACHE PATH "METIS include dir" FORCE)
++set(METIS_LIBRARY "/opt/homebrew/opt/metis/lib/libmetis.dylib" CACHE FILEPATH "METIS library" FORCE)
++set(METIS_LIBRARY_RELEASE "/opt/homebrew/opt/metis/lib/libmetis.dylib" CACHE FILEPATH "METIS release library" FORCE)
++list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/metis")
++
++# --- Standalone ASIO (unlinked from Homebrew) ---
++set(ASIO_INCLUDE_DIRS "/opt/homebrew/opt/asio/include" CACHE PATH "Standalone ASIO include dir" FORCE)
++set(ASIO_INCLUDE_DIR "/opt/homebrew/opt/asio/include" CACHE PATH "Standalone ASIO include dir" FORCE)
++set(asio_INCLUDE_DIR "/opt/homebrew/opt/asio/include" CACHE PATH "Standalone ASIO include dir" FORCE)
++list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/asio")
++list(APPEND CMAKE_INCLUDE_PATH "/opt/homebrew/opt/asio/include")
++
++# --- yaml-cpp (use Homebrew since vendor doesn't install on macOS) ---
++set(YAML_CPP_PREFIX "/opt/homebrew/opt/yaml-cpp" CACHE PATH "yaml-cpp prefix")
+ list(APPEND CMAKE_PREFIX_PATH "${YAML_CPP_PREFIX}")
+-
+-# Config file directory
+ set(yaml-cpp_DIR "${YAML_CPP_PREFIX}/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp config directory")
+-
+-# Explicit include dirs and library (optional)
+ set(YAML_CPP_INCLUDE_DIRS "${YAML_CPP_PREFIX}/include" CACHE PATH "yaml-cpp include directory")
+ set(YAML_CPP_LIBRARIES "${YAML_CPP_PREFIX}/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
+-
+-# Make headers visible globally (optional)
+ include_directories(${YAML_CPP_INCLUDE_DIRS})
+ 
+ # Backward ROS
+@@ -152,6 +182,9 @@ string(REPLACE "-Werror" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "Modified CXX flags without -Werror" FORCE)
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "Modified C flags without -Werror" FORCE)
+ 
++# glog 0.7.1+ requires GLOG_USE_GLOG_EXPORT to be defined before including glog headers
++add_definitions(-DGLOG_USE_GLOG_EXPORT)
++
+ # Ruckig/MoveIt fix: Undefine the macro that causes linking errors with Ruckig Community Edition
+ set(BUILD_CLOUD_CLIENT OFF CACHE BOOL "Disable cloud client")
+ 
+@@ -176,6 +209,10 @@ add_compile_options(
+         -Wno-error=sign-conversion
+         -Wno-error=format
+         -Wno-error=missing-template-arg-list-after-template-kw
++        -Wno-unknown-warning-option
++        -Wno-error=unknown-warning-option
++        -Wno-error=#warnings
++        -Wno-error=deprecated-declarations
+  )
+ 
+ # macOS specific linker
+@@ -244,8 +281,10 @@ set(GDAL_CONFIG_BIN "/opt/homebrew/bin/gdal-config" CACHE FILEPATH "Path to Home
+ set(ENV{GDAL_CONFIG} ${GDAL_CONFIG_BIN})
+ 
+ # 3. Add the Homebrew prefix for general finding (if not already there)
+-set(CMAKE_PREFIX_PATH 
+-    "/opt/homebrew/opt/gdal;${CMAKE_PREFIX_PATH}" CACHE STRING "Prefix paths" FORCE)
++# /opt/homebrew is needed so find_package(absl CONFIG) works for protobuf's abseil dependency
++# GZ_INSTALL_PREFIX must come BEFORE /opt/homebrew so we pick up gz-ionic's protobuf/sdformat first
++set(CMAKE_PREFIX_PATH
++    "${GZ_INSTALL_PREFIX};/opt/homebrew;/opt/homebrew/opt/gdal;/opt/homebrew/opt/opencv;${CMAKE_PREFIX_PATH}" CACHE STRING "Prefix paths" FORCE)
+     
+ #livox_ros_driver2
+ set(PCL_ALL_IN_ONE_INSTALLER OFF CACHE BOOL "Disable bundled Boost" FORCE)
+@@ -277,6 +316,9 @@ set(_qt5gui_OPENGL_INCLUDE_DIR "/opt/homebrew/include/GL" CACHE PATH "")
+ set(Qt5Gui_OPENGL_IMPLEMENTATION GL CACHE STRING "")
+ set(Qt5Gui_OPENGL_LIBRARIES "/opt/homebrew/lib/libGL.dylib" CACHE FILEPATH "")
+ 
++# --- OpenCV (Homebrew) ---
++set(OpenCV_DIR "/opt/homebrew/opt/opencv/lib/cmake/opencv4" CACHE PATH "OpenCV cmake config" FORCE)
++
+ # moveit_ros_perception
+ # Toolchain for macOS Homebrew OpenGL dependencies
+ set(GLEW_INCLUDE_DIR "/opt/homebrew/opt/glew/include" CACHE PATH "GLEW include directory")
+@@ -316,24 +358,75 @@ if (NOT TARGET TINYXML2::TINYXML2)
+     )
+ endif()
+ 
++# --- Additional Homebrew library search paths ---
++# Many ROS packages use pkg-config or FindXXX to locate libraries.
++# On macOS with Homebrew, keg-only and regular libs need explicit paths.
++# CMAKE_LIBRARY_PATH works at find_library() time (more reliable than link_directories in toolchains)
++list(APPEND CMAKE_LIBRARY_PATH
++    /opt/homebrew/lib
++    /opt/homebrew/opt/ffmpeg/lib
++    /opt/homebrew/opt/theora/lib
++    /opt/homebrew/opt/libogg/lib
++    /opt/homebrew/opt/geos/lib
++    /opt/homebrew/opt/proj/lib
++    /opt/homebrew/opt/libspnav/lib
++    /opt/homebrew/opt/zstd/lib
++    /opt/homebrew/opt/zbar/lib
++    /opt/homebrew/opt/google-benchmark/lib
++    /opt/homebrew/opt/gstreamer/lib
++    /opt/homebrew/opt/aravis/lib
++)
++list(APPEND CMAKE_INCLUDE_PATH
++    /opt/homebrew/include
++    /opt/homebrew/opt/ffmpeg/include
++    /opt/homebrew/opt/zbar/include
++    /opt/homebrew/opt/gstreamer/include/gstreamer-1.0
++    /opt/homebrew/opt/aravis/include/aravis-0.8
++    /opt/homebrew/opt/libspnav/include
++    /opt/homebrew/opt/theora/include
++    /opt/homebrew/opt/proj/include
++    /opt/homebrew/opt/geos/include
++)
++# Also set PKG_CONFIG_PATH so pkg-config can find .pc files
++set(ENV{PKG_CONFIG_PATH} "/opt/homebrew/opt/ffmpeg/lib/pkgconfig:/opt/homebrew/opt/theora/lib/pkgconfig:/opt/homebrew/opt/libogg/lib/pkgconfig:/opt/homebrew/opt/geos/lib/pkgconfig:/opt/homebrew/opt/proj/lib/pkgconfig:/opt/homebrew/opt/zstd/lib/pkgconfig:/opt/homebrew/opt/zbar/lib/pkgconfig:/opt/homebrew/opt/gstreamer/lib/pkgconfig:/opt/homebrew/opt/aravis/lib/pkgconfig:/opt/homebrew/opt/google-benchmark/lib/pkgconfig:/opt/homebrew/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
++# link_directories for linking stage
++link_directories(
++    /opt/homebrew/lib
++    /opt/homebrew/opt/ffmpeg/lib
++    /opt/homebrew/opt/theora/lib
++    /opt/homebrew/opt/libogg/lib
++    /opt/homebrew/opt/geos/lib
++    /opt/homebrew/opt/proj/lib
++    /opt/homebrew/opt/libspnav/lib
++    /opt/homebrew/opt/zstd/lib
++    /opt/homebrew/opt/zbar/lib
++    /opt/homebrew/opt/google-benchmark/lib
++    /opt/homebrew/opt/gstreamer/lib
++    /opt/homebrew/opt/aravis/lib
++)
++
+ # --- Eigen (Homebrew) ---
+-# With the symlink 'sudo ln -s /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3'
+-# standard discovery now works.
+-set(Eigen3_DIR "/opt/homebrew/opt/eigen@3/share/eigen3/cmake" CACHE PATH "" FORCE)
+-list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen@3")
+-
+-# --- Google glog (Homebrew) ---
+-set(GLOG_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "glog include path" FORCE)
+-set(GLOG_LIBRARY "/opt/homebrew/lib/libglog.dylib" CACHE FILEPATH "glog library" FORCE)
+-
+-# Add include directory globally
+-include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
+-
+-# Append glog library to all targets' linker flags
+-# This ensures Ceres symbols (used in nav2_constrained_smoother) are found
+-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GLOG_LIBRARY}")
+-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GLOG_LIBRARY}")
+-set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${GLOG_LIBRARY}")
++# Use Eigen 5.0.1 (Homebrew's current eigen) — Ceres was compiled against it.
++# Eigen 5 is the successor to Eigen 3.4 with compatible API.
++set(Eigen3_DIR "/opt/homebrew/opt/eigen/share/eigen3/cmake" CACHE PATH "" FORCE)
++list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen")
++# Eigen 5 Config only provides the Eigen3::Eigen target. Set legacy variables
++# for packages that use ${EIGEN3_INCLUDE_DIRS} or ${EIGEN3_INCLUDE_DIR}.
++set(EIGEN3_INCLUDE_DIRS "/opt/homebrew/opt/eigen/include/eigen3" CACHE PATH "Eigen3 include dir" FORCE)
++set(EIGEN3_INCLUDE_DIR "/opt/homebrew/opt/eigen/include/eigen3" CACHE PATH "Eigen3 include dir" FORCE)
++include_directories(SYSTEM "/opt/homebrew/opt/eigen/include/eigen3")
++
++# --- Google glog ---
++# glog is needed by nav2_constrained_smoother, slam_toolbox (via Ceres public API).
++# Even though local Ceres uses miniglog, downstream packages that include
++# Ceres headers may pull in glog. Provide the cmake config path so that
++# find_package(glog) succeeds and sets correct compile definitions.
++set(glog_DIR "/opt/homebrew/opt/glog/lib/cmake/glog" CACHE PATH "glog cmake config" FORCE)
++list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/glog")
++
++# --- urdfdom (explicit path for downstream MoveIt packages) ---
++set(urdfdom_DIR "${WORKSPACE_ROOT}/install/lib/urdfdom/cmake" CACHE PATH "urdfdom cmake config" FORCE)
++set(urdfdom_headers_DIR "${WORKSPACE_ROOT}/install/lib/urdfdom_headers/cmake" CACHE PATH "urdfdom_headers cmake config" FORCE)
+ 
+ # --- PCL Conversions ---
+ WORKSPACE_PATH(PCL_CONVERSIONS_INCLUDE_DIR "ros-perception/perception_pcl/pcl_conversions/include")
+diff --git a/eProsima/Fast-DDS b/eProsima/Fast-DDS
+--- a/eProsima/Fast-DDS
++++ b/eProsima/Fast-DDS
+@@ -1 +1 @@
+-Subproject commit 805e5bd9d1788d779eb10c53b35baaa33241773d
++Subproject commit 805e5bd9d1788d779eb10c53b35baaa33241773d-dirty
+diff --git a/eclipse-iceoryx/iceoryx b/eclipse-iceoryx/iceoryx
+--- a/eclipse-iceoryx/iceoryx
++++ b/eclipse-iceoryx/iceoryx
+@@ -1 +1 @@
+-Subproject commit 41b69258cf486685f23bd9cc256888aad99b9d9e
++Subproject commit 41b69258cf486685f23bd9cc256888aad99b9d9e-dirty
+diff --git a/gazebo-release/gz_dartsim_vendor b/gazebo-release/gz_dartsim_vendor
+--- a/gazebo-release/gz_dartsim_vendor
++++ b/gazebo-release/gz_dartsim_vendor
+@@ -1 +1 @@
+-Subproject commit e6aaf69239ec258a3bea682ae40ccbe90be27658
++Subproject commit e6aaf69239ec258a3bea682ae40ccbe90be27658-dirty
+diff --git a/gzsim/gps_umd b/gzsim/gps_umd
+index 73b42c7b..c27f29d8 160000
+--- a/gzsim/gps_umd
++++ b/gzsim/gps_umd
+@@ -1 +1 @@
+-Subproject commit 73b42c7b2051db2dc4641f4b74360030f2ab2005
++Subproject commit c27f29d8cf5695e3e14dadbade827a69371c4782
+diff --git a/moveit/OctoMap/octomap b/moveit/OctoMap/octomap
+--- a/moveit/OctoMap/octomap
++++ b/moveit/OctoMap/octomap
+@@ -1 +1 @@
+-Subproject commit d417c181868be79931ec94fd1a407c323e9f0fd3
++Subproject commit d417c181868be79931ec94fd1a407c323e9f0fd3-dirty
+diff --git a/moveit/dependencies/osqp_vendor b/moveit/dependencies/osqp_vendor
+--- a/moveit/dependencies/osqp_vendor
++++ b/moveit/dependencies/osqp_vendor
+@@ -1 +1 @@
+-Subproject commit 3759ffce266ab7043fc809ff2a548e45d413d144
++Subproject commit 3759ffce266ab7043fc809ff2a548e45d413d144-dirty
+diff --git a/moveit/moveit2 b/moveit/moveit2
+--- a/moveit/moveit2
++++ b/moveit/moveit2
+@@ -1 +1 @@
+-Subproject commit ad42494b167402058e259782391d162aadd55773
++Subproject commit ad42494b167402058e259782391d162aadd55773-dirty
+diff --git a/ros-commondep/boost-1.89/include/boost/range/detail/any_iterator_interface.hpp b/ros-commondep/boost-1.89/include/boost/range/detail/any_iterator_interface.hpp
+index 1103be6c..79e71dbd 100644
+--- a/ros-commondep/boost-1.89/include/boost/range/detail/any_iterator_interface.hpp
++++ b/ros-commondep/boost-1.89/include/boost/range/detail/any_iterator_interface.hpp
+@@ -13,6 +13,7 @@
+ #include <boost/mpl/if.hpp>
+ #include <boost/range/detail/any_iterator_buffer.hpp>
+ #include <boost/iterator/iterator_categories.hpp>
++#include <boost/type_traits/add_const.hpp>
+ #include <boost/type_traits/is_convertible.hpp>
+ #include <boost/type_traits/is_reference.hpp>
+ #include <boost/type_traits/remove_const.hpp>
+diff --git a/ros-planning/dependencies/PickNickRobotics/cpp_polyfills b/ros-planning/dependencies/PickNickRobotics/cpp_polyfills
+index 2948b48c..a85026b0 160000
+--- a/ros-planning/dependencies/PickNickRobotics/cpp_polyfills
++++ b/ros-planning/dependencies/PickNickRobotics/cpp_polyfills
+@@ -1 +1 @@
+-Subproject commit 2948b48c5aff0584407dab3f52b0cc626c3dc07b
++Subproject commit a85026b03c2e51f4fc29a4f476886b9d1ecf2b7b
+diff --git a/ros-planning/dependencies/PickNickRobotics/generate_parameter_library b/ros-planning/dependencies/PickNickRobotics/generate_parameter_library
+index f101d5e4..9b935799 160000
+--- a/ros-planning/dependencies/PickNickRobotics/generate_parameter_library
++++ b/ros-planning/dependencies/PickNickRobotics/generate_parameter_library
+@@ -1 +1 @@
+-Subproject commit f101d5e45b056c155e4506538c29845bff2cba6d
++Subproject commit 9b935799879da458c71fbcf25c7f5e88c86f5bc3
+diff --git a/ros-planning/dependencies/ceres-solver b/ros-planning/dependencies/ceres-solver
+--- a/ros-planning/dependencies/ceres-solver
++++ b/ros-planning/dependencies/ceres-solver
+@@ -1 +1 @@
+-Subproject commit 084b3e3b835bb13c42c0658f033826ffa8e0f373
++Subproject commit 084b3e3b835bb13c42c0658f033826ffa8e0f373-dirty
+diff --git a/ros-planning/dependencies/robot_localization b/ros-planning/dependencies/robot_localization
+index f3501bc6..cfdd00a7 160000
+--- a/ros-planning/dependencies/robot_localization
++++ b/ros-planning/dependencies/robot_localization
+@@ -1 +1 @@
+-Subproject commit f3501bc6ffa192efd98d88e0be874865083df336
++Subproject commit cfdd00a76d1dcacf83f386652970b505a8a7f071
+diff --git a/ros-planning/dependencies/rsl b/ros-planning/dependencies/rsl
+index a7b8f4a0..869f64ae 160000
+--- a/ros-planning/dependencies/rsl
++++ b/ros-planning/dependencies/rsl
+@@ -1 +1 @@
+-Subproject commit a7b8f4a0ffc7b7044374730c3a178d4a05dd5f90
++Subproject commit 869f64ae6a3a95165e54ce03e4dd497fc30e77e2
+diff --git a/ros-planning/dependencies/xtl b/ros-planning/dependencies/xtl
+--- a/ros-planning/dependencies/xtl
++++ b/ros-planning/dependencies/xtl
+@@ -1 +1 @@
+-Subproject commit fea39142693fbbc2ef19d75012bc6b46ef0a5f8c
++Subproject commit fea39142693fbbc2ef19d75012bc6b46ef0a5f8c-dirty
+diff --git a/ros-visualization/rqt_reconfigure b/ros-visualization/rqt_reconfigure
+index 4a8be895..30f86ebe 160000
+--- a/ros-visualization/rqt_reconfigure
++++ b/ros-visualization/rqt_reconfigure
+@@ -1 +1 @@
+-Subproject commit 4a8be89590c338a5fb2a634763a58cc5e746ddd6
++Subproject commit 30f86ebecee20a9a8fdc89ebcfe2eac23fd6f7a0
+diff --git a/ros/bond_core b/ros/bond_core
+index 0043f2d6..44cc20e6 160000
+--- a/ros/bond_core
++++ b/ros/bond_core
+@@ -1 +1 @@
+-Subproject commit 0043f2d67e3234750769c712ad9a974a39ac5f50
++Subproject commit 44cc20e678f80f8279d2344045e2193540f3988c
+diff --git a/ros/pluginlib b/ros/pluginlib
+index 0bcb7ea5..820080cb 160000
+--- a/ros/pluginlib
++++ b/ros/pluginlib
+@@ -1 +1 @@
+-Subproject commit 0bcb7ea54cf16b0cb6eea86eddf2fa10fe71b324
++Subproject commit 820080cb7ac223448de5236dd8b18be0d0d9ceb4
+diff --git a/ros/xacro b/ros/xacro
+index 1f24172c..38726b3d 160000
+--- a/ros/xacro
++++ b/ros/xacro
+@@ -1 +1 @@
+-Subproject commit 1f24172cbe9af4ebd7fcb820d06f071f92fff65b
++Subproject commit 38726b3d7ae6771e84484589ba5daeaee2ba6c88
+diff --git a/ros2/examples b/ros2/examples
+index 47512196..0dc4abc9 160000
+--- a/ros2/examples
++++ b/ros2/examples
+@@ -1 +1 @@
+-Subproject commit 475121967cabca70da7d8f1b2ce480a42dd85a94
++Subproject commit 0dc4abc9e5ee67629fe1b4bcdd8efa86aa825f46
+diff --git a/ros2/message_filters b/ros2/message_filters
+index cfa039fe..77212e09 160000
+--- a/ros2/message_filters
++++ b/ros2/message_filters
+@@ -1 +1 @@
+-Subproject commit cfa039fe5db9cf39e584b5f5928917c510ea3ef7
++Subproject commit 77212e09483ab45cf5c07180f07a32ab0ea37ee2
+diff --git a/ros2/rcl b/ros2/rcl
+index 663e16b8..7447e7f6 160000
+--- a/ros2/rcl
++++ b/ros2/rcl
+@@ -1 +1 @@
+-Subproject commit 663e16b87959d60c33f87299ada224f338c4e05f
++Subproject commit 7447e7f637910ad169cf3f602476707584b46576
+diff --git a/ros2/rclcpp b/ros2/rclcpp
+index 0c5bbfaa..68adae6d 160000
+--- a/ros2/rclcpp
++++ b/ros2/rclcpp
+@@ -1 +1 @@
+-Subproject commit 0c5bbfaa899100aa6b09770ebb5dc318abe07f18
++Subproject commit 68adae6d50977e82b4c9cd7c104dba73f6dd8f78
+diff --git a/ros2/rosidl_typesupport_fastrtps b/ros2/rosidl_typesupport_fastrtps
+index 8bfa7314..cda76159 160000
+--- a/ros2/rosidl_typesupport_fastrtps
++++ b/ros2/rosidl_typesupport_fastrtps
+@@ -1 +1 @@
+-Subproject commit 8bfa73140afb0899bae67b689f8da7a579db036a
++Subproject commit cda76159addf188be64417deb8e2b72ac1ac1942
+diff --git a/ros2/rviz b/ros2/rviz
+--- a/ros2/rviz
++++ b/ros2/rviz
+@@ -1 +1 @@
+-Subproject commit f63abde18e35e454074460af1207e4ccb36a1287
++Subproject commit f63abde18e35e454074460af1207e4ccb36a1287-dirty
+diff --git a/ros2_control/dependencies/pal_statistics b/ros2_control/dependencies/pal_statistics
+--- a/ros2_control/dependencies/pal_statistics
++++ b/ros2_control/dependencies/pal_statistics
+@@ -1 +1 @@
+-Subproject commit c24371687668488d832538113db461d608942ad1
++Subproject commit c24371687668488d832538113db461d608942ad1-dirty
+diff --git a/ros2_control/ros2_controllers b/ros2_control/ros2_controllers
+index 64de6545..044f98ab 160000
+--- a/ros2_control/ros2_controllers
++++ b/ros2_control/ros2_controllers
+@@ -1 +1 @@
+-Subproject commit 64de6545c40d85ddfd8b25ce788f92012e977e6c
++Subproject commit 044f98ab2e315761f75e4d6106c6ba8226d9dd3d

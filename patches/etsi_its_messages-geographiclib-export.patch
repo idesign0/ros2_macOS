@@ -1,0 +1,28 @@
+diff --git a/etsi_its_msgs_utils/CMakeLists.txt b/etsi_its_msgs_utils/CMakeLists.txt
+index d9801bc5..6b828c1b 100644
+--- a/etsi_its_msgs_utils/CMakeLists.txt
++++ b/etsi_its_msgs_utils/CMakeLists.txt
+@@ -24,7 +24,7 @@ target_link_libraries(${PROJECT_NAME} INTERFACE
+ )
+ 
+ ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
+-ament_export_dependencies(etsi_its_msgs geometry_msgs tf2_geometry_msgs)
++ament_export_dependencies(etsi_its_msgs geometry_msgs tf2_geometry_msgs GeographicLib)
+ 
+ install(DIRECTORY include/
+   DESTINATION include/${PROJECT_NAME}
+diff --git a/etsi_its_rviz_plugins/src/displays/MAPEM/mapem_display.cpp b/etsi_its_rviz_plugins/src/displays/MAPEM/mapem_display.cpp
+index d63b6182..f7b602cb 100644
+--- a/etsi_its_rviz_plugins/src/displays/MAPEM/mapem_display.cpp
++++ b/etsi_its_rviz_plugins/src/displays/MAPEM/mapem_display.cpp
+@@ -158,6 +158,10 @@ void MAPEMDisplay::reset() {
+   texts_.clear();
+ }
+ 
++void MAPEMDisplay::changedMAPEMViz() {
++  // Trigger re-render with updated MAPEM visualization settings
++}
++
+ void MAPEMDisplay::changedSPATEMViz() {
+   if(!viz_spatem_->getBool()) {
+     deleteStatus("SPATEM Topic");

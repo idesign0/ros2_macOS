@@ -1,0 +1,16 @@
+diff --git a/grid_map_core/include/grid_map_core/eigen_plugins/FunctorsPlugin.hpp b/grid_map_core/include/grid_map_core/eigen_plugins/FunctorsPlugin.hpp
+index b5c3abb..c77ba90 100644
+--- a/grid_map_core/include/grid_map_core/eigen_plugins/FunctorsPlugin.hpp
++++ b/grid_map_core/include/grid_map_core/eigen_plugins/FunctorsPlugin.hpp
+@@ -3,6 +3,11 @@
+ 
+ #include <math.h>
+ 
++// EIGEN_EMPTY_STRUCT_CTOR was removed in Eigen 5. Provide a no-op fallback.
++#ifndef EIGEN_EMPTY_STRUCT_CTOR
++#define EIGEN_EMPTY_STRUCT_CTOR(X)
++#endif
++
+ template<typename Scalar>
+ struct scalar_sum_of_finites_op
+ {

@@ -1,0 +1,26 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 531f4c5..2e6c18f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -13,7 +13,7 @@ endif()
+ 
+ find_package(RobotRaconteur 0.17.0 REQUIRED)
+ find_package(yaml-cpp REQUIRED)
+-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
++find_package(Eigen3 3.3...5.99 REQUIRED NO_MODULE)
+ find_package(OpenCV)
+ 
+ if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/robdef/group1")
+diff --git a/test/CMakeLists.txt b/test/CMakeLists.txt
+index 82f1610..af0e38c 100644
+--- a/test/CMakeLists.txt
++++ b/test/CMakeLists.txt
+@@ -25,7 +25,7 @@ endif()
+ add_executable(test_robotinfo_parser test_robotinfo_parser.cpp)
+ target_link_libraries(test_robotinfo_parser RobotRaconteurCompanion RobotRaconteurCore yaml-cpp)
+ 
+-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
++find_package(Eigen3 3.3...5.99 REQUIRED NO_MODULE)
+ add_executable(test_eigen_converters test_eigen_converters.cpp)
+ target_link_libraries(test_eigen_converters RobotRaconteurCompanion RobotRaconteurCore Eigen3::Eigen GTest::Main)
+ 

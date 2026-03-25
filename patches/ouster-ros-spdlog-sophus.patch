@@ -1,0 +1,39 @@
+diff --git a/ouster-ros/ouster-sdk/ouster_client/CMakeLists.txt b/ouster-ros/ouster-sdk/ouster_client/CMakeLists.txt
+index f17eeb4..025c6b9 100644
+--- a/ouster-ros/ouster-sdk/ouster_client/CMakeLists.txt
++++ b/ouster-ros/ouster-sdk/ouster_client/CMakeLists.txt
+@@ -4,6 +4,7 @@ find_package(Threads REQUIRED)
+ find_package(nmea REQUIRED)
+ find_package(libzip REQUIRED)
+ find_package(OpenSSL REQUIRED)
++find_package(fmt REQUIRED)
+ 
+ include(Coverage)
+ 
+@@ -47,8 +48,10 @@ target_link_libraries(ouster_client
+     nmea
+     libzip::zip
+     ${OPENSSL_LIBRARIES}
++    fmt::fmt
+     )
+ target_compile_definitions(ouster_client PRIVATE EIGEN_MPL2_ONLY)
++target_compile_definitions(ouster_client PRIVATE SPDLOG_FMT_EXTERNAL)
+ if(BUILD_SHARED_LIBRARY)
+   target_compile_definitions(ouster_client PRIVATE BUILD_SHARED_LIBS_EXPORT)
+ endif()
+diff --git a/ouster-ros/ouster-sdk/thirdparty/kiss-icp/cpp/COLCON_IGNORE b/ouster-ros/ouster-sdk/thirdparty/kiss-icp/cpp/COLCON_IGNORE
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/ouster-ros/ouster-sdk/thirdparty/sophus/CMakeLists.txt b/ouster-ros/ouster-sdk/thirdparty/sophus/CMakeLists.txt
+index c5f01ba..a586dde 100644
+--- a/ouster-ros/ouster-sdk/thirdparty/sophus/CMakeLists.txt
++++ b/ouster-ros/ouster-sdk/thirdparty/sophus/CMakeLists.txt
+@@ -54,7 +54,7 @@ endif()
+ # defined by a parent project including Sophus via `add_subdirectory`.)
+ 
+ if(NOT TARGET Eigen3::Eigen)
+-  find_package(Eigen3 3.3.0 REQUIRED)
++  find_package(Eigen3 3.3.0...5.99 REQUIRED)
+ endif()
+ 
+ if (NOT CMAKE_DISABLE_FIND_PACKAGE_fmt)
