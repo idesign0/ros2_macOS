@@ -145,7 +145,7 @@
 [submodule "ros2_control/control_msgs"]
 	path = ros2_control/control_msgs
 	url = https://github.com/ros-controls/control_msgs.git
-	branch = master
+	branch = jazzy
 [submodule "ros2_control/control_toolbox"]
 	path = ros2_control/control_toolbox
 	url = https://github.com/ros-controls/control_toolbox.git
