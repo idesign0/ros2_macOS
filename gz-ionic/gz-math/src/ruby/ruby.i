@@ -1,0 +1,9 @@
+%module "gz::math"
+%include Angle.i
+%include CoordinateVector3.i
+%include GaussMarkovProcess.i
+%include Rand.i
+%include SphericalCoordinates.i
+%include Vector2.i
+%include Vector3.i
+%include Vector4.i

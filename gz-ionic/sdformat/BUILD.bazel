@@ -1,0 +1,286 @@
+load("@buildifier_prebuilt//:rules.bzl", "buildifier", "buildifier_test")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_configure_header", "gz_export_header", "gz_include_header")
+load("@rules_license//rules:license.bzl", "license")
+load("@rules_python//python:py_binary.bzl", "py_binary")
+
+package(
+    default_applicable_licenses = [":license"],
+    default_visibility = ["__subpackages__"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+license(
+    name = "license",
+    package_name = "sdformat",
+)
+
+licenses(["notice"])
+
+exports_files([
+    "package.xml",
+    "LICENSE",
+    "MODULE.bazel",
+])
+
+gz_export_header(
+    name = "Export",
+    out = "include/sdf/Export.hh",
+    export_base = "GZ_SDFORMAT",
+    lib_name = "sdformat",
+)
+
+gz_configure_header(
+    name = "Config",
+    src = "include/sdf/config.hh.in",
+    defines = [
+        "CMAKE_INSTALL_FULL_DATAROOTDIR=unused",
+        "SDF_PROTOCOL_VERSION=1.12",
+    ],
+    package_xml = "package.xml",
+)
+
+public_headers_no_gen = glob(
+    ["include/sdf/*.hh"],
+    exclude = ["include/sdf/sdf.hh"],
+)
+
+gz_include_header(
+    name = "Include",
+    out = "include/sdformat.hh",
+    hdrs = public_headers_no_gen + [
+        "include/sdf/config.hh",
+    ],
+)
+
+py_binary(
+    name = "embed_sdf",
+    srcs = ["sdf/embedSdf.py"],
+    main = "sdf/embedSdf.py",
+)
+
+genrule(
+    name = "embed_sdf_genrule",
+    srcs = glob([
+        "sdf/**/*.sdf",
+        "sdf/**/*.convert",
+    ]),
+    outs = ["EmbeddedSdf.cc"],
+    cmd = "$(execpath :embed_sdf) --output-file $@ --sdf-root sdf/ --input-files $(SRCS)",
+    tools = [":embed_sdf"],
+)
+
+cc_library(
+    name = "urdf_parser",
+    srcs = [
+        "src/urdf/urdf_parser/joint.cpp",
+        "src/urdf/urdf_parser/link.cpp",
+        "src/urdf/urdf_parser/model.cpp",
+        "src/urdf/urdf_parser/pose.cpp",
+        "src/urdf/urdf_parser/twist.cpp",
+        "src/urdf/urdf_parser/urdf_model_state.cpp",
+        "src/urdf/urdf_parser/urdf_sensor.cpp",
+        "src/urdf/urdf_parser/world.cpp",
+    ],
+    hdrs = glob(
+        ["src/urdf/**/*.h"],
+    ),
+    copts = ["-Wno-unknown-pragmas"],
+    includes = ["src/urdf"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@tinyxml2",
+    ],
+)
+
+cc_library(
+    name = "sdformat",
+    srcs = glob(
+        include = [
+            "src/*.cc",
+            "src/*.hh",
+            "src/bazel/*.cc",
+        ],
+        exclude = [
+            "src/*_TEST.cc",
+        ],
+    ) + ["EmbeddedSdf.cc"],
+    hdrs = public_headers_no_gen + [
+        "include/sdf/config.hh",
+        "include/sdf/sdf.hh",
+        "include/sdf/sdf_config.h",
+        "include/sdformat.hh",
+    ],
+    data = glob(["sdf/**"]),
+    defines = [
+        "CMAKE_INSTALL_RELATIVE_DATAROOTDIR=\\\"\\\"",
+        'SDF_SHARE_PATH=\\".\\"',
+        'SDF_VERSION_PATH=\\"sdformat\\"',
+    ],
+    includes = [
+        "include",
+        "src",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":Export",
+        ":urdf_parser",
+        "@gz-math",
+        "@gz-utils//:Environment",
+        "@gz-utils//:ImplPtr",
+        "@gz-utils//:SuppressWarning",
+        "@tinyxml2",
+    ],
+)
+
+test_sources = glob(
+    include = [
+        "src/*_TEST.cc",
+    ],
+    exclude = [
+        "src/gz_TEST.cc",
+        # Tests below this line have data dependencies and aren't done as part
+        # of the glob
+        "src/Converter_TEST.cc",
+        "src/FrameSemantics_TEST.cc",
+        "src/parser_TEST.cc",
+        "src/ParserConfig_TEST.cc",
+        "src/Root_TEST.cc",
+    ],
+)
+
+[
+    cc_test(
+        name = src.replace("/", "_").replace(".cc", "").replace("src_", ""),
+        srcs = [src],
+        copts = [
+            # Some tests are for private headers
+            "-Wno-private-header",
+        ],
+        deps = [
+            ":sdformat",
+            "//test:test_utils",
+            "@googletest//:gtest",
+            "@googletest//:gtest_main",
+            "@gz-math",
+            "@gz-utils//:Environment",
+            "@gz-utils//:ExtraTestMacros",
+            "@gz-utils//:SuppressWarning",
+            "@tinyxml2",
+        ],
+    )
+    for src in test_sources
+]
+
+cc_test(
+    name = "Converter_TEST",
+    srcs = [
+        "src/Converter.hh",
+        "src/Converter_TEST.cc",
+        "src/XmlUtils.hh",
+    ],
+    data = [
+        "sdf/1.10/1_9.convert",
+        "sdf/1.6/1_5.convert",
+        "sdf/1.7/1_6.convert",
+        "sdf/1.8/1_7.convert",
+        "sdf/1.9/1_8.convert",
+    ],
+    deps = [
+        ":sdformat",
+        "//test:test_utils",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@tinyxml2",
+    ],
+)
+
+cc_test(
+    name = "FrameSemantics_TEST",
+    srcs = [
+        "src/FrameSemantics.hh",
+        "src/FrameSemantics_TEST.cc",
+        "src/ScopedGraph.hh",
+    ],
+    data = [
+        "//test:sdf",
+    ],
+    deps = [
+        ":sdformat",
+        "//test:test_utils",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@gz-math",
+    ],
+)
+
+cc_test(
+    name = "parser_TEST",
+    srcs = [
+        "src/parser_TEST.cc",
+    ],
+    data = [
+        "//test:integration/model",
+        "//test:sdf",
+    ],
+    deps = [
+        ":sdformat",
+        "//test:test_utils",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@gz-utils//:Environment",
+    ],
+)
+
+cc_test(
+    name = "ParserConfig_TEST",
+    srcs = [
+        "src/ParserConfig_TEST.cc",
+    ],
+    data = [
+        "//test:sdf",
+    ],
+    deps = [
+        ":sdformat",
+        "//test:test_utils",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "Root_TEST",
+    srcs = [
+        "src/Root_TEST.cc",
+    ],
+    data = [
+        "//test:sdf",
+    ],
+    deps = [
+        ":sdformat",
+        "//test:test_utils",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+# Bazel linting
+buildifier(
+    name = "buildifier.fix",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "fix",
+    mode = "fix",
+)
+
+buildifier_test(
+    name = "buildifier.test",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "warn",
+    mode = "diff",
+    no_sandbox = True,
+    workspace = "//:MODULE.bazel",
+)

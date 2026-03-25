@@ -1,0 +1,166 @@
+load("@buildifier_prebuilt//:rules.bzl", "buildifier", "buildifier_test")
+load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_configure_header", "gz_export_header", "gz_include_header")
+load("@rules_license//rules:license.bzl", "license")
+load("@rules_python//python:py_library.bzl", "py_library")
+load("@rules_python//python:py_test.bzl", "py_test")
+
+package(
+    default_applicable_licenses = [":license"],
+    default_visibility = ["__subpackages__"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+license(
+    name = "license",
+    package_name = "gz-math",
+)
+
+licenses(["notice"])
+
+exports_files([
+    "LICENSE",
+    "MODULE.bazel",
+])
+
+gz_export_header(
+    name = "Export",
+    out = "include/gz/math/Export.hh",
+    export_base = "GZ_MATH",
+    lib_name = "gz-math",
+)
+
+gz_configure_header(
+    name = "Config",
+    src = "include/gz/math/config.hh.in",
+    package_xml = "package.xml",
+)
+
+public_headers_no_gen = glob(
+    include = [
+        "include/gz/math/*.hh",
+        "include/gz/math/detail/*.hh",
+        "include/gz/math/graph/*.hh",
+    ],
+)
+
+gz_include_header(
+    name = "Include",
+    out = "include/gz/math.hh",
+    hdrs = public_headers_no_gen + ["include/gz/math/config.hh"],
+)
+
+public_headers = public_headers_no_gen + [
+    "include/gz/math.hh",
+    "include/gz/math/Export.hh",
+    "include/gz/math/config.hh",
+]
+
+private_headers = glob(
+    include = [
+        "src/*.hh",
+    ],
+)
+
+sources = glob(
+    include = [
+        "src/*.cc",
+    ],
+    exclude = [
+        "src/*_TEST.cc",
+    ],
+)
+
+cc_library(
+    name = "gz-math",
+    srcs = sources + private_headers,
+    hdrs = public_headers,
+    includes = [
+        "include",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@gz-utils//:ImplPtr",
+        "@gz-utils//:NeverDestroyed",
+        "@gz-utils//:SuppressWarning",
+    ],
+)
+
+pybind_extension(
+    name = "gz/math8",
+    srcs = glob(
+        include = [
+            "src/python_pybind11/src/*.cc",
+            "src/python_pybind11/src/*.hh",
+        ],
+    ),
+    defines = [
+        "BINDINGS_MODULE_NAME=math8",
+    ],
+    linkstatic = True,
+    visibility = ["//visibility:private"],
+    deps = [":gz-math"],
+)
+
+py_library(
+    name = "python",
+    data = [":gz/math8"],
+    visibility = ["//visibility:public"],
+)
+
+test_sources = glob(
+    include = [
+        "src/*_TEST.cc",
+        "src/graph/*_TEST.cc",
+    ],
+)
+
+[
+    cc_test(
+        name = src.replace("/", "_").replace(".cc", "").replace("src_", ""),
+        srcs = [src],
+        deps = [
+            ":gz-math",
+            "@googletest//:gtest",
+            "@googletest//:gtest_main",
+            "@gz-utils//:SuppressWarning",
+        ],
+    )
+    for src in test_sources
+]
+
+py_test_sources = glob(
+    include = [
+        "src/python_pybind11/test/*_TEST.py",
+    ],
+)
+
+[
+    py_test(
+        name = src.replace("/", "_").replace(".py", "_py").replace("src_python_pybind11_test_", ""),
+        srcs = [src],
+        main = src,
+        deps = [":python"],
+    )
+    for src in py_test_sources
+]
+
+buildifier(
+    name = "buildifier.fix",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "fix",
+    mode = "fix",
+)
+
+buildifier_test(
+    name = "buildifier.test",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "warn",
+    mode = "diff",
+    no_sandbox = True,
+    workspace = "//:MODULE.bazel",
+)

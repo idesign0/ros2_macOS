@@ -1,0 +1,76 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_export_header")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = ["__subpackages__"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+gz_export_header(
+    name = "Export",
+    out = "include/gz/utils/log/Export.hh",
+    export_base = "GZ_UTILS_LOG",
+    lib_name = "gz-utils-log",
+)
+
+cc_library(
+    name = "SplitSink",
+    srcs = [
+        "src/SplitSink.cc",
+    ],
+    hdrs = [
+        "include/gz/utils/log/SplitSink.hh",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":Export",
+        "//:Config",
+        "//:ImplPtr",
+        "@spdlog",
+    ],
+)
+
+cc_library(
+    name = "Logger",
+    srcs = [
+        "src/Logger.cc",
+    ],
+    hdrs = [
+        "include/gz/utils/log/Logger.hh",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":Export",
+        ":SplitSink",
+        "//:Config",
+        "//:ImplPtr",
+        "@spdlog",
+    ],
+)
+
+cc_library(
+    name = "log",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":Logger",
+        ":SplitSink",
+    ],
+)
+
+cc_test(
+    name = "SplitSink_TEST",
+    srcs = ["src/SplitSink_TEST.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":SplitSink",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@spdlog",
+    ],
+)

@@ -1,0 +1,15 @@
+#include "builtin_interfaces/msg/Time.idl"
+
+module autoware_auto_planning_msgs {
+  module msg {
+
+    @verbatim (language="comment", text=
+      " The amount of the offset to shift the reference path.")
+    struct LateralOffset {
+      builtin_interfaces::msg::Time stamp;
+
+      @default (value=0.0)
+      float lateral_offset;
+    };
+  };
+};

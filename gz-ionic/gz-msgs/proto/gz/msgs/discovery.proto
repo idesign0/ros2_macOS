@@ -1,0 +1,181 @@
+/*
+ * Copyright (C) 2019 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "DiscoveryProtos";
+
+/// \ingroup gz.msgs
+/// \interface Discovery
+/// \brief Message that contains Discovery information.
+
+import "gz/msgs/header.proto";
+
+message Discovery
+{
+  /// \brief Type of discovery message.
+  enum Type
+  {
+    /// \brief Type not initialized.
+    UNINITIALIZED   = 0;
+
+    /// \brief Advertise message.
+    ADVERTISE       = 1;
+
+    /// \brief Subscribe message.
+    SUBSCRIBE       = 2;
+
+    /// \brief Unadvertise message.
+    UNADVERTISE     = 3;
+
+    /// \brief Heartbeat message.
+    HEARTBEAT       = 4;
+
+    /// \brief Bye message.
+    BYE             = 5;
+
+    /// \brief New connection message.
+    NEW_CONNECTION  = 6;
+
+    /// \brief End connection message.
+    END_CONNECTION  = 7;
+
+    /// \brief Request the list of subscribers.
+    SUBSCRIBERS_REQ = 8;
+
+    /// \brief Reply to a SUBSCRIBERS_REQ.
+    SUBSCRIBERS_REP = 9;
+  }
+
+  /// \brief Discovery flags.
+  message Flags
+  {
+    /// \brief Flag set when a discovery message is relayed.
+    bool relay    = 1;
+
+    /// \brief Flag set when we want to avoid to relay a discovery message.
+    /// This is used to avoid loops.
+    bool no_relay = 2;
+  }
+
+  /// \brief Information about a subscriber.
+  message Subscriber
+  {
+    string topic = 1;
+  }
+
+  /// \brief Information about a publisher.
+  message Publisher
+  {
+    /// \brief Defines the different options for the scope of a topic/service.
+    enum Scope
+    {
+      /// \brief Topic/service only available to subscribers in the same
+      /// process as the publisher.
+      PROCESS = 0;
+
+      /// \brief Topic/service only available to subscribers in the same
+      /// machine as the publisher.
+      HOST    = 1;
+
+      /// \brief Topic/service available to any subscriber.
+      ALL     = 2;
+    }
+
+    /// \brief Information about a message publisher.
+    message MessagePublisher
+    {
+      /// \brief ZeroMQ control address of the publisher.
+      /// \todo(caguero) Is this the same as 'socket_id' in the
+      /// ServicePublisher message?
+      string ctrl         = 1;
+
+      /// \brief Message type advertised by this publisher.
+      string msg_type     = 2;
+
+      /// \brief Whether the publication has been throttled.
+      bool throttled      = 3;
+
+      /// \brief The maximum number of messages per second to be published.
+      uint64 msgs_per_sec = 4;
+    }
+
+    /// \brief Information about service provider.
+    message ServicePublisher
+    {
+      /// \brief ZeroMQ socket ID used by this publisher.
+      string socket_id     = 1;
+
+      /// \brief The name of the request's protobuf message advertised.
+      string request_type  = 2;
+
+      /// \brief The name of the response's protobuf message advertised.
+      string response_type = 3;
+    }
+
+    /// \brief Topic name.
+    string topic        = 1;
+
+    /// \brief ZeroMQ address of the publisher.
+    string address      = 2;
+
+    /// \brief Process UUID of the publisher.
+    string process_uuid = 3;
+
+    /// \brief Node UUID of the publisher.
+    string node_uuid    = 4;
+
+    /// \brief The scope of this publisher.
+    Scope scope         = 5;
+
+    /// \brief Information about a message or service publisher.
+    oneof pub_type
+    {
+      /// \brief Message publisher.
+      MessagePublisher msg_pub = 6;
+
+      /// \brief Service provider.
+      ServicePublisher srv_pub = 7;
+    }
+  }
+
+  /// \brief Optional header data.
+  Header header       = 1;
+
+  /// \brief Version of the discovery protocol.
+  uint32 version      = 2;
+
+  /// \brief Process UUID.
+  string process_uuid = 3;
+
+  /// \brief The type of this message.
+  Type type           = 4;
+
+  /// \brief Optional flags.
+  Flags flags         = 5;
+
+  /// \brief Optional subscriber or publisher information.
+  oneof disc_contents
+  {
+    /// \brief Subscriber information.
+    Subscriber sub    = 6;
+
+    /// \brief Publisher information.
+    Publisher pub     = 7;
+  }
+}

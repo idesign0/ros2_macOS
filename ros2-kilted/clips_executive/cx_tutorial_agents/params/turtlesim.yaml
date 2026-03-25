@@ -1,0 +1,21 @@
+/**:
+  ros__parameters:
+    autostart_node: true
+    environments: ["turtlesim_monitor"]
+
+    turtlesim_monitor:
+      plugins: ["executive", "ros_msgs", "files"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+
+    executive:
+      plugin: "cx::ExecutivePlugin"
+
+    ros_msgs:
+      plugin: "cx::RosMsgsPlugin"
+
+    files:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_tutorial_agents"]
+      load: ["clips/turtlesim_monitor.clp",
+             "clips/turtlesim_teleport.clp"]

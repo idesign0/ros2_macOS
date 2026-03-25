@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="save_world">
+    <physics name="fast" type="ignored">
+      <real_time_factor>0</real_time_factor>
+    </physics>
+
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>5.5645e-6 22.8758e-6 -42.3884e-6</magnetic_field>
+    <atmosphere type='adiabatic'/>
+
+   <scene>
+     <ambient>0.4 0.4 0.4 1.0</ambient>
+     <background>.7 .7 .7 1</background>
+     <shadows>true</shadows>
+   </scene>
+
+   <physics type='ode'>
+     <max_step_size>0.001</max_step_size>
+     <real_time_factor>1.0</real_time_factor>
+     <real_time_update_rate>1000</real_time_update_rate>
+   </physics>
+
+    <model name="inlineM1">
+      <pose>10 0 0 0 0 0</pose>
+      <link name="body"/>
+    </model>
+
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/openroboticstest/models/backpack</uri>
+      <name>backpack1</name>
+      <pose>1 0 0 0 0 0</pose>
+    </include>
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/openroboticstest/models/backpack</uri>
+      <name>backpack2</name>
+      <pose>1 2 3 0.1 0.2 0.3</pose>
+    </include>
+    <include>
+      <uri>https://fuel.gazebosim.org/1.0/openroboticstest/models/backpack/3</uri>
+      <name>backpack3</name>
+      <pose>2 0 0 0.1 0.2 0.3</pose>
+    </include>
+
+  </world>
+</sdf>

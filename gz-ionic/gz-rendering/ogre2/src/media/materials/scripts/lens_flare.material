@@ -1,0 +1,57 @@
+fragment_program LensFlareFS_GLSL glsl
+{
+  source lens_flare_fs.glsl
+
+  default_params
+  {
+    param_named srcTex int 0
+  }
+}
+
+fragment_program LensFlareFS_VK glslvk
+{
+  source lens_flare_fs.glsl
+}
+
+fragment_program LensFlareFS_Metal metal
+{
+  source lens_flare_fs.metal
+  shader_reflection_pair_hint Ogre/Compositor/Quad_vs
+}
+
+fragment_program LensFlareFS unified
+{
+  delegate LensFlareFS_GLSL
+  delegate LensFlareFS_Metal
+  delegate LensFlareFS_VK
+
+  default_params
+  {
+    param_named vpAspectRatio float 1.0
+    param_named lightPos float3 0 0 0
+    param_named scale float 1.0
+    param_named color float3 1.4 1.2 1.0
+  }
+}
+
+material LensFlare
+{
+  technique
+  {
+    pass
+    {
+      depth_check off
+      depth_write off
+      cull_hardware none
+
+      vertex_program_ref Ogre/Compositor/Quad_vs { }
+      fragment_program_ref LensFlareFS { }
+
+      texture_unit RT
+      {
+        tex_address_mode  border
+        filtering         none
+      }
+    }
+  }
+}

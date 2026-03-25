@@ -1,0 +1,81 @@
+version: 2.1
+
+commands:
+  ros1_build:
+    steps:
+      - checkout
+      - run:
+          name: Set Up Container
+          command: |
+            apt-get update -qq
+            source /opt/ros/*/setup.bash
+            rosdep install --from-paths . --ignore-src -y
+            cd ..
+            catkin init
+            catkin config --extend /opt/ros/$ROS_DISTRO
+      - run:
+          name: Build
+          command: |
+            cd ..
+            catkin build
+      - run:
+          name: Run Tests
+          command: |
+            source /opt/ros/*/setup.bash
+            cd ..
+            catkin run_tests
+            catkin_test_results
+
+  ros2_build:
+    steps:
+      - checkout
+      - run:
+          name: Set Up Container
+          command: |
+            apt-get update -qq
+            source /opt/ros/*/local_setup.bash
+            rosdep update
+            rosdep install --from-paths . --ignore-src -y
+            cd ..
+      - run:
+          name: Build
+          command: |
+            source /opt/ros/*/local_setup.bash
+            cd ..
+            colcon build
+      - run:
+          name: Run Tests
+          command: |
+            source /opt/ros/*/local_setup.bash
+            cd ..
+            colcon test
+            colcon test-result
+
+jobs:
+  melodic:
+    docker:
+      - image: autonomoustuff/docker-builds:melodic-ros-base
+    steps:
+      - ros1_build
+    working_directory: ~/src
+
+  noetic:
+    docker:
+      - image: autonomoustuff/docker-builds:noetic-ros-base
+    steps:
+      - ros1_build
+    working_directory: ~/src
+
+  foxy:
+    docker:
+      - image: autonomoustuff/docker-builds:foxy-ros-base
+    steps:
+      - ros2_build
+    working_directory: ~/src
+
+workflows:
+  testing:
+    jobs:
+      - melodic
+      - noetic
+      - foxy

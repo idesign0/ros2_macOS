@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>cx_pddl_clips</name>
+  <version>0.0.0</version>
+  <description>CLIPS snippets to help using the cx_pddl_interfaces with CLIPS.</description>
+  <maintainer email="viehmann@kbsg.rwth-aachen.de">Tarik Viehmann</maintainer>
+  <license>Apache-2.0</license>
+
+  <depend>cx_pddl_interfaces</depend>
+  <depend>cx_ros_comm_gen</depend>
+  <exec_depend>cx_pddl_manager</exec_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

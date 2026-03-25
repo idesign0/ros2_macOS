@@ -1,0 +1,20 @@
+/**:
+  ros__parameters:
+    environments: ["cx_ros_msgs_client"]
+    cx_ros_msgs_client:
+      plugins: ["executive", "ros_msgs", "files"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+
+    executive:
+      plugin: "cx::ExecutivePlugin"
+      publish_on_refresh: false
+      assert_time: true
+      refresh_rate: 10
+    ros_msgs:
+      plugin: "cx::RosMsgsPlugin"
+    files:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_bringup"]
+      load: [
+        "clips/plugin_examples/ros-msgs-client.clp"]

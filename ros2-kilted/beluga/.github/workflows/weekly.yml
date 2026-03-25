@@ -1,0 +1,106 @@
+name: Weekly pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths: '.github/workflows/weekly.yml'
+  pull_request:
+    branches: [ main ]
+    paths: '.github/workflows/weekly.yml'
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    if: github.repository == 'Ekumen-OS/beluga'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro:
+          - humble
+          - jazzy
+          - kilted
+          - rolling
+        include:
+          - ros_distro: humble
+            upload_artifacts: true
+    container:
+      image: ros:${{ matrix.ros_distro }}-ros-base
+    steps:
+      - name: Install debian packages
+        run: >-
+          sudo apt-get update && sudo apt-get install -y \
+            gcovr \
+            git \
+            lcov \
+            python3-colcon-common-extensions \
+            python3-colcon-coveragepy-result \
+            python3-colcon-lcov-result \
+            python3-colcon-mixin \
+            python3-pip \
+            python3-vcstool
+
+      - name: Install python packages
+        run: |
+             export PIP_BREAK_SYSTEM_PACKAGES=1
+             pip install pre-commit==2.20.0 \
+             h5py==3.11.0
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          path: ${{ github.workspace }}/src/beluga
+
+      - name: Import external repositories
+        working-directory: ${{ github.workspace }}/src
+        run: |
+          vcs import < ./beluga/docker/files/${{ matrix.ros_distro }}.repos
+          rm -rf ./flatland
+
+      - name: Install dependencies
+        run: |
+          . /opt/ros/${{ matrix.ros_distro }}/setup.sh
+          export PIP_BREAK_SYSTEM_PACKAGES=1
+          rosdep update
+          sudo -E rosdep install -r --from-paths src -y -i -t exec -t build -t doc -t test
+          colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/c75e4b34a3959524564afb584e2aa33c7eec323c/index.yaml
+          colcon mixin update default
+
+      - name: Setup compiler cache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          api_token: ${{ secrets.GITHUB_TOKEN }}
+          update_packager_index: false
+          override_cache_key: ccache-${{ matrix.ros_distro }}-${{ github.head_ref || github.ref_name }}
+          override_cache_key_fallback: |
+            ccache-${{ matrix.ros_distro }}-${{ github.base_ref || github.ref_name }}
+            ccache-${{ matrix.ros_distro }}-
+
+      - name: Build and test
+        working-directory: ${{ github.workspace }}
+        run: ./src/beluga/tools/build-and-test.sh
+
+      - name: Perform static analysis
+        working-directory: ${{ github.workspace }}
+        run: ./src/beluga/tools/run-clang-tidy.sh
+
+      - name: Enforce code coverage
+        working-directory: ${{ github.workspace }}
+        run: ./src/beluga/tools/check-code-coverage.sh
+
+      - name: Upload code coverage report
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./lcov/total_coverage.info,./coveragepy/.coverage
+          codecov_yml_path: ./src/beluga/.codecov.yml
+          disable_search: true
+          name: codecov-umbrella
+          fail_ci_if_error: true
+          verbose: true
+        if: ${{ matrix.upload_artifacts && github.event_name == 'schedule' }}

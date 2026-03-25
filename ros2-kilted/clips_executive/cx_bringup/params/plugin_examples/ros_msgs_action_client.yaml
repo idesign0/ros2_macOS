@@ -1,0 +1,39 @@
+/**:
+  ros__parameters:
+    environments: ["cx_ros_msgs_action_client", "cx_fibonacci_server"]
+
+    cx_ros_msgs_action_client:
+      plugins: ["executive", "ros_msgs", "files_client"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+      redirect_stdout_to_debug: true
+
+    cx_fibonacci_server:
+      plugins: ["executive", "fibonacci", "files_server"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+      redirect_stdout_to_debug: true
+
+    executive:
+      plugin: "cx::ExecutivePlugin"
+      publish_on_refresh: false
+      assert_time: true
+      refresh_rate: 10
+
+    fibonacci:
+      plugin: "cx::CXExampleInterfacesFibonacciPlugin"
+
+    ros_msgs:
+      plugin: "cx::RosMsgsPlugin"
+
+    files_client:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_bringup"]
+      load: [
+        "clips/plugin_examples/ros-msgs-action-client.clp"]
+
+    files_server:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_bringup"]
+      load: [
+        "clips/plugin_examples/fibonacci-action-server.clp"]

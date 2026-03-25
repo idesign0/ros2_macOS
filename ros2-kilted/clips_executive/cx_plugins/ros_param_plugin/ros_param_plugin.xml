@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="cx_ros_param_plugin">
+    <class type="cx::RosParamPlugin" base_class_type="cx::ClipsPlugin">
+      <description>CLIPS plugin for retrieving ROS params from own or other nodes</description>
+    </class>
+  </library>
+</class_libraries>

@@ -1,0 +1,11 @@
+import lanelet2  # noqa: F401 # isort: skip
+import autoware_lanelet2_extension_python._autoware_lanelet2_extension_python_boost_python_regulatory_elements as _regulatory_elements_cpp
+
+AutowareTrafficLight = _regulatory_elements_cpp.AutowareTrafficLight
+Crosswalk = _regulatory_elements_cpp.Crosswalk
+DetectionArea = _regulatory_elements_cpp.DetectionArea
+NoParkingArea = _regulatory_elements_cpp.NoParkingArea
+NoStoppingArea = _regulatory_elements_cpp.NoStoppingArea
+RoadMarking = _regulatory_elements_cpp.RoadMarking
+SpeedBump = _regulatory_elements_cpp.SpeedBump
+VirtualTrafficLight = _regulatory_elements_cpp.VirtualTrafficLight

@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>aws_sdk_cpp_vendor</name>
+  <version>0.2.1</version>
+  <description>A vendor package for aws-sdk-cpp</description>
+  <maintainer email="daisuke.nishimatsu1021@gmail.com">Daisuke Nishimatsu</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_vendor_package</buildtool_depend>
+  <buildtool_depend>curl</buildtool_depend>
+
+  <depend>libssl-dev</depend>
+  <depend>zlib</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

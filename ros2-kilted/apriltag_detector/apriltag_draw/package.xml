@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>apriltag_draw</name>
+  <version>3.1.0</version>
+  <description>ROS package for drawing apriltags on image</description>
+  <maintainer email="bernd.pfrommer@gmail.com">Bernd Pfrommer</maintainer>
+  <license>Apache2</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ros_environment</buildtool_depend> <!-- ROS_VERSION + ROS_DISTRO -->
+
+  <depend>apriltag_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+  <depend>sensor_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_clang_format</test_depend>
+
+  
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>

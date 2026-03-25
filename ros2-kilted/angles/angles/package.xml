@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<?xml-model
+  href="http://download.ros.org/schema/package_format3.xsd"
+  schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>angles</name>
+  <version>1.16.1</version>
+  <description>This package provides a set of simple math utilities to work
+        with angles. The utilities cover simple things like
+        normalizing an angle and conversion between degrees and
+        radians. But even if you're trying to calculate things like
+        the shortest angular distance between two joint space
+        positions of your robot, but the joint motion is constrained
+        by joint limits, this package is what you need. The code in
+        this package is stable and well tested. There are no plans for
+        major changes in the near future.</description>
+  <maintainer email="tfoote@osrfoundation.org">Tully Foote</maintainer>
+  <maintainer email="davidvlu@gmail.com">David V. Lu!!</maintainer>
+  <license>BSD</license>
+
+  <url>http://wiki.ros.org/angles</url>
+  <author email="hsu@osrfoundation.org">John Hsu</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+  <buildtool_depend>python3-setuptools</buildtool_depend>
+
+  <buildtool_export_depend>ament_cmake</buildtool_export_depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_cmake_pytest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

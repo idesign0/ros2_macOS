@@ -1,0 +1,22 @@
+name: UpdateDashboard
+on:
+  pull_request:
+    paths-ignore:
+    - ".github/workflows/UpdateWorkflowStatus.yaml"
+    - ".github/workflows/BuildTest.yaml"
+    - ".github/workflows/Release.yaml"
+    - ".github/workflows/Review.yaml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: UpdateDashboard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: benc-uk/workflow-dispatch@v1
+        with:
+          # You should create a personal access token and store it in your repository
+          token: ${{ secrets.WAMV_TAN_BOT_SECRET }}
+          repo: OUXT-Polaris/ouxt_automation
+          workflow: document
+          ref: master

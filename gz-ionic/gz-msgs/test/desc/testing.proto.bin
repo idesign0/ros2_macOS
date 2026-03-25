@@ -1,0 +1,16 @@
+
+´
+testing/message.prototesting" 
+
+FooMessage
+data (	Rdata"3
+
+BarMessage%
+foo (2.testing.FooMessageRfoo"3
+
+BazMessage%
+bar (2.testing.BarMessageRbarbproto3
+F
+testing/bytes.prototesting"
+FooBytes
+data (Rdatabproto3

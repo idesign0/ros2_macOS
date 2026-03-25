@@ -1,0 +1,25 @@
+---
+extends: default
+
+rules:
+  line-length: disable  # Disable line length checks
+  key-duplicates: enable
+  document-start: disable
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+  braces:  # Controls spaces inside braces {}
+    min-spaces-inside: 0  # At least one space inside braces
+    max-spaces-inside: 0  # At most one space inside braces
+    level: error
+  brackets:  # Controls spaces inside brackets []
+    min-spaces-inside: 0  # At least one space inside brackets
+    max-spaces-inside: 0  # At most one space inside brackets
+    level: error
+  colons:
+    max-spaces-before: 0  # No spaces before colons
+    max-spaces-after: 1  # At most one space after colons, making it exact
+  commas:
+    max-spaces-before: 0  # No spaces before commas
+    min-spaces-after: 1  # Exactly one space after commas
+    max-spaces-after: 1  # At most one space after commas, making it exact

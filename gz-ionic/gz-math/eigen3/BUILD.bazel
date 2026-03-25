@@ -1,0 +1,62 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_include_header")
+load("@rules_license//rules:license.bzl", "license")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+license(
+    name = "license",
+    package_name = "gz-math-eigen3",
+)
+
+public_headers_no_gen = glob(
+    include = [
+        "include/gz/math/eigen3/*.hh",
+    ],
+)
+
+gz_include_header(
+    name = "Include",
+    out = "include/gz/math/eigen3.hh",
+    hdrs = public_headers_no_gen,
+)
+
+public_headers = public_headers_no_gen + [
+    "include/gz/math/eigen3.hh",
+]
+
+cc_library(
+    name = "eigen3",
+    hdrs = public_headers,
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:gz-math",
+        "@eigen",
+    ],
+)
+
+test_sources = glob(
+    include = [
+        "src/*_TEST.cc",
+    ],
+)
+
+[
+    cc_test(
+        name = src.replace("/", "_").replace(".cc", "").replace("src_", ""),
+        srcs = [src],
+        deps = [
+            ":eigen3",
+            "@googletest//:gtest",
+            "@googletest//:gtest_main",
+        ],
+    )
+    for src in test_sources
+]

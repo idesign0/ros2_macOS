@@ -1,0 +1,203 @@
+load("@buildifier_prebuilt//:rules.bzl", "buildifier", "buildifier_test")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_configure_header", "gz_export_header")
+load("@rules_license//rules:license.bzl", "license")
+
+package(
+    default_applicable_licenses = [":license"],
+    default_visibility = ["__subpackages__"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+license(
+    name = "license",
+    package_name = "gz-utils",
+)
+
+exports_files([
+    "LICENSE",
+    "MODULE.bazel",
+])
+
+gz_export_header(
+    name = "Export",
+    out = "include/gz/utils/Export.hh",
+    export_base = "GZ_UTILS",
+    lib_name = "gz-utils",
+)
+
+gz_configure_header(
+    name = "Config",
+    src = "include/gz/utils/config.hh.in",
+    package_xml = "package.xml",
+)
+
+cc_library(
+    name = "Environment",
+    srcs = ["src/Environment.cc"],
+    hdrs = ["include/gz/utils/Environment.hh"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":Config",
+        ":Export",
+    ],
+)
+
+cc_library(
+    name = "ExtraTestMacros",
+    hdrs = [
+        "include/gz/utils/ExtraTestMacros.hh",
+        "include/gz/utils/detail/ExtraTestMacros.hh",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":SuppressWarning",
+    ],
+)
+
+cc_test(
+    name = "ExtraTestMacros_TEST",
+    srcs = ["src/ExtraTestMacros_TEST.cc"],
+    deps = [
+        ":ExtraTestMacros",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "ImplPtr",
+    hdrs = [
+        "include/gz/utils/ImplPtr.hh",
+        "include/gz/utils/detail/DefaultOps.hh",
+        "include/gz/utils/detail/ImplPtr.hh",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":Export",
+        ":SuppressWarning",
+    ],
+)
+
+cc_library(
+    name = "NeverDestroyed",
+    hdrs = ["include/gz/utils/NeverDestroyed.hh"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "SuppressWarning",
+    hdrs = [
+        "include/gz/utils/SuppressWarning.hh",
+        "include/gz/utils/detail/SuppressWarning.hh",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "Subprocess",
+    hdrs = [
+        "include/gz/utils/Subprocess.hh",
+        "include/gz/utils/detail/subprocess.h",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":Environment",
+    ],
+)
+
+cc_library(
+    name = "gz-utils",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":Environment",
+        ":ImplPtr",
+        ":NeverDestroyed",
+        ":Subprocess",
+        ":SuppressWarning",
+    ],
+)
+
+# Tests
+cc_library(
+    name = "implptr_test_classes",
+    srcs = [
+        "test/integration/implptr/implptr_test_classes.cc",
+    ],
+    hdrs = [
+        "test/integration/implptr/implptr_test_classes.hh",
+    ],
+    includes = ["test/integration/implptr"],
+    deps = [
+        ":Export",
+        ":ImplPtr",
+    ],
+)
+
+cc_test(
+    name = "ImplPtr_TEST",
+    size = "small",
+    srcs = ["test/integration/implptr/ImplPtr_TEST.cc"],
+    deps = [
+        ":implptr_test_classes",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "Environment_TEST",
+    srcs = ["src/Environment_TEST.cc"],
+    deps = [
+        ":Environment",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_binary(
+    name = "subprocess_main",
+    srcs = ["test/integration/subprocess/subprocess_main.cc"],
+    deps = [
+        ":Environment",
+        "//cli:cli11",
+    ],
+)
+
+cc_test(
+    name = "subprocess_TEST",
+    srcs = ["test/integration/subprocess_TEST.cc"],
+    local_defines = ['SUBPROCESS_EXECUTABLE_PATH=\\"subprocess_main\\"'],
+    deps = [
+        ":Environment",
+        ":Subprocess",
+        ":subprocess_main",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+buildifier(
+    name = "buildifier.fix",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "fix",
+    mode = "fix",
+)
+
+buildifier_test(
+    name = "buildifier.test",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "warn",
+    mode = "diff",
+    no_sandbox = True,
+    workspace = "//:MODULE.bazel",
+)

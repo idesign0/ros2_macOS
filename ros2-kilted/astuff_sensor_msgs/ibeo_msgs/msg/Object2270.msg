@@ -1,0 +1,59 @@
+uint16 id
+uint16 age
+uint16 prediction_age
+uint16 relative_moment_of_measurement
+uint8 reference_point_location
+int16 reference_point_position_x
+int16 reference_point_position_y
+uint16 reference_point_position_sigma_x
+uint16 reference_point_position_sigma_y
+int16 contour_points_cog_x
+int16 contour_points_cog_y
+uint16 object_box_length
+uint16 object_box_width
+int16 object_box_orientation_angle
+int16 object_box_orientation_angle_sigma
+int16 absolute_velocity_x
+int16 absolute_velocity_y
+uint16 absolute_velocity_sigma_x
+uint16 absolute_velocity_sigma_y
+int16 relative_velocity_x
+int16 relative_velocity_y
+uint16 relative_velocity_sigma_x
+uint16 relative_velocity_sigma_y
+uint8 classification
+uint8 tracking_model
+bool mobile_detected
+bool track_valid
+uint16 classification_age
+uint16 classification_confidence
+uint16 number_of_contour_points
+ibeo_msgs/Point2Di[] contour_point_list
+
+# reference_point_location values
+uint8 CENTER_OF_GRAVITY=0
+uint8 TOP_FRONT_LEFT_CORNER=1
+uint8 TOP_FRONT_RIGHT_CORNER=2
+uint8 BOTTOM_REAR_RIGHT_CORNER=3
+uint8 BOTTOM_REAR_LEFT_CORNER=4
+uint8 CENTER_OF_TOP_FRONT_EDGE=5
+uint8 CENTER_OF_RIGHT_EDGE=6
+uint8 CENTER_OF_BOTTOM_REAR_EDGE=7
+uint8 CENTER_OF_LEFT_EDGE=8
+uint8 BOX_CENTER=9
+uint8 INVALID=255
+
+# classification values
+uint8 UNCLASSIFIED=0
+uint8 UNKNOWN_SMALL=1
+uint8 UNKNOWN_BIG=2
+uint8 PEDESTRIAN=3
+uint8 BIKE=4
+uint8 CAR=5
+uint8 TRUCK=6
+uint8 OVER_DRIVABLE=10
+uint8 UNDER_DRIVABLE=11
+
+# tracking_model values
+uint8 DYNAMIC_MODEL=0
+uint8 STATIC_MODEL=1

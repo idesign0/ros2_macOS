@@ -1,0 +1,29 @@
+@property( gz_render_solid_color )
+
+@piece( custom_ps_posExecution_solid_color )
+
+  @property( gz_render_solid_color_textured )
+    if( inPs.gzSolidColour.w >= 0.0f )
+    {
+      outPs_colour0 = inPs.gzSolidColour;
+    }
+    else
+    {
+      @property( diffuse_map )
+        float4 diffuse = SampleDiffuse( textureMaps@value( diffuse_map_idx ),
+                           samplerState@value(diffuse_map_sampler),
+                           UV_DIFFUSE( inPs.uv@value(uv_diffuse).xy ),
+                           texIndex_diffuseIdx );
+        outPs_colour0 = float4( inPs.gzSolidColour.xyz,
+                                -inPs.gzSolidColour.w - 0.5f ) * diffuse;
+      @else
+        outPs_colour0 = float4( inPs.gzSolidColour.xyz,
+                                -inPs.gzSolidColour.w - 0.5f );
+      @end
+    }
+  @else
+    outPs_colour0 = inPs.gzSolidColour;
+  @end
+@end
+
+@end

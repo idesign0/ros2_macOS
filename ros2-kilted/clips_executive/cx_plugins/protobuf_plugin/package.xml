@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>cx_protobuf_plugin</name>
+  <version>0.1.3</version>
+  <description>CX plugin to send and receive protobuf messages</description>
+
+  <maintainer email="viehmann@kbsg.rwth-aachen.de">Tarik Viehmann</maintainer>
+
+  <license>GPL-2.0-or-later</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>cx_plugin</depend>
+  <depend>cx_utils</depend>
+  <depend>pluginlib</depend>
+  <depend>protobuf</depend>
+  <depend>protobuf_comm</depend>
+  <depend>python3-jinja2</depend>
+
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <cx_plugin plugin="${prefix}/protobuf_plugin.xml"/>
+  </export>
+</package>

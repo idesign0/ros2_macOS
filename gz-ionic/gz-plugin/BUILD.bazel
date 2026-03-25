@@ -1,0 +1,155 @@
+load("@buildifier_prebuilt//:rules.bzl", "buildifier", "buildifier_test")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_configure_header", "gz_export_header")
+load("@rules_license//rules:license.bzl", "license")
+
+package(
+    default_applicable_licenses = [":license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+license(
+    name = "license",
+    package_name = "gz-plugin",
+)
+
+licenses(["notice"])
+
+gz_configure_header(
+    name = "Config",
+    src = "core/include/gz/plugin/config.hh.in",
+    out = "core/include/gz/plugin/config.hh",
+    package_xml = "package.xml",
+)
+
+gz_export_header(
+    name = "Export",
+    out = "core/include/gz/plugin/Export.hh",
+    export_base = "GZ_PLUGIN",
+    lib_name = "gz-plugin",
+)
+
+public_headers_no_gen = glob([
+    "core/include/gz/plugin/*.hh",
+    "core/include/gz/plugin/detail/*.hh",
+])
+
+sources = glob(
+    ["core/src/*.cc"],
+    exclude = ["core/src/*_TEST.cc"],
+)
+
+public_headers = public_headers_no_gen + [
+    "core/include/gz/plugin/config.hh",
+    "core/include/gz/plugin/Export.hh",
+]
+
+cc_library(
+    name = "core",
+    srcs = sources,
+    hdrs = public_headers,
+    includes = ["core/include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@gz-utils//:SuppressWarning",
+    ],
+)
+
+[cc_test(
+    name = src.replace("/", "_").replace(".cc", "").replace("src_", ""),
+    srcs = [src],
+    deps = [
+        ":core",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+) for src in glob(
+    [
+        "core/src/*_TEST.cc",
+    ],
+)]
+
+cc_library(
+    name = "register",
+    hdrs = [
+        "register/include/gz/plugin/Register.hh",
+        "register/include/gz/plugin/RegisterMore.hh",
+        "register/include/gz/plugin/RegisterStatic.hh",
+        "register/include/gz/plugin/detail/Common.hh",
+        "register/include/gz/plugin/detail/Register.hh",
+        "register/include/gz/plugin/detail/RegisterStatic.hh",
+    ],
+    includes = [
+        "register/include",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":core",
+        ":loader",
+    ],
+)
+
+gz_export_header(
+    name = "loader_export",
+    out = "loader/include/gz/plugin/loader/Export.hh",
+    export_base = "GZ_PLUGIN_LOADER",
+    lib_name = "gz-plugin-loader",
+)
+
+cc_library(
+    name = "loader",
+    srcs = [
+        "loader/src/Loader.cc",
+        "loader/src/detail/Registry.cc",
+        "loader/src/detail/StaticRegistry.cc",
+    ],
+    hdrs = [
+        "loader/include/gz/plugin/Loader.hh",
+        "loader/include/gz/plugin/detail/Loader.hh",
+        "loader/include/gz/plugin/detail/Registry.hh",
+        "loader/include/gz/plugin/detail/StaticRegistry.hh",
+        "loader/include/gz/plugin/loader/Export.hh",
+    ],
+    includes = ["loader/include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":core",
+        "@gz-utils//:SuppressWarning",
+    ],
+)
+
+cc_test(
+    name = "Loader_TEST",
+    srcs = [
+        "loader/src/Loader_TEST.cc",
+    ],
+    defines = [
+        'GzDummyPlugins_LIB=\\"./test/libGzDummyPlugins.so\\"',
+    ],
+    deps = [
+        ":core",
+        ":loader",
+        "//test:test_plugins",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+buildifier(
+    name = "buildifier.fix",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "fix",
+    mode = "fix",
+)
+
+buildifier_test(
+    name = "buildifier.test",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "warn",
+    mode = "diff",
+    no_sandbox = True,
+    workspace = "//:MODULE.bazel",
+)

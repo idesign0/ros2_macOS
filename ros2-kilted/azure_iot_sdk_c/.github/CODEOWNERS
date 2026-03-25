@@ -1,0 +1,10 @@
+###########
+# Azure IoT SDK C
+###########
+
+# Catch all for whole project
+* @avishekpant @ewertons @RLeclair @vaavva @cartertinney
+
+# README Files
+*.md @avishekpant @ewertons @RLeclair @vaavva @cartertinney
+

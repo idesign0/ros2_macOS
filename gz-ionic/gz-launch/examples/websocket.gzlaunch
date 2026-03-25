@@ -1,0 +1,31 @@
+<?xml version='1.0'?>
+<gz version='1.0'>
+
+  <!-- Load a websocket server that provides access to Gazebo Transport
+       topics through websockets.-->
+  <plugin name="gz::launch::WebsocketServer"
+          filename="gz-launch-websocket-server">
+    <publication_hz>30</publication_hz>
+    <port>9002</port>
+
+    <!-- The following elements support authorization keys-->
+    <!-- <authorization_key>auth_key</authorization_key>
+         <admin_authorization_key>admin_key</admin_authorization_key>
+    -->
+
+    <!-- The maximum number of allowed connections. If this element is not
+         defined or negative, then a limit is not enforced. -->
+    <max_connections>-1</max_connections>
+
+    <!-- SSL configuration -->
+    <!-- Specify the path to both the certificate and private key. -->
+    <!-- Sample self-signed SSL certifacts are located in the
+         `plugins/websocket_server/` directory with the names `localhost.cert`
+         and `localhost.key`. -->
+    <!--<ssl>
+      <cert_file>PATH_TO_CERT_FILE</cert_file>
+      <private_key_file>PATH_TO_KEY_FILE</private_key_file>
+    </ssl> -->
+  </plugin>
+
+</gz>

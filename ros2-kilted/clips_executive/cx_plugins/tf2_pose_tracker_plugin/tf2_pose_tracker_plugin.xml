@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="cx_tf2_pose_tracker_plugin">
+    <class type="cx::Tf2PoseTrackerPlugin" base_class_type="cx::ClipsPlugin">
+      <description>CLIPS Plugin to periodically track tf2 poses.</description>
+    </class>
+  </library>
+</class_libraries>

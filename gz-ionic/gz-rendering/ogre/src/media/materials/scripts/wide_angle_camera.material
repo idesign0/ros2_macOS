@@ -1,0 +1,37 @@
+vertex_program WideLensMapVS glsl
+{
+  source wide_lens_map_vs.glsl
+  default_params
+  {
+    param_named ratio float 1
+  }
+}
+
+fragment_program WideLensMapFS glsl
+{
+  source wide_lens_map_fp.glsl
+  default_params
+  {
+    param_named envMap int 0
+    param_named c1 float 1
+    param_named c2 float 1
+    param_named c3 float 0
+    param_named f float 1
+    param_named fun float3 0 0 1
+    param_named cutOffAngle float 3.14
+  }
+}
+
+material WideLensMap
+{
+  technique
+  {
+    pass
+    {
+      vertex_program_ref WideLensMapVS { }
+      fragment_program_ref WideLensMapFS { }
+    }
+  }
+}
+
+

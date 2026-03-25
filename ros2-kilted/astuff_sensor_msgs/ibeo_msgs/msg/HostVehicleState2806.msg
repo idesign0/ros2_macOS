@@ -1,0 +1,20 @@
+std_msgs/Header header
+
+ibeo_msgs/IbeoDataHeader ibeo_header
+builtin_interfaces/Time timestamp
+int32 distance_x
+int32 distance_y
+float32 course_angle
+float32 longitudinal_velocity
+float32 yaw_rate
+float32 steering_wheel_angle
+float32 cross_acceleration
+float32 front_wheel_angle
+float32 vehicle_width
+float32 vehicle_front_to_front_axle
+float32 rear_axle_to_front_axle
+float32 rear_axle_to_vehicle_rear
+float32 steer_ratio_poly_0
+float32 steer_ratio_poly_1
+float32 steer_ratio_poly_2
+float32 steer_ratio_poly_3

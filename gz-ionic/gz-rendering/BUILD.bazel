@@ -1,0 +1,114 @@
+load("@buildifier_prebuilt//:rules.bzl", "buildifier", "buildifier_test")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_configure_header", "gz_export_header")
+load("@rules_license//rules:license.bzl", "license")
+
+package(
+    default_applicable_licenses = [":license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+license(
+    name = "license",
+    package_name = "gz-rendering",
+)
+
+licenses(["notice"])
+
+exports_files([
+    "package.xml",
+    "LICENSE",
+    "MODULE.bazel",
+])
+
+gz_configure_header(
+    name = "Config",
+    src = "include/gz/rendering/config.hh.in",
+    package_xml = "package.xml",
+)
+
+gz_export_header(
+    name = "Export",
+    out = "include/gz/rendering/Export.hh",
+    export_base = "GZ_RENDERING",
+    lib_name = "gz-rendering",
+)
+
+public_headers_no_gen = glob([
+    "include/gz/rendering/*.hh",
+    "include/gz/rendering/base/*.hh",
+])
+
+public_headers = public_headers_no_gen + [
+    "include/gz/rendering/config.hh",
+    "include/gz/rendering/Export.hh",
+]
+
+sources = glob(
+    [
+        "src/*.cc",
+        "src/base/*.cc",
+        "src/bazel/*.cc",
+    ],
+    exclude = ["src/*_TEST.cc"],
+)
+
+cc_library(
+    name = "gz-rendering",
+    srcs = sources,
+    hdrs = public_headers,
+    includes = ["include"],
+    local_defines = [
+        "GZ_RENDERING_PLUGIN_PATH='\"\"'",
+        "GZ_RENDERING_RELATIVE_RESOURCE_PATH='\"\"'",
+        "GZ_RENDERING_ENGINE_RELATIVE_INSTALL_DIR='\"\"'",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@gz-common",
+        "@gz-common//events",
+        "@gz-common//geospatial",
+        "@gz-common//graphics",
+        "@gz-math",
+        "@gz-plugin//:loader",
+        "@gz-utils//:ImplPtr",
+        "@gz-utils//:SuppressWarning",
+    ],
+)
+
+test_sources = glob([
+    "src/*_TEST.cc",
+])
+
+[
+    cc_test(
+        name = src.replace("/", "_").replace(".cc", "").replace("src_", ""),
+        srcs = [src],
+        deps = [
+            ":gz-rendering",
+            "@googletest//:gtest",
+            "@googletest//:gtest_main",
+            "@gz-common//geospatial",
+        ],
+    )
+    for src in test_sources
+]
+
+buildifier(
+    name = "buildifier.fix",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "fix",
+    mode = "fix",
+)
+
+buildifier_test(
+    name = "buildifier.test",
+    exclude_patterns = ["./.git/*"],
+    lint_mode = "warn",
+    mode = "diff",
+    no_sandbox = True,
+    workspace = "//:MODULE.bazel",
+)

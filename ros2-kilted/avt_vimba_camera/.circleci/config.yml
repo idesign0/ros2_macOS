@@ -1,0 +1,40 @@
+version: 2.1
+
+commands:
+  ros_build:
+    steps:
+      - checkout
+      - run:
+          name: Set Up Container
+          command: |
+            apt-get update -qq
+            source /opt/ros/*/setup.bash
+            mkdir -p ~/ros2_ws/src
+            ln -s "$PWD" ~/ros2_ws/src/
+            cd ~/ros2_ws
+            rosdep update && rosdep install --from-paths src/ --ignore-src -y
+      - run:
+          name: Build
+          command: |
+            source /opt/ros/*/setup.bash
+            cd ~/ros2_ws
+            export MAKEFLAGS="-j 2"
+            colcon build
+      - run:
+          name: Run Tests
+          command: |
+            source /opt/ros/*/setup.bash
+            cd ~/ros2_ws
+            colcon test --packages-select $CIRCLE_PROJECT_REPONAME
+            colcon test-result --verbose
+jobs:
+  foxy:
+    docker:
+      - image: autonomoustuff/docker-builds:foxy-ros-base
+    steps:
+      - ros_build
+
+workflows:
+  ros_build:
+    jobs:
+      - foxy

@@ -1,0 +1,14 @@
+freeglut3-dev
+libfreeimage-dev
+libglew-dev
+libgz-cmake4-dev
+libgz-common6-dev
+libgz-math8-dev
+libgz-math8-eigen3-dev
+libgz-plugin3-dev
+libgz-utils3-dev
+libogre-1.9-dev
+libxi-dev
+libxmu-dev
+uuid-dev
+xvfb

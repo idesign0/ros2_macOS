@@ -1,0 +1,13 @@
+// This file interfaces all modular pieces into one
+
+// Order in custom_passBuffer MUST be the same as they're added to
+// GzHlmsPbs::customizations
+@piece( custom_passBuffer )
+  @insertpiece( custom_passBuffer_spherical_clip_min_distance )
+  @insertpiece( custom_passBuffer_terra )
+@end
+
+@piece( custom_VStoPS )
+  @insertpiece( custom_VStoPS_solid_color )
+  @insertpiece( custom_VStoPS_terra )
+@end

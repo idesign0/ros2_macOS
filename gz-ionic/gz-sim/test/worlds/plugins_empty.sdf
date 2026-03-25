@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<!-- plugins.sdf without the plugins -->
+<sdf version="1.6">
+  <world name="default">
+    <physics name="fast" type="ignored">
+      <real_time_factor>0</real_time_factor>
+    </physics>
+
+    <model name="box">
+      <link name="link_1">
+        <sensor name="camera" type="camera">
+        </sensor>
+      </link>
+    </model>
+  </world>
+</sdf>

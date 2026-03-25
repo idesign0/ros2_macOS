@@ -1,0 +1,20 @@
+module autoware_auto_planning_msgs {
+  module msg {
+    module PathChangeModuleId_Constants {
+      const uint8 NONE = 0;
+      const uint8 AVOIDANCE = 1;
+      const uint8 LANE_CHANGE = 2;
+      const uint8 FORCE_LANE_CHANGE = 3;
+      const uint8 PULL_OVER = 4;
+      const uint8 PULL_OUT = 5;
+    };
+
+    @verbatim (language="comment", text=
+      "Type of the module change on the planned path")
+    struct PathChangeModuleId {
+
+      @default (value=0)
+      uint8 type;
+    };
+  };
+};

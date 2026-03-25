@@ -1,0 +1,3 @@
+// Automatically generated
+#include <gz/fuel_tools/config.hh>
+${gz_headers}

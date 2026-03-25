@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>gz-launch8</name>
+  <version>8.0.2</version>
+  <description>Gazebo Launch : Run and manage programs and plugins</description>
+  <maintainer email="natekoenig@gmail.com">Nate Koenig</maintainer>
+  <license>Apache License 2.0</license>
+  <url type="website">https://github.com/gazebosim/gz-launch</url>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <depend>binutils</depend>
+  <depend>gz-cmake4</depend>
+  <depend>gz-common6</depend>
+  <depend>gz-gui9</depend>
+  <depend>gz-math8</depend>
+  <depend>gz-msgs11</depend>
+  <depend>gz-plugin3</depend>
+  <depend>gz-sim9</depend>
+  <depend>gz-tools2</depend>
+  <depend>gz-transport14</depend>
+  <depend>libgflags-dev</depend>
+  <depend>libwebsockets-dev</depend>
+  <depend>libxi-dev</depend>
+  <depend>libxmu-dev</depend>
+  <depend>libyaml-dev</depend>
+  <depend>tinyxml2</depend>
+  <depend>uuid</depend>
+
+  <test_depend>xvfb</test_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
+

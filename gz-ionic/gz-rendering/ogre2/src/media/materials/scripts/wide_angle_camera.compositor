@@ -1,0 +1,182 @@
+// Renders scene (each face)
+abstract target draw_scene_face
+{
+  pass render_scene
+  {
+    load
+    {
+      all           clear
+      clear_colour  0 0 0 1
+    }
+    store
+    {
+      depth         dont_care
+      stencil       dont_care
+    }
+
+    overlays			off
+
+    shadows PbsMaterialsShadowNode recalculate
+
+    profiling_id "Cubemap WideAngleCamera pass"
+
+    // kWideAngleCameraCubemapPassId
+    identifier 1276660
+  }
+}
+
+compositor_node WideAngleCameraCubemapPass
+{
+  in 0 rt_input
+  in 1 rt_output
+
+  target rt_output : draw_scene_face {}
+
+  out 0 rt_output   // Inverted on purpose
+  out 1 rt_input    // Inverted on purpose
+}
+
+compositor_node WideAngleCameraCubemapPassMsaa
+{
+  in 0 rt_input
+  in 1 rt_output
+
+  texture tmpMsaa target_width target_height target_format msaa 4 explicit_resolve
+
+  rtv msaaRtv
+  {
+    // Specify we want to render to tmpMsaa at slot[0]
+    // but we want to resolve to rt_output
+    colour	0 tmpMsaa resolve rt_output
+  }
+
+  target msaaRtv : draw_scene_face {}
+
+  out 0 rt_output   // Inverted on purpose
+  out 1 rt_input    // Inverted on purpose
+}
+
+// Copies from temp 2D texture into each cubemap face
+abstract target cubemap_copy
+{
+  pass render_quad
+  {
+    load
+    {
+      all dont_care
+    }
+    store
+    {
+      depth   dont_care
+      stencil dont_care
+    }
+
+    profiling_id "Cubemap from 2D to cubemap face"
+
+    material Ogre/Copy/4xFP32
+
+    input 0 rt_input
+  }
+}
+
+compositor_node WideAngleCameraCubemapCopyPX
+{
+  in 0 rt_input
+  in 1 rt_unused
+  in 2 cubeTexture
+  target cubeTexture  +X : cubemap_copy { }
+}
+compositor_node WideAngleCameraCubemapCopyNX
+{
+  in 0 rt_input
+  in 1 rt_unused
+  in 2 cubeTexture
+  target cubeTexture  -X : cubemap_copy { }
+}
+compositor_node WideAngleCameraCubemapCopyPY
+{
+  in 0 rt_input
+  in 1 rt_unused
+  in 2 cubeTexture
+  target cubeTexture  +Y : cubemap_copy { }
+}
+compositor_node WideAngleCameraCubemapCopyNY
+{
+  in 0 rt_input
+  in 1 rt_unused
+  in 2 cubeTexture
+  target cubeTexture  -Y : cubemap_copy { }
+}
+compositor_node WideAngleCameraCubemapCopyPZ
+{
+  in 0 rt_input
+  in 1 rt_unused
+  in 2 cubeTexture
+  target cubeTexture  +Z : cubemap_copy { }
+}
+compositor_node WideAngleCameraCubemapCopyNZ
+{
+  in 0 rt_input
+  in 1 rt_unused
+  in 2 cubeTexture
+  target cubeTexture  -Z : cubemap_copy { }
+}
+
+// Remaps the cubemap (final output) into a 2D fish-eye output
+compositor_node WideAngleCameraFinalPass
+{
+  in 0 rt_unused
+  in 1 finalOutput
+  in 2 cubeTexture
+
+  target finalOutput
+  {
+    pass render_quad
+    {
+      load
+      {
+        all dont_care
+      }
+      store
+      {
+        depth   dont_care
+        stencil dont_care
+      }
+
+      // kWideAngleCameraQuadPassId
+      identifier 1276661
+
+      profiling_id "Map Cubemap to Wide Lens"
+
+      material WideLensMap
+
+      input 0 cubeTexture
+    }
+  }
+
+  out 0 finalOutput   // Inverted on purpose
+  out 1 rt_unused     // Inverted on purpose
+}
+
+/*
+This is generated in C++
+workspace WideAngleCamera/NAME/PX
+{
+  connect_external 0 WideAngleCameraCubemapPass 0
+  connect_external 1 WideAngleCameraCubemapPass 1
+
+  // Additional RenderPass effects come here
+
+  connect WideAngleCameraCubemapPassPX WideAngleCameraCubemapCopyPX
+  connect_external 2 WideAngleCameraCubemapCopyPX 2
+}
+*/
+
+/*
+This is generated in C++
+workspace WideAngleCameraFinalPass
+{
+  connect_external 0 WideAngleCameraFinalPass 0
+  connect_external 1 WideAngleCameraFinalPass 1
+}
+*/

@@ -1,0 +1,8 @@
+- FeatureName: AcquisitionFrameRate
+  Type: float
+  Min: 1.0
+  Max: 50.0
+  Description: Controls the acquisition rate (in Hertz) at which the frames are captured.
+- FeatureName: PtpEnable
+  Type: bool
+  Description: Enables the Precision Time Protocol (PTP).

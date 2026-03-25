@@ -1,0 +1,5 @@
+string env_name
+string plugin_name
+---
+bool success
+string error

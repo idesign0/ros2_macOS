@@ -1,0 +1,16 @@
+# CMake folders
+build
+build_*
+
+# OS generated files
+.DS_Store
+*.swp
+*.bak
+*.orig
+
+# server files
+test-server/node_modules
+test-server/npm-debug.log
+
+# Bazel generated files
+bazel-*

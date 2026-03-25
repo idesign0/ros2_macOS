@@ -1,0 +1,813 @@
+/* Titillium Web" Font - Self-hosted version */
+@font-face {
+    font-family: "Titillium Web";
+    src: url("/fonts/TitilliumWeb/TitilliumWeb-Light.woff2") format("woff2"),
+        url("/fonts/TitilliumWeb/TitilliumWeb-Light.woff") format("woff");
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Titillium Web";
+    src: url("/fonts/TitilliumWeb/TitilliumWeb-Regular.woff2") format("woff2"),
+        url("/fonts/TitilliumWeb/TitilliumWeb-Regular.woff") format("woff");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Titillium Web";
+    src: url("/fonts/TitilliumWeb/TitilliumWeb-SemiBold.woff2") format("woff2"),
+        url("/fonts/TitilliumWeb/TitilliumWeb-SemiBold.woff") format("woff");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Titillium Web";
+    src: url("/fonts/TitilliumWeb/TitilliumWeb-Bold.woff2") format("woff2"),
+        url("/fonts/TitilliumWeb/TitilliumWeb-Bold.woff") format("woff");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* =========================================
+    THEME VARIABLES (Default = Dark)
+   ========================================= */
+:root {
+    /* --- Theme Colors --- */
+    --primary-color: #E83F3F;
+    --secondary-color: #447AE5;
+
+    /* --- Typography --- */
+    --font-heading: "Titillium Web", sans-serif;
+    --font-body: "Titillium Web", sans-serif;
+    --font-mono: 'Fira Code', 'Roboto Mono', monospace;
+
+    /* --- Animations --- */
+    --transition-fast: 0.3s ease-out;
+    --transition-smooth: 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+    /* --- BACKGROUND --- */
+    --bg-main: #1C1C21;
+    /* Deep dark background */
+    --bg-card: #1C1C21;
+    /* Card background */
+    --bg-overlay: #1C1C21;
+
+    --grid-line: rgba(255, 255, 255, 0.05);
+
+    /* Fullscreen overlay bg */
+    --bg-input: transparent;
+
+    --text-main: #F1F2F2;
+    /* Main bright text */
+    --text-muted: #888;
+
+    --text-inverse: #333;
+    /* Text on red/blue buttons */
+
+    --bg-hover: hsl(210, 15%, 95%);
+
+    --border-subtle: rgba(255, 255, 255, 0.2);
+    --border-input: #888;
+
+    --shadow-card: none;
+
+    /* --- TERMINAL (LOG) COLORS--- */
+    --term-bg: #2d2d2d;
+    --term-border: #444;
+    --term-text: #c5c8c6;
+    --term-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+    /* Syntax Colors */
+    --term-black: #666666;
+
+    --term-red: #d54e53;
+    /* Errors */
+    --term-green: #74c16a;
+    /* Success/Strings */
+    --term-yellow: #f0c674;
+    /* Warnings */
+    --term-blue: #8db7dc;
+    /* Functions/Info */
+    --term-magenta: #c397d8;
+    /* Keywords */
+    --term-cyan: #7ecdc3;
+    /* Operators */
+    --term-white: #eaeaea;
+    /* Standard Text */
+
+    /* Dark Mode Glass */
+    --bg-glass-btn: rgba(31, 41, 55, 0.8);
+    --shadow-glass-btn: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+
+}
+
+/* --- LIGHT MODE OVERRIDES --- */
+/* JS toggles the 'light' class to activate this block */
+html.light {
+    --bg-main: hsl(0, 0%, 94%);
+    --bg-card: #e2dede;
+    --bg-overlay: #ffffff;
+
+    --text-main: #333333;
+    --text-muted: #666666;
+
+    --text-inverse: #d4d1d1;
+
+    --bg-hover: hsl(180, 1%, 28%);
+
+    --border-subtle: rgba(0, 0, 0, 0.15);
+    --border-input: #ccc;
+    --grid-line: rgba(0, 0, 0, 0.05);
+
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+    /* Light Mode Glass */
+    --bg-glass-btn: rgba(255, 255, 255, 0.8);
+    --shadow-glass-btn: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+}
+
+/* Shared styling for the logo */
+.brand-logo {
+    width: 6vw;
+    height: auto;
+    object-fit: contain;
+}
+
+/* --- DEFAULT STATE (Dark Mode) --- */
+/* Hide the light logo by default */
+.brand-light {
+    display: none !important;
+}
+
+/* Show the dark logo by default */
+.brand-dark {
+    display: block !important;
+}
+
+/* --- ACTIVE LIGHT MODE --- */
+/* When <html class="light"> exists, swap visibility */
+html.light .brand-light {
+    display: block !important;
+}
+
+html.light .brand-dark {
+    display: none !important;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    margin: 0;
+    padding: var(--spacing-md);
+}
+
+/* SETTINGS FORM LABEL WITH INPUT */
+.form-input {
+    color: var(--text-main);
+    font-family: 'Fira Code', 'Roboto Mono', monospace;
+}
+
+
+.form-input input {
+    flex: 1;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--border-input);
+    border-radius: 6px;
+    width: fit-content;
+    background-color: transparent;
+    color: var(--text-main);
+    font-family: 'Fira Code', 'Roboto Mono', monospace;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input input::placeholder {
+    color: var(--text-muted);
+}
+
+
+.form-input input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: fit-content;
+    border-radius: 9999px;
+    border-color: var(--text-main);
+    background-color: var(--text-main);
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.form-input input[type="checkbox"]::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    background-color: var(--text-main);
+    transition: transform 0.3s ease;
+}
+
+.form-input input[type="checkbox"]:checked {
+    background-color: var(--secondary-color);
+}
+
+.form-input input[type="color"] {
+
+    width: 30%;
+    padding: 0.4rem;
+    cursor: pointer;
+    background-color: transparent;
+}
+
+/* Chrome/Safari/Edge: Remove internal padding and style the swatch */
+.form-input input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.form-input input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 0.4rem;
+}
+
+/* Firefox: Style the swatch */
+.form-input input[type="color"]::-moz-color-swatch {
+    border: none;
+    border-radius: 0.4rem;
+}
+
+/* BACKGROUND GRID */
+.grid-section {
+    position: relative;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    min-height: 100vh;
+}
+
+.grid-section:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image:
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 25px 25px;
+    z-index: 0;
+    opacity: 0.5;
+    min-height: 100vh;
+}
+
+.grid-section .content {
+    position: relative;
+    z-index: 1;
+}
+
+/* MAIN STYLED CARD */
+.main-card {
+    background: none;
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: var(--spacing-md);
+    text-align: left;
+    justify-content: space-between;
+}
+
+.main-card h3 {
+    font-size: 2rem;
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--text-main);
+}
+
+.main-card p {
+    font-size: 1rem;
+    opacity: 0.8;
+    margin-bottom: var(--spacing-sm);
+}
+
+/* MAIN STYLED INNER CARD */
+.inner-main-card {
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: var(--spacing-md);
+    text-align: left;
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+/* FULL SCREEN OVERLAY */
+.fullscreen-overlay {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    background-color: var(--bg-main);
+    padding: 2rem;
+    margin: 0 !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    overflow-y: auto !important;
+    /* Allow scrolling inside the card */
+}
+
+/* Adjust inner card height when in fullscreen */
+.fullscreen-overlay .inner-main-card {
+    max-height: 90vh !important;
+}
+
+/* Ensure map takes full space when in fullscreen */
+.fullscreen-overlay [name="map-canvas"],
+.fullscreen-overlay img {
+    width: auto !important;
+    height: 100% !important;
+    min-height: 90vh;
+    /* Force it to grow */
+    display: flex;
+    /* Helps align content if needed */
+    justify-content: center;
+    align-items: center;
+}
+
+
+/* Active Map Button State - Uses Primary Color */
+.active-brand-red {
+    background-color: var(--primary-color) !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--primary-color) !important;
+    opacity: 1 !important;
+    box-shadow: 0 0 10px rgba(232, 63, 63, 0.4);
+}
+
+
+/* =========================================
+   TITLES
+   ========================================= */
+.cool-title-mini {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -1px;
+    color: var(--text-main);
+    -webkit-text-fill-color: var(--text-main);
+    text-shadow: -2px -2px 0 var(--secondary-color);
+    margin-bottom: var(--spacing-md);
+}
+
+.cool-subtitle-mini {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -1px;
+    color: var(--primary-color);
+    -webkit-text-stroke: 1px var(--primary-color);
+    -webkit-text-fill-color: var(--primary-color);
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.cool-subtitle-mini-blue {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -1px;
+    color: var(--light-brand-blue);
+    -webkit-text-stroke: 0.5px var(--secondary-color);
+    -webkit-text-fill-color: var(--secondary-color);
+    font-size: 1.5rem;
+    margin: var(--spacing-sm);
+}
+
+/* =========================================
+   BUTTONS
+   ========================================= */
+.primary-button {
+    background-color: var(--primary-color);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 1.1rem;
+    padding: 0.8rem 1.8rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast),
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast);
+    box-shadow: 0 0 0 0 rgba(232, 63, 63, 0.7);
+    position: relative;
+    overflow: hidden;
+}
+
+.primary-button:hover {
+    background-color: var(--primary-color);
+    color: var(--bg-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 5px rgba(232, 63, 63, 0.2);
+}
+
+.secondary-button {
+    background-color: var(--text-main);
+    color: var(--text-inverse);
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 1.1rem;
+    padding: 0.8rem 1.8rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast),
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast);
+    box-shadow: 0 0 0 0 rgba(232, 63, 63, 0.7);
+    position: relative;
+    overflow: hidden;
+}
+
+.secondary-button:hover {
+    background-color: var(--secondary-color);
+    color: var(--bg-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 5px rgba(51, 51, 49, 0.2);
+}
+
+.uk-icon-button {
+    color: var(--primary-color);
+    border: none !important;
+    box-shadow: none !important;
+    /* Removes glow/shadow if present */
+    background: transparent;
+    /* ensures no background box */
+    padding: none;
+    transition: filter var(--transition-fast, 0.3s), color var(--transition-fast, 0.3s);
+}
+
+.uk-icon-button:hover {
+    /* Slight glow effect using the primary color */
+    filter: drop-shadow(0 0 0.5rem var(--secondary-color));
+}
+
+/* btn-touch-target used to increase the clickable area of an icon button on the drag-handle */
+.btn-touch-target {
+    position: relative;
+}
+
+.btn-touch-target::after {
+    content: '';
+    position: absolute;
+    top: -1.5rem;
+    bottom: -1.5rem;
+    left: -1.5rem;
+    right: -1.5rem;
+
+    /* Ensure it sits above the drag handle background */
+    z-index: 1;
+    cursor: pointer;
+}
+
+/* Custom Tooltip Styling for Map Buttons */
+.uk-tooltip {
+    background-color: rgba(20, 20, 20, 0.9) !important;
+    /* Dark semi-transparent bg */
+    color: #ffffff !important;
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    text-transform: none;
+    /* Prevent uppercase transformation if set globally */
+    z-index: 10000;
+    /* Ensure it appears above the map overlay */
+}
+
+
+.uk-tooltip.uk-active {
+    animation: uk-fade 0.2s ease-out;
+}
+
+
+/* FILTER BUTTON */
+.tag-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.filter-btn {
+    background-color: rgba(238, 242, 243, 0.05);
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: background-color 0.2s, transform 0.2s;
+    position: relative;
+}
+
+
+.filter-btn.active {
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+}
+
+.filter-btn.inactive {
+    border: 1px solid var(--text-muted);
+    color: var(--text-muted);
+}
+
+.filter-btn:hover,
+.filter-btn.active:hover,
+.filter-btn.inactive:hover {
+    background-color: var(--primary-color);
+    border: 1px solid var(--text-main);
+    color: var(--text-main);
+    transform: translateY(-1px);
+    cursor: pointer;
+}
+
+.info-btn {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    font-size: 1.0rem;
+    font-weight: bold;
+    border: 1px solid var(--text-muted);
+    color: var(--text-muted);
+}
+
+.glass-icon-btn {
+    /* Layout */
+    width: 2vw;
+    /* Matches w-[2vw] */
+    min-width: 32px;
+    /* Safety: don't get too small on mobile */
+    aspect-ratio: 1 / 1;
+    /* Ensures it stays a square circle/box */
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    /* Or 6px/8px if you prefer squares */
+
+    /* The "Vibe" */
+    background-color: var(--bg-glass-btn);
+    backdrop-filter: blur(4px);
+    /* Matches backdrop-blur */
+    -webkit-backdrop-filter: blur(4px);
+    /* Safari support */
+    box-shadow: var(--shadow-glass-btn);
+    /* Matches shadow-md */
+    border: 1px solid var(--border-subtle);
+    /* Optional: adds definition */
+
+    /* Text/Icon Color */
+    color: var(--text-main);
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+/* Hover Effect (Bonus) */
+.glass-icon-btn:hover {
+    transform: translateY(-2px);
+    /* Make it slightly more opaque on hover */
+    background-color: var(--text-main);
+    color: var(--bg-main);
+}
+
+.card-border {
+    border: 1px solid var(--border-subtle);
+}
+
+/* =========================================
+   TERMINAL CONTAINER
+   ========================================= */
+.terminal-container {
+    background-color: var(--term-bg);
+    color: var(--term-text);
+    border: 1px solid var(--term-border);
+    box-shadow: var(--term-shadow);
+
+    padding: var(--spacing-lg);
+    font-family: var(--font-mono);
+    /* Inherit from your main vars */
+    font-size: 0.95rem;
+    line-height: 1.6;
+    position: relative;
+    border-radius: 6px;
+    /* Optional: slight radius looks cleaner in light mode */
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* =========================================
+   SYNTAX HIGHLIGHTING CLASSES
+   ========================================= */
+
+.tomorrow-night-black {
+    color: var(--term-black);
+}
+
+.tomorrow-night-red {
+    color: var(--term-red);
+}
+
+.tomorrow-night-green {
+    color: var(--term-green);
+}
+
+.tomorrow-night-yellow {
+    color: var(--term-yellow);
+}
+
+.tomorrow-night-blue {
+    color: var(--term-blue);
+}
+
+.tomorrow-night-magenta {
+    color: var(--term-magenta);
+}
+
+.tomorrow-night-cyan {
+    color: var(--term-cyan);
+}
+
+.tomorrow-night-white {
+    color: var(--term-white);
+}
+
+
+/* =========================================
+   TASK STATUS
+   ========================================= */
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+}
+
+.status-badge.inactive,
+.status-badge.unknown {
+    background-color: rgba(238, 242, 243, 0.05);
+    color: var(--text-muted);
+}
+
+.status-badge.accepted {
+    background-color: #1951a0;
+    color: #5f7da6;
+}
+
+.status-badge.active,
+.status-badge.running {
+    background-color: #043d40;
+    color: #219da4;
+}
+
+.status-badge.completed {
+    background-color: #33a06f33;
+    color: #33a06f;
+}
+
+.status-badge.failed,
+.status-badge.aborted {
+    background-color: #e74c3c33;
+    color: #e74c3c;
+}
+
+.status-badge.cancelled {
+    background-color: #f1c40f33;
+    color: #f1c40f;
+}
+
+/* TASK TIMER */
+.slick-timer {
+    /* Key property: prevents jittering numbers */
+    font-variant-numeric: tabular-nums;
+    background-color: #33a06f33;
+    color: #33a06f;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: 'Roboto Mono', monospace;
+
+    /* Spacing and Shape */
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #33a06f83;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    line-height: 1;
+}
+
+/* =========================================
+   Resize Handle
+   ========================================= */
+
+/* The clickable area for resizing */
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: nwse-resize;
+    /* Diagonal cursor */
+    z-index: 10;
+    touch-action: none;
+    /* Prevents scrolling on touch */
+}
+
+/* Visual corner accent using theme variables */
+.resize-handle::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 0 10px 10px;
+    /* Use theme variable for the corner color */
+    border-color: transparent transparent var(--border-subtle) transparent;
+    /* Smooth transition using your theme timing */
+    transition: border-color var(--transition-fast, 0.3s);
+}
+
+/* Hover effect using secondary theme color */
+.resize-handle:hover::after {
+    border-color: transparent transparent var(--secondary-color) transparent;
+}
+
+
+/* =========================================
+   DIALOG & OVERLAY
+   ========================================= */
+
+dialog {
+    margin: 0;
+
+    background-color: var(--text-muted);
+    color: var(--text-inverse);
+    border: 2px solid var(--text-muted);
+    border-radius: 2px;
+    /* Make sure it sits on top */
+    position: fixed;
+    min-width: 10vw;
+}
+
+.custom-overlay {
+    display: none;
+    /* Hidden initially */
+    position: fixed;
+    /* Stays in place when scrolling */
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    height: 100vh;
+    place-items: center;
+    backdrop-filter: blur(2px);
+}
+
+/* 2. The Modal Content Box */
+.modal-box {
+    background: var(--text-inverse);
+    color: var(--text-main);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    max-width: 50vw;
+    width: 90%;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

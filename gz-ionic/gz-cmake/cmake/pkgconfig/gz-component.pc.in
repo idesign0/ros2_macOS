@@ -1,0 +1,12 @@
+prefix=${pcfiledir}/@PC_CONFIG_RELATIVE_PATH_TO_PREFIX@
+libdir=@PC_LIBDIR@
+includedir=@PC_INCLUDEDIR@
+
+Name: Gazebo @GZ_DESIGNATION@ @component_name@
+Description: A set of @GZ_DESIGNATION@ @component_name@ classes for robot applications
+Version: @PROJECT_VERSION_FULL_NO_SUFFIX@
+Requires: @component_pkgconfig_requires@
+Requires.private: @component_pkgconfig_requires_private@
+Libs: -L${libdir} @component_pkgconfig_lib@ @component_pkgconfig_lib_deps@
+Libs.private: @component_pkgconfig_lib_deps_private@
+CFLags: -I${includedir} @component_pkgconfig_cflags@

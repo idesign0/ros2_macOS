@@ -1,0 +1,21 @@
+# Colcon build
+build/
+install/
+lcov/
+logs/
+
+# Bazel build
+bazel-*
+user.bazelrc
+
+# Python related
+__pycache__/
+**/venv/
+
+# Development environments
+.vscode/
+.idea/
+
+# Sphinx / Doxygen related
+_build
+generated

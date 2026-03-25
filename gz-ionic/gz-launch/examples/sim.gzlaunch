@@ -1,0 +1,12 @@
+<?xml version='1.0'?>
+<gz version='1.0'>
+  <executable name='sim-server'>
+    <command>gz sim -s</command>
+  </executable>
+
+  <executable name='sim-client'>
+    <command>gz sim -g</command>
+    <auto_restart>true</auto_restart>
+  </executable>
+
+</gz>

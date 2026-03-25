@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>apriltag_tools</name>
+  <version>3.1.0</version>
+  <description>misc tools for working with apriltags under ROS2</description>
+  <maintainer email="bernd.pfrommer@gmail.com">Bernd Pfrommer</maintainer>
+  <license>Apache2</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ros_environment</buildtool_depend>  <!-- ROS_VERSION + ROS_DISTRO -->
+
+  <depend>apriltag_detector</depend>
+  <depend>apriltag_draw</depend>
+  <depend>apriltag_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rosbag2_transport</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_clang_format</test_depend>
+
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>

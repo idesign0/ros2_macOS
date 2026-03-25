@@ -1,0 +1,15 @@
+#include "autoware_auto_planning_msgs/msg/PathChangeModuleId.idl"
+#include "std_msgs/msg/Header.idl"
+
+module autoware_auto_planning_msgs {
+  module msg {
+
+    @verbatim (language="comment", text=
+      "States the change information of current module.")
+    struct PathChangeModule {
+      std_msgs::msg::Header header;
+
+      autoware_auto_planning_msgs::msg::PathChangeModuleId module;
+    };
+  };
+};

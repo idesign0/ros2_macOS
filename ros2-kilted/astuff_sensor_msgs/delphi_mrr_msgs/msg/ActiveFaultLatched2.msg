@@ -1,0 +1,7 @@
+std_msgs/Header header
+
+bool ipma_pcan_data_range_check
+bool ipma_pcan_missing_msg
+bool vin_signal_compare_failure
+bool module_not_configured_error
+bool car_cfg_not_configured_error

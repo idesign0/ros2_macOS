@@ -1,0 +1,6 @@
+cx_pddl_interfaces/Action action
+---
+bool success
+bool sat
+string error
+string[] unsatisfied_conditions

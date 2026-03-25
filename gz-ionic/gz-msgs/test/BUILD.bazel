@@ -1,0 +1,28 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+integration_tests = glob(
+    include = ["integration/*.cc"],
+    exclude = ["integration/gz_TEST.cc"],
+)
+
+[cc_test(
+    name = "INTEGRATION_%s" % test.replace("integration/", "").replace("/", "_").replace(".cc", ""),
+    srcs = ["%s" % test],
+    data = glob(["desc/**"]),
+    defines = ['GZ_MSGS_TEST_PATH=\\"test\\"'],
+    deps = [
+        "//:gz-msgs",
+        "//:gzmsgs_cc_proto",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@gz-math",
+    ],
+) for test in integration_tests]

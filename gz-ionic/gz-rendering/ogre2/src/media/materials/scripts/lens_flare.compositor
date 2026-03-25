@@ -1,0 +1,34 @@
+compositor_node LensFlareNode
+{
+  in 0 rt_input
+  in 1 rt_output
+
+  target rt_output
+  {
+    pass render_quad
+    {
+      // No clear since this pass overwrites all content
+      load
+      {
+        all dont_care
+      }
+      store
+      {
+        depth   dont_care
+        stencil dont_care
+      }
+
+      profiling_id "LensFlare Effect"
+
+      // kLensFlareNodePassQuad
+      identifier 98744413
+
+      material LensFlare
+
+      input 0 rt_input
+    }
+  }
+
+  out 0 rt_output
+  out 1 rt_input
+}

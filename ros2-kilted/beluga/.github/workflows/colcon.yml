@@ -1,0 +1,187 @@
+name: CI pipeline (Colcon)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup python
+        uses: actions/setup-python@v6
+        with:
+          cache: pip
+
+      - name: Install python packages
+        run: pip install pre-commit==2.20.0
+
+      - name: Lint
+        run: pre-commit run --all-files --verbose --show-diff-on-failure
+
+  build-test:
+    runs-on: ubuntu-22.04
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro:
+          - humble
+          - jazzy
+          - kilted
+        include:
+          - ros_distro: humble
+            upload_artifacts: true
+    container:
+      image: ros:${{ matrix.ros_distro }}-ros-base
+    steps:
+      - name: Install debian packages
+        run: >-
+          sudo apt-get update && sudo apt-get install -y \
+            gcovr \
+            git \
+            lcov \
+            python3-colcon-common-extensions \
+            python3-colcon-coveragepy-result \
+            python3-colcon-lcov-result \
+            python3-colcon-mixin \
+            python3-pip \
+            python3-vcstool
+
+      - name: Install python packages
+        run: |
+             export PIP_BREAK_SYSTEM_PACKAGES=1
+             pip install pre-commit==2.20.0 \
+             h5py==3.11.0
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          path: ${{ github.workspace }}/src/beluga
+
+      - name: Import external repositories
+        working-directory: ${{ github.workspace }}/src
+        run: |
+          vcs import < ./beluga/docker/files/${{ matrix.ros_distro }}.repos
+          rm -rf ./flatland
+
+      - name: Install dependencies
+        run: |
+          . /opt/ros/${{ matrix.ros_distro }}/setup.sh
+          export PIP_BREAK_SYSTEM_PACKAGES=1
+          rosdep update
+          sudo -E rosdep install -r --from-paths src -y -i -t exec -t build -t doc -t test
+          colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/c75e4b34a3959524564afb584e2aa33c7eec323c/index.yaml
+          colcon mixin update default
+
+      - name: Setup compiler cache
+        uses: Chocobo1/setup-ccache-action@v1
+        with:
+          api_token: ${{ secrets.GITHUB_TOKEN }}
+          update_packager_index: false
+          override_cache_key: ccache-${{ matrix.ros_distro }}-${{ github.head_ref || github.ref_name }}
+          override_cache_key_fallback: |
+            ccache-${{ matrix.ros_distro }}-${{ github.base_ref || github.ref_name }}
+            ccache-${{ matrix.ros_distro }}-
+
+      - name: Build and test
+        working-directory: ${{ github.workspace }}
+        run: ./src/beluga/tools/build-and-test.sh
+
+      - name: Perform static analysis
+        working-directory: ${{ github.workspace }}
+        run: ./src/beluga/tools/run-clang-tidy.sh
+
+      - name: Enforce code coverage
+        working-directory: ${{ github.workspace }}
+        run: ./src/beluga/tools/check-code-coverage.sh
+
+      - name: Upload code coverage report
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./lcov/total_coverage.info,./coveragepy/.coverage
+          codecov_yml_path: ./src/beluga/.codecov.yml
+          disable_search: true
+          name: codecov-umbrella
+          fail_ci_if_error: true
+          verbose: true
+        if: ${{ matrix.upload_artifacts && !github.event.pull_request.head.repo.fork }}
+
+  build-docs:
+    needs: build-test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup python
+        uses: actions/setup-python@v6
+        with:
+          cache: pip
+
+      - name: Install tooling dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            doxygen \
+            git \
+            graphviz \
+            make \
+            texlive-latex-base
+          pip install -r docs/requirements.txt
+
+      - name: Build documentation
+        run: make -C docs html
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: docs-${{ github.sha }}
+          path: ./docs/_build/html/
+          overwrite: true
+          include-hidden-files: true
+          retention-days: 7
+
+  deploy-docs:
+    needs: build-docs
+    runs-on: ubuntu-22.04
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - name: Checkout documentation branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+
+      - name: Configure username
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Remove current documentation
+        run: |
+          git rm -rf .
+
+      - name: Download documentation artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: docs-${{ github.sha }}
+          merge-multiple: true
+
+      - name: Deploy documentation
+        env:
+          COMMIT_MESSAGE: "Triggered by commit ${{ github.sha }}."
+          COMMIT_CO_AUTHOR: "Co-authored-by: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>"
+        run: |
+          git add --all
+          git commit -m "Update documentation" -m "${{ env.COMMIT_MESSAGE }}" -m "${{ env.COMMIT_CO_AUTHOR }}" || true
+          git push

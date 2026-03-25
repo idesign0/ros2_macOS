@@ -1,0 +1,6 @@
+string pddl_instance
+string type
+---
+bool success
+string error
+string[] objects

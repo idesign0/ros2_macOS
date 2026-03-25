@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="cx_file_load_plugin">
+    <class type="cx::FileLoadPlugin" base_class_type="cx::ClipsPlugin">
+      <description>CLIPS plugin that can load CLIPS code via load* and batch*</description>
+    </class>
+  </library>
+</class_libraries>

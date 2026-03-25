@@ -1,0 +1,11 @@
+libgz-cmake4-dev
+libgz-math8-dev
+libgz-tools2-dev
+libgz-utils3-cli-dev
+libprotobuf-dev
+libprotoc-dev
+libtinyxml2-dev
+protobuf-compiler
+ruby
+python3-pytest
+python3-protobuf

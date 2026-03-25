@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>auto_apms_behavior_tree</name>
+  <version>1.5.0</version>
+  <description>Standard AutoAPMS behavior tree nodes and deployment tools</description>
+  <maintainer email="mue.robin@icloud.com">Robin Müller</maintainer>
+  <license>Apache-2.0</license>
+  <url>https://autoapms.github.io/auto-apms-guide/</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>ament_index_python</depend>
+  <depend>rcl_interfaces</depend>
+  <depend>std_srvs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>rclcpp_action</depend>
+  <depend>rclcpp_components</depend>
+  <depend>generate_parameter_library</depend>
+  <depend>auto_apms_util</depend>
+  <depend>auto_apms_interfaces</depend>
+  <depend>auto_apms_behavior_tree_core</depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>ros2cli</exec_depend>
+  <exec_depend>ros2param</exec_depend>
+
+  <test_depend>ament_cmake_copyright</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,13 @@
+# CMake folders
+build
+build_*
+
+# OS generated files
+.DS_Store
+*.swp
+
+# Python generaated files
+*.pyc
+
+# Bazel generated files
+bazel-*

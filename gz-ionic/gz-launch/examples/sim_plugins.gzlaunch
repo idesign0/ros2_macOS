@@ -1,0 +1,347 @@
+<?xml version='1.0'?>
+<!-- Usage: gz launch sim_plugins.gzlaunch [worldName:=<worldName>]
+
+     The [worldName] command line argument is optional. If left blank, or not
+     specified, then "diff_drive" is used for the world name.
+
+    Example that loads the shapes.sdf world instead of diff_drive:
+
+      gz launch sim_plugins.gzlaunch worldName:=shapes
+-->
+<%
+  # Check if worldName is not defined or is empty/nil
+  if !defined?(worldName) || worldName == nil || worldName.empty?
+    worldName = "diff_drive"
+  end
+%>
+
+<!-- Requires gz-sim branch support_loading_plugins_programmatically -->
+<gz version='1.0'>
+  <!-- Load a joystick plugin that will read from a device and output to a
+       topic -->
+  <plugin name="gz::launch::Joystick"
+          filename="gz-launch-joystick">
+    <device>/dev/input/js0</device>
+    <sticky_buttons>false</sticky_buttons>
+    <dead_zone>0.05</dead_zone>
+    <rate>60</rate>
+    <accumulation_rate>1000</accumulation_rate>
+  </plugin>
+
+  <!-- Load a plugin that transforms a joystick message to a
+       twist message -->
+  <plugin name="gz::launch::JoyToTwist"
+          filename="gz-launch-joytotwist">
+    <input_topic>/joy</input_topic>
+    <output_topic>/model/vehicle_green/cmd_vel</output_topic>
+  </plugin>
+
+  <!-- Load a plugin that transforms a joystick message to a
+       twist message -->
+  <plugin name="gz::launch::JoyToTwist"
+          filename="gz-launch-joytotwist">
+    <input_topic>/joy</input_topic>
+    <output_topic>/model/vehicle_blue/cmd_vel</output_topic>
+  </plugin>
+
+  <!-- Run the gazebo server with a set of plugins -->
+  <plugin name="gz::launch::SimServer"
+          filename="gz-launch-sim">
+    <world_file><%= worldName %>.sdf</world_file>
+    <run>true</run>
+    <!-- 3000 Hz == 300% RTF == 3x real time -->
+    <update_rate>3000</update_rate>
+    <levels>false</levels>
+    <record>
+      <enabled>true</enabled>
+      <!-- Use the <path> element to specify where to create the log file on
+           disk. Leaving this empty will cause Gazebo to log into the default
+           location of ~/.gz/sim/log -->
+      <path>/tmp/gz-launch-demo</path>
+
+      <!-- Use the <overwrite> element to overwrite <path> in case it already
+           exists. Otherwise, logs will be recorded to a new path that has a
+           number appended. -->
+      <overwrite>true</overwrite>
+
+      <!-- Use the <compress> element to zip recorded files in the end of the
+           run. -->
+      <compress>true</compress>
+
+      <!-- Use the <resources> element to store all model resources used during
+           simulation. -->
+      <resources>true</resources>
+    </record>
+    <seed>123</seed>
+    <!-- The diff_drive SDF world has the following plugins defined.
+         Uncomment this if you are using a world that doesn't include the
+         necessary plugin
+    <plugin entity_name="<%= worldName %>"
+            entity_type="world"
+            filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin entity_name="<%= worldName %>"
+            entity_type="world"
+            filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+
+    <plugin entity_name="vehicle_green"
+            entity_type="model"
+            filename="gz-sim-diff-drive-system"
+            name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>1.25</wheel_separation>
+      <wheel_radius>0.3</wheel_radius>
+    </plugin>
+
+    <plugin entity_name="vehicle_blue"
+            entity_type="model"
+            filename="gz-sim-diff-drive-system"
+            name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>1.25</wheel_separation>
+      <wheel_radius>0.3</wheel_radius>
+    </plugin>
+-->
+
+  </plugin>
+  <executable_wrapper>
+    <plugin name="gz::launch::SimGui"
+          filename="gz-launch-simgui">
+
+      <!-- Override default window title (Gazebo) -->
+      <window_title>Gazebo Launch</window_title>
+
+      <!-- Override default icon.
+           In this example, setting to a resource file shipped with Gazebo GUI -->
+      <window_icon>:/qml/images/drawer.png</window_icon>
+
+      <plugin filename="MinimalScene" name="3D View">
+          <gz-gui>
+              <title>3D View</title>
+              <property type="bool" key="showTitleBar">false</property>
+              <property type="string" key="state">docked</property>
+          </gz-gui>
+          <engine>ogre2</engine>
+          <scene>scene</scene>
+          <ambient_light>0.4 0.4 0.4</ambient_light>
+          <background_color>0.8 0.8 0.8</background_color>
+          <camera_pose>-6 0 6 0 0.5 0</camera_pose>
+      </plugin>
+
+      <!-- Plugins that add functionality to the scene -->
+      <plugin filename="EntityContextMenuPlugin" name="Entity context menu">
+          <gz-gui>
+              <property key="state" type="string">floating</property>
+              <property key="width" type="double">5</property>
+              <property key="height" type="double">5</property>
+              <property key="showTitleBar" type="bool">false</property>
+          </gz-gui>
+      </plugin>
+
+      <plugin filename="GzSceneManager" name="Scene Manager">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="width" type="double">5</property>
+              <property key="height" type="double">5</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+          </gz-gui>
+      </plugin>
+
+      <plugin filename="InteractiveViewControl" name="Interactive view control">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="width" type="double">5</property>
+              <property key="height" type="double">5</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+          </gz-gui>
+      </plugin>
+
+      <plugin filename="CameraTracking" name="Camera Tracking">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="width" type="double">5</property>
+              <property key="height" type="double">5</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+          </gz-gui>
+      </plugin>
+
+      <plugin filename="MarkerManager" name="Marker manager">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="width" type="double">5</property>
+              <property key="height" type="double">5</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+          </gz-gui>
+      </plugin>
+
+      <plugin filename="SelectEntities" name="Select Entities">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="width" type="double">5</property>
+              <property key="height" type="double">5</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+          </gz-gui>
+      </plugin>
+
+      <plugin filename="Spawn" name="Spawn Entities">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="width" type="double">5</property>
+              <property key="height" type="double">5</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+          </gz-gui>
+      </plugin>
+
+      <plugin filename="VisualizationCapabilities" name="Visualization Capabilities">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="width" type="double">5</property>
+              <property key="height" type="double">5</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+          </gz-gui>
+      </plugin>
+
+      <!-- World control -->
+      <plugin filename="WorldControl" name="World control">
+          <gz-gui>
+              <title>World control</title>
+              <property type="bool" key="showTitleBar">false</property>
+              <property type="bool" key="resizable">false</property>
+              <property type="double" key="height">72</property>
+              <property type="double" key="z">1</property>
+              <property type="string" key="state">floating</property>
+              <anchors target="3D View">
+                  <line own="left" target="left"/>
+                  <line own="bottom" target="bottom"/>
+              </anchors>
+          </gz-gui>
+          <play_pause>true</play_pause>
+          <step>true</step>
+          <start_paused>true</start_paused>
+          <use_event>true</use_event>
+      </plugin>
+
+      <!-- World statistics -->
+      <plugin filename="WorldStats" name="World stats">
+          <gz-gui>
+              <title>World stats</title>
+              <property type="bool" key="showTitleBar">false</property>
+              <property type="bool" key="resizable">false</property>
+              <property type="double" key="height">110</property>
+              <property type="double" key="width">290</property>
+              <property type="double" key="z">1</property>
+              <property type="string" key="state">floating</property>
+              <anchors target="3D View">
+                  <line own="right" target="right"/>
+                  <line own="bottom" target="bottom"/>
+              </anchors>
+          </gz-gui>
+          <sim_time>true</sim_time>
+          <real_time>true</real_time>
+          <real_time_factor>true</real_time_factor>
+          <iterations>true</iterations>
+      </plugin>
+
+      <!-- Insert simple shapes -->
+      <plugin filename="Shapes" name="Shapes">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="x" type="double">0</property>
+              <property key="y" type="double">0</property>
+              <property key="width" type="double">250</property>
+              <property key="height" type="double">50</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+              <property key="cardBackground" type="string">#666666</property>
+          </gz-gui>
+      </plugin>
+
+      <!-- Insert lights -->
+      <plugin filename="Lights" name="Lights">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="x" type="double">250</property>
+              <property key="y" type="double">0</property>
+              <property key="width" type="double">150</property>
+              <property key="height" type="double">50</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+              <property key="cardBackground" type="string">#666666</property>
+          </gz-gui>
+      </plugin>
+
+      <!-- Translate / rotate -->
+      <plugin filename="TransformControl" name="Transform control">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="x" type="double">0</property>
+              <property key="y" type="double">50</property>
+              <property key="width" type="double">250</property>
+              <property key="height" type="double">50</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+              <property key="cardBackground" type="string">#777777</property>
+          </gz-gui>
+      </plugin>
+
+      <!-- Screenshot -->
+      <plugin filename="Screenshot" name="Screenshot">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="x" type="double">250</property>
+              <property key="y" type="double">50</property>
+              <property key="width" type="double">50</property>
+              <property key="height" type="double">50</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+              <property key="cardBackground" type="string">#777777</property>
+          </gz-gui>
+      </plugin>
+
+      <!-- Copy/Paste -->
+      <plugin filename="CopyPaste" name="CopyPaste">
+          <gz-gui>
+              <property key="resizable" type="bool">false</property>
+              <property key="x" type="double">300</property>
+              <property key="y" type="double">50</property>
+              <property key="width" type="double">100</property>
+              <property key="height" type="double">50</property>
+              <property key="state" type="string">floating</property>
+              <property key="showTitleBar" type="bool">false</property>
+              <property key="cardBackground" type="string">#777777</property>
+          </gz-gui>
+      </plugin>
+
+      <!-- Inspector -->
+      <plugin filename="ComponentInspector" name="Component inspector">
+          <gz-gui>
+              <property type="bool" key="showTitleBar">false</property>
+              <property type="string" key="state">docked</property>
+          </gz-gui>
+      </plugin>
+
+      <!-- Entity tree -->
+      <plugin filename="EntityTree" name="Entity tree">
+          <gz-gui>
+              <property type="bool" key="showTitleBar">false</property>
+              <property type="string" key="state">docked</property>
+          </gz-gui>
+      </plugin>
+
+
+    </plugin>
+  </executable_wrapper>
+
+</gz>

@@ -1,0 +1,71 @@
+/*
+ * Copyright (C) 2017 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "CameraLensProtos";
+
+/// \ingroup gz.msgs
+/// \interface CameraLens
+/// \brief Information and control over a camera lens element
+
+import "gz/msgs/header.proto";
+
+message CameraLens
+{
+  /// \brief Optional header data
+  Header header = 1;
+
+  /// \brief Type of projection of the lens
+  ///        possible values are "gnomonical", "stereographic", "equidistant",
+  ///        "equisolid_angle", "stereographic", "custom".
+  ///        If you set this value to "custom" you need to specify at least one
+  ///        of the `c1`, `c2`, `c3`, `f` or `fun`.
+  string type = 2;
+
+  /// \brief Linear image scaling factor
+  double c1 = 3;
+
+  /// \brief Angle scaling factor
+  double c2 = 4;
+
+  /// \brief Angle offset factor
+  double c3 = 5;
+
+  /// \brief Linear scaling factor, unlike `c1`, will be adjusted to match hfov
+  ///        if scale_to_fov is set to `true`.
+  double f = 6;
+
+  /// \brief Angle modification function
+  //         possible values are "tan", "sin" and "id".
+  string fun = 7;
+
+  /// \brief Scale image to fit horizontal FOV
+  bool scale_to_hfov = 8;
+
+  /// \brief Everything outside of this angle will be hidden,
+  ///        the angle is counted from camera's X (forward) axis.
+  double cutoff_angle = 9;
+
+  /// \brief Horizontal field of view in radians.
+  double hfov = 10;
+
+  /// \brief Size of cube map texture,
+  ///        used to store intermediate rendering result.
+  int32 env_texture_size = 11;
+}

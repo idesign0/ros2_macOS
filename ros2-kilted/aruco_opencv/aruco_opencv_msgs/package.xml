@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<?xml-model
+  href="http://download.ros.org/schema/package_format3.xsd"
+  schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>aruco_opencv_msgs</name>
+  <version>6.1.1</version>
+  <description>
+    Message definitions for aruco_opencv package.
+  </description>
+
+  <maintainer email="support@fictionlab.pl">Fictionlab</maintainer>
+
+  <license>MIT</license>
+
+  <author email="blazej@fictionlab.pl">Błażej Sowa</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_cmake_lint_cmake</test_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>

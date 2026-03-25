@@ -1,0 +1,48 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+cc_test(
+    name = "INTEGRATION_console",
+    srcs = ["integration/console.cc"],
+    env = {
+        "GZ_BAZEL": "1",
+    },
+    deps = [
+        "//:gz-common",
+        "//testing",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "INTEGRATION_mesh",
+    srcs = ["integration/mesh.cc"],
+    data = [
+        "data/box.dae",
+        "data/box.fbx",
+        "data/box.glb",
+        "data/box.mtl",
+        "data/box.obj",
+    ],
+    env = {
+        "GZ_BAZEL": "1",
+    },
+    deps = [
+        "//:gz-common",
+        "//graphics",
+        "//testing",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@gz-math//:gz-math",
+    ],
+)
+
+exports_files(["data"])

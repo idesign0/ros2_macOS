@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="cx_executive_plugin">
+    <class type="cx::ExecutivePlugin" base_class_type="cx::ClipsPlugin">
+      <description>Executive plugin for continuously running environments</description>
+    </class>
+  </library>
+</class_libraries>

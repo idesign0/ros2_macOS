@@ -1,0 +1,63 @@
+<?xml version='1.0'?>
+<gz version='1.0'>
+
+  <!-- Load a joystick plugin that will read from a device and output to a
+       topic -->
+  <plugin name="gz::launch::Joystick"
+          filename="gz-launch-joystick">
+    <device>/dev/input/js0</device>
+    <sticky_buttons>false</sticky_buttons>
+    <dead_zone>0.05</dead_zone>
+    <rate>60</rate>
+    <accumulation_rate>1000</accumulation_rate>
+  </plugin>
+
+  <!-- Load a plugin that transforms a joystick message to a
+       twist message -->
+  <plugin name="gz::launch::JoyToTwist"
+          filename="gz-launch-joytotwist">
+    <input_topic>/joy</input_topic>
+    <output_topic>/model/vehicle_green/cmd_vel</output_topic>
+  </plugin>
+
+  <!-- Load a plugin that transforms a joystick message to a
+       twist message -->
+  <plugin name="gz::launch::JoyToTwist"
+          filename="gz-launch-joytotwist">
+    <!-- Incoming topic that publishes gz::msgs::Joystick messages -->
+    <input_topic>/joy</input_topic>
+
+    <!-- Outgoing topic that publishes gz::msgs::Twist messages -->
+    <output_topic>/model/vehicle_blue/cmd_vel</output_topic>
+
+    <!-- Button which must be pressed to enable publishing, defaults to 0 -->
+    <enable_button>0</enable_button>
+
+    <!-- Joystick axis for linear control of XYZ, defaults to [1 0 0]-->
+    <axis_linear>1 0 0</axis_linear>
+
+    <!-- Scale for linear XYZ, defaults to [0.5 0 0] -->
+    <scale_linear>2 0 0</scale_linear>
+
+    <!-- Scale for linear XYZ with turbo mode, defaults [0.5 0 0] -->
+    <scale_linear_turbo>5 0 0</scale_linear_turbo>
+
+    <!-- Joystick axis for angular control, defaults to [0 0 0] -->
+    <axis_angular>0 0 1</axis_angular>
+
+    <!-- Scale for angular control, defaults to [0 0 0.5]-->
+    <scale_angular>0 0 0.5</scale_angular>
+
+    <!-- Scale for angular control with turbo mode, defaults [0 0 0.5] -->
+    <scale_angular_turbo>0 0 0.5</scale_angular_turbo>
+
+    <!-- Button which must be pressed to enable turbo, defaults to invalid
+         (-1) -->
+    <enable_turbo_button>4</enable_turbo_button>
+  </plugin>
+
+  <executable name='sim'>
+    <command>gz sim diff_drive.sdf</command>
+  </executable>
+
+</gz>

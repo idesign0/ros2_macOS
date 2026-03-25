@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>version_from_package_xml</name>
+  <version>8.21.65</version>
+  <description>Test package for gz-cmake</description>
+
+  <maintainer email="scpeters@openrobotics.org">Steve Peters</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <url type="website">https://github.com/gazebosim/gz-cmake</url>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

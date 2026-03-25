@@ -1,0 +1,27 @@
+name: Build Debian packaging
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_debs:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    name: Build debs
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: automatika-robotics/create-ros-debs-action@v1
+        with:
+          ros-versions-matrix: 'humble jazzy kilted'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debs-${{ strategy.job-index }}
+          path: ./debs/*.deb

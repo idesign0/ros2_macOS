@@ -1,0 +1,23 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = ["//visibility:private"],
+)
+
+cc_binary(
+    name = "log",
+    srcs = ["log/main.cc"],
+    deps = [
+        "//log:Logger",
+    ],
+)
+
+cc_binary(
+    name = "using_cli",
+    srcs = ["using_cli/main.cc"],
+    deps = [
+        "//:Config",
+        "//cli",
+    ],
+)

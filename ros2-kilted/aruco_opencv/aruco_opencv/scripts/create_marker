@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import argparse
+
+import numpy as np
+import cv2
+import img2pdf
+
+ARUCO_DICTS = {
+    "4X4_50": cv2.aruco.DICT_4X4_50,
+    "4X4_100": cv2.aruco.DICT_4X4_100,
+    "4X4_250": cv2.aruco.DICT_4X4_250,
+    "4X4_1000": cv2.aruco.DICT_4X4_1000,
+    "5X5_50": cv2.aruco.DICT_5X5_50,
+    "5X5_100": cv2.aruco.DICT_5X5_100,
+    "5X5_250": cv2.aruco.DICT_5X5_250,
+    "5X5_1000": cv2.aruco.DICT_5X5_1000,
+    "6X6_50": cv2.aruco.DICT_6X6_50,
+    "6X6_100": cv2.aruco.DICT_6X6_100,
+    "6X6_250": cv2.aruco.DICT_6X6_250,
+    "6X6_1000": cv2.aruco.DICT_6X6_1000,
+    "7X7_50": cv2.aruco.DICT_7X7_50,
+    "7X7_100": cv2.aruco.DICT_7X7_100,
+    "7X7_250": cv2.aruco.DICT_7X7_250,
+    "7X7_1000": cv2.aruco.DICT_7X7_1000,
+    "ARUCO_ORIGINAL": cv2.aruco.DICT_ARUCO_ORIGINAL,
+    "APRILTAG_16h5": cv2.aruco.DICT_APRILTAG_16h5,
+    "APRILTAG_25h9": cv2.aruco.DICT_APRILTAG_25h9,
+    "APRILTAG_36h10": cv2.aruco.DICT_APRILTAG_36h10,
+    "APRILTAG_36h11": cv2.aruco.DICT_APRILTAG_36h11,
+}
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "-o",
+        dest="output",
+        type=str,
+        default="markers.pdf",
+        help="Path to output PDF file containing ArUco markers",
+    )
+    parser.add_argument(
+        "-d",
+        dest="dict",
+        type=str,
+        default="4X4_50",
+        choices=list(ARUCO_DICTS.keys()),
+        help="Dictionary of ArUco markers to use",
+    )
+    parser.add_argument(
+        "-b",
+        "--border-bits",
+        type=int,
+        default=1,
+        help="Number of border bits (black squares surrounding the inner marker)",
+    )
+    parser.add_argument(
+        "-p", "--pixels-per-bit", type=int, default=1, help="Pixels per marker bit"
+    )
+    parser.add_argument(
+        "-m",
+        "--margin-pixels",
+        type=int,
+        default=1,
+        help="Number of white margin pixels",
+    )
+    parser.add_argument(
+        "-s",
+        "--size",
+        type=float,
+        default=0.10,
+        help="Output marker size (with margins) in meters",
+    )
+    parser.add_argument(
+        "-i",
+        "--inverted",
+        action='store_true',
+        help="Whether the marker should be inverted (white marker)",
+    )
+    parser.add_argument("id", type=int, nargs="+", help="ID of the marker to generate")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    aruco_dict = cv2.aruco.getPredefinedDictionary(ARUCO_DICTS[args.dict])
+
+    marker_side_pixels = (
+        aruco_dict.markerSize + 2 * args.border_bits
+    ) * args.pixels_per_bit
+    output_side_pixels = marker_side_pixels + 2 * args.margin_pixels
+    dpi = output_side_pixels / (args.size / 0.0254)
+    marker_size = (marker_side_pixels / dpi) * 0.0254
+
+    print(f"ArUco dictionary: {args.dict}")
+    print(f"Inner marker bits: {aruco_dict.markerSize}")
+    print(f"Marker border bits: {args.border_bits}")
+    print(f"Pixels per bit: {args.pixels_per_bit}")
+    print(f"Margin pixels: {args.margin_pixels}")
+    print(
+        f"Marker side size: {marker_size:.4f} m - {marker_side_pixels} pixels"
+    )
+    print(f"Output image side size: {args.size:.3f} m - {output_side_pixels} pixels")
+    print(f"Output DPI: {dpi:.3f}")
+    print(f"Inverted: {"TRUE" if args.inverted else "FALSE"}")
+
+    images = []
+    for marker_id in args.id:
+        print(f"Generating marker with ID {marker_id}...")
+        marker = np.zeros((marker_side_pixels, marker_side_pixels), dtype="uint8")
+        cv2.aruco.drawMarker(
+            aruco_dict, marker_id, marker_side_pixels, marker, args.border_bits
+        )
+        if args.margin_pixels > 0:
+            marker = np.pad(marker, args.margin_pixels, constant_values=255)
+        if args.inverted:
+            marker = ~marker
+        img = cv2.imencode(".png", marker)[1].tobytes()
+        images.append(img)
+
+    print(f"Converting images to pdf and writing to output file {args.output}...")
+    my_layout_fun = img2pdf.get_fixed_dpi_layout_fun((dpi, dpi))
+    with open(args.output, "wb") as output_file:
+        output_file.write(img2pdf.convert(images, layout_fun=my_layout_fun))
+
+
+if __name__ == "__main__":
+    main()

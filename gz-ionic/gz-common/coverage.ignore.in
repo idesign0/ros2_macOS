@@ -1,0 +1,5 @@
+graphics/src/tiny_obj_loader.h
+graphics/src/CDT/*
+graphics/src/VHACD/*
+profiler/src/Remotery/*
+src/win_dirent.h

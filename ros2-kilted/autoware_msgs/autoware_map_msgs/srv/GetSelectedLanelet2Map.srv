@@ -1,0 +1,9 @@
+# Osm file ids which are selected to be loaded
+string[] cell_ids
+
+---
+# Header
+std_msgs/Header header
+
+# Newly loaded Lanelet map
+autoware_map_msgs/LaneletMapBin lanelet2_cells

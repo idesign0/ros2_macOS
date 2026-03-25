@@ -1,0 +1,117 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_configure_header")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+gz_configure_header(
+    name = "Config",
+    src = "test_config.hh.in",
+    out = "include/test_config.hh",
+    package_xml = "//:package.xml",
+    visibility = ["//:__subpackages__"],
+)
+
+cc_library(
+    name = "utils",
+    hdrs = ["test_utils.hh"],
+    includes = ["."],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@gz-utils",
+    ],
+)
+
+test_executables = [
+    "authPubSubSubscriberInvalid_aux",
+    "fastPub_aux",
+    "pub_aux",
+    "pub_aux_throttled",
+    "scopedTopicSubscriber_aux",
+    "twoProcsPublisher_aux",
+    "twoProcsPubSubMixedSubscribers_aux",
+    "twoProcsPubSubSingleSubscriber_aux",
+    "twoProcsPubSubSubscriber_aux",
+    "twoProcsSrvCallReplier_aux",
+    "twoProcsSrvCallReplierInc_aux",
+    "twoProcsSrvCallWithoutInputReplier_aux",
+    "twoProcsSrvCallWithoutInputReplierInc_aux",
+    "twoProcsSrvCallWithoutOutputReplier_aux",
+    "twoProcsSrvCallWithoutOutputReplierInc_aux",
+]
+
+[cc_binary(
+    name = name,
+    srcs = ["integration/test_executables/" + name + ".cc"],
+    deps = [
+        ":Config",
+        "//:gz-transport",
+        "@googletest//:gtest",
+        "@gz-msgs//:gzmsgs_cc_proto",
+        "@gz-utils//:Environment",
+    ],
+) for name in test_executables]
+
+integration_test_sources = [
+    "authPubSub.cc",
+    "scopedTopic.cc",
+    "callback_scope_TEST.cc",
+    "statistics.cc",
+    "twoProcsPubSub.cc",
+    "twoProcsSrvCall.cc",
+    "twoProcsSrvCallStress.cc",
+    "twoProcsSrvCallSync1.cc",
+    "twoProcsSrvCallWithoutInput.cc",
+    "twoProcsSrvCallWithoutInputStress.cc",
+    "twoProcsSrvCallWithoutInputSync1.cc",
+    "twoProcsSrvCallWithoutOutput.cc",
+    "twoProcsSrvCallWithoutOutputStress.cc",
+]
+
+# Found with
+# bazel test test:all --runs_per_test 10
+flaky_test_srcs = [
+    "twoProcsPubSub.cc",
+    "twoProcsSrvCall.cc",
+    "twoProcsSrvCallWithoutInput.cc",
+    "twoProcsSrvCallWithoutOutput.cc",
+]
+
+[cc_test(
+    name = "INTEGRATION_" + src.replace(".cc", ""),
+    srcs = ["integration/" + src],
+    data = [":" + name for name in test_executables],
+    defines = [
+        'AUTH_PUB_SUB_SUBSCRIBER_INVALID_EXE=\\"./test/authPubSubSubscriberInvalid_aux\\"',
+        'FAST_PUB_EXE=\\"./test/fastPub_aux\\"',
+        'PUB_EXE=\\"./test/pub_aux\\"',
+        'PUB_THROTTLED_EXE=\\"./test/pub_aux_throttled\\"',
+        'SCOPED_TOPIC_SUBSCRIBER_EXE=\\"./test/scopedTopicSubscriber_aux\\"',
+        'TWO_PROCS_PUBLISHER_EXE=\\"./test/twoProcsPublisher_aux\\"',
+        'TWO_PROCS_PUB_SUB_MIXED_SUBSCRIBERS_EXE=\\"./test/twoProcsPubSubMixedSubscribers_aux\\"',
+        'TWO_PROCS_PUB_SUB_SINGLE_SUBSCRIBER_EXE=\\"./test/twoProcsPubSubSingleSubscriber_aux\\"',
+        'TWO_PROCS_PUB_SUB_SUBSCRIBER_EXE=\\"./test/twoProcsPubSubSubscriber_aux\\"',
+        'TWO_PROCS_SRV_CALL_REPLIER_EXE=\\"./test/twoProcsSrvCallReplier_aux\\"',
+        'TWO_PROCS_SRV_CALL_REPLIER_INC_EXE=\\"./test/twoProcsSrvCallReplierInc_aux\\"',
+        'TWO_PROCS_SRV_CALL_WITHOUT_INPUT_REPLIER_EXE=\\"./test/twoProcsSrvCallWithoutInputReplier_aux\\"',
+        'TWO_PROCS_SRV_CALL_WITHOUT_INPUT_REPLIER_INC_EXE=\\"./test/twoProcsSrvCallWithoutInputReplierInc_aux\\"',
+        'TWO_PROCS_SRV_CALL_WITHOUT_OUTPUT_REPLIER_EXE=\\"./test/twoProcsSrvCallWithoutOutputReplier_aux\\"',
+        'TWO_PROCS_SRV_CALL_WITHOUT_OUTPUT_REPLIER_INC_EXE=\\"./test/twoProcsSrvCallWithoutOutputReplierInc_aux\\"',
+    ],
+    env = {"GZ_BAZEL": "1"},
+    deps = [
+        ":Config",
+        ":utils",
+        "//:gz-transport",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@gz-msgs//:gzmsgs_cc_proto",
+        "@gz-utils//:Environment",
+        "@gz-utils//:Subprocess",
+    ],
+) for src in integration_test_sources if src not in flaky_test_srcs]

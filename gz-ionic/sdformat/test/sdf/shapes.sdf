@@ -1,0 +1,279 @@
+<?xml version="1.0" ?>
+<sdf version="1.11">
+  <model name="shapes">
+    <link name="link">
+      <collision name="box_col">
+        <geometry>
+          <box>
+            <size>3 4 5</size>
+          </box>
+        </geometry>
+        <surface>
+          <contact>
+            <collide_bitmask>0xAB</collide_bitmask>
+            <category_bitmask>0xBA</category_bitmask>
+          </contact>
+          <friction>
+              <ode>
+                <mu>0.6</mu>
+                <mu2>0.7</mu2>
+                <slip1>4</slip1>
+                <slip2>5</slip2>
+                <fdir1>1.2 3.4 5.6</fdir1>
+              </ode>
+              <bullet>
+                <friction>1.6</friction>
+                <friction2>1.7</friction2>
+                <fdir1>6.5 4.3 2.1</fdir1>
+                <rolling_friction>1.5</rolling_friction>
+              </bullet>
+              <torsional>
+                <coefficient>5.1</coefficient>
+                <use_patch_radius>false</use_patch_radius>
+                <patch_radius>1.3</patch_radius>
+                <surface_radius>3.7</surface_radius>
+                <ode>
+                  <slip>3.1</slip>
+                </ode>
+              </torsional>
+          </friction>
+        </surface>
+      </collision>
+
+      <visual name="box_vis">
+        <geometry>
+          <box>
+            <size>1 2 3</size>
+          </box>
+        </geometry>
+      </visual>
+
+      <collision name="capsule_col">
+        <geometry>
+          <capsule>
+            <radius>0.2</radius>
+            <length>0.1</length>
+          </capsule>
+        </geometry>
+      </collision>
+
+      <visual name="capsule_vis">
+        <geometry>
+          <capsule>
+            <radius>2.1</radius>
+            <length>10.2</length>
+          </capsule>
+        </geometry>
+      </visual>
+
+      <collision name="cone_col">
+        <geometry>
+          <cone>
+            <radius>0.2</radius>
+            <length>0.1</length>
+          </cone>
+        </geometry>
+      </collision>
+
+      <visual name="cone_vis">
+        <geometry>
+          <cone>
+            <radius>2.1</radius>
+            <length>10.2</length>
+          </cone>
+        </geometry>
+      </visual>
+
+      <collision name="cylinder_col">
+        <geometry>
+          <cylinder>
+            <radius>0.2</radius>
+            <length>0.1</length>
+          </cylinder>
+        </geometry>
+      </collision>
+
+      <visual name="cylinder_vis">
+        <geometry>
+          <cylinder>
+            <radius>2.1</radius>
+            <length>10.2</length>
+          </cylinder>
+        </geometry>
+      </visual>
+
+      <collision name="ellipsoid_col">
+        <geometry>
+          <ellipsoid>
+            <radii>1.0 2.0 3.0</radii>
+          </ellipsoid>
+        </geometry>
+      </collision>
+
+      <visual name="ellipsoid_vis">
+        <geometry>
+          <ellipsoid>
+            <radii>0.1 0.2 0.3</radii>
+          </ellipsoid>
+        </geometry>
+      </visual>
+
+      <collision name="plane_col">
+        <geometry>
+          <plane>
+            <normal>1 0 0</normal>
+            <size>1.4 6.3</size>
+          </plane>
+        </geometry>
+      </collision>
+
+      <visual name="plane_vis">
+        <geometry>
+          <plane>
+            <normal>0 1 0</normal>
+            <size>2 4</size>
+          </plane>
+        </geometry>
+      </visual>
+
+      <collision name="sphere_col">
+        <geometry>
+          <sphere>
+            <radius>23.4</radius>
+          </sphere>
+        </geometry>
+      </collision>
+
+      <visual name="sphere_vis">
+        <geometry>
+          <sphere>
+            <radius>100.2</radius>
+          </sphere>
+        </geometry>
+      </visual>
+
+      <collision name="mesh_col">
+        <geometry>
+          <mesh optimization="convex_decomposition">
+            <convex_decomposition>
+              <max_convex_hulls>4</max_convex_hulls>
+              <voxel_resolution>400000</voxel_resolution>
+            </convex_decomposition>
+            <uri>https://fuel.gazebosim.org/1.0/an_org/models/a_model/mesh/mesh.dae</uri>
+            <submesh>
+              <name>my_submesh</name>
+              <center>true</center>
+            </submesh>
+            <scale>0.1 0.2 0.3</scale>
+          </mesh>
+        </geometry>
+      </collision>
+
+      <visual name="mesh_vis">
+        <geometry>
+          <mesh>
+            <uri>https://fuel.gazebosim.org/1.0/an_org/models/a_model/mesh/mesh.dae</uri>
+            <submesh>
+              <name>another_submesh</name>
+              <center>false</center>
+            </submesh>
+            <scale>1.2 2.3 3.4</scale>
+          </mesh>
+        </geometry>
+      </visual>
+
+      <collision name="heightmap_col">
+        <geometry>
+          <heightmap>
+            <uri>https://fuel.gazebosim.org/1.0/an_org/models/a_model/materials/textures/heightmap.png</uri>
+            <size>500 500 100</size>
+            <pos>1 2 3</pos>
+          </heightmap>
+        </geometry>
+      </collision>
+
+      <visual name="heightmap_vis">
+        <geometry>
+          <heightmap>
+            <uri>https://fuel.gazebosim.org/1.0/an_org/models/a_model/materials/textures/heightmap.png</uri>
+            <size>500 500 100</size>
+            <pos>1 2 3</pos>
+            <texture>
+              <diffuse>https://fuel.gazebosim.org/1.0/an_org/models/a_model/materials/textures/diffuse0.png</diffuse>
+              <normal>https://fuel.gazebosim.org/1.0/an_org/models/a_model/materials/textures/normal0.png</normal>
+              <size>5</size>
+            </texture>
+            <blend>
+              <min_height>15</min_height>
+              <fade_dist>5</fade_dist>
+            </blend>
+            <texture>
+              <diffuse>https://fuel.gazebosim.org/1.0/an_org/models/a_model/materials/textures/diffuse1.png</diffuse>
+              <normal>https://fuel.gazebosim.org/1.0/an_org/models/a_model/materials/textures/normal1.png</normal>
+              <size>10</size>
+            </texture>
+            <blend>
+              <min_height>30</min_height>
+              <fade_dist>10</fade_dist>
+            </blend>
+            <texture>
+              <diffuse>https://fuel.gazebosim.org/1.0/an_org/models/a_model/materials/textures/diffuse2.png</diffuse>
+              <normal>https://fuel.gazebosim.org/1.0/an_org/models/a_model/materials/textures/normal2.png</normal>
+              <size>20</size>
+            </texture>
+          </heightmap>
+        </geometry>
+      </visual>
+
+      <collision name="polyline_col">
+        <geometry>
+          <polyline>
+            <point>-0.5 -0.5</point>
+            <point>-0.5 0.5</point>
+            <point>0.5 0.5</point>
+            <point>0 0</point>
+            <point>0.5 -0.5</point>
+            <height>0.5</height>
+          </polyline>
+          <polyline>
+            <point>-0.3 -0.3</point>
+            <point>-0.3 0.3</point>
+            <point>0.3 0.3</point>
+            <point>0 0</point>
+            <height>0.3</height>
+          </polyline>
+        </geometry>
+      </collision>
+
+      <visual name="polyline_vis">
+        <geometry>
+          <polyline>
+            <point>-0.2 -0.2</point>
+            <point>-0.2 0.2</point>
+            <point>0.2 0.2</point>
+            <height>1</height>
+          </polyline>
+        </geometry>
+      </visual>
+
+      <visual name="sphere_vis_transparency">
+        <transparency>0.22</transparency>
+        <visibility_flags>1</visibility_flags>
+        <geometry>
+          <sphere>
+            <radius>0.5</radius>
+          </sphere>
+        </geometry>
+      </visual>
+
+      <visual name="sphere_vis_laser_retro">
+        <laser_retro>1150</laser_retro>
+        <geometry>
+          <sphere>
+            <radius>0.5</radius>
+          </sphere>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>

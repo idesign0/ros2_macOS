@@ -1,0 +1,61 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_export_header")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+public_headers_no_gen = glob([
+    "include/gz/common/*.hh",
+    "include/gz/common/**/*.hh",
+])
+
+sources = glob(
+    include = ["src/*.cc"],
+    exclude = ["src/*_TEST.cc"],
+)
+
+test_sources = glob(
+    include = ["src/*_TEST.cc"],
+)
+
+gz_export_header(
+    name = "Export",
+    out = "include/gz/common/events/Export.hh",
+    export_base = "GZ_COMMON_EVENTS",
+    lib_name = "gz-common-events",
+)
+
+public_headers = public_headers_no_gen + [
+    "include/gz/common/events/Export.hh",
+]
+
+cc_library(
+    name = "events",
+    srcs = sources,
+    hdrs = public_headers,
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:gz-common",
+        "@gz-math",
+        "@gz-utils//:ImplPtr",
+        "@gz-utils//:SuppressWarning",
+    ],
+)
+
+[cc_test(
+    name = src.replace("/", "_").replace(".cc", "").replace("src_", ""),
+    srcs = [src],
+    deps = [
+        ":events",
+        "//:gz-common",
+        "//testing",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+) for src in test_sources]

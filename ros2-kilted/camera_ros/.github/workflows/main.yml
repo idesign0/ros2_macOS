@@ -1,0 +1,57 @@
+name: colcon
+
+on:
+  pull_request:
+    paths-ignore:
+      - "README.md"
+
+jobs:
+  build:
+    name: "${{ matrix.distribution }} (${{ matrix.ros }})"
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - {distribution: ubuntu,    version: 22.04, ros: humble}
+          - {distribution: ubuntu,    version: 24.04, ros: jazzy}
+          - {distribution: ubuntu,    version: 24.04, ros: rolling}
+          - {distribution: almalinux, version: 8,     ros: humble}
+          - {distribution: almalinux, version: 9,     ros: jazzy}
+
+    continue-on-error: ${{ matrix.ros == 'rolling' }}
+
+    container:
+      image: ${{ matrix.distribution }}:${{ matrix.version }}
+
+    steps:
+      - name: install ROS 2
+        uses: ros-tooling/setup-ros@v0.7
+
+      - name: build and test dependencies (almalinux)
+        if: ${{ matrix.distribution == 'almalinux'}}
+        run: |
+          dnf -y install libasan python3-mypy
+
+      - name: setup rosdep
+        run: |
+          rosdep update
+
+      - name: setup mixins
+        run: |
+          colcon mixin add default https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml
+          colcon mixin update default
+
+      - uses: actions/checkout@v6
+        with:
+          path: src
+
+      - name: build and test
+        run: |
+          rosdep install --from-paths src --ignore-src -y --rosdistro ${{ matrix.ros }}
+          . /opt/ros/${{ matrix.ros }}/setup.sh
+          colcon build \
+            --event-handlers=console_cohesion+ \
+            --mixin asan-gcc tsan coverage-gcc memcheck \
+            --packages-up-to camera_ros
+          colcon test --return-code-on-test-failure --event-handlers=console_cohesion+

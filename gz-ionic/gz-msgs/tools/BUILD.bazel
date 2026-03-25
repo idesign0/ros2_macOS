@@ -1,0 +1,22 @@
+load("@rules_license//rules:license.bzl", "license")
+load("@rules_python//python:py_binary.bzl", "py_binary")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+license(
+    name = "license",
+    package_name = "gz-msgs-tools",
+)
+
+py_binary(
+    name = "gz_msgs_generate_factory_py",
+    srcs = ["gz_msgs_generate_factory_lite.py"],
+    main = "gz_msgs_generate_factory_lite.py",
+    visibility = ["//:__subpackages__"],
+)

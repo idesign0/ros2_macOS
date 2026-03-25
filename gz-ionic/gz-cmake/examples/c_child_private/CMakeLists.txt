@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.22.1 FATAL_ERROR)
+project(gz-c_child_private VERSION 0.1.0)
+find_package(gz-cmake4 REQUIRED)
+gz_configure_project()
+gz_find_package(gz-c_no_deps PRIVATE REQUIRED)
+gz_configure_build(QUIT_IF_BUILD_ERRORS)
+gz_create_packages()
+gz_create_docs(TAGFILES "${GZ-CORE_NO_DEPS_DOXYGEN_TAGFILE} = ${GZ-CORE_NO_DEPS_API_URL}")

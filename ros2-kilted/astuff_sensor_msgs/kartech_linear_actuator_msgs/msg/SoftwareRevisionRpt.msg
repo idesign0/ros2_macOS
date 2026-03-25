@@ -1,0 +1,6 @@
+std_msgs/Header header
+uint8 software_version_0
+uint8 software_version_1
+uint8 software_version_2
+uint8 software_day
+uint16 software_month_year

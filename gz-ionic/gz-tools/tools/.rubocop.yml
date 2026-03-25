@@ -1,0 +1,9 @@
+AllCops:
+  Include:
+    - '**/src/gz.in'
+
+Metrics/BlockLength:
+  Max: 80
+
+Style/SafeNavigation:
+  Enabled: false

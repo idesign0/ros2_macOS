@@ -1,0 +1,25 @@
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: docker/images/${ROSDISTRO:-humble}/Dockerfile
+    image: ekumenlabs/beluga-${ROSDISTRO:-humble}-dev
+    hostname: beluga-${ROSDISTRO:-humble}-dev
+    container_name: beluga-${ROSDISTRO:-humble}-dev
+    environment:
+      - DISPLAY
+      - QT_X11_NO_MITSHM=1
+      - XAUTHORITY=/tmp/.docker.xauth
+    stdin_open: true
+    tty: true
+    user: ${USERID:-1000}:${GROUPID:-1000}
+    privileged: ${PRIVILEGED_CONTAINER:-false}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /tmp/.docker.xauth:/tmp/.docker.xauth
+      - ..:/ws/src/beluga
+      - beluga_ccache:/home/developer/.ccache
+    devices:
+      - /dev/dri:/dev/dri
+volumes:
+  beluga_ccache:

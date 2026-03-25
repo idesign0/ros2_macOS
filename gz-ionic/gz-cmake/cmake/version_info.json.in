@@ -1,0 +1,49 @@
+{
+  "build":
+  {
+    "cmake_build_type": "${CMAKE_BUILD_TYPE}",
+    "build_time": "${build_time}",
+    "platform":
+    {
+      "hostname": "${HOST}",
+      "fqdn": "${FQDN}",
+      "memory":
+      {
+        "total_virtual": "${TOTAL_VIRTUAL}",
+        "available_virtual": "${AVAILABLE_VIRTUAL}",
+        "total_physical": "${TOTAL_PHYSICAL}",
+        "available_physical": "${AVAILABLE_PHYSICAL}"
+      },
+      "processor":
+      {
+        "name": "${PROC_NAME}",
+        "description": "${PROC_DESC}",
+        "serial_number": "${PROC_SERIAL}",
+        "number_of_logical_cores": "${NUM_LOGICAL}",
+        "number_of_physical_cores": "${NUM_PHYSICAL}"
+      },
+      "os":
+      {
+        "name": "${OS_NAME}",
+        "release": "${OS_RELEASE}",
+        "version": "${OS_VERSION}",
+        "platform": "${OS_PLATFORM}"
+      }
+    }
+  },
+  "hg":
+  {
+    "hash": "${HG_GLOBAL_REVISION}",
+    "revision_number": "${HG_REVISION_NUM}",
+    "branch": "${HG_BRANCH}"
+  },
+  "gz":
+  {
+    "project_name": "${PROJECT_NAME}",
+    "version": "${PROJECT_VERSION}",
+    "version_full": "${PROJECT_VERSION_FULL}",
+    "major": "${PROJECT_VERSION_MAJOR}",
+    "minor": "${PROJECT_VERSION_MINOR}",
+    "patch": "${PROJECT_VERSION_PATCH}"
+  }
+}

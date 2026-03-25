@@ -1,0 +1,634 @@
+/*
+ * Copyright 2012 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+#ifndef SDF_PARSER_HH_
+#define SDF_PARSER_HH_
+
+#include <string>
+
+#include "sdf/SDFImpl.hh"
+#include "sdf/config.hh"
+#include "sdf/system_util.hh"
+
+/// \ingroup sdf_parser
+/// \brief namespace for Simulation Description Format parser
+///
+/// The parsing functions read XML elements contained in either a file or
+/// string and translates the XML elements into SDF data structures. This
+/// translation finds errors in the provided XML, fills in default values,
+/// and performs any necessary version related conversions.
+///
+/// XML elements that are not part of the SDF specification are copied in
+/// place. This preserves the given XML structure and data.
+namespace sdf
+{
+  // Inline bracket to help doxygen filtering.
+  inline namespace SDF_VERSION_NAMESPACE {
+  //
+  // TODO(marcoag): Deprecate function overloads that do not use sdf::Errors,
+  // see: https://github.com/gazebosim/sdformat/issues/1186
+  class Root;
+
+  /// \brief Initialize the SDF interface from the embedded root spec file
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool init(SDFPtr _sdf);
+
+  /// \brief Initialize the SDF interface from the embedded root spec file
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[in] _config Custom parser configuration
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool init(SDFPtr _sdf, const ParserConfig &_config);
+
+  /// \brief Initialize the SDF interface from the embedded root spec file
+  /// \param[out] _errors Vector of errors.
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[in] _config Custom parser configuration
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool init(sdf::Errors &_errors, SDFPtr _sdf, const ParserConfig &_config);
+
+  /// \brief Initialize the SDF interface using a file
+  /// \param[in] _filename Name of the SDF file
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool initFile(const std::string &_filename, SDFPtr _sdf);
+
+  /// \brief Initialize the SDF interface using a file
+  /// \param[in] _filename Name of the SDF file
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool initFile(
+      const std::string &_filename, const ParserConfig &_config, SDFPtr _sdf);
+
+  /// \brief Initialize the SDF interface using a file
+  /// \param[in] _filename Name of the SDF file
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[out] _errors Vector of errors.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool initFile(
+      const std::string &_filename, const ParserConfig &_config, SDFPtr _sdf,
+      sdf::Errors &_errors);
+
+  /// \brief Initialize an SDF Element interface using a file
+  /// \param[in] _filename Name of the SDF file
+  /// \param[out] _sdf Pointer to an SDF Element object.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool initFile(const std::string &_filename, ElementPtr _sdf);
+
+  /// \brief Initialize an SDFElement interface using a file
+  /// \param[in] _filename Name of the SDF file
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF Element object.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool initFile(const std::string &_filename, const ParserConfig &_config,
+      ElementPtr _sdf);
+
+  /// \brief Initialize an SDFElement interface using a file
+  /// \param[in] _filename Name of the SDF file
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF Element object.
+  /// \param[out] _errors Vector of errors.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool initFile(const std::string &_filename, const ParserConfig &_config,
+      ElementPtr _sdf, sdf::Errors &_errors);
+
+  /// \brief Initialize the SDF interface using a string
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool initString(const std::string &_xmlString, SDFPtr _sdf);
+
+  /// \brief Initialize the SDF interface using a string
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool initString(
+      const std::string &_xmlString, const ParserConfig &_config, SDFPtr _sdf);
+
+  /// \brief Initialize the SDF interface using a string
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[out] _errors Vector of errors.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool initString(const std::string &_xmlString, const ParserConfig &_config,
+                  SDFPtr _sdf, sdf::Errors &_errors);
+
+  /// \brief Populate the SDF values from a file
+  ///
+  /// This populates a new SDF pointer from a file. If the file is a URDF
+  /// file it is converted to SDF first. All files are converted to the latest
+  /// SDF version
+  /// \param[in] _filename Name of the SDF file
+  /// \return Populated SDF pointer.
+  SDFORMAT_VISIBLE
+  sdf::SDFPtr readFile(const std::string &_filename);
+
+  /// \brief Populate the SDF values from a file
+  ///
+  /// This populates a new SDF pointer from a file. If the file is a URDF
+  /// file it is converted to SDF first. All files are converted to the latest
+  /// SDF version
+  /// \param[in] _filename Name of the SDF file
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return Populated SDF pointer.
+  SDFORMAT_VISIBLE
+  sdf::SDFPtr readFile(const std::string &_filename, Errors &_errors);
+
+  /// \brief Populate the SDF values from a file
+  ///
+  /// This populates a new SDF pointer from a file. If the file is a URDF
+  /// file it is converted to SDF first. All files are converted to the latest
+  /// SDF version
+  /// \param[in] _filename Name of the SDF file
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return Populated SDF pointer.
+  SDFORMAT_VISIBLE
+  sdf::SDFPtr readFile(const std::string &_filename,
+      const ParserConfig &_config, Errors &_errors);
+
+  /// \brief Populate the SDF values from a file
+  ///
+  /// This populates the given SDF pointer from a file. If the file is a URDF
+  /// file it is converted to SDF first. All files are converted to the latest
+  /// SDF version
+  /// \param[in] _filename Name of the SDF file
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readFile(const std::string &_filename, SDFPtr _sdf, Errors &_errors);
+
+  /// \brief Populate the SDF values from a file
+  ///
+  /// This populates the given SDF pointer from a file. If the file is a URDF
+  /// file it is converted to SDF first. All files are converted to the latest
+  /// SDF version
+  /// \param[in] _filename Name of the SDF file
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readFile(const std::string &_filename, const ParserConfig &_config,
+      SDFPtr _sdf, Errors &_errors);
+
+  /// \brief Populate the SDF values from a file without converting to the
+  /// latest SDF version
+  ///
+  /// This populates the given SDF pointer from a file. If the file is a URDF
+  /// file it is converted to SDF first. This function does not convert the
+  /// loaded SDF to the latest version. Use this function with care, as it may
+  /// prevent loading of DOM objects from this SDF object.
+  /// \param[in] _filename Name of the SDF file
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readFileWithoutConversion(
+      const std::string &_filename, SDFPtr _sdf, Errors &_errors);
+
+  /// \brief Populate the SDF values from a file without converting to the
+  /// latest SDF version
+  ///
+  /// This populates the given SDF pointer from a file. If the file is a URDF
+  /// file it is converted to SDF first. This function does not convert the
+  /// loaded SDF to the latest version. Use this function with care, as it may
+  /// prevent loading of DOM objects from this SDF object.
+  /// \param[in] _filename Name of the SDF file
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readFileWithoutConversion(const std::string &_filename,
+      const ParserConfig &_config, SDFPtr _sdf, Errors &_errors);
+
+  /// \brief Populate the SDF values from a file
+  ///
+  /// This populates the given SDF pointer from a file. If the file is a URDF
+  /// file it is converted to SDF first. All files are converted to the latest
+  /// SDF version
+  /// \param[in] _filename Name of the SDF file
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readFile(const std::string &_filename, SDFPtr _sdf);
+
+  /// \brief Populate the SDF values from a string
+  ///
+  /// This populates the SDF pointer from a string. If the string is a URDF
+  /// string it is converted to SDF first. All string are converted to the
+  /// latest SDF version
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readString(const std::string &_xmlString, SDFPtr _sdf, Errors &_errors);
+
+  /// \brief Populate the SDF values from a string
+  ///
+  /// This populates the SDF pointer from a string. If the string is a URDF
+  /// string it is converted to SDF first. All string are converted to the
+  /// latest SDF version
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readString(const std::string &_xmlString, const ParserConfig &_config,
+      SDFPtr _sdf, Errors &_errors);
+
+  /// \brief Populate the SDF values from a string
+  ///
+  /// This populates the SDF pointer from a string. If the string is a URDF
+  /// string it is converted to SDF first. All string are converted to the
+  /// latest SDF version
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readString(const std::string &_xmlString, SDFPtr _sdf);
+
+  /// \brief Populate the SDF values from a string
+  ///
+  /// This populates the SDF pointer from a string. If the string is a URDF
+  /// string it is converted to SDF first. All strings are converted to the
+  /// latest SDF version
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[out] _sdf Pointer to an SDF Element object.
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readString(const std::string &_xmlString, ElementPtr _sdf,
+      Errors &_errors);
+
+  /// \brief Populate the SDF values from a string
+  ///
+  /// This populates the SDF pointer from a string. If the string is a URDF
+  /// string it is converted to SDF first. All strings are converted to the
+  /// latest SDF version
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF Element object.
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readString(const std::string &_xmlString, const ParserConfig &_config,
+      ElementPtr _sdf, Errors &_errors);
+
+  /// \brief Populate the SDF values from a string without converting to the
+  /// latest SDF version
+  ///
+  /// This populates the SDF pointer from a string. If the string is a URDF
+  /// file it is converted to SDF first. This function does not convert the
+  /// loaded SDF to the latest version. Use this function with care, as it may
+  /// prevent loading of DOM objects from this SDF object.
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readStringWithoutConversion(
+      const std::string &_xmlString, SDFPtr _sdf, Errors &_errors);
+
+  /// \brief Populate the SDF values from a string
+  ///
+  /// This populates the SDF pointer from a string. If the string is a URDF
+  /// string it is converted to SDF first. All strings are converted to the
+  /// latest SDF version
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to an SDF object.
+  /// \param[out] _errors Parsing errors will be appended to this variable.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readStringWithoutConversion(const std::string &_xmlString,
+      const ParserConfig &_config, SDFPtr _sdf, Errors &_errors);
+
+  /// \brief Populate the SDF values from a string
+  ///
+  /// This populates the SDF pointer from a string. If the string is a URDF
+  /// string it is converted to SDF first. All strings are converted to the
+  /// latest SDF version
+  /// \param[in] _xmlString XML string to be parsed.
+  /// \param[in] _sdf Pointer to an SDF Element object.
+  /// \return True if successful.
+  SDFORMAT_VISIBLE
+  bool readString(const std::string &_xmlString, ElementPtr _sdf);
+
+  /// \brief Get the file path to the model file
+  /// \param[in] _modelDirPath directory system path of the model
+  /// \return string with the full filesystem path to the best version (greater
+  ///         SDF protocol supported by this sdformat version) of the .sdf
+  ///         model files hosted by _modelDirPath.
+  SDFORMAT_VISIBLE
+  std::string getModelFilePath(const std::string &_modelDirPath);
+
+  /// \brief Get the file path to the model file
+  /// \param[out] _errors Vector of errors.
+  /// \param[in] _modelDirPath directory system path of the model
+  /// \return string with the full filesystem path to the best version (greater
+  ///         SDF protocol supported by this sdformat version) of the .sdf
+  ///         model files hosted by _modelDirPath.
+  SDFORMAT_VISIBLE
+  std::string getModelFilePath(sdf::Errors &_errors,
+                               const std::string &_modelDirPath);
+
+  /// \brief Convert an SDF file to a specific SDF version.
+  /// \param[in] _filename Name of the SDF file to convert.
+  /// \param[in] _version Version to convert _filename to.
+  /// \param[out] _sdf Pointer to the converted SDF document.
+  /// \return True on success.
+  SDFORMAT_VISIBLE
+  bool convertFile(const std::string &_filename, const std::string &_version,
+                   SDFPtr _sdf);
+
+  /// \brief Convert an SDF file to a specific SDF version.
+  /// \param[in] _filename Name of the SDF file to convert.
+  /// \param[in] _version Version to convert _filename to.
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to the converted SDF document.
+  /// \return True on success.
+  SDFORMAT_VISIBLE
+  bool convertFile(const std::string &_filename, const std::string &_version,
+                   const ParserConfig &_config, SDFPtr _sdf);
+
+  /// \brief Convert an SDF file to a specific SDF version.
+  /// \param[out] _sdf Pointer to the converted SDF document.
+  /// \param[in] _filename Name of the SDF file to convert.
+  /// \param[in] _version Version to convert _filename to.
+  /// \param[in] _config Custom parser configuration
+  /// \return Vector of errors, successful when vector is empty.
+  SDFORMAT_VISIBLE
+  sdf::Errors convertFile(
+      SDFPtr _sdf, const std::string &_filename, const std::string &_version,
+      const ParserConfig &_config = ParserConfig::GlobalConfig());
+
+  /// \brief Convert an SDF string to a specific SDF version.
+  /// \param[in] _sdfString The SDF string to convert.
+  /// \param[in] _version Version to convert _filename to.
+  /// \param[out] _sdf Pointer to the converted SDF document.
+  /// \return True on success.
+  SDFORMAT_VISIBLE
+  bool convertString(const std::string &_sdfString,
+                     const std::string &_version, SDFPtr _sdf);
+
+  /// \brief Convert an SDF string to a specific SDF version.
+  /// \param[in] _sdfString The SDF string to convert.
+  /// \param[in] _version Version to convert _filename to.
+  /// \param[in] _config Custom parser configuration
+  /// \param[out] _sdf Pointer to the converted SDF document.
+  /// \return True on success.
+  SDFORMAT_VISIBLE
+  bool convertString(const std::string &_sdfString, const std::string &_version,
+                     const ParserConfig &_config, SDFPtr _sdf);
+
+  /// \brief Convert an SDF string to a specific SDF version.
+  /// \param[out] _sdf Pointer to the converted SDF document.
+  /// \param[in] _sdfString The SDF string to convert.
+  /// \param[in] _version Version to convert _filename to.
+  /// \param[in] _config Custom parser configuration
+  /// \return Vector of errors, successful when vector is empty.
+  SDFORMAT_VISIBLE
+  sdf::Errors convertString(
+      SDFPtr _sdf, const std::string &_sdfString, const std::string &_version,
+      const ParserConfig &_config = ParserConfig::GlobalConfig());
+
+  /// \brief Check that for each model, the canonical_link attribute value
+  /// matches the name of a link in the model if the attribute is set and
+  /// not empty.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \return True if all models have valid canonical_link attributes.
+  SDFORMAT_VISIBLE
+  bool checkCanonicalLinkNames(const sdf::Root *_root);
+
+  /// \brief Check that for each model, the canonical_link attribute value
+  /// matches the name of a link in the model if the attribute is set and
+  /// not empty.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[out] _errors Vector of errors.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \return True if all models have valid canonical_link attributes.
+  SDFORMAT_VISIBLE
+  bool checkCanonicalLinkNames(sdf::Errors &_errors, const sdf::Root *_root);
+
+  /// \brief For the world and each model, check that the attached_to graphs
+  /// build without errors and have no cycles.
+  /// Confirm that following directed edges from each vertex in the graph
+  /// leads to a model, link, or world frame.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \return True if all attached_to graphs are valid.
+  SDFORMAT_VISIBLE
+  bool checkFrameAttachedToGraph(const sdf::Root *_root);
+
+  /// \brief For the world and each model, check that the attached_to graphs
+  /// build without errors and have no cycles.
+  /// Confirm that following directed edges from each vertex in the graph
+  /// leads to a model, link, or world frame.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[out] _errors Vector of errors.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \return True if all attached_to graphs are valid.
+  SDFORMAT_VISIBLE
+  bool checkFrameAttachedToGraph(sdf::Errors &_errors, const sdf::Root *_root);
+
+  /// \brief Check that for each frame, the attached_to attribute value
+  /// does not match its own frame name but does match the name of a
+  /// link, joint, or other frame in the model if the attribute is set and
+  /// not empty.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \return True if all frames have valid attached_to attributes.
+  SDFORMAT_VISIBLE
+  bool checkFrameAttachedToNames(const sdf::Root *_root);
+
+  /// \brief Check that for each frame, the attached_to attribute value
+  /// does not match its own frame name but does match the name of a
+  /// link, joint, or other frame in the model if the attribute is set and
+  /// not empty.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[out] _errors Vector of errors.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \return True if all frames have valid attached_to attributes.
+  SDFORMAT_VISIBLE
+  bool checkFrameAttachedToNames(sdf::Errors &_errors, const sdf::Root *_root);
+
+  /// \brief Check that all joints in contained models specify parent
+  /// and child link names that match the names of sibling links.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \return True if all models have joints with valid parent and child
+  /// link names.
+  SDFORMAT_VISIBLE
+  bool checkJointParentChildNames(const sdf::Root *_root);
+
+  /// \brief Check that all joints in contained models specify parent
+  /// and child names that match the names of sibling links, joints,
+  /// models, or frames.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \param[out] _errors Detected errors will be appended to this variable.
+  SDFORMAT_VISIBLE
+  void checkJointParentChildNames(const sdf::Root *_root, Errors &_errors);
+
+  /// \brief Check that all joint axes in contained joints specify xyz
+  /// expressed-in names that match the names of valid frames.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \param[out] _errors Detected errors will be appended to this variable.
+  SDFORMAT_VISIBLE
+  void checkJointAxisExpressedInValues(const sdf::Root *_root, Errors &_errors);
+
+  /// \brief Check that all joint axes in contained joints that specify mimic
+  /// constraints use valid joint names.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \param[out] _errors Detected errors will be appended to this variable.
+  SDFORMAT_VISIBLE
+  void checkJointAxisMimicValues(const sdf::Root *_root, Errors &_errors);
+
+  /// \brief For the world and each model, check that the attached_to graphs
+  /// build without errors and have no cycles.
+  /// Confirm that following directed edges from each vertex in the graph
+  /// leads to a model, link, or world frame.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \return True if all attached_to graphs are valid.
+  SDFORMAT_VISIBLE
+  bool checkPoseRelativeToGraph(const sdf::Root *_root);
+
+  /// \brief For the world and each model, check that the attached_to graphs
+  /// build without errors and have no cycles.
+  /// Confirm that following directed edges from each vertex in the graph
+  /// leads to a model, link, or world frame.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first error is found.
+  /// \param[out] _errors Vector of errors.
+  /// \param[in] _root SDF Root object to check recursively.
+  /// \return True if all attached_to graphs are valid.
+  SDFORMAT_VISIBLE
+  bool checkPoseRelativeToGraph(sdf::Errors &_errors, const sdf::Root *_root);
+
+  /// \brief Check that all sibling elements of the same type have unique names.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first duplicate name is found.
+  /// \param[in] _elem SDF Element to check recursively.
+  /// \return True if all contained elements have do not share a name with
+  /// sibling elements of the same type.
+  SDFORMAT_VISIBLE
+  bool recursiveSameTypeUniqueNames(sdf::ElementPtr _elem);
+
+  /// \brief Check that all sibling elements of the same type have unique names.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first duplicate name is found.
+  /// \param[out] _errors Vector of errors.
+  /// \param[in] _elem SDF Element to check recursively.
+  /// \return True if all contained elements have do not share a name with
+  /// sibling elements of the same type.
+  SDFORMAT_VISIBLE
+  bool recursiveSameTypeUniqueNames(sdf::Errors &_errors,
+                                    sdf::ElementPtr _elem);
+
+  /// \brief Check that all sibling elements of the any type have unique names.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first duplicate name is found.
+  /// \param[in] _elem SDF Element to check recursively.
+  /// \return True if all contained elements have do not share a name with
+  /// sibling elements of any type.
+  SDFORMAT_VISIBLE
+  bool recursiveSiblingUniqueNames(sdf::ElementPtr _elem);
+
+  /// \brief Check that all sibling elements of the any type have unique names.
+  /// This checks recursively and should check the files exhaustively
+  /// rather than terminating early when the first duplicate name is found.
+  /// \param[out] _errors Vector of errors.
+  /// \param[in] _elem SDF Element to check recursively.
+  /// \return True if all contained elements have do not share a name with
+  /// sibling elements of any type.
+  SDFORMAT_VISIBLE
+  bool recursiveSiblingUniqueNames(sdf::Errors &_errors, sdf::ElementPtr _elem);
+
+  /// \brief Check that all sibling elements do not contain the delimiter
+  /// double colons '::' in element names, which is reserved for forming scopes
+  /// in SDFormat 1.8. This checks recursively and should check the files
+  /// exhaustively rather than terminating early when the first name
+  /// containing '::' is found.
+  /// \param[in] _elem SDF Element to check recursively.
+  /// \return True if all contained element names do not have the delimiter '::'
+  SDFORMAT_VISIBLE
+  bool recursiveSiblingNoDoubleColonInNames(sdf::ElementPtr _elem);
+
+  /// \brief Check that all sibling elements do not contain the delimiter
+  /// double colons '::' in element names, which is reserved for forming scopes
+  /// in SDFormat 1.8. This checks recursively and should check the files
+  /// exhaustively rather than terminating early when the first name
+  /// containing '::' is found.
+  /// \param[out] _errors Vector of errors.
+  /// \param[in] _elem SDF Element to check recursively.
+  /// \return True if all contained element names do not have the delimiter '::'
+  SDFORMAT_VISIBLE
+  bool recursiveSiblingNoDoubleColonInNames(sdf::Errors &_errors,
+                                            sdf::ElementPtr _elem);
+
+  /// \brief Check whether the element should be validated. If this returns
+  /// false, validators such as the unique name and reserve name checkers should
+  /// skip this element and its descendants.
+  /// \param[in] _elem SDF Element to check.
+  /// \return True if the element should be validated
+  SDFORMAT_VISIBLE
+  bool shouldValidateElement(sdf::ElementPtr _elem);
+
+  /// \brief Function to compute a merged model's proxy frame name
+  ///
+  /// \param [in] _modelName The merged model's name
+  /// \return The computed frame name
+  SDFORMAT_VISIBLE
+  std::string computeMergedModelProxyFrameName(const std::string &_modelName);
+  }
+}
+#endif

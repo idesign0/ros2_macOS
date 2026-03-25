@@ -1,0 +1,140 @@
+// Copyright 2024 Robin Müller
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#pragma once
+
+#include "auto_apms_behavior_tree/executor/action_based_executor_node.hpp"
+#include "auto_apms_interfaces/action/start_tree_executor.hpp"
+
+namespace auto_apms_behavior_tree
+{
+
+/**
+ * @ingroup auto_apms_behavior_tree
+ * @brief Flexible ROS 2 node implementing a standardized interface for dynamically executing behavior trees.
+ *
+ * This class uses the ActionBasedTreeExecutorNode template with the builtin StartTreeExecutor action type that allows
+ * external clients to trigger behavior tree execution via a flexible and standardized interface. The executor is
+ * configured using ROS 2 parameters.
+ *
+ * A behavior tree can be executed via command line:
+ *
+ * ```sh
+ * ros2 run auto_apms_behavior_tree run_behavior <build_request> ...
+ * ```
+ *
+ * or using the ROS 2 CLI integration offered by `auto_apms_ros2behavior`:
+ *
+ * ```sh
+ * ros2 behavior run <behavior_resource> ...
+ * ```
+ *
+ * Alternatively, an executor can also be included as part of a ROS 2 components container. The following executor
+ * components are provided:
+ *
+ * - `%auto_apms_behavior_tree::TreeExecutorNode`
+ *
+ * - `auto_apms_behavior_tree::NoUndeclaredParamsExecutorNode`
+ *
+ * - `auto_apms_behavior_tree::OnlyScriptingEnumParamsExecutorNode`
+ *
+ * - `auto_apms_behavior_tree::OnlyBlackboardParamsExecutorNode`
+ *
+ * - `auto_apms_behavior_tree::OnlyInitialScriptingEnumParamsExecutorNode`
+ *
+ * - `auto_apms_behavior_tree::OnlyInitialBlackboardParamsExecutorNode`
+ */
+class TreeExecutorNode : public ActionBasedTreeExecutorNode<auto_apms_interfaces::action::StartTreeExecutor>
+{
+public:
+  /**
+   * @brief Constructor allowing to specify a custom node name and executor options.
+   * @param name Default name of the `rclcpp::Node`.
+   * @param start_action_name Name for the StartTreeExecutor action server. If empty, defaults to `<node_name>/start`.
+   * @param options Executor specific options. Simply pass a `rclcpp::NodeOptions` object to use the default
+   * options.
+   */
+  TreeExecutorNode(const std::string & name, const std::string & start_action_name, Options options);
+
+  /**
+   * @brief Constructor allowing to specify a custom node name and executor options.
+   * @param name Default name of the `rclcpp::Node`.
+   * @param options Executor specific options. Simply pass a `rclcpp::NodeOptions` object to use the default
+   * options.
+   */
+  TreeExecutorNode(const std::string & name, Options options);
+
+  /**
+   * @brief Constructor populating both the node's name and the executor options with the default.
+   * @param options Options forwarded to rclcpp::Node constructor.
+   */
+  explicit TreeExecutorNode(rclcpp::NodeOptions ros_options);
+
+  virtual ~TreeExecutorNode() override = default;
+
+protected:
+  /* ActionBasedTreeExecutorNode overrides */
+
+  /**
+   * @brief Create a TreeConstructor from a StartTreeExecutor action goal.
+   *
+   * Loads the build handler (if specified), parses the node manifest, and creates a tree constructor using the
+   * build request from the goal.
+   * @param goal_ptr Shared pointer to the StartTreeExecutor action goal.
+   * @return Callback for creating the behavior tree.
+   * @throw std::exception if the goal cannot be processed.
+   */
+  TreeConstructor getTreeConstructorFromGoal(std::shared_ptr<const TriggerGoal> goal_ptr) override;
+
+  /**
+   * @brief Determine whether an incoming start action goal should be accepted.
+   *
+   * The default implementation rejects the goal if the executor is currently busy executing a behavior tree. Derived
+   * classes may override this to add additional validation logic.
+   * @param uuid The unique identifier of the incoming goal.
+   * @param goal_ptr Shared pointer to the incoming goal.
+   * @return `true` if the goal should be accepted, `false` if it should be rejected.
+   */
+  bool shouldAcceptGoal(const rclcpp_action::GoalUUID & uuid, std::shared_ptr<const TriggerGoal> goal_ptr) override;
+
+  /**
+   * @brief Hook called after a start action goal has been accepted and before execution begins.
+   *
+   * Clears the global blackboard if the goal's `clear_blackboard` flag is set.
+   * @param goal_handle_ptr Shared pointer to the accepted goal handle.
+   */
+  void onAcceptedGoal(std::shared_ptr<TriggerGoalHandle> goal_handle_ptr) override;
+
+  /**
+   * @brief Hook called after execution has been started successfully.
+   *
+   * Handles attached vs detached mode: in attached mode, sets up the action context to track execution;
+   * in detached mode, immediately succeeds the goal.
+   * @param goal_handle_ptr Shared pointer to the accepted goal handle.
+   */
+  void onExecutionStarted(std::shared_ptr<TriggerGoalHandle> goal_handle_ptr) override;
+
+  /**
+   * @brief Handle the execution result for the StartTreeExecutor action client.
+   *
+   * Populates the result with tree status information and the terminated tree identity.
+   * @param result The execution result.
+   * @param context The action context for sending the result back.
+   */
+  void onGoalExecutionTermination(const ExecutionResult & result, TriggerActionContext & context) override;
+
+  bool afterTick() override;
+};
+
+}  // namespace auto_apms_behavior_tree

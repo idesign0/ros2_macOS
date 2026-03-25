@@ -1,0 +1,22 @@
+# Request
+string build_request # String determining which behavior tree is to be built
+string build_handler # Fully qualified class name of the behavior tree build handler plugin
+string entry_point # Single point of entry for behavior execution
+string node_manifest # Encoded node manifest specifying the behavior tree nodes to load initially
+bool attach true # Flag whether to start execution in attached (true) or detached (false) mode
+bool clear_blackboard true # Flag whether to clear the blackboard before executing the tree
+---
+# Result
+uint8 TREE_RESULT_NOT_SET=0
+uint8 TREE_RESULT_SUCCESS=1
+uint8 TREE_RESULT_FAILURE=2
+
+uint8 tree_result 0
+string terminated_tree_identity
+string message
+---
+# Feedback
+string execution_state_str
+string running_tree_identity
+string running_action_name
+float64 running_action_timestamp

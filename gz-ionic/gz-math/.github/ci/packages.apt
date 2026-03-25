@@ -1,0 +1,8 @@
+libeigen3-dev
+libgz-cmake4-dev
+libgz-utils3-dev
+libpython3-dev
+python3-pybind11
+python3-pytest
+ruby-dev
+swig

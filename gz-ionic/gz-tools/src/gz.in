@@ -1,0 +1,316 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Copyright (C) 2019 Open Source Robotics Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+require 'optparse'
+require 'yaml'
+
+# Module to wrap included shared library module
+module SharedLibInterface
+  # We use 'dl' for Ruby <= 1.9.x and 'fiddle' for Ruby >= 2.0.x
+  if RUBY_VERSION.split('.')[0] < '2'
+    require 'dl'
+    require 'dl/import'
+    include DL
+  else
+    require 'fiddle'
+    require 'fiddle/import'
+    include Fiddle
+  end
+end
+
+# List of required keys in each YAML file.
+#  - format: Format of the YAML file. This version has to be supported by this
+#            script.
+#  - library_version: Expected library version to work with the conf file.
+#  - library: Name of the shared library that will handle the commands.
+#  - commands: List of top level commands supported by the library, as well as
+#              a brief description.
+required_tags =
+  {
+    '1.0.0' => %w[format library_name library_version library_path commands]
+  }
+
+commands = {}
+yaml_found = false
+
+conf_dirs = '@CMAKE_INSTALL_PREFIX@/share/gz/'
+conf_dirs = ENV['GZ_CONFIG_PATH'] if ENV.key?('GZ_CONFIG_PATH')
+
+conf_dirs = conf_dirs.split('@ENV_PATH_DELIMITER@')
+
+# Deprecated
+conf_dirs.append(ENV['IGN_CONFIG_PATH']) if ENV.key?('IGN_CONFIG_PATH')
+
+conf_dirs.each do |conf_directory|
+  next if Dir.glob("#{conf_directory}/*.yaml").empty?
+
+  yaml_found = true
+
+  # Iterate over the list of configuration files.
+  Dir.glob("#{conf_directory}/*.yaml") do |conf_file|
+    next if conf_file == [',', '..'].any?
+
+    # Read the configuration file.
+    yml = YAML.load_file(conf_file)
+
+    # Sanity check: Verify that the content of the file is YAML.
+    unless yml && yml.is_a?(Hash)
+      puts "Configuration warning: File [#{conf_file}] does not contain a "\
+           'valid YAML format. Ignoring this configuration file.'
+      next
+    end
+
+    # Sanity check: Verify that the the configuration file format is supported.
+    unless yml.key?('format') && required_tags.key?(yml['format'])
+      puts "Configuration error: File [#{conf_file}] uses format "\
+           "#{yml[format]} but this version is not supported."
+      exit(-1)
+    end
+
+    # Sanity check: Verify that the format of the conf file is correct.
+    required_tags[yml['format']].each do |tag|
+      # Verify that the YAML file contains the needed keys.
+      unless yml.key?(tag)
+        puts "Configuration error: File [#{conf_file}] has a missing key. "\
+             "Make sure that the file contains '#{tag}'."
+        exit(-1)
+      end
+
+      # Verify that the value for this key is not empty.
+      next if yml[tag]
+
+      puts "Configuration error: File [#{conf_file}] does not contain any "\
+           "value for the key '#{tag}'."
+      exit(-1)
+    end
+
+    yml['commands'].each do |cmd|
+      cmd.each do |key, value|
+        # Sanity check: Verify that we have a non-empty key and value.
+        unless key && value
+          puts "Configuration error: File [#{conf_file}] contains an empty "\
+               "value in the 'commands' section."
+          exit(-1)
+        end
+
+        # Sanity check: A 'help' command is not allowed.
+        if key.eql? 'help'
+          puts "Configuration error: File [#{conf_file}] contains a command "\
+               "named 'help' but this is a reserved name."
+          exit(-1)
+        end
+
+        # Sanity check: Verify that a command has not been used before by other
+        # library.
+        if commands.key?(key) &&
+           commands[key].values[0]['library_name'] != yml['library_name']
+          puts "Configuration error: File [#{conf_file}] contains a command "\
+               'already registered by '\
+               "#{commands[key].values[0]['library_name']}."
+          exit(-1)
+        end
+
+        # Create a hash where the command is the key and the value contains all
+        # the additional information (in a hash).
+        if !commands.key?(key)
+          commands[key] =
+            { yml['library_version'] =>
+              {
+                'library_name' => yml['library_name'],
+                'library_path' => yml['library_path'],
+                'description' => value
+              } }
+        else
+          new_value = {}
+          new_value[yml['library_version']] =
+            {
+              'library_name' => yml['library_name'],
+              'library_path' => yml['library_path'],
+              'description' => value
+            }
+          commands[key].update(new_value)
+        end
+      end
+    end
+  end
+end
+
+# Check that we have at least one configuration file with gz commands.
+unless yaml_found
+  puts "I cannot find any available 'gz' command:\n"\
+       "\t* Did you install any Gazebo library?\n"\
+       "\t* Did you set the GZ_CONFIG_PATH environment variable?\n"\
+       "\t    E.g.: export GZ_CONFIG_PATH=$HOME/local/share/gz\n"
+  exit(-1)
+end
+
+# Use an auxiliary hash to sort the commands ordered by version. Newest
+# versions go first.
+sorted_commands = {}
+commands.each do |cmd, versions|
+  sorted_commands[cmd] = versions.sort_by do |k, _v|
+    # Prereleases include the "~" symbol. However Gem::Version doesn't support
+    # it, so we remove it.
+    k = k.tr('~', '')
+    Gem::Version.new(k)
+  end.reverse
+end
+
+# Commands is a hash where the key is the command and the value is a list.
+commands = sorted_commands
+
+# Debug: show the list of available commands.
+# puts commands
+
+# Read the command line arguments.
+usage = 'The \'gz\' command provides a command line interface to the Gazebo'\
+        " Tools.\n\n"\
+        "  gz <command> [options]\n\n"\
+        "List of available commands:\n\n"\
+        "  help:          Print this help text.\n"
+
+# Used to align the commands and the description.
+padding_width = 15
+commands.keys.sort.each do |cmd|
+  versions = commands[cmd]
+  # Calculate the padding to add between the command and the description.
+  padding_to_apply = padding_width - cmd.size - 1
+  padding = ''
+  padding_to_apply.times do
+    padding += ' '
+  end
+
+  usage += "  #{cmd}:#{padding}#{versions.first[1]['description']}\n"
+end
+
+usage += "\nOptions:\n\n"\
+         "  --force-version <VERSION>  Use a specific library version.\n"\
+         "  --versions                 Show the available versions.\n"\
+         '  --commands                 Show the available commands.'
+
+usage += "\nUse 'gz help <command>' to print help for a command.\n"
+
+OptionParser.new do |opts|
+  opts.banner = usage
+end.parse
+
+# The user wants to show the available commands.
+if ARGV.include?('--commands')
+  commands.each_key do |cmd|
+    puts cmd
+  end
+
+  exit(0)
+end
+
+# Check that there is at least one command and there is a plugin that knows
+# how to handle it.
+if ARGV.empty? || (ARGV[0] != 'help' && !commands.key?(ARGV[0]))
+  puts usage
+  exit(-1)
+end
+
+# The 'help' command is managed here.
+if ARGV[0].eql? 'help'
+
+  # Sanity check: Verify that there is a known command after help.
+  unless ARGV.size == 2 && commands.key?(ARGV[1])
+    puts usage
+    exit(0)
+  end
+
+  # Remove the help command and append --help.
+  ARGV.delete_at(0)
+  ARGV.append('--help')
+end
+
+version_index = 0
+
+# The user wants to use a specific version of the command.
+if ARGV.include?('--force-version')
+  i = ARGV.index('--force-version')
+
+  # Sanity check: Verify that there is an argument after --force-version
+  unless ARGV.size >= i + 2
+    puts usage
+    exit(-1)
+  end
+  required_version = ARGV.at(i + 1)
+
+  # Sanity check: The version value shouldn't start with '-' or '--'.
+  if required_version.start_with?('-', '--')
+    puts usage
+    exit(-1)
+  end
+
+  # Sanity check: Verify if we have the command for the specified version.
+  found = false
+  required_arr = required_version.split('.')
+  commands[ARGV[0]].each_with_index do |version, index|
+    version_arr = version.first.split('.')
+    next unless required_arr.zip(version_arr).map \
+      { |required, current| required == current }.all?
+
+    found = true
+    version_index = index
+    break
+  end
+
+  unless found
+    puts 'Version error: I cannot find this command in '\
+         "version [#{required_version}]."
+    exit(-1)
+  end
+
+  ARGV.delete_at(i)
+  ARGV.delete_at(i)
+end
+
+# The user wants to show the available versions.
+if ARGV.include?('--versions')
+  commands[ARGV[0]].each do |version|
+    puts version.first
+  end
+
+  exit(0)
+end
+
+if defined? RubyInstaller
+  # RubyInstaller does not search for dlls in PATH
+  # https://github.com/oneclick/rubyinstaller2/wiki/For-gem-developers#-dll-loading
+  ENV['RUBY_DLL_PATH'] = ENV['PATH']
+  RubyInstaller::Runtime.enable_dll_search_paths
+end
+
+# Start Backward before loading plugins
+begin
+  SharedLibInterface::Importer.dlload '@backward_library_name@'
+rescue SharedLibInterface::DLError
+  warn 'Library error: @backward_library_name@ not found. Improved backtrace'\
+       ' generation will be disabled'
+end
+
+# Read the plugin that handles the command.
+cmd_rb_library = commands[ARGV[0]].at(version_index)[1]['library_path']
+# Pass the request to the specific ruby library.
+require cmd_rb_library
+cmd = Cmd.new
+
+# Set the process title to something nice.
+Process.setproctitle("gz #{ARGV.join(' ')}")
+
+cmd.execute(ARGV)

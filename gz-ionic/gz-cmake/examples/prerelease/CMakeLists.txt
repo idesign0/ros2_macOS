@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.22.1 FATAL_ERROR)
+project(gz-minimal1 VERSION 1.0.0)
+find_package(gz-cmake4 REQUIRED)
+gz_configure_project(VERSION_SUFFIX pre1)
+gz_configure_build(QUIT_IF_BUILD_ERRORS)

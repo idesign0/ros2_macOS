@@ -1,0 +1,152 @@
+/*
+ * Copyright (C) 2019 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "FuelMetadata";
+
+/// \ingroup gz.msgs
+/// \interface FuelMetadata
+/// \brief Meta data for a Gazebo Fuel resource, such as a model or world.
+
+import "gz/msgs/version.proto";
+import "gz/msgs/version_range.proto";
+import "gz/msgs/versioned_name.proto";
+
+message FuelMetadata
+{
+  /// \brief Contact information.
+  message Contact
+  {
+    /// \brief Contact name.
+    string name  = 1;
+
+    /// \brief Contact email.
+    string email = 2;
+  }
+
+  /// \brief Legal information, including copyright and license specifications.
+  message Legal
+  {
+    /// \brief Copyright information, such as "Copyright 1974, John Doe"
+    string copyright = 1;
+
+    /// \brief License, such as "Apache-2.0"
+    string license = 2;
+  }
+
+  /// \brief Information about a model resource.
+  message Model
+  {
+    /// \brief Main model file, e.g. "model.sdf".
+    string file = 1;
+
+    /// \brief Name and version of the file format used by the file.
+    VersionedName file_format = 2;
+  }
+
+  /// \brief Information about a world resource.
+  message World
+  {
+    /// \brief Main world file, e.g. "world.sdf".
+    string file = 1;
+
+    /// \brief Name and version of the file format used by the file.
+    VersionedName file_format = 2;
+  }
+
+  /// \brief Definition of a dependency
+  message Dependency
+  {
+    /// \brief Dependency uri.
+    string uri = 1;
+  }
+
+  /// \brief A message containing a tool name and a version or range of
+  /// versions, e.g.
+  ///   tools { name: "bullet" version_range { min: {major: 3 } } } }
+  ///   tools { name: "gazebo" version { major: 11 } }
+  message Compatibility
+  {
+    /// \brief Name of the tool/library.
+    string name = 1;
+
+    /// \brief If version is omitted, it is assumed that the model is
+    /// compatible with all versions of the tool.
+    oneof version_type
+    {
+      /// \brief Exact version that the model is compatible with.
+      Version version = 2;
+
+      /// \brief A range of compatible versions.
+      VersionRange version_range = 3;
+    }
+  }
+
+  /// \brief Categories associated with this resource. The set of
+  /// Fuel categories are available at
+  /// https://fuel.ignitionrobotics.org/1.0/categories.
+  ///
+  /// A limited number of categories can be assigned to a Fuel resource.
+  message Categories
+  {
+    /// \brief First category.
+    string first = 1;
+
+    /// \brief Second category.
+    string second = 2;
+  }
+
+  /// \brief A Fuel resource has to be one of the following.
+  oneof resource_type
+  {
+    Model model = 1;
+    World world = 2;
+  }
+
+  /// \brief Name of the resource.
+  string name              = 3;
+
+  /// \brief Description of the resource.
+  string description       = 4;
+
+  /// \brief Version number of the resource. This version is set by Fuel.
+  int32 version            = 5;
+
+  /// \brief Authors of this resource.
+  repeated Contact authors = 6;
+
+  /// \brief Legal information, such as copyright and license specifications.
+  Legal legal              = 7;
+
+  /// \brief Tags for a resource.
+  repeated string tags     = 8;
+
+  // A list of key-value pairs that can contain arbitrary user data.
+  map<string, string> annotations = 9;
+
+  /// \brief Resources that this resource depends on.
+  repeated Dependency dependencies = 10;
+
+  /// \brief List of tools/libraries with version numbers that are compatible
+  /// with this resource.
+  repeated Compatibility compatibilities = 11;
+
+  /// \brief Categories associated with this resource.
+  Categories categories = 12;
+}

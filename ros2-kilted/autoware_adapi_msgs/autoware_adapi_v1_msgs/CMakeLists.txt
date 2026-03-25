@@ -1,0 +1,96 @@
+cmake_minimum_required(VERSION 3.14)
+project(autoware_adapi_v1_msgs)
+
+find_package(ament_cmake_auto REQUIRED)
+ament_auto_find_build_dependencies()
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  common/msg/ResponseStatus.msg
+  common/msg/KvString.msg
+  localization/msg/LocalizationInitializationState.msg
+  localization/srv/InitializeLocalization.srv
+  manual/msg/PedalsCommand.msg
+  manual/msg/AccelerationCommand.msg
+  manual/msg/VelocityCommand.msg
+  manual/msg/SteeringCommand.msg
+  manual/msg/GearCommand.msg
+  manual/msg/TurnIndicatorsCommand.msg
+  manual/msg/HazardLightsCommand.msg
+  manual/msg/ManualControlMode.msg
+  manual/msg/ManualControlModeStatus.msg
+  manual/msg/ManualOperatorHeartbeat.msg
+  manual/srv/ListManualControlMode.srv
+  manual/srv/SelectManualControlMode.srv
+  routing/msg/RouteState.msg
+  routing/msg/Route.msg
+  routing/msg/RouteData.msg
+  routing/msg/RouteOption.msg
+  routing/msg/RoutePrimitive.msg
+  routing/msg/RouteSegment.msg
+  routing/srv/ClearRoute.srv
+  routing/srv/SetRoute.srv
+  routing/srv/SetRoutePoints.srv
+  operation_mode/msg/OperationModeState.msg
+  operation_mode/srv/ChangeOperationMode.srv
+  motion/msg/MotionState.msg
+  motion/srv/AcceptStart.srv
+  perception/msg/DynamicObject.msg
+  perception/msg/DynamicObjectArray.msg
+  perception/msg/DynamicObjectKinematics.msg
+  perception/msg/DynamicObjectPath.msg
+  perception/msg/ObjectClassification.msg
+  planning/msg/SteeringFactor.msg
+  planning/msg/SteeringFactorArray.msg
+  planning/msg/VelocityFactor.msg
+  planning/msg/VelocityFactorArray.msg
+  planning/msg/PlanningBehavior.msg
+  planning/msg/PlanningSequence.msg
+  planning/msg/CooperationCommand.msg
+  planning/msg/CooperationDecision.msg
+  planning/msg/CooperationPolicy.msg
+  planning/msg/CooperationStatus.msg
+  planning/srv/SetCooperationCommands.srv
+  planning/srv/SetCooperationPolicies.srv
+  planning/srv/GetCooperationPolicies.srv
+  system/msg/RtiState.msg
+  system/msg/MrmState.msg
+  system/msg/MrmDescription.msg
+  system/msg/MrmRequest.msg
+  system/msg/MrmRequestList.msg
+  system/srv/SendMrmRequest.srv
+  system/srv/ListMrmDescription.srv
+  system/msg/Heartbeat.msg
+  system/msg/DiagGraphStruct.msg
+  system/msg/DiagGraphStatus.msg
+  system/msg/DiagLeafStruct.msg
+  system/msg/DiagLeafStatus.msg
+  system/msg/DiagNodeStruct.msg
+  system/msg/DiagNodeStatus.msg
+  system/msg/DiagLinkStruct.msg
+  system/srv/ResetDiagGraph.srv
+  vehicle/msg/DoorCommand.msg
+  vehicle/msg/DoorLayout.msg
+  vehicle/msg/DoorStatus.msg
+  vehicle/msg/DoorStatusArray.msg
+  vehicle/msg/Gear.msg
+  vehicle/msg/HazardLights.msg
+  vehicle/msg/TurnIndicators.msg
+  vehicle/msg/VehicleMetrics.msg
+  vehicle/msg/VehicleStatus.msg
+  vehicle/msg/VehicleDimensions.msg
+  vehicle/msg/VehicleSpecs.msg
+  vehicle/msg/VehicleKinematics.msg
+  vehicle/srv/SetDoorCommand.srv
+  vehicle/srv/GetDoorLayout.srv
+  vehicle/srv/GetVehicleDimensions.srv
+  vehicle/srv/GetVehicleSpecs.srv
+  DEPENDENCIES
+    builtin_interfaces
+    geographic_msgs
+    geometry_msgs
+    shape_msgs
+    std_msgs
+    unique_identifier_msgs
+)
+
+ament_auto_package()

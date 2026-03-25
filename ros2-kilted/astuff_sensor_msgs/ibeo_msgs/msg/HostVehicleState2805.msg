@@ -1,0 +1,17 @@
+std_msgs/Header header
+
+ibeo_msgs/IbeoDataHeader ibeo_header
+builtin_interfaces/Time timestamp
+uint16 scan_number
+uint16 error_flags
+float64 longitudinal_velocity
+float64 steering_wheel_angle
+float64 front_wheel_angle
+int32 x_position
+int32 y_position
+int16 course_angle
+uint16 time_difference
+int16 x_difference
+int16 y_difference
+int16 heading_difference
+int16 current_yaw_rate

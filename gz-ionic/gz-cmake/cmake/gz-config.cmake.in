@@ -1,0 +1,190 @@
+# - Config file for the @PKG_NAME@ package.
+#
+# For finding and loading @PKG_NAME@ from your project, type:
+#
+# find_package(@PKG_NAME@)
+#
+# This creates the following targets:
+#
+#   Core library target                     - @import_target_name@
+#   Alternative target name                 - @simple_import_name@
+#   Core library + all requested components - @gz_namespace@requested
+#
+# Use target_link_libraries() to link your library or executable to one of the
+# above targets.
+#
+# We also provide the following variables for backwards compatibility, but use
+# of these is discouraged:
+#
+#   @PKG_NAME@_CORE_LIBRARY - Core library (actually contains @simple_import_name@)
+#   @PKG_NAME@_LIBRARIES    - All libraries to link against (actually contains @gz_namespace@requested).
+#   @PKG_NAME@_INCLUDE_DIRS - Include directories for @PKG_NAME@ and its dependencies.
+#
+# We will also set @PKG_NAME@_FOUND to indicate that the package was found.
+#
+################################################################################
+
+# We explicitly set the desired cmake version to ensure that the policy settings
+# of users or of toolchains do not result in the wrong behavior for our modules.
+# Note that the call to find_package(~) will PUSH a new policy stack before
+# taking on these version settings, and then that stack will POP after the
+# find_package(~) has exited, so this will not affect the cmake policy settings
+# of a caller.
+cmake_minimum_required(VERSION 3.22.1 FATAL_ERROR)
+
+if(NOT @PKG_NAME@_FIND_QUIETLY)
+  message(STATUS "Looking for @PKG_NAME@ -- found version @PROJECT_VERSION_FULL@")
+endif()
+
+if(@PKG_NAME@_CONFIG_INCLUDED)
+
+  # Check that each of the components requested in this call to find_package(~)
+  # have already been found.
+  set(@PKG_NAME@_all_requested_components_found true)
+  foreach(component ${@PKG_NAME@_FIND_COMPONENTS})
+    if(NOT @PKG_NAME@-${component}_FOUND)
+      set(@PKG_NAME@_all_requested_components_found false)
+      break()
+    endif()
+  endforeach()
+
+  # If this @PKG_NAME@-config.cmake file has been called before,
+  # and all the requested components are already found, then exit early.
+  if(@PKG_NAME@_all_requested_components_found)
+    return()
+  endif()
+endif()
+set(@PKG_NAME@_CONFIG_INCLUDED TRUE)
+
+# Get access to the find_dependency utility
+include(CMakeFindDependencyMacro)
+# Find gz-cmake, because we need its modules in order to find the rest of
+# our dependencies.
+find_dependency(gz-cmake@GZ_CMAKE_VERSION_MAJOR@)
+
+# Set the REQUIRED flag for the find_package(~) calls on this project's
+# dependencies.
+if(@PKG_NAME@_FIND_REQUIRED)
+  set(gz_package_required REQUIRED)
+else()
+  set(gz_package_required "")
+endif()
+
+# Set the QUIET flag for the find_package(~) calls on this project's
+# dependencies.
+if(@PKG_NAME@_FIND_QUIETLY)
+  set(gz_package_quiet QUIET)
+else()
+  set(gz_package_quiet "")
+endif()
+
+# --------------------------------
+# Find each required dependency of this project (if nothing is below, then the
+# project has no external dependencies). We use find_package(~) instead of
+# find_dependency(~) here so that we can support COMPONENT arguments.
+#
+# TODO: When we migrate to cmake-3.9+, change these to find_dependency(~),
+#       because at that point the find_dependency(~) function will support
+#       the COMPONENT argument.
+if(NOT @PKG_NAME@_FIND_QUIETLY)
+  message(STATUS "Searching for dependencies of @PKG_NAME@")
+endif()
+@PROJECT_CMAKE_DEPENDENCIES@
+# --------------------------------
+
+@PACKAGE_INIT@
+
+if(NOT TARGET @import_target_name@)
+  include("${CMAKE_CURRENT_LIST_DIR}/@target_output_filename@")
+
+  # Create a simplified imported target name for the core library.
+  # You can link to this target instead of the core library.
+  add_library(@simple_import_name@ INTERFACE IMPORTED)
+  set_target_properties(@simple_import_name@ PROPERTIES
+    INTERFACE_LINK_LIBRARIES @import_target_name@)
+  # Note: In a future version of cmake, we can replace this with an ALIAS target
+
+  # In case someone tries to link against the plain library name, we want to
+  # intercept that and have them link against a target instead. This is
+  # effectively the same as @simple_import_name@, but it does not have the
+  # benefit of unambiguously being a target name.
+  add_library(@PKG_NAME@ INTERFACE IMPORTED)
+  set_target_properties(@PKG_NAME@ PROPERTIES
+    INTERFACE_LINK_LIBRARIES @import_target_name@)
+
+endif()
+
+# Create the "all" target if it does not already exist
+if(NOT TARGET @gz_namespace@requested)
+  add_library(@gz_namespace@requested INTERFACE IMPORTED)
+endif()
+
+# Link the core library to the "all" target. We set the property explicitly
+# because target_link_libraries cannot be called on an imported target.
+get_target_property(gz_all_components @gz_namespace@requested INTERFACE_LINK_LIBRARIES)
+if(NOT gz_all_components)
+  # If @gz_namespace@requested has not been given any libraries yet, then cmake will
+  # set gz_all_components to gz_all_components-NOTFOUND, which is something we
+  # should NOT pass into the INTERFACE_LINK_LIBRARIES property.
+  set_target_properties(@gz_namespace@requested PROPERTIES
+    INTERFACE_LINK_LIBRARIES "@import_target_name@")
+else()
+  set_target_properties(@gz_namespace@requested PROPERTIES
+    INTERFACE_LINK_LIBRARIES "${gz_all_components};@import_target_name@")
+endif()
+
+# Package variables. Note that @PKG_NAME@_LIBRARIES and @PKG_NAME@_CORE_LIBRARY
+# contain imported targets, so @PKG_NAME@_INCLUDE_DIRS is never needed.
+set(@PKG_NAME@_CORE_LIBRARY @simple_import_name@)
+set(@PKG_NAME@_LIBRARIES @gz_namespace@requested)
+
+if (NOT @PKG_NAME@_INCLUDE_DIRS_OVERRIDE)
+  set_and_check(@PKG_NAME@_INCLUDE_DIRS "@PACKAGE_GZ_INCLUDE_INSTALL_DIR_FULL@")
+else()
+  set_and_check(@PKG_NAME@_INCLUDE_DIRS ${@PKG_NAME@_INCLUDE_DIRS_OVERRIDE})
+endif()
+
+# Backwards compatibility variables
+set(@LEGACY_PROJECT_PREFIX@_LIBRARIES ${@PKG_NAME@_LIBRARIES})
+set(@LEGACY_PROJECT_PREFIX@_INCLUDE_DIRS ${@PKG_NAME@_INCLUDE_DIRS})
+
+# This macro is used by gz-cmake to automatically configure the pkgconfig
+# files for Gazebo projects.
+gz_pkg_config_entry(@PKG_NAME@ "@PKG_NAME@")
+
+# Find each of the components requested by find_package(~)
+foreach(component ${@PKG_NAME@_FIND_COMPONENTS})
+
+  if(NOT @PKG_NAME@_FIND_QUIETLY)
+    message(STATUS "Searching for <@PKG_NAME@> component [${component}]")
+  endif()
+
+  if(@PKG_NAME@_FIND_REQUIRED_${component})
+
+    # Find the component package using find_dependency(~). If the user specified
+    # REQUIRED or QUIET, those will automatically get forwarded to
+    # find_dependency(~)
+    find_dependency(@PKG_NAME@-${component} @PROJECT_VERSION_FULL_NO_SUFFIX@ EXACT)
+
+  else()
+
+    # If this is an optional component, use find_package(~) instead of
+    # find_dependency(~) so we can ensure that the use of REQUIRED does not get
+    # forwarded to it.
+    find_package(@PKG_NAME@-${component} @PROJECT_VERSION_FULL_NO_SUFFIX@ EXACT ${gz_package_quiet})
+
+  endif()
+
+endforeach()
+
+# Specify the doxygen tag file
+set(@PROJECT_NAME_NO_VERSION_UPPER@_DOXYGEN_TAGFILE "${PACKAGE_PREFIX_DIR}/@GZ_DATA_INSTALL_DIR@/@PROJECT_NAME_LOWER@.tag.xml")
+
+# Specify the API url. This is where the doxygen tag file will resolve URLS to.
+set(@PROJECT_NAME_NO_VERSION_UPPER@_API_URL "https://gazebosim.org/api/@GZ_DESIGNATION@/@PROJECT_VERSION_MAJOR@")
+
+# include all config extra files
+set(_extras "@PACKAGE_CONFIG_EXTRA_FILES@")
+foreach(_extra ${_extras})
+  include("${@PROJECT_NAME@_DIR}/${_extra}")
+endforeach()

@@ -1,0 +1,19 @@
+#
+# continuous integration workflow
+#
+name: build repo
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    branches: [master]
+
+jobs:
+  build_ros2:
+    uses: ros-misc-utilities/ros_build_scripts/.github/workflows/ci_humble_and_later.yml@master
+    with:
+      repo: ${{ github.event.repository.name }}
+      vcs_url: ${{ github.event.repository.name }}.repos

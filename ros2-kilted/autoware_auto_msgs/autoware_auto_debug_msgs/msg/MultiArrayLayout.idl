@@ -1,0 +1,18 @@
+#include "autoware_auto_debug_msgs/msg/MultiArrayDimension.idl"
+
+module autoware_auto_debug_msgs {
+  module msg {
+    @verbatim (language = "comment", text=
+      "This is from ros2 common_interfaces."
+      "https://github.com/ros2/common_interfaces/blob/master/std_msgs/msg/MultiArrayLayout.msg")
+    struct MultiArrayLayout {
+      @verbatim (language = "comment", text=
+        "Array of dimension properties.")
+      sequence<autoware_auto_debug_msgs::msg::MultiArrayDimension> dim;
+
+      @verbatim (language = "comment", text=
+        "padding bytes at front of data.")
+      uint32 data_offset;
+    };
+  };
+};

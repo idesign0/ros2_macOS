@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+
+from typing import Optional
+import tempfile
+import argparse
+import getpass
+import logging
+from pathlib import Path
+import os
+import subprocess
+from configparser import ConfigParser
+
+
+def _get_username():
+    return os.environ.get("SUDO_USER") or getpass.getuser()
+
+
+DEFAULT_SERVICE = {
+    "Unit": {
+        "Description": "Sugarcoat Service",
+        "After": "multi-user.target",
+    },
+    "Service": {
+        "Type": "simple",
+        "Restart": "on-failure",
+        "RestartSec": "3s",
+        "User": _get_username(),
+        "Environment": "PYTHONUNBUFFERED=1",
+    },
+    "Install": {
+        "WantedBy": "default.target",
+    },
+}
+
+CONFIGPARSER_OPTIONS_SYSTEMD = {
+    "delimiters": ("=",),
+    "comment_prefixes": ("#",),
+    "empty_lines_in_values": False,
+}
+
+
+def _write_systemd_config(
+    service_config: ConfigParser, filename: str, install_path: Path
+):
+    """Write systemd service and add correct permissions"""
+    output_file_path = install_path / filename
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", newline="\n", delete=False
+        ) as temp_service_file:
+            service_config.write(temp_service_file, space_around_delimiters=False)
+            temp_path = Path(temp_service_file.name)
+
+        subprocess.run(
+            ["sudo", "mv", str(temp_path), str(output_file_path)], check=True
+        )
+        subprocess.run(["sudo", "chmod", "644", str(output_file_path)], check=True)
+        subprocess.run(["sudo", "chown", "0:0", str(output_file_path)], check=True)
+    except (subprocess.CalledProcessError, IOError) as e:
+        logging.error(f"Error occurred while writing service file: {e}")
+        raise
+    finally:
+        if temp_path and temp_path.exists():
+            os.remove(temp_path)
+
+
+def install_service(
+    service_file_path: str,
+    service_name: str,
+    service_description: Optional[str] = "Sugarcoat Description",
+    services_enable: bool = True,
+    install_path: str = "/etc/systemd/system",
+    source_workspace_path: Optional[str] = None,
+    restart_time: str = "3s",
+):
+    """
+    Installs a python script as a systemd service
+    """
+    if not Path(service_file_path).is_file():
+        raise FileNotFoundError(
+            f"Cannot find the specified python script at {service_file_path}"
+        )
+    service_file_path = str(Path(service_file_path).absolute())
+
+    logging.info(f"Installing {service_name} service...")
+
+    _config = DEFAULT_SERVICE
+    shell = os.environ["SHELL"].split("/")[-1]
+
+    # Get sourcing path
+    if not source_workspace_path:
+        if Path(f"/opt/ros/{os.environ['ROS_DISTRO']}/setup.{shell}").is_file():
+            workspace_path = f"/opt/ros/{os.environ['ROS_DISTRO']}/setup.{shell}"
+        elif Path(
+            f"/opt/ros/{os.environ['ROS_DISTRO']}/install/setup.{shell}"
+        ).is_file():
+            workspace_path = (
+                f"/opt/ros/{os.environ['ROS_DISTRO']}/install/setup.{shell}"
+            )
+        else:
+            raise ValueError(
+                "Could not find ROS workspace to source. Please provide source_workspace_path explictly"
+            )
+    else:
+        workspace_path = source_workspace_path
+
+    # Add description if provided
+    if service_description:
+        _config["Unit"]["Description"] = service_description
+
+    # Add python script
+    _config["Service"]["ExecStart"] = (
+        f"/bin/{shell} -c 'source {workspace_path}; /usr/bin/python3 {service_file_path}'"
+    )
+
+    # Set the RestartSec value from the parameter
+    _config["Service"]["RestartSec"] = restart_time
+
+    # Create ConfigParser object with service config
+    service_config = ConfigParser(**CONFIGPARSER_OPTIONS_SYSTEMD)
+    service_config.optionxform = str  # to make configparser case sensitive
+    service_config.read_dict(_config)
+
+    # Check service name and add .service to it
+    if not service_name.endswith(".service"):
+        service_name += ".service"
+
+    # Check if service already exists
+    service_path = Path(install_path) / service_name
+    if service_path.exists():
+        logging.warning(
+            f"Service '{service_name}' already exists in {install_path}. It will be overwritten."
+        )
+
+    logging.info(f"Installing service file to {install_path} ...")
+    _write_systemd_config(service_config, service_name, Path(install_path))
+
+    logging.info("Reloading systemd daemon...")
+    subprocess.run(
+        ["systemctl", "daemon-reload"],
+        timeout=60,
+        check=True,
+    )
+
+    if services_enable:
+        logging.info(f"Enabling service {service_name}...")
+        subprocess.run(
+            ["systemctl", "enable", service_name],
+            timeout=60,
+            check=True,
+        )
+
+    logging.info(f"Successfully installed {service_name} service to {install_path}")
+    logging.info(
+        f"You can start the service by running the following (service will start automatically after a restart):\n\n`systemctl start {service_name}`\n"
+    )
+    logging.info(
+        f"After enabling, the logs can be viewed as follows:\n\n`journalctl --unit {service_name}`"
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Install a Python script as a systemd service."
+    )
+
+    parser.add_argument(
+        "service_file_path",
+        type=str,
+        help="Path to the Python script that you want to install as a service.",
+    )
+
+    parser.add_argument(
+        "service_name",
+        type=str,
+        help="Name of the systemd service (without .service extension).",
+    )
+
+    parser.add_argument(
+        "--service-description",
+        type=str,
+        default="Sugarcoat Service",
+        help="Plain language description of the service. Defaults to Sugarcoat Description.",
+    )
+
+    parser.add_argument(
+        "--install-path",
+        type=str,
+        default="/etc/systemd/system",
+        help="Path where the service file will be installed. Default is /etc/systemd/system",
+    )
+
+    parser.add_argument(
+        "--source-workspace-path",
+        type=str,
+        help="Path to the ROS workspace setup script to source in case of packages build from source. If not provided, it will try to just source the available ROS distribution automatically.",
+    )
+
+    parser.add_argument(
+        "--no-enable",
+        action="store_false",
+        dest="services_enable",
+        default=True,
+        help="Do not enable the service after installation.",
+    )
+
+    parser.add_argument(
+        "--restart-time",
+        type=str,
+        default="3s",
+        help="Time in seconds (as a string e.g. 2s) to wait before restarting the service if it fails. Default is 3s",
+    )
+
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO)
+    install_service(**vars(args))
+
+
+if __name__ == "__main__":
+    main()

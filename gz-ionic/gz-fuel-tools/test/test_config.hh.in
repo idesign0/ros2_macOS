@@ -1,0 +1,240 @@
+/*
+ * Copyright (C) 2017 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+#ifndef GZ_FUEL_TOOLS_TEST_CONFIG_HH_
+#define GZ_FUEL_TOOLS_TEST_CONFIG_HH_
+
+#define PROJECT_SOURCE_PATH "${PROJECT_SOURCE_DIR}"
+#define PROJECT_BINARY_PATH "${PROJECT_BINARY_DIR}"
+#define GZ_FUEL_TOOLS_LIBRARY_PATH "${PROJECT_BINARY_DIR}/src"
+#define GZ_FUEL_TOOLS_VERSION_FULL "@PROJECT_VERSION_FULL@"
+#define TEST_PATH "${PROJECT_SOURCE_DIR}/test"
+
+#include <climits>
+#include <cstdio>
+#include <fstream>
+#include <iostream>
+#include <random>
+#include <string>
+
+#ifdef _WIN32
+  #include <filesystem>
+  #include <windows.h>
+#else
+  #include <signal.h>
+  #include <sys/types.h>
+  #include <sys/wait.h>
+  #include <unistd.h>
+#endif
+
+#include "gtest/gtest.h"
+#include "gz/fuel_tools/Helpers.hh"
+
+#ifdef _MSC_VER
+#  define popen _popen
+#  define pclose _pclose
+#endif
+
+#if (_MSC_VER >= 1400) // Visual Studio 2005
+  #include <sstream>
+
+  /// \brief setenv/unstenv are not present in Windows. Define them to make
+  /// the code portable.
+  /// \param[in] _name Variable name.
+  /// \param[in] _value Value.
+  /// \param[in] _rewrite If 'name' does exist in the environment, then its
+  /// value is changed to 'value' if 'rewrite' is nonzero. If overwrite is
+  /// zero, then the value of 'name' is not changed.
+  /// /return 0 on success or -1 on error.
+  int setenv(const char *_name, const char *_value, int /*_rewrite*/)
+  {
+    std::stringstream sstr;
+    std::string name = _name;
+    std::string value = _value;
+    sstr << name << '=' << value;
+    return _putenv(sstr.str().c_str());
+  }
+
+  /// \brief Deletes an environment variable.
+  /// \param[in] _name Variable name.
+  void unsetenv(const char *_name)
+  {
+    std::stringstream sstr;
+    std::string name = _name;
+    sstr << name << '=';
+    _putenv(sstr.str().c_str());
+  }
+#endif
+
+namespace testing
+{
+  /// \brief Join str1 and str2 considering both as storing system paths.
+  /// \param[in] str1 string containing a path.
+  /// \param[in] str2 string containing a path.
+  /// \return The string representation of the union of two paths.
+  std::string portablePathUnion(const std::string &_str1,
+      const std::string &_str2)
+  {
+#ifdef _WIN32
+    std::filesystem::path basePath(_str1);
+    return (basePath / _str2).string();
+#else
+    // Ugly as hell but trying to avoid boost::filesystem
+    return _str1 + "/" + _str2;
+#endif
+  }
+
+#ifdef _WIN32
+  using forkHandlerType = PROCESS_INFORMATION;
+#else
+  using forkHandlerType = pid_t;
+#endif
+
+  /// \brief create a new process and run command on it. This function is
+  /// implementing the creation of a new process on both Linux (fork) and
+  /// Windows (CreateProcess) and the execution of the command provided.
+  /// \param[in] command The full system path to the binary to run into the
+  /// new process.
+  /// \return On success, the PID of the child process is returned in the
+  /// parent, an 0 is returned in the child. On failure, -1 is returned in the
+  /// parent and no child process is created.
+  forkHandlerType forkAndRun(const char *_command, const char *_partition)
+  {
+#ifdef _WIN32
+    STARTUPINFO info= {sizeof(info)};
+    PROCESS_INFORMATION processInfo;
+
+    char cmd[500];
+    gz_strcpy(cmd, _command);
+    gz_strcat(cmd, " ");
+    gz_strcat(cmd, _partition);
+
+    if (!CreateProcess(NULL, const_cast<LPSTR>(cmd), NULL, NULL,
+          TRUE, 0, NULL, NULL, &info, &processInfo))
+    {
+      std::cerr << "CreateProcess call failed" << std::endl;
+    }
+
+    return processInfo;
+#else
+    pid_t pid = fork();
+
+    if (pid == 0)
+    {
+      if (execl(_command, _command, _partition,
+            reinterpret_cast<char *>(0)) == -1)
+      {
+        std::cerr << "Error running execl call: " << _command << std::endl;
+      }
+    }
+
+    return pid;
+#endif
+  }
+
+  /// \brief Wait for the end of a process and handle the termination
+  /// \param[in] pi Process handler of the process to wait for
+  /// (PROCESS_INFORMATION in windows or forkHandlerType in UNIX).
+  void waitAndCleanupFork(const forkHandlerType pi)
+  {
+#ifdef _WIN32
+    // Wait until child process exits.
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    // Close process and thread handler.
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+#else
+    // Wait for the child process to return.
+    int status;
+    waitpid(pi, &status, 0);
+    if (status == -1)
+      std::cerr << "Error while running waitpid" << std::endl;
+#endif
+  }
+
+  /// \brief Send a termination signal to the process handled by pi.
+  /// \param[in] pi Process handler of the process to stop
+  /// (PROCESS_INFORMATION in windows or forkHandlerType in UNIX).
+  void killFork(const forkHandlerType pi)
+  {
+#ifdef _WIN32
+    // TerminateProcess return 0 on error
+    if (TerminateProcess(pi.hProcess, 0) == 0)
+      std::cerr << "Error running TerminateProcess: " << GetLastError();
+#else
+    kill(pi, SIGTERM);
+#endif
+  }
+
+  /// \brief Get a random number based on an integer converted to string.
+  /// \return A random integer converted to string.
+  std::string getRandomNumber()
+  {
+    // Initialize random number generator.
+    uint32_t seed = std::random_device {}();
+    std::mt19937 randGenerator(seed);
+
+    // Create a random number based on an integer converted to string.
+    std::uniform_int_distribution<int32_t> d(0, INT_MAX);
+
+    return std::to_string(d(randGenerator));
+  }
+
+  // The fixture for testing classes.
+  class FileParserUtils : public ::testing::Test
+  {
+    /// \brief Code here will be called immediately after the constructor
+    /// (right before each test).
+    virtual void SetUp()
+    {
+      this->fileName = getRandomNumber() + ".txt";
+    }
+
+    /// \brief Code here will be called immediately after each test
+    /// (right before the destructor).
+    virtual void TearDown()
+    {
+      if (this->testFile.is_open())
+        this->testFile.close();
+      std::remove(this->fileName.c_str());
+    }
+
+    /// \brief Populate the temporary file.
+    /// \param[in] _content File content.
+    protected: void PopulateFile(const std::string &_content)
+    {
+      if (this->testFile.is_open())
+        this->testFile.close();
+
+      this->testFile.open(this->fileName);
+      this->testFile << _content << std::endl;
+    }
+
+    /// \brief The name of the test file created.
+    protected: std::string fileName;
+
+    /// \brief If file content is not empty, its value will be used to populate
+    /// a text file and check some parser functions.
+    protected: std::string fileContent = "";
+
+    /// \brief A test file.
+    protected: std::ofstream testFile;
+  };
+}
+
+#endif  // header guard

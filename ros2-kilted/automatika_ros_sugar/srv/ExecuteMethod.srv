@@ -1,0 +1,5 @@
+string name
+string kwargs_json
+---
+bool success
+string error_msg

@@ -1,0 +1,20 @@
+\page tutorials Tutorials
+
+Welcome to the Gazebo @GZ_DESIGNATION_CAP@ tutorials. These tutorials
+will guide you through the process of understanding the capabilities of the
+Gazebo @GZ_DESIGNATION_CAP@ library and how to use the library effectively.
+
+**The tutorials**
+
+1. \subpage introduction "Introduction"
+2. \subpage installation "Installation"
+3. \subpage custom_sensors "Custom sensors": Creating your own sensors
+4. \subpage thermalcameraigngazebo "Thermal Camera in Gazebo": Using a thermal camera in Gazebo to detect objects of specific temperatures in camera images.
+5. \subpage segmentationcamera_igngazebo "Segmentation Camera in Gazebo"
+6. \subpage boundingbox_camera "Bounding Box Camera in Gazebo"
+
+## License
+
+The code associated with this documentation is licensed under an [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+
+This documentation is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).

@@ -1,0 +1,5 @@
+repositories:
+  apriltag_mit:
+    type: git
+    url: https://github.com/ros-misc-utilities/apriltag_mit.git
+    version: master

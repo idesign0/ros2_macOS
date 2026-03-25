@@ -1,0 +1,61 @@
+# - Config to retrieve all components of the @PKG_NAME@ package
+#
+# This should only be invoked by @PKG_NAME@-config.cmake.
+#
+# To retrieve this meta-package, use:
+# find_package(@PKG_NAME@ COMPONENTS all)
+#
+# This creates the target @gz_namespace@all which will link to all known
+# components of @PKG_NAME@, including the core library.
+#
+# This also creates the variable @PKG_NAME@_ALL_LIBRARIES
+#
+################################################################################
+
+cmake_minimum_required(VERSION 3.22.1 FATAL_ERROR)
+
+if(@PKG_NAME@_ALL_CONFIG_INCLUDED)
+  return()
+endif()
+set(@PKG_NAME@_ALL_CONFIG_INCLUDED TRUE)
+
+if(NOT @all_pkg_name@_FIND_QUIETLY)
+  message(STATUS "Looking for all libraries of @PKG_NAME@ -- found version @PROJECT_VERSION_FULL@")
+endif()
+
+@PACKAGE_INIT@
+
+# Get access to the find_dependency utility
+include(CMakeFindDependencyMacro)
+
+# Find the core library
+find_dependency(@PKG_NAME@ @PROJECT_VERSION_FULL_NO_SUFFIX@ EXACT)
+
+# Find the component libraries
+@find_all_pkg_components@
+
+if(NOT TARGET @import_target_name@)
+  include("${CMAKE_CURRENT_LIST_DIR}/@target_output_filename@")
+
+  add_library(@simple_import_name@ INTERFACE IMPORTED)
+  set_target_properties(@simple_import_name@ PROPERTIES
+    INTERFACE_LINK_LIBRARIES "@import_target_name@")
+
+endif()
+
+# Create the "requested" target if it does not already exist
+if(NOT TARGET @gz_namespace@requested)
+  add_library(@gz_namespace@requested INTERFACE IMPORTED)
+endif()
+
+# Link the "all" target to the "requested" target
+get_target_property(gz_requested_components @gz_namespace@requested INTERFACE_LINK_LIBRARIES)
+if(NOT gz_requested_components)
+  set_target_properties(@gz_namespace@requested PROPERTIES
+    INTERFACE_LINK_LIBRARIES "@import_target_name@")
+else()
+  set_target_properties(@gz_namespace@requested PROPERTIES
+    INTERFACE_LINK_LIBRARIES "${gz_requested_components};@import_target_name@")
+endif()
+
+set(@PKG_NAME@_ALL_LIBRARIES @import_target_name@)

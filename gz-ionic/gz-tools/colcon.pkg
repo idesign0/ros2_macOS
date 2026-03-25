@@ -1,0 +1,10 @@
+# Configuration file for colcon (https://colcon.readthedocs.io).
+#
+# Please see the doc for the details of the spec:
+#   - https://colcon.readthedocs.io/en/released/user/configuration.html#colcon-pkg-files
+
+{
+  # explicitly add gz-cmake4 and gz-cmake as dependencies since they are not included in the package.xml
+  # see https://github.com/gazebosim/gz-tools/pull/142 for discussion of alternatives
+  "dependencies": ["gz-cmake4", "gz-cmake"],
+}

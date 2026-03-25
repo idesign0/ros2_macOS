@@ -1,0 +1,59 @@
+# Run against all the files: pre-commit run -a
+# Install the git hook scripts: pre-commit install
+
+repos:
+  - repo: local
+    hooks:
+      - id: copyright
+        name: fix copyright
+        description: Check that files have a copyright notice.
+        entry: tools/check_copyright.py
+        args: [--fix]
+        types_or: [c++, python, cmake]
+        language: python
+        language_version: python3
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-ast
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-xml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v16.0.3
+    hooks:
+      - id: clang-format
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-docstrings]
+
+  - repo: https://github.com/psf/black
+    rev:  23.3.0
+    hooks:
+      - id: black
+        args: [--skip-string-normalization]
+
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
+      - id: cmake-format
+      - id: cmake-lint
+
+  - repo: https://github.com/keith/pre-commit-buildifier
+    rev: 6.1.0
+    hooks:
+      - id: buildifier
+        args: &args
+          - --warnings=all
+      - id: buildifier-lint
+        args: *args

@@ -1,0 +1,82 @@
+<element name="imu" required="0">
+  <description>These elements are specific to the IMU sensor.</description>
+
+  <element name="topic" type="string" default="__default_topic__" required="0">
+    <description>Topic on which data is published.</description>
+  </element>
+
+  <element name="angular_velocity" required="0">
+    <description>These elements are specific to body-frame angular velocity,
+    which is expressed in radians per second</description>
+    <element name="x" required="0">
+      <description>Angular velocity about the X axis</description>
+      <include filename="noise.sdf" required="0"/>
+    </element>
+    <element name="y" required="0">
+      <description>Angular velocity about the Y axis</description>
+      <include filename="noise.sdf" required="0"/>
+    </element>
+    <element name="z" required="0">
+      <description>Angular velocity about the Z axis</description>
+      <include filename="noise.sdf" required="0"/>
+    </element>
+  </element>
+
+  <element name="linear_acceleration" required="0">
+    <description>These elements are specific to body-frame linear acceleration,
+    which is expressed in meters per second squared</description>
+    <element name="x" required="0">
+      <description>Linear acceleration about the X axis</description>
+      <include filename="noise.sdf" required="0"/>
+    </element>
+    <element name="y" required="0">
+      <description>Linear acceleration about the Y axis</description>
+      <include filename="noise.sdf" required="0"/>
+    </element>
+    <element name="z" required="0">
+      <description>Linear acceleration about the Z axis</description>
+      <include filename="noise.sdf" required="0"/>
+    </element>
+  </element>
+
+  <!-- THE ELEMENTS BELOW ARE DEPRECATED AND SHOULD BE REMOVED in SDF 1.6 -->
+
+  <element name="noise" required="0">
+    <description>The properties of the noise model that should be applied to generated data</description>
+    <element name="type" type="string" default="gaussian" required="1">
+      <description>The type of noise.  Currently supported types are: "gaussian" (draw noise values independently for each beam from a Gaussian distribution).</description>
+    </element>
+    <element name="rate" required="1">
+      <description>Noise parameters for angular rates.</description>
+      <element name="mean" type="double" default="0.0" required="0">
+        <description>For type "gaussian," the mean of the Gaussian distribution from which noise values are drawn.</description>
+      </element>
+      <element name="stddev" type="double" default="0.0" required="0">
+        <description>For type "gaussian," the standard deviation of the Gaussian distribution from which noise values are drawn.</description>
+      </element>
+      <element name="bias_mean" type="double" default="0.0" required="0">
+        <description>For type "gaussian," the mean of the Gaussian distribution from which bias values are drawn.</description>
+      </element>
+      <element name="bias_stddev" type="double" default="0.0" required="0">
+        <description>For type "gaussian," the standard deviation of the Gaussian distribution from which bias values are drawn.</description>
+      </element>
+    </element> <!-- End Rate -->
+
+    <element name="accel" required="1">
+      <description>Noise parameters for linear accelerations.</description>
+      <element name="mean" type="double" default="0.0" required="0">
+        <description>For type "gaussian," the mean of the Gaussian distribution from which noise values are drawn.</description>
+      </element>
+      <element name="stddev" type="double" default="0.0" required="0">
+        <description>For type "gaussian," the standard deviation of the Gaussian distribution from which noise values are drawn.</description>
+      </element>
+      <element name="bias_mean" type="double" default="0.0" required="0">
+        <description>For type "gaussian," the mean of the Gaussian distribution from which bias values are drawn.</description>
+      </element>
+      <element name="bias_stddev" type="double" default="0.0" required="0">
+        <description>For type "gaussian," the standard deviation of the Gaussian distribution from which bias values are drawn.</description>
+      </element>
+    </element> <!-- End Accel -->
+  </element> <!-- End Noise -->
+
+</element>

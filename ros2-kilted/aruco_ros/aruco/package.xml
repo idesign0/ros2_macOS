@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>aruco</name>
+  <version>5.0.5</version>
+  <description>
+    The ARUCO Library has been developed by the Ava group of the Univeristy of Cordoba(Spain).
+    It provides real-time marker based 3D pose estimation using AR markers.
+  </description>
+  <maintainer email="sai.kishor@pal-robotics.com">Sai Kishor Kothakota</maintainer>
+  <license>MIT</license>
+  <url type="website">http://www.uco.es/investiga/grupos/ava/node/26</url>
+  <author email="rmsalinas@uco.es">Rafael Muñoz Salinas</author>
+  <author email="bence.magyar@pal-robotics.com">Bence Magyar</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>cv_bridge</depend>
+  <depend>eigen</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>

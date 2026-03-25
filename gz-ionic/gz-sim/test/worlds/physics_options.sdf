@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="physics_options">
+    <physics name="test" type="ignored">
+      <dart>
+        <collision_detector>bullet</collision_detector>
+        <solver>
+          <solver_type>pgs</solver_type>
+        </solver>
+      </dart>
+      <bullet>
+        <solver>
+          <iters>100</iters>
+        </solver>
+      </bullet>
+      <real_time_factor>0</real_time_factor>
+    </physics>
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+  </world>
+</sdf>

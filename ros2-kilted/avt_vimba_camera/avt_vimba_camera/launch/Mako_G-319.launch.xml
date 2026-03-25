@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Driver parameters, these parameters affect the way the ROS driver works -->
+  <arg name="name" default="camera" doc="The name of the camera"/>
+  <arg name="frame_id" default="$(var name)" doc="The frame id of the camera"/>
+  <arg name="ip" default="" doc="The IP for the camera to connect to"/>
+  <arg name="guid" default="" doc="The GUID for the camera to connect to"/>
+  <arg name="use_measurement_time" default="false" doc="Use the measurement time from the camera"/>
+  <arg name="ptp_offset" default="-37" doc="Offset to add to the timestamp from the camera (s).
+    Useful for converting from TAI to UTC time. Only applies if use_measurement_time is true"/>
+  <arg name="camera_info_url" default="file://$(find-pkg-share avt_vimba_camera)/calibrations/calibration_example.yaml"/>
+  <arg name="image_proc" default="false" doc="Launch image_proc with driver"/>
+
+  <!-- Camera parameters are used to configure the AVT camera upon startup, these params are defined in yaml files -->
+  <arg name="params_file" default="$(find-pkg-share avt_vimba_camera)/config/Mako_G-319.yaml"/>
+
+  <include file="$(find-pkg-share avt_vimba_camera)/launch/mono_camera.launch.xml">
+    <arg name="name" value="$(var name)"/>
+    <arg name="frame_id" value="$(var frame_id)"/>
+    <arg name="ip" value="$(var ip)"/>
+    <arg name="guid" value="$(var guid)"/>
+    <arg name="use_measurement_time" value="$(var use_measurement_time)"/>
+    <arg name="ptp_offset" value="$(var ptp_offset)"/>
+    <arg name="camera_info_url" value="$(var camera_info_url)"/>
+    <arg name="image_proc" value="$(var image_proc)"/>
+
+    <arg name="params_file" value="$(var params_file)"/>
+  </include>
+</launch>

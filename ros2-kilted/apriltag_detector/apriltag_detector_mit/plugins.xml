@@ -1,0 +1,5 @@
+<library path="apriltag_detector_mit">
+  <class type="apriltag_detector_mit::Detector" base_class_type="apriltag_detector::Detector">
+    <description>MIT ApriltagDetector plugin</description>
+  </class>
+</library>

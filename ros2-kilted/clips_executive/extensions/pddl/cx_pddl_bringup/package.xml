@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>cx_pddl_bringup</name>
+  <version>0.0.0</version>
+  <description>Bringup scripts, parameters anf files for launching CLIPS example programs utilizing PDDL</description>
+  <maintainer email="viehmann@kbsg.rwth-aachen.de">Tarik Viehmann</maintainer>
+  <maintainer email="daniel.swoboda@ml.rwth-aachen.de">Daniel Swoboda</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>cx_pddl_clips</exec_depend>
+  <exec_depend>cx_bringup</exec_depend>
+  <exec_depend>cx_pddl_manager</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

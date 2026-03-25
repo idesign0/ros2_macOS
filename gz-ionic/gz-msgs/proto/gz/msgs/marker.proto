@@ -1,0 +1,186 @@
+/*
+ * Copyright (C) 2017 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "MarkerProtos";
+
+/// \ingroup gz.msgs
+/// \interface Marker
+/// \brief A message used to draw visuals
+
+import "gz/msgs/time.proto";
+import "gz/msgs/pose.proto";
+import "gz/msgs/vector3d.proto";
+import "gz/msgs/material.proto";
+import "gz/msgs/header.proto";
+
+message Marker
+{
+  /// \brief The marker type (shape/geometry)
+  enum Type
+  {
+    NONE           = 0;
+    BOX            = 1;
+    CYLINDER       = 2;
+    LINE_LIST      = 4;
+    LINE_STRIP     = 3;
+    POINTS         = 5;
+    SPHERE         = 6;
+    TEXT           = 7;
+    TRIANGLE_FAN   = 8;
+    TRIANGLE_LIST  = 9;
+    TRIANGLE_STRIP = 10;
+    CONE           = 11;
+    ARROW          = 12;
+    AXIS           = 13;
+    CAPSULE        = 14;
+    ELLIPSOID      = 15;
+  }
+
+  /// \brief Visilibity defines what cameras render the marker.
+  enum Visibility
+  {
+    /// \brief Only cameras for user interaction render the visual. Other
+    /// cameras, such as camera sensors, will not render the visual
+    GUI = 0;
+
+    /// \brief All cameras render the visual.
+    ALL = 1;
+  }
+
+  /// \brief How to interpret the data.
+  enum Action
+  {
+    /// \brief Use this action to create a new marker or modify an existing
+    /// marker. A marker will be created if the provided id does not match
+    /// an existing marker, otherwise the marker with the provided id will
+    /// be modified.
+    ADD_MODIFY     = 0;
+
+    /// \brief Use this action to delete an existing marking.
+    /// Nothing will happened if the provided id does not match an existing
+    /// marker.
+    DELETE_MARKER  = 1;
+
+    /// \brief Delete all the markers. If a namespace is provided,
+    /// then only the markers in the provided namespace are deleted.
+    DELETE_ALL     = 2;
+  }
+
+  /// \brief Optional header data
+  Header header     = 1;
+
+  /// \brief The action to take
+  ///
+  /// Relevant Type: all
+  Action action     = 2;
+
+  /// \brief Namespace of the marker. A namespace groups id's together.
+  ///
+  /// Relevant Action: ADD_MODIFY, DELETE_MARKER, DELETE_ALL
+  string ns         = 3;
+
+  /// \brief The id within the namespace of the visual. Each marker has a
+  /// unique id. It's up to the user to select id values.
+  ///
+  /// Relevant Action: ADD_MODIFY, DELETE_MARKER
+  ///
+  /// Relevant Type: all
+  uint64 id         = 4;
+
+  /// \brief The layer the visual belongs to.
+  ///
+  /// Relevant Action: ADD_MODIFY
+  ///
+  /// Relevant Type: all
+  int32 layer      = 5;
+
+  /// \brief The type of geometry.
+  ///
+  /// Relevant Action: ADD_MODIFY
+  Type type         = 6;
+
+  /// \brief How long to keep the visual alive before deletion. A value of
+  /// zero indicates forever. The lifetime is based on simulation-time, not
+  /// real-time.
+  ///
+  /// Relevant Action: ADD_MODIFY
+  ///
+  /// Relevant Type: all
+  Time lifetime     = 7;
+
+  /// \brief Pose of the marker
+  ///
+  /// Relevant Action: ADD_MODIFY
+  ///
+  /// Relevant Type: all
+  Pose pose         = 8;
+
+  /// \brief Scale of the marker.
+  ///
+  /// Relevant Action: ADD_MODIFY
+  ///
+  /// Relevant Type: all
+  Vector3d scale    = 9;
+
+  /// \brief Marker color
+  ///
+  /// Relevant Action: ADD_MODIFY
+  ///
+  /// Relevant Type: all
+  Material material = 10;
+
+  /// \brief Used to specify geometry for a LINE_STRIP, LINE_LIST, POINTS,
+  /// TRIANGLE_LIST, TRIANGLE_FAN, TRIANGLE_STRIP
+  ///
+  /// Relevant Action: ADD_MODIFY
+  ///
+  /// Relevant Type: LINE_STRIP, LINE_LIST, POINTS, TRIANGLE_FAN, TRIANGLE_LIST,
+  /// TRIANGLE_STRIP
+  repeated Vector3d point    = 11;
+
+  /// \brief String to display. Only used for TEXT marker.
+  ///
+  /// Relevant Action: ADD_MODIFY
+  ///
+  /// Relevant Type: TEXT
+  string text       = 12;
+
+  /// \brief Attach this marker to a "parent" visual.
+  ///
+  /// Relevant Action: ADD_MODIFY
+  ///
+  /// Relevant Type: all
+  string parent     = 13;
+
+  /// \brief Defines what cameras render the marker.
+  ///
+  /// Relevant Action: ADD_MODIFY
+  ///
+  /// Relevant Type: all
+  Visibility visibility  = 14;
+
+  /// \brief Marker color for repeated types.
+  ///
+  /// Relevant Action: ADD_MODIFY
+  ///
+  /// Relevant Type: LINE_STRIP, LINE_LIST, POINTS, TRIANGLE_FAN, TRIANGLE_LIST,
+  /// TRIANGLE_STRIP
+  repeated Material materials = 15;
+}

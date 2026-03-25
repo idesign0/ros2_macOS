@@ -1,0 +1,5 @@
+unique_identifier_msgs/UUID object_id
+float32 existence_probability
+ObjectClassification[] classification
+PredictedObjectKinematics kinematics
+Shape shape

@@ -1,0 +1,46 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_configure_header")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+gz_configure_header(
+    name = "Config",
+    src = "test_config.hh.in",
+    defines = [
+        "PROJECT_BINARY_DIR=.",
+        "PROJECT_SOURCE_DIR=.",
+    ],
+    package_xml = "//:package.xml",
+    deps = [
+        "//:gz-fuel-tools",
+        "@googletest//:gtest",
+    ],
+)
+
+[
+    cc_test(
+        name = "INTEGRATION_" + test.split("/")[1].replace(".cc", ""),
+        srcs = [
+            test,
+            "test_config.hh",
+        ],
+        data = glob(["media/**"]),
+        includes = [
+            ".",
+            "integration",
+        ],
+        deps = [
+            "//:gz-fuel-tools",
+            "@googletest//:gtest",
+            "@googletest//:gtest_main",
+            "@gz-common",
+        ],
+    )
+    for test in glob(["integration/*.cc"])
+]

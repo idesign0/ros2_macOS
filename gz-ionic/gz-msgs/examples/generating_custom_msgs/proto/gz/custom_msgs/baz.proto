@@ -1,0 +1,19 @@
+syntax = "proto3";
+package gz.custom_msgs;
+
+import "gz/msgs/header.proto";
+
+import "gz/custom_msgs/foo.proto";
+import "gz/custom_msgs/bar.proto";
+
+message Baz
+{
+  gz.custom_msgs.Foo foo = 1;
+  gz.custom_msgs.Bar bar = 2;
+}
+
+message BazStamped
+{
+  gz.msgs.Header header = 1;
+  gz.custom_msgs.Baz baz = 2;
+}

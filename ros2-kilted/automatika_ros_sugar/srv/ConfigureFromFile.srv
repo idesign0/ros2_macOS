@@ -1,0 +1,5 @@
+string path_to_file
+bool keep_alive         # True -> keep the component running when changing the parameter, False -> deactivate, change parameter then activate
+---
+bool success
+string error_msg

@@ -1,0 +1,4 @@
+cx_pddl_interfaces/Object[] objects
+---
+bool success
+string error

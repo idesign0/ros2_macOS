@@ -1,0 +1,8 @@
+std_msgs/Header header
+
+float64 ref_point_1_position
+float64 ref_point_1_distance
+bool ref_point_1_validity
+float64 ref_point_2_position
+float64 ref_point_2_distance
+bool ref_point_2_validity

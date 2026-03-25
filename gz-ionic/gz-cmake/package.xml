@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>gz-cmake4</name>
+  <version>4.2.1</version>
+  <description>Gazebo CMake : CMake Modules for Gazebo Projects</description>
+
+  <maintainer email="scpeters@openrobotics.org">Steve Peters</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <url type="website">https://github.com/gazebosim/gz-cmake</url>
+
+  <buildtool_depend>cmake</buildtool_depend>
+  <buildtool_depend>pkg-config</buildtool_depend>
+
+  <test_depend>cmake</test_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

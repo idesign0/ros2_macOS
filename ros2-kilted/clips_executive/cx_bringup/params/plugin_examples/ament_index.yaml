@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    environments: ["cx_ament_index"]
+    cx_ament_index:
+      plugins: ["ament_index", "files"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+
+    ament_index:
+      plugin: "cx::AmentIndexPlugin"
+    files:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_bringup"]
+      batch: [
+        "clips/plugin_examples/ament-index.clp"]

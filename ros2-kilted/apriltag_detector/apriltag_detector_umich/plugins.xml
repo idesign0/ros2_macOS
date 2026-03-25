@@ -1,0 +1,5 @@
+<library path="apriltag_detector_umich">
+  <class type="apriltag_detector_umich::Detector" base_class_type="apriltag_detector::Detector">
+    <description>UMich ApriltagDetector plugin</description>
+  </class>
+</library>

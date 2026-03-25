@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>cx_config_plugin</name>
+  <version>0.1.3</version>
+  <description>CX plugin to parse yaml files and provide the values to CLIPS</description>
+
+  <maintainer email="viehmann@kbsg.rwth-aachen.de">Tarik Viehmann</maintainer>
+
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>ament_index_cpp</depend>
+  <depend>cx_plugin</depend>
+  <depend>cx_utils</depend>
+  <depend>pluginlib</depend>
+  <depend>yaml_cpp_vendor</depend>
+  <depend>clips_vendor</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <cx_plugin plugin="${prefix}/config_plugin.xml"/>
+  </export>
+</package>

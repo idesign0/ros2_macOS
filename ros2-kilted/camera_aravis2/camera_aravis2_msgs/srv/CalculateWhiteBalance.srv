@@ -1,0 +1,9 @@
+# Service definition to calculate white balance on demand
+
+---
+
+# flag indicating if successful
+bool is_successful
+
+# balance ratios
+diagnostic_msgs/KeyValue[] balance_ratios

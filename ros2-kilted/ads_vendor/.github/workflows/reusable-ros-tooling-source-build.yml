@@ -1,0 +1,122 @@
+name: Reusable workflow for building a repo with all dependencies from source
+# author:
+#  Denis Štogl <denis@stoglrobotics.de>
+#  Christoph Froehlich <christoph.froehlich@ait.ac.at>
+
+on:
+  workflow_call:
+    inputs:
+      ros_distro:
+        description: 'ROS 2 distribution name'
+        required: true
+        type: string
+      ref:
+        description: 'Reference on which the repo should be checkout. Usually is this name of a branch or a tag.'
+        required: true
+        type: string
+      os_name:
+        description: 'On which OS to run the linter'
+        required: false
+        default: 'ubuntu-latest'
+        type: string
+      container:
+        description: '(optional) Docker container to run the job in, e.g. ubuntu:noble'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  reusable_ros_tooling_source_build:
+    name: ${{ inputs.ros_distro }} ${{ inputs.os_name }}
+    runs-on: ${{ inputs.os_name }}
+    container: ${{ inputs.container }}
+    env:
+      # this will be src/{repo-owner}/{repo-name}
+      repo_path: src/${{ github.repository }}
+    steps:
+      - name: "Determine prerequisites"
+        id: prereq
+        run: |
+          command -v sudo >/dev/null 2>&1 || (apt update && apt install -y sudo)
+          DEBIAN_FRONTEND=noninteractive sudo apt update && sudo apt-mark hold firefox && sudo apt upgrade -y
+          echo "need_node=$(command -v node >/dev/null 2>&1 && echo 0 || echo 1)" >> $GITHUB_OUTPUT
+
+      # needed for github actions, and only if a bare ubuntu image is used
+      - uses: actions/setup-node@v5
+        if: ${{ steps.prereq.outputs.need_node == '1' && !env.ACT }}
+      - name: Install node
+        # Consider switching to https://github.com/actions/setup-node when it works
+        # https://github.com/nektos/act/issues/973
+        if: ${{ steps.prereq.outputs.need_node == '1' && env.ACT }}
+        run: |
+          sudo apt install -y curl
+          curl -sS https://webi.sh/node | sh
+          echo ~/.local/opt/node/bin >> $GITHUB_PATH
+
+      # needed only if a non-ros image is used
+      - uses: ros-tooling/setup-ros@0.7.15
+        with:
+          use-ros2-testing: true
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+          path: ${{ env.repo_path }}
+
+      - name: Get a list of all packages
+        id: package_list_action
+        uses: ros-controls/ros2_control_ci/.github/actions/set-package-list@master
+        with:
+          path: ${{ env.repo_path }}
+
+      # Run the generator and output the results to a file with retry logic.
+      - name: Use rosinstall_generator to get all dependencies
+        run: |
+          for i in {1..5}; do
+            rosinstall_generator ${{ steps.package_list_action.outputs.package_list }} --rosdistro ${{ inputs.ros_distro }} \
+            --deps-only --deps --upstream-development > /tmp/deps.repos && break || echo "retry #${i} .." && sleep 60;
+          done
+
+      - name: Check if dependency file is empty
+        id: check_deps_file
+        run: |
+          if [ -s /tmp/deps.repos ]; then
+            echo "vcs_file_path=/tmp/deps.repos" >> $GITHUB_OUTPUT
+          else
+            echo "vcs_file_path=" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: ros-tooling/action-ros-ci@0.4.5
+        with:
+          target-ros2-distro: ${{ inputs.ros_distro }}
+          ref: ${{ inputs.ref }}
+          package-name: ${{ steps.package_list_action.outputs.package_list }}
+          rosdep-skip-keys: rti-connext-dds-7.3.0
+          vcs-repo-file-url: ${{ steps.check_deps_file.outputs.vcs_file_path }}
+          colcon-mixin-repository: https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml
+          colcon-defaults: |
+            {
+                "test": {
+                    "executor": "sequential"
+                }
+            }
+        id: action-ros
+
+      - name: Download issue template for target failure  # Has to be a local file
+        if: ${{ always() && steps.action-ros.outcome == 'failure' && github.event_name == 'schedule' }}
+        run:
+          wget https://raw.githubusercontent.com/ros-controls/ros2_control_ci/master/.github/issue_template_failed_ci.md -O ${{ env.repo_path }}/.github/issue_template_failed_ci.md
+      - uses: JasonEtco/create-an-issue@v2
+        # action-ros-ci does not report more details on test failures afaik
+        if: ${{ always() && steps.action-ros.outcome == 'failure' && github.event_name == 'schedule'}}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTION_NAME: ${{ inputs.ros_distro }}/source
+          REF: ${{ inputs.ref }}
+          URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          update_existing: true
+          filename: ${{ env.repo_path }}/.github/issue_template_failed_ci.md
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: colcon-logs-${{ inputs.os_name }}-${{ inputs.ros_distro }}
+          path: ros_ws/log

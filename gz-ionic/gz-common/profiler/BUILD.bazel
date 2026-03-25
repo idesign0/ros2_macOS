@@ -1,0 +1,210 @@
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_configure_header", "gz_export_header")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+# Configuration for UNIX
+RMT_ENABLED = 1
+
+RMT_USE_TINYCRT = 0
+
+RMT_USE_CUDA = 0
+
+RMT_USE_D3D11 = 0
+
+RMT_USE_OPENGL = 1
+
+RMT_USE_METAL = 0
+
+gz_configure_header(
+    name = "Config",
+    src = "src/RemoteryConfig.h.in",
+    out = "include/RemoteryConfig.h",
+    defines = [
+        "RMT_ENABLED=%d" % RMT_ENABLED,
+        "RMT_USE_TINYCRT=%d" % RMT_USE_TINYCRT,
+        "RMT_USE_CUDA=%d" % RMT_USE_CUDA,
+        "RMT_USE_D3D11=%d" % RMT_USE_D3D11,
+        "RMT_USE_OPENGL=%d" % RMT_USE_OPENGL,
+        "RMT_USE_METAL=%d" % RMT_USE_METAL,
+    ],
+    package_xml = "//:package.xml",
+)
+
+gz_export_header(
+    name = "Export",
+    out = "include/gz/common/profiler/Export.hh",
+    export_base = "GZ_COMMON_PROFILER",
+    lib_name = "gz-common-profiler",
+)
+
+cc_library(
+    name = "ProfilerImplInterface",
+    hdrs = ["include/gz/common/ProfilerImpl.hh"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [":Export"],
+)
+
+cc_library(
+    name = "RemoteryProfilerImpl",
+    srcs = ["src/RemoteryProfilerImpl.cc"],
+    hdrs = [
+        "include/RemoteryConfig.h",
+        "src/RemoteryProfilerImpl.hh",
+    ],
+    includes = ["include"],
+    deps = [
+        ":Export",
+        ":ProfilerImplInterface",
+        "//:gz-common",
+        "@remotery",
+    ],
+)
+
+# Build flag to control how the Gz Profiler is configured.
+# --//profiler:config="disabled" (default): Profiler will be disabled.
+# --//profiler:config="remotery": Profiler will be enabled and the Remotery
+#   profiler implemenation will be used.
+# --//profiler:config="custom": Profiler will be enabled and a custom profiler
+#   implementation can be set to be used. See Profiler class for details.
+#
+# Note to maintainers: This setup is different from what is used in CMake where
+# the config is split into two parts to control whether Remotery is used or not
+# separately from whether the profiler is enabled or disabled.
+string_flag(
+    name = "config",
+    build_setting_default = "disabled",
+    values = [
+        "disabled",
+        "remotery",
+        "custom",
+    ],
+)
+
+config_setting(
+    name = "disabled",
+    flag_values = {
+        ":config": "disabled",
+    },
+)
+
+config_setting(
+    name = "use_remotery",
+    flag_values = {
+        ":config": "remotery",
+    },
+)
+
+config_setting(
+    name = "use_custom",
+    flag_values = {
+        ":config": "custom",
+    },
+)
+
+public_headers_no_gen = ["include/gz/common/Profiler.hh"]
+
+public_headers = public_headers_no_gen + [
+    "include/gz/common/profiler/Export.hh",
+]
+
+sources = ["src/Profiler.cc"]
+
+cc_library(
+    name = "profiler",
+    srcs = sources,
+    hdrs = public_headers,
+    defines = select({
+        "disabled": [
+            "GZ_PROFILER_ENABLE=0",
+            "GZ_PROFILER_REMOTERY=0",
+        ],
+        "use_remotery": [
+            "GZ_PROFILER_ENABLE=1",
+            "GZ_PROFILER_REMOTERY=1",
+        ],
+        "use_custom": [
+            "GZ_PROFILER_ENABLE=1",
+            "GZ_PROFILER_REMOTERY=0",
+        ],
+    }),
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ProfilerImplInterface",
+        "//:gz-common",
+    ] + select({
+        "use_remotery": [":RemoteryProfilerImpl"],
+        "//conditions:default": [],
+    }),
+)
+
+cc_test(
+    name = "Profiler_Disabled_TEST",
+    srcs = ["src/Profiler_Disabled_TEST.cc"],
+    # This test is only compatible with --//profiler:config="disabled"
+    defines = select({
+        "disabled": [],
+        "//conditions:default": ["BAZEL_SKIP_PROFILER_TEST=1"],
+    }),
+    deps = [
+        ":profiler",
+        "//:gz-common",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "Profiler_Remotery_TEST",
+    srcs = ["src/Profiler_Remotery_TEST.cc"],
+    # This test is only compatible with --//profiler:config="remotery"
+    defines = select({
+        "use_remotery": [],
+        "//conditions:default": ["BAZEL_SKIP_PROFILER_TEST=1"],
+    }),
+    deps = [
+        ":profiler",
+        "//:gz-common",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "Profiler_Custom_TEST",
+    srcs = ["src/Profiler_Custom_TEST.cc"],
+    # This test is only compatible with --//profiler:config="custom"
+    defines = select({
+        "use_custom": [],
+        "//conditions:default": ["BAZEL_SKIP_PROFILER_TEST=1"],
+    }),
+    deps = [
+        ":ProfilerImplInterface",
+        ":profiler",
+        "//:gz-common",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "Profiler_Error_TEST",
+    srcs = ["src/Profiler_Error_TEST.cc"],
+    deps = [
+        ":RemoteryProfilerImpl",
+        ":profiler",
+        "//:gz-common",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@remotery",
+    ],
+)

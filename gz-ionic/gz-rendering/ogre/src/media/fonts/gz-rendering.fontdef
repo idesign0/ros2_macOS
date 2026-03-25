@@ -1,0 +1,119 @@
+Console
+{
+  type truetype
+  source console.ttf
+  size 18
+  resolution 96
+}
+
+Liberation Sans
+{
+  type truetype
+  source liberation-sans/LiberationSans-Regular.ttf
+  size 18
+  resolution 96
+}
+
+Roboto
+{
+  type truetype
+  source roboto/Roboto-Regular.ttf
+  size 18
+  resolution 96
+}
+
+Roboto Black
+{
+  type truetype
+  source roboto/Roboto-Black.ttf
+  size 18
+  resolution 96
+}
+
+Roboto BlackItalic
+{
+  type truetype
+  source roboto/Roboto-BlackItalic.ttf
+  size 18
+  resolution 96
+}
+
+Roboto Bold
+{
+  type truetype
+  source roboto/Roboto-Bold.ttf
+  size 18
+  resolution 96
+}
+
+Roboto BoldItalic
+{
+  type truetype
+  source roboto/Roboto-BoldItalic.ttf
+  size 18
+  resolution 96
+}
+
+Roboto Italic
+{
+  type truetype
+  source roboto/Roboto-Italic.ttf
+  size 18
+  resolution 96
+}
+
+Roboto Light
+{
+  type truetype
+  source roboto/Roboto-Light.ttf
+  size 18
+  resolution 96
+}
+
+Roboto LightItalic
+{
+  type truetype
+  source roboto/Roboto-LightItalic.ttf
+  size 18
+  resolution 96
+}
+
+Roboto Medium
+{
+  type truetype
+  source roboto/Roboto-Medium.ttf
+  size 18
+  resolution 96
+}
+
+Roboto MediumItalic
+{
+  type truetype
+  source roboto/Roboto-MediumItalic.ttf
+  size 18
+  resolution 96
+}
+
+Roboto Regular
+{
+  type truetype
+  source roboto/Roboto-Regular.ttf
+  size 18
+  resolution 96
+}
+
+Roboto Thin
+{
+  type truetype
+  source roboto/Roboto-Thin.ttf
+  size 18
+  resolution 96
+}
+
+Roboto ThinItalic
+{
+  type truetype
+  source roboto/Roboto-ThinItalic.ttf
+  size 18
+  resolution 96
+}

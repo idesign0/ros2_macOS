@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>async_web_server_cpp</name>
+  <version>2.0.1</version>
+  <description>Asynchronous Web/WebSocket Server in C++</description>
+
+  <maintainer email="timo.roehling@fkie.fraunhofer.de">Timo Röhling</maintainer>
+  <author email="mwills@wpi.edu">Mitchell Wills</author>
+  <author email="russell.toris@gmail.com">Russel Toris</author>
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/async_web_server_cpp</url>
+  <url type="bugtracker">https://github.com/fkie/async_web_server_cpp/issues</url>
+  <url type="repository">https://github.com/fkie/async_web_server_cpp</url>
+
+  <buildtool_depend>ament_cmake_ros</buildtool_depend>
+
+  <build_depend>libssl-dev</build_depend>
+  <build_depend>boost</build_depend>
+
+  <exec_depend>boost</exec_depend>
+
+  <test_depend>launch_testing</test_depend>
+  <test_depend>python3-websocket</test_depend>
+</package>

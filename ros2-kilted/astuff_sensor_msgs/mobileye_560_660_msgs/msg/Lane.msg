@@ -1,0 +1,9 @@
+std_msgs/Header header
+
+float64 lane_curvature
+float64 lane_heading
+bool construction_area
+float64 pitch_angle
+float64 yaw_angle
+bool right_ldw_availability
+bool left_ldw_availability

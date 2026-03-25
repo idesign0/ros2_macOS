@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="destination_ip" default="192.168.255.255" doc="The ip address of the camera/s to be triggered" />
+  <arg name="trigger_src" default="timer" doc="When to send action commands. Use 'timer' or 'subscriber'" />
+  <arg name="timer_period" default="0.1" doc="Period of timer for sending action commands (s)" />
+  <arg name="action_device_key" default="1" doc="The device key for the sent action" />
+  <arg name="action_group_key" default="1" doc="The group key for the sent actions" />
+  <arg name="action_group_mask" default="1" doc="The group mask for the sent actions" />
+
+  <node pkg="avt_vimba_camera" name="trigger_node" exec="trigger_exec" output="screen">
+    <param name="destination_ip" value="$(var destination_ip)" />
+    <param name="trigger_src" value="$(var trigger_src)" />
+    <param name="timer_period" value="$(var timer_period)" />
+    <param name="action_device_key" value="$(var action_device_key)" />
+    <param name="action_group_key" value="$(var action_group_key)" />
+    <param name="action_group_mask" value="$(var action_group_mask)" />
+  </node>
+</launch>

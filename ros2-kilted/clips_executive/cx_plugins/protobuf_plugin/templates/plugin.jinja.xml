@@ -1,0 +1,8 @@
+<!-- Generated using cx_potobuf_plugin at:  {{gen_date}}-->
+<class_libraries>
+  <library path="{{name_snake}}">
+    <class type="cx::{{name_camel}}" base_class_type="cx::ClipsPlugin">
+      <description>CLIPS Plugin that extends the ProtobufPlugin by custom messages linked at compile-time</description>
+    </class>
+  </library>
+</class_libraries>

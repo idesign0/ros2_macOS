@@ -1,0 +1,29 @@
+uint16 id
+uint32 age
+builtin_interfaces/Time timestamp
+uint16 hidden_status_age
+uint8 classification
+uint8 classification_certainty
+uint32 classification_age
+ibeo_msgs/Point2Df bounding_box_center
+ibeo_msgs/Point2Df bounding_box_size
+ibeo_msgs/Point2Df object_box_center
+ibeo_msgs/Point2Df object_box_center_sigma
+ibeo_msgs/Point2Df object_box_size
+float32 yaw_angle
+ibeo_msgs/Point2Df relative_velocity
+ibeo_msgs/Point2Df relative_velocity_sigma
+ibeo_msgs/Point2Df absolute_velocity
+ibeo_msgs/Point2Df absolute_velocity_sigma
+uint8 number_of_contour_points
+uint8 closest_point_index
+ibeo_msgs/Point2Df[] contour_point_list
+
+# classification values
+uint8 UNCLASSIFIED=0
+uint8 UNKNOWN_SMALL=1
+uint8 UNKNOWN_BIG=2
+uint8 PEDESTRIAN=3
+uint8 BIKE=4
+uint8 CAR=5
+uint8 TRUCK=6

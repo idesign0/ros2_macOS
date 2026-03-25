@@ -1,0 +1,12 @@
+<?xml version='1.0'?>
+<%
+  # Check if testVar is not defined or is empty/nil
+  if !defined?(testVar) || testVar == nil || testVar.empty?
+    testVar = ""
+  end
+%>
+<gz version='1.0'>
+  <executable name='ls'>
+    <command>echo -n <%= testVar %></command>
+  </executable>
+</gz>

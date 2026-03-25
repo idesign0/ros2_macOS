@@ -1,0 +1,10 @@
+uint16 relative_time_of_measurement
+ibeo_msgs/Point2Di position_closest_point
+ibeo_msgs/Point2Di object_box_size
+ibeo_msgs/Point2Dui object_box_size_sigma
+int16 object_box_orientation
+uint16 object_box_orientation_sigma
+ibeo_msgs/Point2Di tracking_point_coordinate
+ibeo_msgs/Point2Dui tracking_point_coordinate_sigma
+uint8 number_of_contour_points
+ibeo_msgs/ContourPointSigma[] contour_point_list

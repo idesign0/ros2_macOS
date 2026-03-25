@@ -1,0 +1,15 @@
+syntax = "proto3";
+package gz.custom_msgs;
+
+import "gz/msgs/header.proto";
+
+message Bar
+{
+  double value = 1;
+}
+
+message BarStamped
+{
+  gz.msgs.Header header = 1;
+  gz.custom_msgs.Bar bar = 2;
+}

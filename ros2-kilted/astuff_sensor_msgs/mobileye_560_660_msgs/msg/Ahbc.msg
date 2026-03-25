@@ -1,0 +1,9 @@
+std_msgs/Header header
+
+uint8 HIGH_LOW_BEAM_DECISION_NO_RECOMMENDATION = 0
+uint8 HIGH_LOW_BEAM_DECISION_RECOMMENDATION_OFF = 1
+uint8 HIGH_LOW_BEAM_DECISION_RECOMMENDATION_ON = 2
+uint8 HIGH_LOW_BEAM_DECISION_INVALID = 3
+uint8 high_low_beam_decision
+
+uint16 reasons_for_switch_to_low_beam

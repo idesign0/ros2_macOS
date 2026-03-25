@@ -1,0 +1,11 @@
+#include "builtin_interfaces/msg/Time.idl"
+
+module autoware_auto_debug_msgs {
+  module msg {
+    struct Float32Stamped {
+      builtin_interfaces::msg::Time stamp;
+
+      float data;
+    };
+  };
+};

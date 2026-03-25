@@ -1,0 +1,1412 @@
+# EsrStatus1
+class update_delphi_esr_msgs_EsrStatus1_8f96a58d642c579a639b0c54f121d1ed(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrStatus1"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR status1
+string      canmsg
+uint8       time_stamp
+uint8       rolling_count
+bool        comm_error
+int16       curvature
+uint16      scan_id
+float32     yaw_rate
+float32     vehicle_speed_calc
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrStatus1"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Status1
+string      canmsg
+
+uint8       rolling_count_1
+uint8       dsp_timestamp
+bool        comm_error
+int16       radius_curvature_calc
+uint16      scan_index
+float32     yaw_rate_calc
+float32     vehicle_speed_calc
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.canmsg = old_msg.canmsg
+		new_msg.rolling_count_1 = old_msg.rolling_count
+		new_msg.dsp_timestamp = old_msg.time_stamp
+		new_msg.comm_error = old_msg.comm_error
+		new_msg.radius_curvature_calc = old_msg.curvature
+		new_msg.scan_index = old_msg.scan_id
+		new_msg.yaw_rate_calc = old_msg.yaw_rate
+		new_msg.vehicle_speed_calc = old_msg.vehicle_speed_calc
+
+# EsrStatus2
+class update_delphi_esr_msgs_EsrStatus2_de9d4dcad18be0f8d7fd839abd77cb7c(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrStatus2"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR status2
+string      canmsg
+uint8       rolling_count2
+uint8       max_track_ack
+bool        overheat_error
+bool        range_perf_error
+bool        internal_error
+bool        xcvr_operational
+bool        raw_data_mode
+uint16      steer_angle_ack
+int8        temperature
+float32     spd_comp_factor
+uint8       grouping_mode
+float32     yaw_rate_bias
+string      sw_version_dsp
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrStatus2"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Status2
+string      canmsg
+
+uint8       maximum_tracks_ack
+uint8       rolling_count_2
+bool        overheat_error
+bool        range_perf_error
+bool        internal_error
+bool        xcvr_operational
+bool        raw_data_mode
+uint16      steering_angle_ack
+int8        temperature
+float32     veh_spd_comp_factor
+uint8       grouping_mode
+float32     yaw_rate_bias
+string      sw_version_dsp
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.canmsg = old_msg.canmsg
+		new_msg.maximum_tracks_ack = old_msg.max_track_ack
+		new_msg.rolling_count_2 = old_msg.rolling_count2
+		new_msg.overheat_error = old_msg.overheat_error
+		new_msg.range_perf_error = old_msg.range_perf_error
+		new_msg.internal_error = old_msg.internal_error
+		new_msg.xcvr_operational = old_msg.xcvr_operational
+		new_msg.raw_data_mode = old_msg.raw_data_mode
+		new_msg.steering_angle_ack = old_msg.steer_angle_ack
+		new_msg.temperature = old_msg.temperature
+		new_msg.veh_spd_comp_factor = old_msg.spd_comp_factor
+		new_msg.grouping_mode = old_msg.grouping_mode
+		new_msg.yaw_rate_bias = old_msg.yaw_rate_bias
+		new_msg.sw_version_dsp = old_msg.sw_version_dsp
+
+# EsrStatus4
+class update_delphi_esr_msgs_EsrStatus4_f7cf3bcce6d7e6a3b7b68f3a7c2726e4(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrStatus4"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR status4
+string      canmsg
+uint8       rolling_count3
+uint8       mrlr_mode
+bool        patial_blockage
+bool        side_lobe_blockage
+bool        lr_only_grating_lobe_det
+bool        truck_target_det
+uint8       path_id_acc
+uint8       path_id_cmmb_move
+uint8       path_id_cmmb_stat
+uint8       path_id_fcw_move
+uint8       path_id_fcw_stat
+uint8       path_id_acc_stat
+float32     auto_algin_angle
+
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrStatus4"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Status4
+string      canmsg
+
+bool        truck_target_det
+bool        lr_only_grating_lobe_det
+bool        sidelobe_blockage
+bool        partial_blockage
+uint8       mr_lr_mode
+uint8       rolling_count_3
+uint8       path_id_acc
+uint8       path_id_cmbb_move
+uint8       path_id_cmbb_stat
+uint8       path_id_fcw_move
+uint8       path_id_fcw_stat
+float32     auto_align_angle
+uint8       path_id_acc_stat
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.canmsg = old_msg.canmsg
+		new_msg.truck_target_det = old_msg.truck_target_det
+		new_msg.lr_only_grating_lobe_det = old_msg.lr_only_grating_lobe_det
+		new_msg.sidelobe_blockage = old_msg.side_lobe_blockage
+		new_msg.partial_blockage = old_msg.patial_blockage
+		new_msg.mr_lr_mode = old_msg.mrlr_mode
+		new_msg.rolling_count_3 = old_msg.rolling_count3
+		new_msg.path_id_acc = old_msg.path_id_acc
+		new_msg.path_id_cmbb_move = old_msg.path_id_cmmb_move
+		new_msg.path_id_cmbb_stat = old_msg.path_id_cmmb_stat
+		new_msg.path_id_fcw_move = old_msg.path_id_fcw_move
+		new_msg.path_id_fcw_stat = old_msg.path_id_fcw_stat
+		new_msg.auto_align_angle = old_msg.auto_algin_angle
+		new_msg.path_id_acc_stat = old_msg.path_id_acc_stat
+
+# EsrStatus5
+class update_delphi_esr_msgs_EsrStatus5_e6dd803ab75c77da3bbe6f55a701a0ea(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrStatus5"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR status5
+string      canmsg
+uint8       swbatt_a2d
+uint8       ignp_a2d
+uint8       temp1_a2d
+uint8       temp2_a2d
+uint8       supply_5v_a
+uint8       supply_5v_dx
+uint8       supply_53p_3v
+uint8       supply_10_v
+
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrStatus5"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Status5
+string      canmsg
+
+uint8       swbatt_a2d
+uint8       ignp_a2d
+uint8       temp1_a2d
+uint8       temp2_a2d
+uint8       supply_5va_a2d
+uint8       supply_5vdx_a2d
+uint8       supply_3p3v_a2d
+uint8       supply_10v_a2d
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.canmsg = old_msg.canmsg
+		new_msg.swbatt_a2d = old_msg.swbatt_a2d
+		new_msg.ignp_a2d = old_msg.ignp_a2d
+		new_msg.temp1_a2d = old_msg.temp1_a2d
+		new_msg.temp2_a2d = old_msg.temp2_a2d
+		new_msg.supply_5va_a2d = old_msg.supply_5v_a
+		new_msg.supply_5vdx_a2d = old_msg.supply_5v_dx
+		new_msg.supply_3p3v_a2d = old_msg.supply_53p_3v
+		new_msg.supply_10v_a2d = old_msg.supply_10_v
+
+# EsrStatus6
+class update_delphi_esr_msgs_EsrStatus6_d0f0f9e72f36d0edc6c699e8188282b7(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrStatus6"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR status6
+string      canmsg
+uint8       supply_1p_8v
+uint8       supply_n_5v
+uint8       wave_diff_a2d
+uint8       sw_version_dsp_3rd_byte
+bool        vertical_algin_updated
+uint8       system_power_mode
+bool        found_target
+bool        recommend_unconverge
+uint8       factory_algin_status1
+uint8       factory_algin_status2
+float32     factory_mis_alginment
+uint8       serv_algin_updates_done
+float32     vertical_mis_alginment
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrStatus6"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Status6
+string      canmsg
+
+uint8       supply_1p8v_a2d
+uint8       supply_n5v_a2d
+uint8       wave_diff_a2d
+uint8       sw_version_dsp_3rd_byte
+bool        vertical_align_updated
+uint8       system_power_mode
+bool        found_target
+bool        recommend_unconverge
+uint8       factory_align_status_1
+uint8       factory_align_status_2
+float32     factory_misalignment
+uint8       serv_align_updates_done
+float32     vertical_misalignment
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.canmsg = old_msg.canmsg
+		new_msg.supply_1p8v_a2d = old_msg.supply_1p_8v
+		new_msg.supply_n5v_a2d = old_msg.supply_n_5v
+		new_msg.wave_diff_a2d = old_msg.wave_diff_a2d
+		new_msg.sw_version_dsp_3rd_byte = old_msg.sw_version_dsp_3rd_byte
+		new_msg.vertical_align_updated = old_msg.vertical_algin_updated
+		new_msg.system_power_mode = old_msg.system_power_mode
+		new_msg.found_target = old_msg.found_target
+		new_msg.recommend_unconverge = old_msg.recommend_unconverge
+		new_msg.factory_align_status_1 = old_msg.factory_algin_status1
+		new_msg.factory_align_status_2 = old_msg.factory_algin_status2
+		new_msg.factory_misalignment = old_msg.factory_mis_alginment
+		new_msg.serv_align_updates_done = old_msg.serv_algin_updates_done
+		new_msg.vertical_misalignment = old_msg.vertical_mis_alginment
+
+# EsrStatus7
+class update_delphi_esr_msgs_EsrStatus7_b42bcace404e10fd5ee3631fdf186959(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrStatus7"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR status7
+string      canmsg
+uint8       active_fault0
+uint8       active_fault1
+uint8       active_fault2
+uint8       active_fault3
+uint8       active_fault4
+uint8       active_fault5
+uint8       active_fault6
+uint8       active_fault7
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrStatus7"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Status7
+string      canmsg
+
+uint8       active_fault_0
+uint8       active_fault_1
+uint8       active_fault_2
+uint8       active_fault_3
+uint8       active_fault_4
+uint8       active_fault_5
+uint8       active_fault_6
+uint8       active_fault_7
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.canmsg = old_msg.canmsg
+		new_msg.active_fault_0 = old_msg.active_fault0
+		new_msg.active_fault_1 = old_msg.active_fault1
+		new_msg.active_fault_2 = old_msg.active_fault2
+		new_msg.active_fault_3 = old_msg.active_fault3
+		new_msg.active_fault_4 = old_msg.active_fault4
+		new_msg.active_fault_5 = old_msg.active_fault5
+		new_msg.active_fault_6 = old_msg.active_fault6
+		new_msg.active_fault_7 = old_msg.active_fault7
+
+# EsrStatus8
+class update_delphi_esr_msgs_EsrStatus8_12cc314f728c579155b83fab509b20f4(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrStatus8"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR status8
+string      canmsg
+uint8       history_fault0
+uint8       history_fault1
+uint8       history_fault2
+uint8       history_fault3
+uint8       history_fault4
+uint8       history_fault5
+uint8       history_fault6
+uint8       history_fault7
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrStatus8"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Status8
+string      canmsg
+
+uint8       history_fault_0
+uint8       history_fault_1
+uint8       history_fault_2
+uint8       history_fault_3
+uint8       history_fault_4
+uint8       history_fault_5
+uint8       history_fault_6
+uint8       history_fault_7
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.canmsg = old_msg.canmsg
+		new_msg.history_fault_0 = old_msg.history_fault0
+		new_msg.history_fault_1 = old_msg.history_fault1
+		new_msg.history_fault_2 = old_msg.history_fault2
+		new_msg.history_fault_3 = old_msg.history_fault3
+		new_msg.history_fault_4 = old_msg.history_fault4
+		new_msg.history_fault_5 = old_msg.history_fault5
+		new_msg.history_fault_6 = old_msg.history_fault6
+		new_msg.history_fault_7 = old_msg.history_fault7
+
+# EsrStatus9
+class update_delphi_esr_msgs_EsrStatus9_5b168b544c1d619478bacb46ee366ea7(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrStatus9"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR status9
+string      canmsg
+uint16      avg_pwr_cwblkg
+float32     side_slip_angle
+uint8       serial_num3rd_byte
+uint8       water_spray_target_id
+float32     filtered_xohp_acc_cipv
+uint8       path_id_acc2
+uint8       path_id_acc3
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrStatus9"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Status9
+string      canmsg
+
+uint16      avg_pwr_cwblkg
+float32     sideslip_angle
+uint8       serial_num_3rd_byte
+uint8       water_spray_target_id
+float32     filtered_xohp_acc_cipv
+uint8       path_id_acc_2
+uint8       path_id_acc_3
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.canmsg = old_msg.canmsg
+		new_msg.avg_pwr_cwblkg = old_msg.avg_pwr_cwblkg
+		new_msg.sideslip_angle = old_msg.side_slip_angle
+		new_msg.serial_num_3rd_byte = old_msg.serial_num3rd_byte
+		new_msg.water_spray_target_id = old_msg.water_spray_target_id
+		new_msg.filtered_xohp_acc_cipv = old_msg.filtered_xohp_acc_cipv
+		new_msg.path_id_acc_2 = old_msg.path_id_acc2
+		new_msg.path_id_acc_3 = old_msg.path_id_acc3
+
+# EsrTrack
+class update_delphi_esr_msgs_EsrTrack_67d29dbcdfb86efe0822e360bf7a498a(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrTrack"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR Track Msg
+string        canmsg
+uint8         track_id
+float32       track_lat_rate
+bool          track_group_changed
+uint8         track_status
+float32       track_angle
+float32       track_range
+bool          track_bridge_object
+bool          track_rolling_count
+float32       track_width
+float32       track_range_accel
+uint8         track_med_range_mode
+float32       track_range_rate
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrTrack"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Track
+string        canmsg
+
+uint8         id
+float32       lat_rate
+bool          grouping_changed
+bool          oncoming
+uint8         status
+float32       angle
+float32       range
+bool          bridge_object
+bool          rolling_count
+float32       width
+float32       range_accel
+uint8         med_range_mode
+float32       range_rate
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.canmsg = old_msg.canmsg
+		new_msg.id = old_msg.track_id
+		new_msg.lat_rate = old_msg.track_lat_rate
+		new_msg.grouping_changed = old_msg.track_group_changed
+		new_msg.oncoming = False
+		new_msg.status = old_msg.track_status
+		new_msg.angle = old_msg.track_angle
+		new_msg.range = old_msg.track_range
+		new_msg.bridge_object = old_msg.track_bridge_object
+		new_msg.rolling_count = old_msg.track_rolling_count
+		new_msg.width = old_msg.track_width
+		new_msg.range_accel = old_msg.track_range_accel
+		new_msg.med_range_mode = old_msg.track_med_range_mode
+		new_msg.range_rate = old_msg.track_range_rate
+
+# EsrTrackMotionPower
+class update_delphi_esr_msgs_EsrTrackMotionPower_c8b6ca4d7b49b9f380f75c5de7ed6095(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrTrackMotionPower"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR TrackMotionPower Msg
+string                              canmsg
+uint8                               rolling_count
+uint8                               group_id
+delphi_esr_msgs/TrackMotionPower[]  tracks
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+
+================================================================================
+MSG: delphi_esr_msgs/TrackMotionPower
+bool  movable_fast
+bool  movable_slow
+bool  moving
+int8  power
+"""
+
+	new_type = "delphi_esr_msgs/EsrTrackMotionPowerGroup"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR TrackMotionPower, information common to a group
+string                                      canmsg
+
+uint8                                       rolling_count_2
+uint8                                       can_id_group
+delphi_esr_msgs/EsrTrackMotionPowerTrack[]  tracks
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+
+================================================================================
+MSG: delphi_esr_msgs/EsrTrackMotionPowerTrack
+# ESR TrackMotionPower, track-specific information
+uint8  id
+bool   movable_fast
+bool   movable_slow
+bool   moving
+int8   power
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),
+		("TrackMotionPower","EsrTrackMotionPowerTrack"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.canmsg = old_msg.canmsg
+		new_msg.rolling_count_2 = old_msg.rolling_count
+		new_msg.can_id_group = old_msg.group_id
+		self.migrate_array(old_msg.tracks, new_msg.tracks, "delphi_esr_msgs/EsrTrackMotionPowerTrack")
+
+# EsrVehicle1
+class update_delphi_esr_msgs_EsrVehicle1_ccab5c3c9c182cced0afa3db1f83373f(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrVehicle1"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR vehicle1
+float32     vehicle_speed
+bool        speed_direction
+float32     yaw_rate
+bool        yaw_rate_valid
+int16       radius_curvature
+bool        steering_angle_valid
+bool        steering_angle_sign
+uint16      steering_angle
+uint16      steering_angle_rate
+bool        steering_angle_rate_sign
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrVehicle1"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Vehicle1
+float32     vehicle_speed
+bool        vehicle_speed_direction
+float32     yaw_rate
+bool        yaw_rate_validity
+bool        steering_angle_rate_sign
+int16       radius_curvature
+bool        steering_angle_validity
+bool        steering_angle_sign
+uint16      steering_angle
+uint16      steering_angle_rate
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.vehicle_speed = old_msg.vehicle_speed
+		new_msg.vehicle_speed_direction = old_msg.speed_direction
+		new_msg.yaw_rate = old_msg.yaw_rate
+		new_msg.yaw_rate_validity =old_msg.yaw_rate_valid
+		new_msg.steering_angle_rate_sign = old_msg.steering_angle_rate_sign
+		new_msg.radius_curvature = old_msg.radius_curvature
+		new_msg.steering_angle_validity = old_msg.steering_angle_valid
+		new_msg.steering_angle_sign = old_msg.steering_angle_sign
+		new_msg.steering_angle = old_msg.steering_angle
+		new_msg.steering_angle_rate = old_msg.steering_angle_rate
+
+# EsrVehicle2
+class update_delphi_esr_msgs_EsrVehicle2_034f7a7ed6d34122e2b7d043548b7f0d(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrVehicle2"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR vehicle2
+uint16      scan_index_ack
+bool        use_angle_misalignment
+bool        clear_faults
+int8        high_yaw_angle
+bool        mr_only_transmit
+bool        lr_only_transmit
+float32     angle_misalignment
+float32     lateral_mounting_offset
+bool        radar_cmd_radiate
+bool        blockage_disable
+uint8       maximum_tracks
+uint8       turn_signal_status
+bool        vehicle_speed_valid
+bool        mmr_upside_down
+uint8       grouping_mode
+bool        wiper_status
+bool        raw_data_enabled
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrVehicle2"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Vehicle2
+uint16      scan_index_ack
+bool        use_angle_misalignment
+bool        clear_faults
+int8        high_yaw_angle
+bool        mr_only_transmit
+bool        lr_only_transmit
+float32     angle_misalignment
+float32     lateral_mounting_offset
+bool        radar_cmd_radiate
+bool        blockage_disable
+uint8       maximum_tracks
+uint8       turn_signal_status
+bool        vehicle_speed_validity
+bool        mmr_upside_down
+uint8       grouping_mode
+bool        wiper_status
+bool        raw_data_enable
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.scan_index_ack = old_msg.scan_index_ack
+		new_msg.use_angle_misalignment = old_msg.use_angle_misalignment
+		new_msg.clear_faults = old_msg.clear_faults
+		new_msg.high_yaw_angle = old_msg.high_yaw_angle
+		new_msg.mr_only_transmit = old_msg.mr_only_transmit
+		new_msg.lr_only_transmit = old_msg.lr_only_transmit
+		new_msg.angle_misalignment = old_msg.angle_misalignment
+		new_msg.lateral_mounting_offset = old_msg.lateral_mounting_offset
+		new_msg.radar_cmd_radiate = old_msg.radar_cmd_radiate
+		new_msg.blockage_disable = old_msg.blockage_disable
+		new_msg.maximum_tracks = old_msg.maximum_tracks
+		new_msg.turn_signal_status = old_msg.turn_signal_status
+		new_msg.vehicle_speed_validity = old_msg.vehicle_speed_valid
+		new_msg.mmr_upside_down = old_msg.mmr_upside_down
+		new_msg.grouping_mode = old_msg.grouping_mode
+		new_msg.wiper_status = old_msg.wiper_status
+		new_msg.raw_data_enable = old_msg.raw_data_enabled
+
+# EsrVehicle3
+class update_delphi_esr_msgs_EsrVehicle3_0833bf12f4f5dda6a3b6915054c197ac(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrVehicle3"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR vehicle3
+bool        long_accel_valid
+bool        lat_accel_valid
+float32     lat_accel
+float32     long_accel
+uint8       radar_fov_lr
+uint8       radar_fov_mr
+bool        auto_align_disable
+uint8       radar_height
+bool        serv_align_type
+bool        serv_align_enable
+uint16      align_avg_ctr_total
+bool        auto_align_converged
+uint8       wheel_slip
+uint8       serv_align_updates_need
+int8        angle_mounting_offset
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrVehicle3"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Vehicle3
+bool        long_accel_validity
+bool        lat_accel_validity
+float32     lat_accel
+float32     long_accel
+uint8       radar_fov_lr
+uint8       radar_fov_mr
+bool        auto_align_disable
+uint8       radar_height
+bool        serv_align_type
+bool        serv_align_enable
+uint16      aalign_avg_ctr_total
+bool        auto_align_converged
+uint8       wheel_slip
+uint8       serv_align_updates_need
+int8        angle_mounting_offset
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.long_accel_validity = old_msg.long_accel_valid
+		new_msg.lat_accel_validity = old_msg.lat_accel_valid
+		new_msg.lat_accel = old_msg.lat_accel
+		new_msg.long_accel = old_msg.long_accel
+		new_msg.radar_fov_lr = old_msg.radar_fov_lr
+		new_msg.radar_fov_mr = old_msg.radar_fov_mr
+		new_msg.auto_align_disable = old_msg.auto_align_disable
+		new_msg.radar_height = old_msg.radar_height
+		new_msg.serv_align_type = old_msg.serv_align_type
+		new_msg.serv_align_enable = old_msg.serv_align_enable
+		new_msg.aalign_avg_ctr_total = old_msg.align_avg_ctr_total
+		new_msg.auto_align_converged = old_msg.auto_align_converged
+		new_msg.wheel_slip = old_msg.wheel_slip
+		new_msg.serv_align_updates_need = old_msg.serv_align_updates_need
+		new_msg.angle_mounting_offset = old_msg.angle_mounting_offset
+
+# EsrVehicle4
+class update_delphi_esr_msgs_EsrVehicle4_e5ad11954543105650efb5580bfa282c(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrVehicle4"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR vehicle4
+bool        fac_align_cmd1
+bool        fac_align_cmd2
+uint8       fac_align_max_nt
+uint8       fac_align_samp_req
+int8        fac_tgt_mtg_offset
+int8        fac_tgt_mtg_space_hor
+int8        fac_tgt_mtg_space_ver
+float32     fac_tgt_range1
+float32     fac_tgt_range_r2m
+float32     fac_tgt_range_m2t
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrVehicle4"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Vehicle4
+bool        fac_align_cmd_1
+bool        fac_align_cmd_2
+uint8       fac_align_max_nt
+uint8       fac_align_samp_req
+int8        fac_tgt_mtg_offset
+int8        fac_tgt_mtg_space_hor
+int8        fac_tgt_mtg_space_ver
+float32     fac_tgt_range_1
+float32     fac_tgt_range_r2m
+float32     fac_tgt_range_m2t
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.fac_align_cmd_1 = old_msg.fac_align_cmd1
+		new_msg.fac_align_cmd_2 = old_msg.fac_align_cmd2
+		new_msg.fac_align_max_nt = old_msg.fac_align_max_nt
+		new_msg.fac_align_samp_req = old_msg.fac_align_samp_req
+		new_msg.fac_tgt_mtg_offset = old_msg.fac_tgt_mtg_offset
+		new_msg.fac_tgt_mtg_space_hor = old_msg.fac_tgt_mtg_space_hor
+		new_msg.fac_tgt_mtg_space_ver = old_msg.fac_tgt_mtg_space_ver
+		new_msg.fac_tgt_range_1 = old_msg.fac_tgt_range1
+		new_msg.fac_tgt_range_r2m = old_msg.fac_tgt_range_r2m
+		new_msg.fac_tgt_range_m2t = old_msg.fac_tgt_range_m2t
+
+# EsrVehicle5
+class update_delphi_esr_msgs_EsrVehicle5_e4135fc6914a28e2c947a8270cd84b22(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/EsrVehicle5"
+	old_full_text = """
+std_msgs/Header header
+
+# ESR vehicle5
+int8        oversteer_understeer
+bool        yaw_rate_bias_shift
+float32     beamwidth_vert
+float32     funnel_offset_left
+float32     funnel_offset_right
+float32     cw_blockage_threshold
+uint16      distance_rear_axle
+uint16      wheel_base
+float32     steering_gear_ratio
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_esr_msgs/EsrVehicle5"
+	new_full_text = """
+std_msgs/Header header
+
+# ESR Vehicle5
+int8        oversteer_understeer
+bool        yaw_rate_bias_shift
+float32     beamwidth_vert
+float32     funnel_offset_left
+float32     funnel_offset_right
+float32     cw_blockage_threshold
+uint16      distance_rear_axle
+uint16      wheelbase
+float32     steering_gear_ratio
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 1
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.oversteer_understeer = old_msg.oversteer_understeer
+		new_msg.yaw_rate_bias_shift = old_msg.yaw_rate_bias_shift
+		new_msg.beamwidth_vert = old_msg.beamwidth_vert
+		new_msg.funnel_offset_left = old_msg.funnel_offset_left
+		new_msg.funnel_offset_right = old_msg.funnel_offset_right
+		new_msg.cw_blockage_threshold = old_msg.cw_blockage_threshold
+		new_msg.distance_rear_axle = old_msg.distance_rear_axle
+		new_msg.wheelbase = old_msg.wheel_base
+		new_msg.steering_gear_ratio = old_msg.steering_gear_ratio
+
+# TrackMotionPower
+class update_delphi_esr_msgs_TrackMotionPower_f6b1c4ad81b926dc71e475401a529999(MessageUpdateRule):
+	old_type = "delphi_esr_msgs/TrackMotionPower"
+	old_full_text = """
+bool  movable_fast
+bool  movable_slow
+bool  moving
+int8  power
+"""
+
+	new_type = "delphi_esr_msgs/EsrTrackMotionPowerTrack"
+	new_full_text = """
+# ESR TrackMotionPower, track-specific information
+uint8  id
+bool   movable_fast
+bool   movable_slow
+bool   moving
+int8   power
+"""
+
+	order = 1
+	migrated_types = []
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		#No matching field name in old message
+		new_msg.id = 0
+		new_msg.movable_fast = old_msg.movable_fast
+		new_msg.movable_slow = old_msg.movable_slow
+		new_msg.moving = old_msg.moving
+		new_msg.power = old_msg.power

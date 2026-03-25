@@ -1,0 +1,48 @@
+name: Windows
+on:
+  pull_request:
+
+jobs:
+  build:
+    name: Window CI
+    env:
+      PACKAGE: gz-rendering9
+    runs-on: windows-latest
+    steps:
+    - name: setup-pixi
+      uses: prefix-dev/setup-pixi@v0.8.1
+      with:
+        run-install: false
+
+    - name: Install build tools
+      run: |
+        pixi init
+        pixi add vcstool colcon-common-extensions pkgconfig
+    - name: Setup pixi env variables
+      shell: bash
+      run: |
+        eval "$(pixi shell-hook)"
+        echo CMAKE_PREFIX_PATH=$CONDA_PREFIX/Library >> $GITHUB_ENV
+    - name: Install base dependencies
+      run: |
+        # List adapted from https://github.com/gazebo-tooling/release-tools/blob/f89ac8cafc646260598eb8eb6d94be8093bdc9f7/jenkins-scripts/lib/windows_env_vars.bat#L22
+        pixi add assimp dlfcn-win32 eigen ffmpeg freeimage gdal gflags ogre ogre-next spdlog tinyxml2
+    - name: Clone source dependencies
+      run: |
+        mkdir src
+        cd src
+        pixi run vcs import --input https://raw.githubusercontent.com/gazebo-tooling/gazebodistro/master/${env:PACKAGE}.yaml
+
+    - uses: actions/checkout@v4
+      with:
+        path: src/gz-rendering
+
+    - name: Build Dependencies
+      run: |
+        pixi run colcon build --merge-install --cmake-args " -GVisual Studio 17 2022" " -A x64" " -DCMAKE_BUILD_TYPE=Release" " -DBUILD_TESTING=OFF" --event-handlers console_direct+ --packages-up-to ${env:PACKAGE}
+
+    - name: Build Package
+      run: pixi run colcon build --merge-install --cmake-args " -GVisual Studio 17 2022" " -A x64" " -DCMAKE_BUILD_TYPE=Release" " -DBUILD_TESTING=ON" " -DSKIP_ogre=ON" --event-handlers console_direct+ --packages-select ${env:PACKAGE}
+
+    - name: Test
+      run: pixi run colcon test --merge-install --event-handlers console_direct+ --packages-select ${env:PACKAGE}

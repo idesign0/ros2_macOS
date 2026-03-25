@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package testing;
+
+message FooMessage {
+    string data = 1;
+}
+
+message BarMessage {
+    FooMessage foo = 1;
+}
+
+message BazMessage {
+    BarMessage bar = 1;
+}

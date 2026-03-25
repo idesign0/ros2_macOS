@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>ackermann_nlmpc</name>
+  <version>1.0.3</version>
+  <description>Lightweight non-linear MPC controller for autonomous driving in 2D environments</description>
+  <maintainer email="j.pflughaupt@uni-luebeck.de">Jasper Pflughaupt</maintainer>
+  <author email="georg.schildbach@uni-luebeck.de">Georg Schildbach</author>
+  <license>GPL-3.0-only</license>
+
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>ackermann_msgs</depend>
+  <depend>ackermann_nlmpc_msgs</depend>
+
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

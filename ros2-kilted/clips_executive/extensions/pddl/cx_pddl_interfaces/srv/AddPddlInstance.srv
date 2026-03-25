@@ -1,0 +1,7 @@
+string name
+string directory
+string domain_file
+string problem_file
+---
+bool success
+string error

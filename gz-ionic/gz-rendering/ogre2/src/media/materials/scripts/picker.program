@@ -1,0 +1,67 @@
+// GLSL shaders
+vertex_program plaincolor_vs_GLSL glsl
+{
+  source plain_color_vs.glsl
+  num_clip_distances 1
+}
+
+// Vulkan shaders
+vertex_program plaincolor_vs_VK glslvk
+{
+  source plain_color_vs.glsl
+  num_clip_distances 1
+}
+
+// Metal shaders
+vertex_program plaincolor_vs_Metal metal
+{
+  source plain_color_vs.metal
+  num_clip_distances 1
+}
+
+// Unified shaders
+vertex_program plaincolor_vs unified
+{
+  delegate plaincolor_vs_GLSL
+  delegate plaincolor_vs_Metal
+  delegate plaincolor_vs_VK
+
+  default_params
+  {
+	param_named_auto worldViewProj worldviewproj_matrix
+	param_named_auto worldView worldview_matrix
+	param_named gzMinClipDistance float 0.0
+  }
+}
+
+// GLSL shaders
+fragment_program plaincolor_fs_GLSL glsl
+{
+  source plain_color_fs.glsl
+}
+
+// Vulkan shaders
+fragment_program plaincolor_fs_VK glslvk
+{
+  source plain_color_fs.glsl
+}
+
+// Metal shaders
+fragment_program plaincolor_fs_Metal metal
+{
+  source plain_color_fs.metal
+  shader_reflection_pair_hint plaincolor_vs_Metal
+}
+
+// Unified shaders
+fragment_program plaincolor_fs unified
+{
+  delegate plaincolor_fs_GLSL
+  delegate plaincolor_fs_Metal
+  delegate plaincolor_fs_VK
+
+  default_params
+  {
+	param_named inColor float4 1 1 1 1
+  }
+}

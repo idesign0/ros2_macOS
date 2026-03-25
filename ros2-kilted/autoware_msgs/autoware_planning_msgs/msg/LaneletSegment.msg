@@ -1,0 +1,2 @@
+autoware_planning_msgs/LaneletPrimitive preferred_primitive
+autoware_planning_msgs/LaneletPrimitive[] primitives

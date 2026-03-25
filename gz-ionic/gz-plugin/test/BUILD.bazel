@@ -1,0 +1,253 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+cc_library(
+    name = "test_plugins_core",
+    testonly = 1,
+    hdrs = [
+        "plugins/DummyMultiPlugin.hh",
+        "plugins/DummyPlugins.hh",
+        "plugins/FactoryPlugins.hh",
+        "plugins/GenericExport.hh",
+        "plugins/TemplatedPlugins.hh",
+    ],
+    includes = ["plugins"],
+)
+
+cc_binary(
+    name = "libGzBadPluginAlign.so",
+    testonly = 1,
+    srcs = [
+        "plugins/BadPluginAlign.cc",
+    ],
+    linkshared = 1,
+    deps = [
+        ":test_plugins_core",
+        "//:core",
+        "//:register",
+    ],
+)
+
+cc_binary(
+    name = "libGzBadPluginAPIVersionNew.so",
+    testonly = 1,
+    srcs = [
+        "plugins/BadPluginAPIVersionNew.cc",
+    ],
+    linkshared = 1,
+    deps = [
+        ":test_plugins_core",
+        "//:core",
+        "//:register",
+    ],
+)
+
+cc_binary(
+    name = "libGzBadPluginAPIVersionOld.so",
+    testonly = 1,
+    srcs = [
+        "plugins/BadPluginAPIVersionOld.cc",
+    ],
+    linkshared = 1,
+    deps = [
+        ":test_plugins_core",
+        "//:core",
+        "//:register",
+    ],
+)
+
+cc_binary(
+    name = "libGzBadPluginNoInfo.so",
+    testonly = 1,
+    srcs = [
+        "plugins/BadPluginNoInfo.cc",
+    ],
+    linkshared = 1,
+    deps = [
+        ":test_plugins_core",
+        "//:core",
+        "//:register",
+    ],
+)
+
+cc_binary(
+    name = "libGzBadPluginSize.so",
+    testonly = 1,
+    srcs = [
+        "plugins/BadPluginSize.cc",
+    ],
+    linkshared = 1,
+    deps = [
+        ":test_plugins_core",
+        "//:core",
+        "//:register",
+    ],
+)
+
+cc_binary(
+    name = "libGzFactoryPlugins.so",
+    testonly = 1,
+    srcs = [
+        "plugins/FactoryPlugins.cc",
+    ],
+    linkshared = 1,
+    deps = [
+        ":test_plugins_core",
+        "//:register",
+    ],
+)
+
+cc_binary(
+    name = "libGzTemplatedPlugins.so",
+    testonly = 1,
+    srcs = [
+        "plugins/TemplatedPlugins.cc",
+    ],
+    linkshared = 1,
+    deps = [
+        ":test_plugins_core",
+        "//:register",
+    ],
+)
+
+cc_binary(
+    name = "libGzDummyPlugins.so",
+    testonly = 1,
+    srcs = [
+        "plugins/DummyPlugins.cc",
+        "plugins/DummyPluginsOtherTranslationUnit.cc",
+    ],
+    linkshared = 1,
+    deps = [
+        ":test_plugins_core",
+        "//:register",
+    ],
+)
+
+cc_library(
+    name = "test_plugins",
+    testonly = 1,
+    data = [
+        ":libGzBadPluginAPIVersionNew.so",
+        ":libGzBadPluginAPIVersionOld.so",
+        ":libGzBadPluginAlign.so",
+        ":libGzBadPluginNoInfo.so",
+        ":libGzBadPluginSize.so",
+        ":libGzDummyPlugins.so",
+        ":libGzFactoryPlugins.so",
+        ":libGzTemplatedPlugins.so",
+    ],
+    defines = [
+        'GzDummyPlugins_LIB=\\"./test/libGzDummyPlugins.so\\"',
+        'GzFactoryPlugins_LIB=\\"./test/libGzFactoryPlugins.so\\"',
+        'GzTemplatedPlugins_LIB=\\"./test/libGzTemplatedPlugins.so\\"',
+        'GzBadPluginAlign_LIB=\\"./test/lbGzBadPluginAlign.so\\"',
+        'GzBadPluginNoInfo_LIB=\\"./test/lbGzBadPluginNoInfo.so\\"',
+        'GzBadPluginSize_LIB=\\"./test/lbGzBadPluginSize.so\\"',
+        'GzBadPluginAPIVersionOld_LIB=\\"./test/lbGzBadPluginAPIVersionOld.so\\"',
+        'GzBadPluginAPIVersionNew_LIB=\\"./test/lbGzBadPluginAPIVersionNew.so\\"',
+    ],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":test_plugins_core",
+    ],
+)
+
+cc_test(
+    name = "INTEGRATION_aliases",
+    srcs = ["integration/aliases.cc"],
+    deps = [
+        ":test_plugins",
+        ":test_plugins_core",
+        "//:loader",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "INTEGRATION_EnablePluginFromThis",
+    srcs = [
+        "integration/EnablePluginFromThis_TEST.cc",
+        "integration/utils.hh",
+    ],
+    deps = [
+        ":test_plugins",
+        ":test_plugins_core",
+        "//:core",
+        "//:loader",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "INTEGRATION_factory",
+    srcs = [
+        "integration/factory.cc",
+        "integration/utils.hh",
+    ],
+    deps = [
+        ":test_plugins",
+        ":test_plugins_core",
+        "//:core",
+        "//:loader",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "INTEGRATION_plugin",
+    srcs = [
+        "integration/plugin.cc",
+        "integration/utils.hh",
+    ],
+    deps = [
+        ":test_plugins",
+        ":test_plugins_core",
+        "//:core",
+        "//:loader",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "INTEGRATION_templated_plugins",
+    srcs = [
+        "integration/templated_plugins.cc",
+        "integration/utils.hh",
+    ],
+    deps = [
+        ":test_plugins",
+        ":test_plugins_core",
+        "//:core",
+        "//:loader",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "INTEGRATION_WeakPluginPtr",
+    srcs = [
+        "integration/WeakPluginPtr.cc",
+        "integration/utils.hh",
+    ],
+    deps = [
+        ":test_plugins",
+        ":test_plugins_core",
+        "//:core",
+        "//:loader",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

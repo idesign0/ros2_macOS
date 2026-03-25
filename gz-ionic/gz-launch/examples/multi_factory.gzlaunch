@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<gz version='1.0'>
+  <plugin name="gz::launch::SimFactory"
+    filename="gz-launch-sim-factory">
+    <spawn>
+      <name>x2</name>
+      <allow_renaming>true</allow_renaming>
+      <pose>1 2 0.5 0 0 0</pose>
+
+      <sdf version='1.6'>
+        <include>
+          <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/X3 UAV Config 1</uri>
+        </include>
+      </sdf>
+    </spawn>
+    <spawn>
+      <name>x1</name>
+      <allow_renaming>true</allow_renaming>
+      <pose>4 2 0.5 0 0 0</pose>
+
+      <sdf version='1.6'>
+        <include>
+          <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/X1 Config 1</uri>
+        </include>
+      </sdf>
+    </spawn>
+  </plugin>
+</gz>

@@ -1,0 +1,7 @@
+<launch version="0.1.1">
+  <node pkg="aruco_opencv" exec="aruco_tracker_autostart">
+    <param from="$(find-pkg-share aruco_opencv)/config/aruco_tracker.yaml" />
+    <param name="board_descriptions_path"
+      value="$(find-pkg-share aruco_opencv)/config/board_descriptions.yaml" />
+  </node>
+</launch> 

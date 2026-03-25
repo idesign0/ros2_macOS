@@ -1,0 +1,9 @@
+uint8 echo
+uint8 layer
+bool transparent_point
+bool clutter_atmospheric
+bool ground
+bool dirt
+int16 horizontal_angle
+uint16 radial_distance
+uint16 echo_pulse_width

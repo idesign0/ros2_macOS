@@ -1,0 +1,3 @@
+# Clear the current route and stop route following.
+---
+autoware_common_msgs/ResponseStatus status

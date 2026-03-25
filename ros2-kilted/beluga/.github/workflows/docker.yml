@@ -1,0 +1,46 @@
+name: Docker CI pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docker/**'
+      - '**/package.xml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'docker/**'
+      - '**/package.xml'
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+jobs:
+  build-image:
+    if: github.repository == 'Ekumen-OS/beluga'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro:
+          - humble
+          - jazzy
+          - kilted
+          - rolling
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/images/${{ matrix.ros_distro }}/Dockerfile
+          tags: ekumen/beluga-${{ matrix.ros_distro }}-dev:latest
+          push: false
+          cache-from: |
+            type=gha,scope=docker-${{ matrix.ros_distro }}-${{ github.head_ref || github.ref_name }}
+            type=gha,scope=docker-${{ matrix.ros_distro }}-${{ github.base_ref || github.ref_name }}
+          cache-to: type=gha,mode=min,scope=docker-${{ matrix.ros_distro }}-${{ github.head_ref || github.ref_name }}

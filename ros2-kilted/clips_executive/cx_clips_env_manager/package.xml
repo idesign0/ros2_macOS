@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>cx_clips_env_manager</name>
+  <version>0.1.3</version>
+  <description>Lifecycle node for managing CLIPS environments</description>
+
+  <maintainer email="viehmann@kbsg.rwth-aachen.de">Tarik Viehmann</maintainer>
+
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>bond</depend>
+  <depend>bondcpp</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>clips_vendor</depend>
+  <depend>lifecycle_msgs</depend>
+  <depend>cx_msgs</depend>
+  <depend>cx_plugin</depend>
+  <depend>pluginlib</depend>
+
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

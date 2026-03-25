@@ -1,0 +1,90 @@
+// GLSL shaders
+vertex_program WideLensMapVS_GLSL glsl
+{
+  source wide_lens_map_vs.glsl
+}
+
+fragment_program WideLensMapFS_GLSL glsl
+{
+  source wide_lens_map_fp.glsl
+  default_params
+  {
+    param_named envMap int 0
+  }
+}
+
+// Vulkan shaders
+vertex_program WideLensMapVS_VK glslvk
+{
+  source wide_lens_map_vs.glsl
+}
+
+fragment_program WideLensMapFS_VK glslvk
+{
+  source wide_lens_map_fp.glsl
+}
+
+// Metal shaders
+vertex_program WideLensMapVS_Metal metal
+{
+  source wide_lens_map_vs.metal
+}
+
+fragment_program WideLensMapFS_Metal metal
+{
+  source wide_lens_map_fp.metal
+  shader_reflection_pair_hint WideLensMapVS_Metal
+}
+
+// Unified shaders
+vertex_program WideLensMapVS unified
+{
+  delegate WideLensMapVS_GLSL
+  delegate WideLensMapVS_Metal
+  delegate WideLensMapVS_VK
+
+  default_params
+  {
+    param_named ratio float 1
+    param_named_auto worldViewProj worldviewproj_matrix
+  }
+}
+
+fragment_program WideLensMapFS unified
+{
+  delegate WideLensMapFS_GLSL
+  delegate WideLensMapFS_Metal
+  delegate WideLensMapFS_VK
+
+  default_params
+  {
+    param_named c1 float 1
+    param_named c2 float 1
+    param_named c3 float 0
+    param_named f float 1
+    param_named fun float3 0 0 1
+    param_named cutOffAngle float 3.14
+  }
+}
+
+material WideLensMap
+{
+  technique
+  {
+    pass
+    {
+      depth_check off
+      depth_write off
+      cull_hardware none
+
+      vertex_program_ref WideLensMapVS { }
+      fragment_program_ref WideLensMapFS { }
+
+      texture_unit RT
+      {
+      }
+    }
+  }
+}
+
+

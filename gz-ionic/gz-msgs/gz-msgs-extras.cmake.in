@@ -1,0 +1,102 @@
+# Copyright 2023 Open Source Robotics Foundation, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# copied from gz-msgs/gz-msgs-extras.cmake
+
+if(NOT TARGET Python3::Interpreter)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+endif()
+
+include(${@PROJECT_NAME@_DIR}/gz_msgs_string_utils.cmake)
+include(${@PROJECT_NAME@_DIR}/gz_msgs_protoc.cmake)
+include(${@PROJECT_NAME@_DIR}/gz_msgs_factory.cmake)
+include(${@PROJECT_NAME@_DIR}/gz_msgs_generate.cmake)
+
+set(@PROJECT_NAME@_INSTALL_PATH "${@PROJECT_NAME@_DIR}/@PROJECT_CMAKE_EXTRAS_PATH_TO_PREFIX@")
+cmake_path(NORMAL_PATH @PROJECT_NAME@_INSTALL_PATH OUTPUT_VARIABLE @PROJECT_NAME@_INSTALL_PATH)
+
+set(PROTOC_NAME "$<TARGET_FILE_NAME:@PROJECT_NAME@_protoc_plugin>")
+set(PROTO_SCRIPT_NAME "@PROJECT_NAME@_generate.py")
+set(FACTORY_SCRIPT_NAME "@PROJECT_NAME@_generate_factory.py")
+
+set(@PROJECT_NAME@_PROTO_PATH ${@PROJECT_NAME@_INSTALL_PATH}/share/protos)
+# Provide support to override generator executable used during cross-compilation
+if(NOT DEFINED @PROJECT_NAME@_PROTO_GENERATOR_PLUGIN)
+  set(@PROJECT_NAME@_PROTO_GENERATOR_PLUGIN ${@PROJECT_NAME@_INSTALL_PATH}/bin/${PROTOC_NAME})
+endif()
+if(NOT DEFINED @PROJECT_NAME@_PROTOC_EXECUTABLE)
+  set(@PROJECT_NAME@_PROTOC_EXECUTABLE protobuf::protoc)
+endif()
+if(NOT DEFINED @PROJECT_NAME@_PYTHON_INTERPRETER)
+  set(@PROJECT_NAME@_PYTHON_INTERPRETER Python3::Interpreter)
+endif()
+set(@PROJECT_NAME@_PROTO_GENERATOR_SCRIPT ${@PROJECT_NAME@_INSTALL_PATH}/bin/${PROTO_SCRIPT_NAME})
+set(@PROJECT_NAME@_FACTORY_GENERATOR_SCRIPT ${@PROJECT_NAME@_INSTALL_PATH}/bin/${FACTORY_SCRIPT_NAME})
+
+##################################################
+# A function to generate a target message library from a group of protobuf files .
+# The generation follows the conventions to make the messages available in gazebo tooling
+#
+# For an example use, consult gz-msgs/examples/generating_custom_messages
+#
+# Generally, the structure should be:
+#     protos/your/package/foo.proto
+#     protos/your/package/bar.proto
+#
+# In that case, the arguments would be
+#     MSGS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/protos
+#     PROTO_PACKAGE "your.package"
+#     MSGS_PROTOS
+#       protos/your/package/foo.proto
+#       protos/your/package/bar.proto
+#
+# One value arguments:
+#   MSG_PATHS           - The base path of the proto files
+#                         All proto imports are relative to this path
+#   PROTO_PACKAGE       - The name of the proto package to generate
+#   TARGET              - The name of the generated output target
+# Multi value arguments
+#   MSGS_PROTOS         - List of input proto files
+#   DEPENDENCIES        - List of message libraries this message library depends on
+function(gz_msgs_generate_messages)
+  set(options "")
+  set(oneValueArgs MSGS_PATH TARGET PROTO_PACKAGE OUTPUT_DIRECTORY)
+  set(multiValueArgs MSGS_PROTOS DEPENDENCIES)
+
+  cmake_parse_arguments(generate_messages "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+  gz_msgs_generate_messages_lib(
+    PYTHON_INTERPRETER
+      ${@PROJECT_NAME@_PYTHON_INTERPRETER}
+    PROTOC_EXEC
+      ${@PROJECT_NAME@_PROTOC_EXECUTABLE}
+    MSGS_GEN_SCRIPT
+      ${@PROJECT_NAME@_PROTO_GENERATOR_SCRIPT}
+    FACTORY_GEN_SCRIPT
+      ${@PROJECT_NAME@_FACTORY_GENERATOR_SCRIPT}
+    GZ_PROTOC_PLUGIN
+      ${@PROJECT_NAME@_PROTO_GENERATOR_PLUGIN}
+    INPUT_PROTOS
+      ${generate_messages_MSGS_PROTOS}
+    PROTO_PACKAGE
+      ${generate_messages_PROTO_PACKAGE}
+    PROTO_PATH
+      ${generate_messages_MSGS_PATH}
+    MSGS_LIB
+      @PROJECT_NAME@::@PROJECT_NAME@
+    DEPENDENCIES
+      ${generate_messages_DEPENDENCIES}
+    TARGET
+      ${generate_messages_TARGET}
+  )
+endfunction()

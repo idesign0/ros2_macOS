@@ -1,0 +1,30 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: apriltag_ros
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - {image: "ubuntu:22.04", ros: humble}
+          - {image: "ubuntu:24.04", ros: jazzy}
+          - {image: "ubuntu:24.04", ros: rolling}
+          - {image: "almalinux:8", ros: humble}
+
+    container:
+      image: ${{ matrix.image }}
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - uses: ros-tooling/setup-ros@v0.7
+
+    - uses: ros-tooling/action-ros-ci@v0.4
+      with:
+        package-name: apriltag_ros
+        target-ros2-distro: ${{ matrix.ros }}
+        vcs-repo-file-url: .github/deps.repos

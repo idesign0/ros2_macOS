@@ -1,0 +1,274 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="default">
+    <physics name="my_physics" type="bullet">
+      <max_step_size>0.1</max_step_size>
+      <real_time_factor>0.5</real_time_factor>
+    </physics>
+    <audio>
+      <device>/dev/audio</device>
+    </audio>
+    <wind>
+      <linear_velocity>4 5 6</linear_velocity>
+    </wind>
+    <gravity>1 2 3</gravity>
+    <magnetic_field>-1 0.5 10</magnetic_field>
+    <atmosphere type="adiabatic">
+      <temperature>23.1</temperature>
+      <pressure>43.1</pressure>
+      <temperature_gradient>4.3</temperature_gradient>
+    </atmosphere>
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>-22.9</latitude_deg>
+      <longitude_deg>-43.2</longitude_deg>
+      <elevation>100</elevation>
+      <heading_deg>90</heading_deg>
+    </spherical_coordinates>
+    <gui fullscreen="true">
+      <plugin name="gui_plugin1" filename="test/file/gui1"/>
+      <plugin name="gui_plugin2" filename="test/file/gui2"/>
+    </gui>
+    <scene>
+      <ambient>0.3 0.4 0.5</ambient>
+      <background>0.6 0.7 0.8</background>
+      <grid>true</grid>
+      <shadows>true</shadows>
+      <origin_visual>true</origin_visual>
+    </scene>
+
+    <light name="point_light" type="point">
+      <cast_shadows>false</cast_shadows>
+      <pose relative_to="world">1 2 10 0 0 0</pose>
+      <diffuse>1.0 0.0 0.5 1.0</diffuse>
+      <specular>0.2 0.1 0.0 1.0</specular>
+      <attenuation>
+        <range>123.5</range>
+        <linear>2.0</linear>
+        <constant>-2.0</constant>
+        <quadratic>20.2</quadratic>
+      </attenuation>
+    </light>
+
+    <light name="spot_light" type="spot">
+      <cast_shadows>true</cast_shadows>
+      <spot>
+        <inner_angle>0.1</inner_angle>
+        <outer_angle>0.5</outer_angle>
+        <falloff>2.2</falloff>
+      </spot>
+    </light>
+
+    <light name="directional_light" type="directional">
+      <pose relative_to="frame1">0 10 20 0 0 0</pose>
+      <attenuation>
+        <range>-123.5</range>
+        <linear>-1.0</linear>
+        <constant>2.0</constant>
+        <quadratic>-100.2</quadratic>
+      </attenuation>
+      <intensity>1.8</intensity>
+    </light>
+
+    <frame name="frame1" attached_to="world">
+      <pose>1 2 3 0 0 0</pose>
+    </frame>
+
+    <model name="model1">
+      <pose relative_to="frame1"/>
+      <frame name="frame2">
+        <pose>4 5 6 0 0 0</pose>
+      </frame>
+      <link name="link">
+        <particle_emitter name="emitter" type="box">
+          <pose>7 8 9 0 0 0</pose>
+          <emitting>true</emitting>
+          <size>10 11 12</size>
+          <particle_size>1 2 3</particle_size>
+          <lifetime>25</lifetime>
+          <min_velocity>0.1</min_velocity>
+          <max_velocity>0.2</max_velocity>
+          <scale_rate>0.5</scale_rate>
+          <rate>5</rate>
+          <material>
+            <diffuse>0.7 0.7 0.7</diffuse>
+            <specular>1.0 1.0 1.0</specular>
+            <pbr>
+              <metal>
+                <albedo_map>materials/textures/fog.png</albedo_map>
+              </metal>
+            </pbr>
+          </material>
+          <color_range_image>materials/textures/fogcolors.png</color_range_image>
+          <particle_scatter_ratio>0.2</particle_scatter_ratio>
+        </particle_emitter>
+
+        <projector name="projector">
+          <pose>1 2 3 0 0 0</pose>
+          <near_clip>0.03</near_clip>
+          <far_clip>3</far_clip>
+          <fov>0.8</fov>
+          <visibility_flags>0x01</visibility_flags>
+          <texture>materials/textures/projector.png</texture>
+          <plugin name="projector_plugin" filename="test/file/projector"/>
+        </projector>
+
+        <light name="spot_light" type="spot">
+          <pose relative_to="frame2">7 8 9 0 0 0</pose>
+          <cast_shadows>true</cast_shadows>
+          <spot>
+            <inner_angle>0.1</inner_angle>
+            <outer_angle>0.5</outer_angle>
+            <falloff>2.2</falloff>
+          </spot>
+        </light>
+        <visual name="link_visual">
+          <geometry>
+            <box><size>1 1 1</size></box>
+          </geometry>
+          <plugin name="visual_plugin1" filename="test/file/visual1"/>
+          <plugin name="visual_plugin2" filename="test/file/visual2"/>
+        </visual>
+
+        <sensor name="altimeter_sensor" type="altimeter">
+          <altimeter>
+            <vertical_position>
+              <noise type="gaussian">
+                <mean>0.1</mean>
+                <stddev>0.2</stddev>
+              </noise>
+            </vertical_position>
+            <vertical_velocity>
+              <noise type="gaussian">
+                <mean>2.3</mean>
+                <stddev>4.5</stddev>
+              </noise>
+            </vertical_velocity>
+          </altimeter>
+          <plugin name="sensor_plugin1" filename="test/file/sensor1"/>
+          <plugin name="sensor_plugin2" filename="test/file/sensor2"/>
+        </sensor>
+      </link>
+      <plugin name="model_plugin1" filename="test/file/model1"/>
+      <plugin name="model_plugin2" filename="test/file/model2"/>
+    </model>
+
+    <actor name="actor_1">
+      <skin>
+        <filename>walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <pose>0 0 0 0 0 0</pose>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.0</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <delay_start>1.0</delay_start>
+        <auto_start>true</auto_start>
+        <trajectory id="0" type="walking">
+          <waypoint>
+            <time>0</time>
+            <pose>0 1 0 0 0 0</pose>
+          </waypoint>
+          <waypoint>
+            <time>0.5</time>
+            <pose>0.1950 0.9807 0 0 0 -0.1963</pose>
+          </waypoint>
+          <waypoint>
+            <time>1</time>
+            <pose>0.3826 0.9238 0 0 0 -0.3926</pose>
+          </waypoint>
+          <waypoint>
+            <time>1.5</time>
+            <pose>0.5555 0.831 0 0 0 -0.589</pose>
+          </waypoint>
+        </trajectory>
+      </script>
+      <plugin name="actor_plugin1" filename="test/file/actor1"/>
+      <plugin name="actor_plugin2" filename="test/file/actor2"/>
+    </actor>
+
+    <actor name="actor_2">
+      <pose>0 0 1.1 0 0 0</pose>
+      <skin>
+        <filename>walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walk">
+        <filename>walk.dae</filename>
+        <scale>1.0</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <animation name="sit">
+        <filename>sit.dae</filename>
+        <scale>1.0</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <animation name="gesture">
+        <filename>gesture.bvh</filename>
+        <scale>0.055</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <delay_start>1.0</delay_start>
+        <auto_start>true</auto_start>
+        <trajectory id="0" type="gesture">
+          <waypoint>
+            <time>0</time>
+            <pose>0 1 0 0 0 0</pose>
+          </waypoint>
+          <waypoint>
+            <time>1.5</time>
+            <pose>0 1 0 0 0 0</pose>
+          </waypoint>
+        </trajectory>
+        <trajectory id="1" type="walk">
+          <waypoint>
+            <time>0</time>
+            <pose>0 1 0 0 0 0</pose>
+          </waypoint>
+          <waypoint>
+            <time>0.5</time>
+            <pose>0.1950 0.9807 0 0 0 -0.1963</pose>
+          </waypoint>
+          <waypoint>
+            <time>1</time>
+            <pose>0.3826 0.9238 0 0 0 -0.3926</pose>
+          </waypoint>
+          <waypoint>
+            <time>1.5</time>
+            <pose>0.5555 0.831 0 0 0 -0.589</pose>
+          </waypoint>
+        </trajectory>
+        <trajectory id="2" type="sit">
+          <waypoint>
+            <time>0</time>
+            <pose>0.5555 0.831 0 0 0 -0.589</pose>
+          </waypoint>
+          <waypoint>
+            <time>1.5</time>
+            <pose>0.5555 0.831 0 0 0 -0.589</pose>
+          </waypoint>
+        </trajectory>
+      </script>
+      <link name="link1">
+      </link>
+      <link name="link2">
+      </link>
+      <joint name="fixed_joint" type="fixed">
+        <pose>0 0 0 1 0 0</pose>
+        <child>link1</child>
+        <parent>link2</parent>
+      </joint>
+    </actor>
+
+    <plugin name="world_plugin1" filename="test/file/world1"/>
+    <plugin name="world_plugin2" filename="test/file/world2"/>
+
+  </world>
+</sdf>

@@ -1,0 +1,5 @@
+builtin_interfaces/Time stamp
+autoware_adapi_v1_msgs/Gear gear
+autoware_adapi_v1_msgs/TurnIndicators turn_indicators
+autoware_adapi_v1_msgs/HazardLights hazard_lights
+float64 steering_tire_angle

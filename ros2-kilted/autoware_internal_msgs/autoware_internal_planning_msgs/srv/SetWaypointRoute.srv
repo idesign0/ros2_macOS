@@ -1,0 +1,11 @@
+std_msgs/Header header
+# Goal pose in map frame
+geometry_msgs/Pose goal_pose
+# Intermediate waypoints between current position and goal
+geometry_msgs/Pose[] waypoints
+# Unique identifier for this route request
+unique_identifier_msgs/UUID uuid
+# If true, planner may modify route for optimization
+bool allow_modification
+---
+autoware_common_msgs/ResponseStatus status

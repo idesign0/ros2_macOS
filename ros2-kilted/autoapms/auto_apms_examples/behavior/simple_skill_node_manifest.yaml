@@ -1,0 +1,6 @@
+SimpleSkillActionNode:
+  class_name: auto_apms_examples::SimpleSkillClient
+  topic: simple_skill
+
+HasParameter:
+  class_name: auto_apms_behavior_tree::HasParameter

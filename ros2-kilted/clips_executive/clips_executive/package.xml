@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>clips_executive</name>
+  <version>0.1.3</version>
+  <description>ROS2 CLIPS-Executive meta package and documentation</description>
+  <maintainer email="viehmann@kbsg.rwth-aachen.de">Tarik Viehmann</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>cx_bringup</exec_depend>
+  <exec_depend>cx_clips_env_manager</exec_depend>
+  <exec_depend>cx_msgs</exec_depend>
+  <exec_depend>cx_plugin</exec_depend>
+  <exec_depend>cx_ros_comm_gen</exec_depend>
+  <exec_depend>cx_utils</exec_depend>
+
+  <!-- plugins -->
+  <exec_depend>cx_ament_index_plugin</exec_depend>
+  <exec_depend>cx_config_plugin</exec_depend>
+  <exec_depend>cx_example_plugin</exec_depend>
+  <exec_depend>cx_executive_plugin</exec_depend>
+  <exec_depend>cx_file_load_plugin</exec_depend>
+  <exec_depend>cx_protobuf_plugin</exec_depend>
+  <exec_depend>cx_ros_msgs_plugin</exec_depend>
+  <exec_depend>cx_tf2_pose_tracker_plugin</exec_depend>
+
+  <!-- docs -->
+  <build_depend>python3-sphinx-copybutton</build_depend>
+
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <rosdoc2>rosdoc2.yaml</rosdoc2>
+  </export>
+</package>

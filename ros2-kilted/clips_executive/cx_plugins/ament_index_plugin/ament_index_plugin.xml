@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="cx_ament_index_plugin">
+    <class type="cx::AmentIndexPlugin" base_class_type="cx::ClipsPlugin">
+      <description>AmentIndex plugin to test pluginlib</description>
+    </class>
+  </library>
+</class_libraries>

@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>cx_ros_msgs_plugin</name>
+  <version>0.1.3</version>
+  <description>CLIPS plugin for using generic ROS topics via introspection API</description>
+
+  <maintainer email="viehmann@kbsg.rwth-aachen.de">Tarik Viehmann</maintainer>
+
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>pluginlib</depend>
+  <depend>cx_plugin</depend>
+  <depend>cx_utils</depend>
+  <depend>clips_vendor</depend>
+  <depend>rosidl_typesupport_cpp</depend>
+  <depend>rosidl_typesupport_introspection_cpp</depend>
+  <depend>action_msgs</depend>
+  <depend>rcutils</depend>
+  <!-- for unicode support -->
+  <depend>libicu-dev</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <cx_plugin plugin="${prefix}/ros_msg_plugin.xml"/>
+  </export>
+</package>

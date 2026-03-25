@@ -1,0 +1,39 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@rules_license//rules:license.bzl", "license")
+load("@rules_python//python:py_binary.bzl", "py_binary")
+
+package(
+    default_applicable_licenses = ["//:license"],
+)
+
+license(
+    name = "license",
+    package_name = "gz-math-examples",
+)
+
+example_sources = glob(
+    include = [
+        "*.cc",
+    ],
+)
+
+[cc_binary(
+    name = src.replace(".cc", ""),
+    srcs = [src],
+    deps = [
+        "//:gz-math",
+    ],
+) for src in example_sources]
+
+example_sources_py = glob(
+    include = [
+        "*.py",
+    ],
+)
+
+[py_binary(
+    name = src.replace(".py", "_py"),
+    srcs = [src],
+    main = src,
+    deps = ["//:python"],
+) for src in example_sources_py]

@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>apriltag_mit</name>
+  <version>2.0.0</version>
+  <description>ROS2 package wrapper for the MIT apriltag detector</description>
+  <author>Michael Kaess</author>
+  <maintainer email="bernd.pfrommer@gmail.com">Bernd Pfrommer</maintainer>
+  <license>LGPLv2.1</license>
+
+  <depend>clang-tidy</depend>
+  <buildtool_depend>cmake</buildtool_depend>
+  <depend>eigen</depend>
+  <depend>libboost-dev</depend>
+  <depend>libopencv-dev</depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+
+</package>

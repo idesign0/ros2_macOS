@@ -1,0 +1,100 @@
+/*
+ * Copyright (C) 2019 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "PointCloudPackedProtos";
+
+/// \ingroup gz.msgs
+/// \interface PointCloudPacked
+/// \brief This message is designed to mimic ROS sensor_msgs/PointCloud2 to
+/// facilitate transfer/conversion of data between Gazebo and ROS.
+///
+/// See: http://docs.ros.org/melodic/api/sensor_msgs/html/msg/PointCloud2.html
+
+import "gz/msgs/header.proto";
+
+/// \brief (Copied from the ROS message): This message holds a collection of
+/// N-dimensional points, which may contain additional information such as
+/// normals, intensity, etc. The point data is stored as a binary blob, its
+/// layout described by the contents of the "fields" array.
+///
+/// The point cloud data may be organized 2d (image-like) or 1d
+/// (unordered). Point clouds organized as 2d images may be produced by
+/// camera depth sensors such as stereo or time-of-flight.
+message PointCloudPacked
+{
+  /// \brief A field that describes the format of the data field.
+  message Field
+  {
+    // Datatype for the point field.
+    enum DataType
+    {
+      INT8    = 0;
+      UINT8   = 1;
+      INT16   = 2;
+      UINT16  = 3;
+      INT32   = 4;
+      UINT32  = 5;
+      FLOAT32 = 6;
+      FLOAT64 = 7;
+    }
+
+    /// \brief Name of the field.
+    string name = 1;
+
+    /// \brief Offset from start of point struct
+    uint32 offset = 2;
+
+    /// \brief Datatype enumeration
+    DataType datatype = 3;
+
+    /// \brief How many elements in the field
+    uint32 count = 4;
+  }
+
+  /// \brief Optional header data. This should contain time of sensor data
+  /// acquisition, and the coordinate frame ID (for 3D points).
+  Header header   = 1;
+
+  /// \brief Information that describes the data contained in the `data` field.
+  repeated Field field = 2;
+
+  /// \brief Height of a 2D structured point cloud, or 1 if the point cloud is
+  /// unordered.
+  uint32 height = 3;
+
+  /// \brief Width of a 2D structured point cloud, or length of the point cloud
+  /// if the point cloud is unordered.
+  uint32 width = 4;
+
+  /// \brief Is this data big endian?
+  bool is_bigendian = 5;
+
+  /// \brief Length of a point in bytes.
+  uint32 point_step = 6;
+
+  /// \brief Length of row in bytes.
+  uint32 row_step = 7;
+
+  /// \brief The point data, size is (row_step * height);
+  bytes data = 8;
+
+  /// \brief True if there are not invalid points.
+  bool is_dense = 9;
+}

@@ -1,0 +1,86 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_configure_header", "gz_export_header")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+gz_configure_header(
+    name = "Config",
+    src = "src/build_config.hh.in",
+    out = "include/build_config.hh",
+    defines = [
+        "SCHEMA_INSTALL_PATH=transport/log/sql",
+    ],
+    package_xml = "//:package.xml",
+)
+
+gz_export_header(
+    name = "Export",
+    out = "include/gz/transport/log/Export.hh",
+    export_base = "GZ_TRANSPORT_LOG",
+    lib_name = "gz-transport-log",
+)
+
+public_headers_no_gen = glob([
+    "include/gz/transport/log/*.hh",
+    "include/gz/transport/log/detail/*.hh",
+])
+
+private_headers = glob(["src/*.hh"])
+
+sources = glob(
+    ["src/*.cc"],
+    exclude = [
+        "src/*_TEST.cc",
+    ],
+)
+
+public_headers = public_headers_no_gen + [
+    "include/gz/transport/log/Export.hh",
+]
+
+cc_library(
+    name = "log",
+    srcs = sources + private_headers + ["include/build_config.hh"],
+    hdrs = public_headers,
+    data = ["sql/0.1.0.sql"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:gz-transport",
+        "@sqlite3",
+    ],
+)
+
+test_sources = glob(
+    include = ["src/*_TEST.cc"],
+    exclude = ["src/LogCommandAPI_TEST.cc"],
+)
+
+[cc_test(
+    name = src.replace("/", "_").replace(".cc", "").replace("src_", ""),
+    srcs = [src],
+    copts = [
+        "-Wno-private-header",  # Required for Descriptor_TEST
+    ],
+    data = [
+        "test/data/state.tlog",
+    ],
+    defines = ['CORRUPT_DB_TEST_PATH=\\"log/test/data/state.tlog\\"'],
+    env = {
+        "GZ_BAZEL": "1",
+        "GZ_TRANSPORT_LOG_SQL_PATH": "log/sql",
+    },
+    deps = [
+        ":log",
+        "//test:utils",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@gz-common//testing",
+    ],
+) for src in test_sources]

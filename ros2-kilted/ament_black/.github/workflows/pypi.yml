@@ -1,0 +1,50 @@
+name: Publish to PyPI.org
+on:
+  push:
+    branches:
+      - main
+      - master
+  release:
+    types:
+      - published
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build sdist and wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python3
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Build sdist
+        run: pipx run build --sdist ${{github.workspace}}/ament_black/
+      - name: Build wheel
+        run: pipx run build --wheel ${{github.workspace}}/ament_black/
+      - name: Move artifacts to dist
+        run: |
+          mkdir -p dist
+          mv ${{github.workspace}}/ament_black/dist/*.tar.gz dist/
+          mv ${{github.workspace}}/ament_black/dist/*.whl dist/
+      - uses: actions/upload-artifact@v3
+        with:
+          name: artifacts
+          path: |
+            dist/*.tar.gz
+            dist/*.whl
+
+  pypi:
+    if: github.event_name == 'release'
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifacts
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

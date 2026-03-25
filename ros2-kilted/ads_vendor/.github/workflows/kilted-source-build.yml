@@ -1,0 +1,22 @@
+name: Kilted Source Build
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - kilted
+    paths:
+      - '**.hpp'
+      - '**.h'
+      - '**.cpp'
+      - '**.py'
+      - '.github/workflows/kilted-source-build.yml'
+      - '**/package.xml'
+      - '**/CMakeLists.txt'
+
+jobs:
+  source:
+    uses: ./.github/workflows/reusable-ros-tooling-source-build.yml
+    with:
+      ros_distro: kilted
+      ref: kilted
+      container: ubuntu:24.04

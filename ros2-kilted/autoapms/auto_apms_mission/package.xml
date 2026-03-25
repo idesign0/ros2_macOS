@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>auto_apms_mission</name>
+  <version>1.5.0</version>
+  <description>Implementation of AutoAPMS's automated mission management system</description>
+  <maintainer email="mue.robin@icloud.com">Robin Müller</maintainer>
+  <license>Apache-2.0</license>
+  <url>https://autoapms.github.io/auto-apms-guide/</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp_components</depend>
+  <depend>auto_apms_util</depend>
+  <depend>auto_apms_behavior_tree</depend>
+
+  <test_depend>ament_cmake_copyright</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

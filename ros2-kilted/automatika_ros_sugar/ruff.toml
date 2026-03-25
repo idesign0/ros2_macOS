@@ -1,0 +1,10 @@
+extend-exclude = [".mypy_cache", ".tox", ".venv", "buck-out", "build", ".pytest_cache"]
+fix = true
+line-length = 88
+preview = true
+[lint]
+ignore = ["E203", "E266", "E501", "F403", "F401"]
+per-file-ignores = { "ros_sugar/ui_node/elements.py" = ["F403", "F405"], "ros_sugar/ui_node/frontend.py" = ["F403", "F405"] }
+select = ["B","C","E","F","W","B9"]
+[lint.mccabe]
+max-complexity = 10

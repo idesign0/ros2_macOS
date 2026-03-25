@@ -1,0 +1,16 @@
+libassimp-dev
+libavcodec-dev
+libavdevice-dev
+libavformat-dev
+libavutil-dev
+libfreeimage-dev
+libgdal-dev
+libgz-cmake4-dev
+libgz-math8-dev
+libgz-utils3-dev
+libgz-utils3-log-dev
+libspdlog-dev
+libswscale-dev
+libtinyxml2-dev
+pkg-config
+uuid-dev

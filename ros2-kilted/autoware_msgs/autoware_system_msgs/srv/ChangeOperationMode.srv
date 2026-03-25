@@ -1,0 +1,9 @@
+# Operation mode constants
+uint16 STOP = 1        # Stop the vehicle
+uint16 AUTONOMOUS = 2  # Autonomous driving mode
+uint16 LOCAL = 3       # Local manual operation mode
+uint16 REMOTE = 4      # Remote operation mode
+
+uint16 mode
+---
+autoware_common_msgs/ResponseStatus status

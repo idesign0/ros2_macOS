@@ -1,0 +1,11 @@
+std_msgs/Header header
+# Goal pose in header.frame_id frame
+geometry_msgs/Pose goal_pose
+# Lanelet segments defining the route path
+autoware_planning_msgs/LaneletSegment[] segments
+# Unique identifier for this route request
+unique_identifier_msgs/UUID uuid
+# If true, the goal pose may be modified by the service before the route is planned
+bool allow_modification
+---
+autoware_common_msgs/ResponseStatus status

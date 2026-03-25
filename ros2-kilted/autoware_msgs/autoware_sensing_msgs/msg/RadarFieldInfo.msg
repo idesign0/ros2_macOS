@@ -1,0 +1,8 @@
+std_msgs/String field_name
+bool min_value_available
+bool max_value_available
+bool resolution_available
+
+float32 min_value
+float32 max_value
+float32 resolution

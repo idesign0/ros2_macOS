@@ -1,0 +1,14 @@
+#include "builtin_interfaces/msg/Time.idl"
+#include "autoware_auto_debug_msgs/msg/MultiArrayLayout.idl"
+
+module autoware_auto_debug_msgs {
+  module msg {
+    struct Int32MultiArrayStamped {
+      builtin_interfaces::msg::Time stamp;
+
+      autoware_auto_debug_msgs::msg::MultiArrayLayout layout;
+
+      sequence<int32> data;
+    };
+  };
+};

@@ -1,0 +1,14 @@
+
+#include "/media/matias/Datos/SyntaxHighlightingMisc.h"
+
+@piece( custom_materialBuffer )
+	float4 ignWeightsMinHeight;
+	float4 ignWeightsMaxHeight;
+@end
+
+@piece( custom_VStoPS_terra )
+	INTERPOLANT( float localHeight, @counter(texcoord) );
+
+	// added to prevent crash when decals are in the scene
+	INTERPOLANT( float3 normal, @counter(texcoord) );
+@end

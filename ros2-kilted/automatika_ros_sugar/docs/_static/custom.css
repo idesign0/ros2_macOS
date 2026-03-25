@@ -1,0 +1,94 @@
+/* === Theme Colors === */
+:root {
+    --automatika-primary: #E83F3F;
+    --automatika-secondary: #447AE5;
+    --automatika-black: #1E1E1E;
+}
+
+/* === Text color classes === */
+.text-red {
+    color: var(--automatika-primary);
+}
+
+.text-blue {
+    color: var(--automatika-secondary);
+}
+
+.text-red-strong {
+    color: var(--automatika-primary);
+    font-weight: bold;
+}
+
+
+blockquote.epigraph {
+    font-size: 95%;
+}
+
+
+/* card style */
+.sd-card {
+    border-radius: 12px !important;
+    border: 1px solid var(--sy-c-border) !important;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    background-color: var(--sy-c-bg-weak);
+}
+
+/* Hover effect for cards */
+.sd-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    border-color: var(--sy-c-brand) !important;
+}
+
+
+.sd-card-header {
+    background-color: transparent !important;
+    border-bottom: none !important;
+    font-weight: bold;
+}
+
+
+.sugar-card {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    border: 1px solid var(--sy-c-border) !important;
+    background-color: var(--sy-c-bg);
+}
+
+.sugar-card:hover {
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.15) !important;
+    border-color: var(--sy-c-brand) !important;
+    background-color: color-mix(in srgb, var(--sy-c-brand), var(--sy-c-bg) 3%) !important;
+}
+
+/* Ensure the title inside inherits the color on hover */
+.sugar-card:hover .sd-card-title span {
+    color: var(--sy-c-brand) !important;
+}
+
+
+/* === H3 === */
+h3 {
+    font-size: 1.5rem !important;
+    /* Default is often ~1.25rem */
+    font-weight: 700 !important;
+    /* Make it extra bold */
+    margin-top: 2.5rem !important;
+    /* Add breathing room above */
+    margin-bottom: 1rem !important;
+    /* Space below */
+    /* Ensure high contrast */
+    letter-spacing: -0.01em;
+
+}
+
+/* === H4 === */
+h4 {
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+    /* Semi-bold */
+    margin-top: 1.75rem !important;
+    margin-bottom: 0.75rem !important;
+    /* Slightly softer black/white */
+}
+

@@ -1,0 +1,24 @@
+
+material gz-rendering/plain_color
+{
+  // Material has one technique
+  technique
+  {
+    // This technique has one pass
+    pass
+    {
+      fog_override true
+
+      // Make this pass use the vertex shader defined above
+      vertex_program_ref plaincolor_vs
+      {
+      }
+
+      // Make this pass use the pixel shader defined above
+      fragment_program_ref plaincolor_fs
+      {
+        param_named_auto inColor custom 1
+      }
+    }
+  }
+}

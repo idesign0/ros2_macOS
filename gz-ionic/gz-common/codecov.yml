@@ -1,0 +1,7 @@
+ignore:
+  - "graphics/src/tiny_obj_loader.h"
+  - "graphics/src/CDT"
+  - "graphics/src/VHACD"
+  - "profiler/src/Remotery/lib"
+  - "profiler/src/Remotery/vis"
+  - "src/win_dirent.h"

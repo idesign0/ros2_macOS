@@ -1,0 +1,29 @@
+name: Ubuntu CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'ign-tools[0-9]'
+      - 'gz-tools[0-9]'
+      - 'main'
+
+jobs:
+  jammy-ci:
+    runs-on: ubuntu-latest
+    name: Ubuntu Jammy CI
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Compile and test
+        id: ci
+        uses: gazebo-tooling/action-gz-ci@jammy
+  noble-ci:
+    runs-on: ubuntu-latest
+    name: Ubuntu Noble CI
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Compile and test
+        id: ci
+        uses: gazebo-tooling/action-gz-ci@noble

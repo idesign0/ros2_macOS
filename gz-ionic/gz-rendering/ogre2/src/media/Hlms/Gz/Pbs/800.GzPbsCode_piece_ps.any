@@ -1,0 +1,5 @@
+// This file interfaces all modular pieces into one
+
+@piece( custom_ps_posExecution )
+  @insertpiece( custom_ps_posExecution_solid_color )
+@end

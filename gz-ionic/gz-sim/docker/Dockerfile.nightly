@@ -1,0 +1,35 @@
+FROM gz-sim:base
+
+COPY docker/scripts/enable_stable.sh scripts/enable_stable.sh
+RUN scripts/enable_stable.sh
+
+COPY docker/scripts/enable_prerelease.sh scripts/enable_prerelease.sh
+RUN scripts/enable_prerelease.sh
+
+COPY docker/scripts/enable_nightly.sh scripts/enable_nightly.sh
+RUN scripts/enable_nightly.sh
+
+RUN apt-get update \
+ && apt-get install -y \
+    libgz-cmake4-dev \
+    libgz-common6-dev \
+    libgz-fuel-tools10-dev \
+    libgz-math8-eigen3-dev \
+    libgz-plugin3-dev \
+    libgz-physics8-dev \
+    libgz-rendering9-dev \
+    libgz-tools2-dev \
+    libgz-transport14-dev \
+    libgz-gui9-dev \
+    libgz-msgs11-dev \
+    libgz-sensors9-dev \
+    libsdformat15-dev \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY . gz-sim
+RUN cd gz-sim \
+ && ./docker/scripts/build_gz_sim.sh
+
+COPY ./docker/scripts/entrypoint.sh /
+ENTRYPOINT ["/entrypoint.sh"]

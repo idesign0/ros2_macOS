@@ -1,0 +1,52 @@
+#!/usr/bin/ruby
+
+# Copyright (C) 2021 Open Source Robotics Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+require 'pathname'
+
+# Constants.
+LIBRARY_VERSION = '@PROJECT_VERSION_FULL@'
+COMMANDS = {
+  "model" => "@model_exe_location@",
+}
+
+#
+# Class for the Gazebo Model command line tools.
+#
+class Cmd
+  def execute(args)
+    command = args[0]
+    exe_name = COMMANDS[command]
+
+    unless Pathname.new(exe_name).absolute?
+      # We're assuming that the library path is relative to the current
+      # location of this script.
+      exe_name = File.expand_path(File.join(File.dirname(__FILE__), exe_name))
+    end
+    conf_version = LIBRARY_VERSION
+    exe_version = `#{exe_name} --version`.strip
+
+    # Sanity check: Verify that the version of the yaml file matches the version
+    # of the library that we are using.
+    unless exe_version.eql? conf_version
+      puts "Error: Version mismatch. Your configuration file version is
+            [#{conf_version}] but #{exe_name} version is [#{exe_version}]."
+      exit(-1)
+    end
+
+    # Drop command from list of arguments
+    exec(exe_name, *args[1..-1])
+  end
+end

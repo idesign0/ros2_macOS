@@ -1,0 +1,39 @@
+# Copyright 2024 Robin Müller
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+find_package(auto_apms_util QUIET REQUIRED) # Populate _AUTO_APMS_UTIL__AUTO_APMS_SHARED_RESOURCES_DIR_RELATIVE
+
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__FIND_TREE_NAMES_CMD "@CMAKE_INSTALL_PREFIX@/lib/@PROJECT_NAME@/find_tree_names.py")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__CREATE_NODE_MANIFEST_CMD "@CMAKE_INSTALL_PREFIX@/lib/@PROJECT_NAME@/create_node_manifest")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__CREATE_NODE_MODEL_CMD "@CMAKE_INSTALL_PREFIX@/lib/@PROJECT_NAME@/create_node_model")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__CREATE_NODE_MODEL_FOR_MANIFEST_RESOURCE_CMD "@CMAKE_INSTALL_PREFIX@/lib/@PROJECT_NAME@/create_node_model_for_manifest_resource")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__CREATE_NODE_MODEL_HEADER_CMD "@CMAKE_INSTALL_PREFIX@/lib/@PROJECT_NAME@/create_node_model_header")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__BUILD_DIR_ABSOLUTE "${PROJECT_BINARY_DIR}/@PROJECT_NAME@")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__INTERNAL_BEHAVIOR_CATEGORY_SUFFIX "@_AUTO_APMS_BEHAVIOR_TREE_CORE__INTERNAL_BEHAVIOR_CATEGORY_SUFFIX@")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__DEFAULT_BEHAVIOR_CATEGORY "@_AUTO_APMS_BEHAVIOR_TREE_CORE__DEFAULT_BEHAVIOR_CATEGORY@")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__DEFAULT_BEHAVIOR_CATEGORY__TREE "@_AUTO_APMS_BEHAVIOR_TREE_CORE__DEFAULT_BEHAVIOR_CATEGORY__TREE@")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__RESOURCE_DIR_RELATIVE__BEHAVIOR "${_AUTO_APMS_UTIL__AUTO_APMS_SHARED_RESOURCES_DIR_RELATIVE}/@PROJECT_NAME@/behavior")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__RESOURCE_DIR_RELATIVE__TREE "${_AUTO_APMS_UTIL__AUTO_APMS_SHARED_RESOURCES_DIR_RELATIVE}/@PROJECT_NAME@/tree")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__RESOURCE_DIR_RELATIVE__METADATA "${_AUTO_APMS_UTIL__AUTO_APMS_SHARED_RESOURCES_DIR_RELATIVE}/@PROJECT_NAME@/metadata")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__RESOURCE_TYPE_NAME__BEHAVIOR "@_AUTO_APMS_BEHAVIOR_TREE_CORE__RESOURCE_TYPE_NAME__BEHAVIOR@")
+set(_AUTO_APMS_BEHAVIOR_TREE_CORE__RESOURCE_TYPE_NAME__NODE_MANIFEST "@_AUTO_APMS_BEHAVIOR_TREE_CORE__RESOURCE_TYPE_NAME__NODE_MANIFEST@")
+
+include("${@PROJECT_NAME@_DIR}/generate_node_metadata.cmake")
+include("${@PROJECT_NAME@_DIR}/generate_node_metadata_hybrid_manifest_args.cmake")
+include("${@PROJECT_NAME@_DIR}/register_behavior.cmake")
+include("${@PROJECT_NAME@_DIR}/register_nodes.cmake")
+include("${@PROJECT_NAME@_DIR}/register_trees.cmake")
+
+find_package(ament_cmake_core QUIET REQUIRED)
+ament_register_extension("ament_package" "@PROJECT_NAME@" "register_resource_hook.cmake")

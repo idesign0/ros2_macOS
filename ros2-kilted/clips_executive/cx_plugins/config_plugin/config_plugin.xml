@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="cx_config_plugin">
+    <class type="cx::ConfigPlugin" base_class_type="cx::ClipsPlugin">
+      <description>CLIPS Plugin providing yaml configurations</description>
+    </class>
+  </library>
+</class_libraries>

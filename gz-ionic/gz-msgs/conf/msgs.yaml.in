@@ -1,0 +1,8 @@
+--- # Subcommands available inside gz-transport.
+format: 1.0.0
+library_name: @PROJECT_NAME_NO_VERSION_LOWER@
+library_version: @PROJECT_VERSION_FULL@
+library_path: @gz_library_path@
+commands:
+    - msg   : Print information about messages.
+---

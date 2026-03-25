@@ -1,0 +1,9 @@
+# Start vision langauge action
+string task
+---
+# Result
+bool success
+---
+# Feedback
+int32 timestep
+bool completed

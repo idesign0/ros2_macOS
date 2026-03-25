@@ -1,0 +1,58 @@
+/*
+ * Copyright (C) 2023 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "DataLoadPathOptions";
+
+import "gz/msgs/spherical_coordinates.proto";
+
+/// \brief Used for specifying how to load environmental data
+message DataLoadPathOptions
+{
+    /// \brief Units used by spherical coordinates
+    enum DataAngularUnits
+    {
+        RADIANS = 0;
+        DEGREES = 1;
+    }
+
+    /// \brief File path to load
+    string path = 1;
+
+    /// \brief Name of time axis
+    string time = 2;
+
+    /// \brief Is the data static in time
+    bool static_time = 3;
+
+    /// \brief Name of x axis
+    string x = 4;
+
+    /// \brief Name of y axis
+    string y = 5;
+
+    /// \brief Name of z axis
+    string z = 6;
+
+    /// Units
+    DataAngularUnits units = 7;
+
+    /// Spherical Coordinate type
+    gz.msgs.SphericalCoordinatesType coordinate_type = 8;
+}

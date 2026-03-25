@@ -1,0 +1,17 @@
+/**:
+  ros__parameters:
+    environments: ["cx_pddl_parser"]
+    cx_pddl_parser:
+      plugins: ["ament_index", "pddl_parser", "files"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+
+    ament_index:
+      plugin: "cx::AmentIndexPlugin"
+    pddl_parser:
+      plugin: "cx::PddlParserPlugin"
+    files:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_bringup"]
+      load: [
+        "clips/plugin_examples/pddl-parser.clp"]

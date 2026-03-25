@@ -1,0 +1,23 @@
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+cc_test(
+    name = "INTEGRATION_load_static_render_engine_plugin",
+    srcs = ["integration/load_static_render_engine_plugin.cc"],
+    env = {"GZ_BAZEL": "1"},
+    deps = [
+        "//:gz-rendering",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+        "@gz-common",
+        "@gz-plugin//:loader",
+        "@gz-plugin//:register",
+    ],
+)

@@ -1,0 +1,367 @@
+/*
+ * Copyright (C) 2017 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+#include <gtest/gtest.h>
+
+#include <gz/common/Console.hh>
+#include <gz/transport/Node.hh>
+#include <gz/utils/ExtraTestMacros.hh>
+
+#include "test_config.hh"  // NOLINT(build/include)
+#include "gz/gui/Application.hh"
+#include "gz/gui/Plugin.hh"
+#include "gz/gui/MainWindow.hh"
+#include "WorldStats.hh"
+
+int g_argc = 1;
+char* g_argv[] =
+{
+  reinterpret_cast<char*>(const_cast<char*>("./WorldStats_TEST")),
+};
+
+using namespace gz;
+using namespace gui;
+
+// See https://github.com/gazebosim/gz-gui/issues/75
+/////////////////////////////////////////////////
+TEST(WorldStatsTest, GZ_UTILS_TEST_ENABLED_ONLY_ON_LINUX(Load))
+{
+  common::Console::SetVerbosity(4);
+
+  Application app(g_argc, g_argv);
+  app.AddPluginPath(std::string(PROJECT_BINARY_PATH) + "/lib");
+
+  EXPECT_TRUE(app.LoadPlugin("WorldStats"));
+
+  // Get main window
+  auto win = app.findChild<MainWindow *>();
+  ASSERT_NE(nullptr, win);
+
+  // Get plugin
+  auto plugins = win->findChildren<Plugin *>();
+  EXPECT_EQ(plugins.size(), 1);
+
+  auto plugin = plugins[0];
+  EXPECT_EQ(plugin->Title(), "World stats");
+
+  // Check that everything is visible
+  for (auto name : {
+      "realTimeFactorValue",
+      "simTimeValue",
+      "realTimeValue",
+      "iterationsValue",
+    })
+  {
+    auto obj = plugin->PluginItem()->findChild<QObject *>(name);
+    ASSERT_NE(nullptr, obj) << name;
+    EXPECT_TRUE(obj->property("visible").toBool()) << name;
+  }
+
+  // Cleanup
+  plugins.clear();
+}
+
+/////////////////////////////////////////////////
+TEST(WorldStatsTest, GZ_UTILS_TEST_ENABLED_ONLY_ON_LINUX(WorldStats))
+{
+  common::Console::SetVerbosity(4);
+
+  Application app(g_argc, g_argv);
+  app.AddPluginPath(std::string(PROJECT_BINARY_PATH) + "/lib");
+
+  // Load plugin
+  const char *pluginStr =
+    "<plugin filename=\"WorldStats\">"
+      "<gz-gui>"
+        "<title>World Stats!</title>"
+      "</gz-gui>"
+      "<sim_time>true</sim_time>"
+      "<real_time>true</real_time>"
+      "<real_time_factor>true</real_time_factor>"
+      "<topic>/world_stats_test</topic>"
+    "</plugin>";
+
+  tinyxml2::XMLDocument pluginDoc;
+  pluginDoc.Parse(pluginStr);
+  EXPECT_TRUE(app.LoadPlugin("WorldStats",
+      pluginDoc.FirstChildElement("plugin")));
+
+  // Get main window
+  auto win = app.findChild<MainWindow *>();
+  ASSERT_NE(nullptr, win);
+
+  // Show, but don't exec, so we don't block
+  win->QuickWindow()->show();
+
+  // Get plugin
+  auto plugin = win->findChild<plugins::WorldStats *>();
+  ASSERT_NE(nullptr, plugin);
+
+  EXPECT_EQ(plugin->SimTime(), "N/A");
+  EXPECT_EQ(plugin->RealTime(), "N/A");
+  EXPECT_EQ(plugin->RealTimeFactor(), "N/A");
+
+  // Publish stats
+  transport::Node node;
+  auto pub = node.Advertise<msgs::WorldStatistics>("/world_stats_test");
+
+  // Sim time
+  {
+    msgs::WorldStatistics msg;
+    auto simTimeMsg = msg.mutable_sim_time();
+    simTimeMsg->set_sec(3600);
+    simTimeMsg->set_nsec(123456789);
+    msg.set_paused(true);
+    pub.Publish(msg);
+  }
+
+  // Give it time to be processed
+  int sleep = 0;
+  int maxSleep = 10;
+  while (plugin->SimTime() == "N/A" && sleep < maxSleep)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    QCoreApplication::processEvents();
+    sleep++;
+  }
+
+  EXPECT_EQ(plugin->SimTime().toStdString(), "00 01:00:00.123");
+  EXPECT_EQ(plugin->RealTime().toStdString(), "N/A");
+  EXPECT_EQ(plugin->RealTimeFactor().toStdString(), "0.00 %");
+
+  // Real time
+  {
+    msgs::WorldStatistics msg;
+    auto realTimeMsg = msg.mutable_real_time();
+    realTimeMsg->set_sec(86400);
+    realTimeMsg->set_nsec(1000000);
+    msg.set_paused(true);
+    pub.Publish(msg);
+  }
+
+  // Give it time to be processed
+  sleep = 0;
+  while (plugin->RealTime() == "N/A" && sleep < maxSleep)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    QCoreApplication::processEvents();
+    sleep++;
+  }
+
+  EXPECT_EQ(plugin->SimTime().toStdString(), "00 01:00:00.123");
+  EXPECT_EQ(plugin->RealTime().toStdString(), "01 00:00:00.001");
+  EXPECT_EQ(plugin->RealTimeFactor().toStdString(), "0.00 %");
+
+  // Real time factor
+  {
+    msgs::WorldStatistics msg;
+    msg.set_real_time_factor(1.0);
+    pub.Publish(msg);
+  }
+
+  // Give it time to be processed
+  sleep = 0;
+  while (plugin->RealTimeFactor() == "0.00 %" && sleep < maxSleep)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    QCoreApplication::processEvents();
+    sleep++;
+  }
+
+  EXPECT_EQ(plugin->SimTime().toStdString(), "00 01:00:00.123");
+  EXPECT_EQ(plugin->RealTime().toStdString(), "01 00:00:00.001");
+  EXPECT_EQ(plugin->RealTimeFactor().toStdString(), "100.00 %");
+}
+
+/////////////////////////////////////////////////
+TEST(WorldStatsTest, GZ_UTILS_TEST_ENABLED_ONLY_ON_LINUX(WorldNameNoTopic))
+{
+  common::Console::SetVerbosity(4);
+
+  Application app(g_argc, g_argv);
+  app.AddPluginPath(std::string(PROJECT_BINARY_PATH) + "/lib");
+
+  // Get main window
+  auto win = app.findChild<MainWindow *>();
+  ASSERT_NE(nullptr, win);
+
+  QStringList names{"banana", "grape"};
+  win->setProperty("worldNames", names);
+
+  // Load plugin
+  const char *pluginStr =
+    "<plugin filename=\"WorldStats\">"
+    "  <sim_time>true</sim_time>"
+    "</plugin>";
+
+  tinyxml2::XMLDocument pluginDoc;
+  pluginDoc.Parse(pluginStr);
+  EXPECT_TRUE(app.LoadPlugin("WorldStats",
+      pluginDoc.FirstChildElement("plugin")));
+
+  // Show, but don't exec, so we don't block
+  win->QuickWindow()->show();
+
+  // Get plugin
+  auto plugin = win->findChild<plugins::WorldStats *>();
+  ASSERT_NE(nullptr, plugin);
+
+  // Publish stats
+  transport::Node node;
+  auto pub = node.Advertise<msgs::WorldStatistics>("/world/banana/stats");
+
+  // Sim time
+  {
+    msgs::WorldStatistics msg;
+    auto simTimeMsg = msg.mutable_sim_time();
+    simTimeMsg->set_sec(3600);
+    simTimeMsg->set_nsec(123456789);
+    msg.set_paused(true);
+    pub.Publish(msg);
+  }
+
+  // Give it time to be processed
+  int sleep = 0;
+  int maxSleep = 30;
+  while (plugin->SimTime() == "N/A" && sleep < maxSleep)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    QCoreApplication::processEvents();
+    sleep++;
+  }
+
+  EXPECT_EQ(plugin->SimTime().toStdString(), "00 01:00:00.123");
+}
+
+/////////////////////////////////////////////////
+TEST(WorldStatsTest, GZ_UTILS_TEST_ENABLED_ONLY_ON_LINUX(WorldNameBadTopic))
+{
+  common::Console::SetVerbosity(4);
+
+  Application app(g_argc, g_argv);
+  app.AddPluginPath(std::string(PROJECT_BINARY_PATH) + "/lib");
+
+  // Get main window
+  auto win = app.findChild<MainWindow *>();
+  ASSERT_NE(nullptr, win);
+
+  QStringList names{"banana", "grape"};
+  win->setProperty("worldNames", names);
+
+  // Load plugin
+  const char *pluginStr =
+    "<plugin filename=\"WorldStats\">"
+    "  <sim_time>true</sim_time>"
+    "  <topic>/world/watermelon/stats</topic>"
+    "</plugin>";
+
+  tinyxml2::XMLDocument pluginDoc;
+  pluginDoc.Parse(pluginStr);
+  EXPECT_TRUE(app.LoadPlugin("WorldStats",
+      pluginDoc.FirstChildElement("plugin")));
+
+  // Show, but don't exec, so we don't block
+  win->QuickWindow()->show();
+
+  // Get plugin
+  auto plugin = win->findChild<plugins::WorldStats *>();
+  ASSERT_NE(nullptr, plugin);
+
+  // Publish stats
+  transport::Node node;
+  auto pub = node.Advertise<msgs::WorldStatistics>("/world/banana/stats");
+
+  // Sim time
+  {
+    msgs::WorldStatistics msg;
+    auto simTimeMsg = msg.mutable_sim_time();
+    simTimeMsg->set_sec(3600);
+    simTimeMsg->set_nsec(123456789);
+    msg.set_paused(true);
+    pub.Publish(msg);
+  }
+
+  // Give it time to be processed
+  int sleep = 0;
+  int maxSleep = 30;
+  while (plugin->SimTime() == "N/A" && sleep < maxSleep)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    QCoreApplication::processEvents();
+    sleep++;
+  }
+
+  EXPECT_EQ(plugin->SimTime().toStdString(), "00 01:00:00.123");
+}
+
+/////////////////////////////////////////////////
+TEST(WorldStatsTest, GZ_UTILS_TEST_ENABLED_ONLY_ON_LINUX(WorldNameNoProp))
+{
+  common::Console::SetVerbosity(4);
+
+  Application app(g_argc, g_argv);
+  app.AddPluginPath(std::string(PROJECT_BINARY_PATH) + "/lib");
+
+  // Get main window
+  auto win = app.findChild<MainWindow *>();
+  ASSERT_NE(nullptr, win);
+
+  // Load plugin
+  const char *pluginStr =
+    "<plugin filename=\"WorldStats\">"
+    "  <sim_time>true</sim_time>"
+    "  <topic>/world/watermelon/stats</topic>"
+    "</plugin>";
+
+  tinyxml2::XMLDocument pluginDoc;
+  pluginDoc.Parse(pluginStr);
+  EXPECT_TRUE(app.LoadPlugin("WorldStats",
+      pluginDoc.FirstChildElement("plugin")));
+
+  // Show, but don't exec, so we don't block
+  win->QuickWindow()->show();
+
+  // Get plugin
+  auto plugin = win->findChild<plugins::WorldStats *>();
+  ASSERT_NE(nullptr, plugin);
+
+  // Publish stats
+  transport::Node node;
+  auto pub = node.Advertise<msgs::WorldStatistics>("/world/watermelon/stats");
+
+  // Sim time
+  {
+    msgs::WorldStatistics msg;
+    auto simTimeMsg = msg.mutable_sim_time();
+    simTimeMsg->set_sec(3600);
+    simTimeMsg->set_nsec(123456789);
+    msg.set_paused(true);
+    pub.Publish(msg);
+  }
+
+  // Give it time to be processed
+  int sleep = 0;
+  int maxSleep = 30;
+  while (plugin->SimTime() == "N/A" && sleep < maxSleep)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    QCoreApplication::processEvents();
+    sleep++;
+  }
+
+  EXPECT_EQ(plugin->SimTime().toStdString(), "00 01:00:00.123");
+}

@@ -1,0 +1,5 @@
+### Copied from .github/CODEOWNERS-manual ###
+
+### Automatically generated from package.xml ###
+autoware_cmake/** esteve.fernandez@tier4.jp ryohsuke.mitsudome@tier4.jp yutaka.kondo@tier4.jp
+autoware_lint_common/** esteve.fernandez@tier4.jp ryohsuke.mitsudome@tier4.jp yutaka.kondo@tier4.jp

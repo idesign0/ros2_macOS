@@ -1,0 +1,158 @@
+compositor_node GpuRays1stPass
+{
+  in 0 colorTexture
+  in 1 depthTexture
+  in 2 particleTexture
+  in 3 particleDepthTexture
+  in 4 rt_input
+
+  // Create RTVs which explicitly use the depth buffers we want
+  // (and thus we can sample from it later). We can't
+  // override auto-created RTV from input channels (only local textures).
+  rtv particleTextureRtv
+  {
+    colour	particleTexture
+    depth   particleDepthTexture
+  }
+  rtv colorTextureRtv
+  {
+    colour	colorTexture
+    depth   depthTexture
+  }
+
+  target colorTextureRtv
+  {
+    pass render_scene
+    {
+      load
+      {
+        all           clear
+        clear_colour	0 0 0 1
+      }
+
+      // kLaserRetroMainDepthPassId
+      identifier 9525
+
+      // GZ_VISIBILITY_ALL & ~Ogre2ParticleEmitter::kParticleVisibilityFlags
+      visibility_mask 0xFEFFFFF
+
+      enable_forwardplus no
+      light_visibility_mask 0x0
+
+      profiling_id "GpuRays1stPass Color"
+    }
+  }
+
+  target particleTextureRtv
+  {
+    pass clear
+    {
+      execution_mask 0xEF
+      colour_value 0 0 0 1
+    }
+
+    pass render_scene
+    {
+      load
+      {
+        all           clear
+        clear_colour	0 0 0 1
+      }
+
+      // Ogre2ParticleEmitter::kParticleVisibilityFlags
+      visibility_mask 0x00100000
+
+      enable_forwardplus no
+      light_visibility_mask 0x0
+
+      execution_mask 0x0
+
+      profiling_id "GpuRays1stPass Particle"
+    }
+  }
+
+  target rt_input
+  {
+    pass render_quad
+    {
+      // No clear since this pass overwrites all content
+      load
+      {
+        all dont_care
+      }
+
+      profiling_id "GpuRaysScan1st Combination"
+
+      // kLaserRetro1stPassQuad
+      identifier 9526
+
+      material GpuRaysScan1st
+
+      quad_normals  camera_far_corners_view_space
+
+      input 0 depthTexture
+      input 1 colorTexture
+      input 2 particleDepthTexture
+      input 3 particleTexture
+    }
+  }
+}
+
+compositor_node GpuRays2ndPass
+{
+  in 0 rt_input
+  in 1 cubeUvTexture
+  in 2 cubeface0
+  in 3 cubeface1
+  in 4 cubeface2
+  in 5 cubeface3
+  in 6 cubeface4
+  in 7 cubeface5
+
+  target rt_input
+  {
+    pass render_quad
+    {
+      // No clear since this pass overwrites all content
+      load
+      {
+        all dont_care
+      }
+
+      profiling_id "GpuRaysScan2nd Final pass"
+
+      material GpuRaysScan2nd
+
+      quad_normals  camera_far_corners_view_space
+
+      input 0 cubeUvTexture
+      input 1 cubeface0
+      input 2 cubeface1
+      input 3 cubeface2
+      input 4 cubeface3
+      input 5 cubeface4
+      input 6 cubeface5
+    }
+  }
+}
+
+workspace GpuRays1stPassWorkspace
+{
+  connect_external 0 GpuRays1stPass 0
+  connect_external 1 GpuRays1stPass 1
+  connect_external 2 GpuRays1stPass 2
+  connect_external 3 GpuRays1stPass 3
+  connect_external 4 GpuRays1stPass 4
+}
+
+workspace GpuRays2ndPassWorkspace
+{
+  connect_external 0 GpuRays2ndPass 0
+  connect_external 1 GpuRays2ndPass 1
+  connect_external 2 GpuRays2ndPass 2
+  connect_external 3 GpuRays2ndPass 3
+  connect_external 4 GpuRays2ndPass 4
+  connect_external 5 GpuRays2ndPass 5
+  connect_external 6 GpuRays2ndPass 6
+  connect_external 7 GpuRays2ndPass 7
+}

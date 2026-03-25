@@ -1,0 +1,69 @@
+name: macOS latest
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'ign-common[0-9]'
+      - 'gz-common[0-9]'
+      - 'main'
+
+jobs:
+  build:
+    env:
+      PACKAGE: gz-common6
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Homebrew
+      id: set-up-homebrew
+      uses: Homebrew/actions/setup-homebrew@master
+    - run: brew config
+    - run: brew list
+
+    # Workaround for https://github.com/actions/setup-python/issues/577
+    - name: Clean up python binaries
+      run: |
+        rm -f $(brew --prefix)/bin/2to3*;
+        rm -f $(brew --prefix)/bin/idle3*;
+        rm -f $(brew --prefix)/bin/pydoc3*;
+        rm -f $(brew --prefix)/bin/python3*;
+        rm -f $(brew --prefix)/bin/python3*-config;
+    - name: Install base dependencies
+      env:
+        HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
+      run: |
+        brew tap osrf/simulation;
+        # check for ci_matching_branch
+        brew install wget
+        wget https://github.com/gazebo-tooling/release-tools/raw/master/jenkins-scripts/tools/detect_ci_matching_branch.py
+        TRY_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+        if python3 detect_ci_matching_branch.py ${TRY_BRANCH}
+        then
+          echo "# BEGIN SECTION: trying to checkout branch ${TRY_BRANCH} from osrf/simulation"
+          pushd $(brew --repo osrf/simulation)
+          git fetch origin ${TRY_BRANCH} || true
+          git checkout ${TRY_BRANCH} || true
+          popd
+          echo '# END SECTION'
+        fi
+        # gz-math8 has problems with swig, remove it for now
+        brew remove swig || true
+        brew install --only-dependencies ${PACKAGE};
+    - run: mkdir build
+    - name: cmake
+      working-directory: build
+      run: cmake .. -DCMAKE_INSTALL_PREFIX=$(brew --prefix)/Cellar/${PACKAGE}/HEAD
+    - run: make
+      working-directory: build
+    # Run make install before make test so that the package will be available to
+    # build examples as part of the test
+    - name: make install
+      working-directory: build
+      run: |
+        make install;
+        brew link ${PACKAGE};
+    - run: make test
+      working-directory: build
+      env:
+        CTEST_OUTPUT_ON_FAILURE: 1

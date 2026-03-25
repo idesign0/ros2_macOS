@@ -1,0 +1,6 @@
+string[] fluents
+string pddl_instance
+string goal_instance
+---
+bool success
+string error

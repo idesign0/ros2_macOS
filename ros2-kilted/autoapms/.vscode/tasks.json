@@ -1,0 +1,68 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Create docs",
+            "detail": "Create API documentation with doxygen",
+            "type": "shell",
+            "command": "doxygen doc/Doxyfile",
+            "problemMatcher": "$gcc"
+        },
+        // Test tasks
+        {
+            "label": "Test auto-apms packages (Unit tests)",
+            "detail": "Run all unit tests of auto-apms",
+            "type": "shell",
+            "command": "colcon test --build-base ${workspaceFolder:px4-ros2-env}/build --install-base ${workspaceFolder:px4-ros2-env}/install --packages-select-regex auto_apms\\S* --ctest-args \"-R auto_apms\\S*_unit_tests\"",
+            "group": "test",
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Test auto-apms packages (Integration tests)",
+            "detail": "Run all integration tests of auto-apms",
+            "type": "shell",
+            "command": "colcon test --build-base ${workspaceFolder:px4-ros2-env}/build --install-base ${workspaceFolder:px4-ros2-env}/install --packages-select-regex auto_apms\\S* --ctest-args \"-R auto_apms\\S*_integration_tests\"",
+            "group": "test",
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Run auto-apms Pre-Commit",
+            "detail": "Run all tests in pre-commit config of auto-apms",
+            "type": "shell",
+            "command": "pre-commit run -a",
+            "group": "test",
+            "problemMatcher": "$gcc"
+        },
+        // Behavior tree related tasks
+        {
+            "label": "Write empty behavior tree",
+            "detail": "Write the basic XML of an empty behavior tree to the current opened .xml file",
+            "type": "shell",
+            "command": "ros2 run auto_apms_behavior_tree new_tree ${file} ${input:nodeManifestResourceIdentity}",
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Run behavior tree",
+            "detail": "Run an installed behavior tree",
+            "type": "shell",
+            "command": "ros2 run auto_apms_behavior_tree run_behavior ${input:treeResourceIdentity}",
+            "problemMatcher": "$gcc"
+        },
+    ],
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "nodeManifestResourceIdentity",
+            "description": "Node manifest resource identity",
+            "default": ""
+        },
+        {
+            "type": "promptString",
+            "id": "treeResourceIdentity",
+            "description": "Behavior tree resource identity",
+            "default": ""
+        },
+    ]
+}

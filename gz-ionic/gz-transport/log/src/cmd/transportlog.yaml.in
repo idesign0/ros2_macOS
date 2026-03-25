@@ -1,0 +1,8 @@
+--- # Subcommands available inside gz-transport-log.
+format: 1.0.0
+library_name: gz-transport-log
+library_version: @PROJECT_VERSION_FULL@
+library_path: @gz_log_ruby_path@
+commands:
+    - log   : Record or playback topics.
+---

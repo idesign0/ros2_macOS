@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    feature/AcquisitionFrameCount: 1
+    feature/AcquisitionMode: Continuous
+    feature/BalanceWhiteAuto: Continuous
+    feature/ExposureTime: 100000.0
+    feature/GainAuto: Continuous
+    feature/PixelFormat: Mono8
+    feature/TriggerActivation: RisingEdge
+    feature/TriggerMode: 'Off'
+    feature/TriggerSelector: AcquisitionStart
+    feature/TriggerSource: Software
+    feature/Width: 4024
+    feature/Height: 3036
+    feature/LineMode: Input

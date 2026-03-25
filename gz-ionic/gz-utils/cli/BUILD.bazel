@@ -1,0 +1,56 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = ["__subpackages__"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+cc_library(
+    name = "cli11",
+    hdrs = glob([
+        "include/vendored-cli/gz/utils/cli/*.hpp",
+    ]),
+    features = [
+        # Disable header parsing for CLI11.
+        "-parse_headers",
+    ],
+    includes = ["include/vendored-cli"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "GzFormatter",
+    hdrs = [
+        "include/gz/utils/cli/GzFormatter.hpp",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":cli11",
+        "//:Export",
+    ],
+)
+
+cc_library(
+    name = "cli",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":GzFormatter",
+        ":cli11",
+    ],
+)
+
+cc_test(
+    name = "cli_TEST",
+    srcs = ["src/cli_TEST.cc"],
+    deps = [
+        ":GzFormatter",
+        ":cli11",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

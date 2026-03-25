@@ -1,0 +1,7 @@
+geometry_msgs/PoseWithCovarianceStamped pose_with_covariance
+---
+# If failure to run initial pose estimation and node could not get result, success is set to false.
+bool success
+# reliable is used to check reliability of initial pose was good or bad.
+bool reliable
+geometry_msgs/PoseWithCovarianceStamped pose_with_covariance

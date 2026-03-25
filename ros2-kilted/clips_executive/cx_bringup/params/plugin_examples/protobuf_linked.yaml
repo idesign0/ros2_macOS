@@ -1,0 +1,26 @@
+/**:
+  ros__parameters:
+    environments: ["cx_protobuf"]
+    cx_protobuf:
+      plugins: ["executive", "protobuf", "files"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+
+    executive:
+      plugin: "cx::ExecutivePlugin"
+      publish_on_refresh: false
+      assert_time: true
+      refresh_rate: 1
+    protobuf:
+      # Uses the plugin generated from cmake
+      plugin: "cx::BringupProtobufPlugin"
+      # While it additionally acts like the base plugin, including all
+      # configuration that can be found in the protobuf example, it actually
+      # does not need to sepcify any other parameter if it registers the types
+      # at runtime.
+
+    files:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_bringup"]
+      load: [
+        "clips/plugin_examples/protobuf-linked.clp"]

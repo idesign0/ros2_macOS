@@ -1,0 +1,189 @@
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Changelog for package aruco_ros
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1.0.0 (2019-09-27)
+------------------
+* Merge pull request `#68 <https://github.com/pal-robotics/aruco_ros//issues/68>`_ from aPonza/ros_format
+  Autoformatting as per CppStyleGuide
+* removed using namespace declarations
+* autoformatting as per CppStyleGuide
+* Merge pull request `#58 <https://github.com/pal-robotics/aruco_ros//issues/58>`_ from jrgnicho/aruco-3.0.4
+  Sets the 'useRectifiedImages' member from a parameter before it uses it
+* sets the 'useRectifiedImages' member from a parameter before it uses it
+* Update readme for new coordinates
+* Fix orientation changes in aruco 3.0.0
+* Migration to aruco 3.0.4
+* Merge branch 'indigo-devel' into kinetic-devel
+* Merge pull request `#41 <https://github.com/pal-robotics/aruco_ros//issues/41>`_ from Voidminded/kinetic-devel
+  Fixed OpenCV Calib3D link error on ROS Kinetic
+* Fixed OpenCV Calib3D link error on ROS Kinetic
+* Merge pull request `#36 <https://github.com/pal-robotics/aruco_ros//issues/36>`_ from pal-robotics/add-aruco-ros-utils
+  Add aruco_ros_utils lib and fix some missing dependencies
+* Add aruco_ros_utils lib and fix some missing dependencies
+* Merge pull request `#35 <https://github.com/pal-robotics/aruco_ros//issues/35>`_ from ugnelis/kinetic-devel
+  Removed duplicated line.
+* Removed duplicated line.
+* Merge pull request `#27 <https://github.com/pal-robotics/aruco_ros//issues/27>`_ from cehberlin/assert_fix
+  Replace assert by error message to keep library functional
+* Improved camera_frame\_ assert and removed unecessary opencv includes
+* Replace assert by error message to keep library functional
+* Contributors: Andrea Ponza, Bence Magyar, Christopher Hrabia, Jordi Pages, Jorge Nicho, Ugnius Malūkas, Victor Lopez, Voidminded
+
+5.0.5 (2024-05-09)
+------------------
+* Merge pull request #135 from wep21/jazzy-devel
+  Update cv_bridge header
+* check header exists
+* feat: update cv bridge header
+* Contributors: Sai Kishor Kothakota, wep21
+
+5.0.4 (2023-11-14)
+------------------
+* Add website tag
+* Contributors: Noel Jimenez
+
+5.0.3 (2023-10-03)
+------------------
+
+5.0.2 (2023-03-20)
+------------------
+* Merge branch 'fix_warnings' into 'humble-devel'
+  Fix warnings
+  See merge request ros-overlays/aruco_ros!11
+* rename variable to avoid shadowing
+* check marker_size greater than 0
+* return true at the end of setup
+* Contributors: Noel Jimenez, saikishor
+
+5.0.1 (2023-03-06)
+------------------
+
+5.0.0 (2023-02-08)
+------------------
+* ament uncrustify lint
+* create subnode to namespace the topics and changed default node names
+* declare params and fix launchers
+* disable copyright check
+* linters fixes
+* add tests
+* remove wrong copyright
+* params fix
+* port launchers to ros2
+* declare node parameters
+* migrate the aruco_ros double node to ROS2
+* added some fixes for the aruco_simple ros2 node
+* migrate the node aruco_simple to ROS2
+* refactor marker_publisher for the setup to work correctly
+* migrated the marker publish node to ROS2
+* migrated the aruco_ros_utils.cpp to ros2
+* added temporary changes of humble
+* Contributors: Noel Jimenez, Sai Kishor Kothakota
+
+3.1.2 (2022-11-10)
+------------------
+
+3.1.1 (2022-11-08)
+------------------
+
+3.1.0 (2022-11-07)
+------------------
+* Merge branch 'feat/aruco-3.1.5-migration-gallium' into 'gallium-devel'
+  ArUCO 3.1.5 migration gallium
+  See merge request ros-overlays/aruco_ros!5
+* Add correct fisheye distortion functionality
+* migrate to 3.1.5
+* Contributors: josegarcia, saikishor
+
+3.0.3 (2022-05-16)
+------------------
+* Merge branch 'missing_catkin_export_dep' into 'gallium-devel'
+  added the missing catkin_EXPORTED_TARGETS dependency
+  See merge request ros-overlays/aruco_ros!3
+* added the missing catkin_EXPORTED_TARGETS dependency
+* Contributors: Sai Kishor Kothakota, saikishor
+
+3.0.2 (2022-04-05)
+------------------
+* Merge pull request #103 from bmagyar/make-sai-maintainer
+  Make Sai maintainer of all aruco_ros packages
+* Make Sai maintainer of all
+* Update license tags in the package.xml
+* Contributors: Bence Magyar, Sai Kishor Kothakota
+
+3.0.1 (2022-02-10)
+------------------
+* Merge branch 'fix_camera_matrix_gallium' into 'gallium-devel'
+  fix the issue with the improper camera matrix with non rectified images
+  See merge request ros-overlays/aruco_ros!2
+* fix the issue with the improper camera matrix with non rectified images
+* Contributors: Sai Kishor Kothakota, saikishor
+
+3.0.0 (2021-07-16)
+------------------
+* fixes pal-robotics/aruco_ros/#89
+* Contributors: 444lhc
+
+2.1.1 (2020-09-17)
+------------------
+* Use time stamps from image messages
+* Contributors: Markus Vieth
+
+2.1.0 (2020-01-21)
+------------------
+* Migrate to tf2 and add utilities
+* Add support for camera extrinsics when dealing with stereo cameras
+* Contributors: Victor Lopez
+
+2.0.2 (2019-11-09)
+------------------
+* Add SYSTEM to external include dirs
+* Contributors: Victor Lopez
+
+2.0.1 (2019-09-27)
+------------------
+
+0.2.2 (2017-07-25)
+------------------
+* only look for aruco if someone is looking for them
+* Contributors: Victor Lopez
+
+0.2.1 (2017-07-21)
+------------------
+* Change default threshold to match defaults of aruco marker detector
+* Add dynamic reconfigure to simple_single
+* Contributors: Victor Lopez
+
+0.2.0 (2016-10-19)
+------------------
+* only proccesses images if there are subscribers
+* add rviz marker and add corner param
+* use double precision to improve accuracy
+* Contributors: Jordi Pages, Procópio Stein
+
+0.1.0 (2015-08-10)
+------------------
+* Update changelogs and maintainer email
+* Frame parameters only checked when using camera info
+* Add marker list publisher
+* Remove unused broadcaster
+* Only do 3d when there is camera info
+* Use waitForMessage for camerainfo
+* Remove nonsense assert
+* Reorganize and allow no camera_info
+* Fix crash when distortion vector is 0 long (usb_cam)
+* Contributors: Bence Magyar
+
+0.0.1 (2015-05-20)
+------------------
+* More accurate ROS timestamps (callback triggering time)
+  This commit ensures that:
+  - all published msgs in a callback have the same timestamp
+  - the time is as close as possible to the frame grabbing time (as fast as the marker detection may be, the delay might affect TF interpolation in an unacceptable way for applications like visual servoing)
+* Install marker_publisher executable
+  This target was missing in the installation rule
+* Finished some renaming
+* changes to finish branch merge
+* aruco_ros: Fixing superfluous (and broken) linker arg to -laruco
+* Reorganize aruco_ros into 3 packages
+* Contributors: Bence Magyar, Jordi Pages, Josh Langsfeld, ObiWan, Steve Vozar

@@ -1,0 +1,56 @@
+auto_apms_behavior_tree::executor_params:
+  ${_AUTO_APMS_BEHAVIOR_TREE__EXECUTOR_PARAM_ALLOW_OTHER_BUILD_HANDLERS}:
+    type: bool
+    default_value: true
+    read_only: true
+    description: Option whether to allow dynamic loading/unloading of tree build handler plugins.
+
+  ${_AUTO_APMS_BEHAVIOR_TREE__EXECUTOR_PARAM_ALLOW_DYNAMIC_SCRIPTING_ENUMS}:
+    type: bool
+    default_value: true
+    description: Option whether to allow dynamically changing scripting enum parameters.
+
+  ${_AUTO_APMS_BEHAVIOR_TREE__EXECUTOR_PARAM_ALLOW_DYNAMIC_BLACKBOARD}:
+    type: bool
+    default_value: true
+    description: Option whether to allow dynamically changing blackboard parameters.
+
+  ${_AUTO_APMS_BEHAVIOR_TREE__EXECUTOR_PARAM_EXCLUDE_PACKAGES_NODE}:
+    type: string_array
+    default_value: []
+    read_only: true
+    description: List of package names to exclude when searching for tree node plugins.
+    validation:
+      unique<>: []
+
+  ${_AUTO_APMS_BEHAVIOR_TREE__EXECUTOR_PARAM_EXCLUDE_PACKAGES_BUILD_HANDLER}:
+    type: string_array
+    default_value: []
+    read_only: true
+    description: List of package names to exclude when searching for tree build handler plugins.
+    validation:
+      unique<>: []
+
+  ${_AUTO_APMS_BEHAVIOR_TREE__EXECUTOR_PARAM_BUILD_HANDLER}:
+    type: string
+    default_value: auto_apms_behavior_tree::TreeFromResourceBuildHandler
+    description: Fully qualified class name of the behavior tree build handler responsible for creating trees if not overridden by the StartTreeExecutor action goal.
+
+  ${_AUTO_APMS_BEHAVIOR_TREE__EXECUTOR_PARAM_TICK_RATE}:
+    type: double
+    default_value: 0.1
+    description: Interval [s] at which the behavior tree is being ticked.
+    validation:
+      gt_eq<>: [0]
+
+  ${_AUTO_APMS_BEHAVIOR_TREE__EXECUTOR_PARAM_GROOT2_PORT}:
+    type: int
+    default_value: -1
+    description: Server port for the Groot2 publisher. -1 means no Groot2 publisher will be created.
+    validation:
+      gt_eq<>: [-1]
+
+  ${_AUTO_APMS_BEHAVIOR_TREE__EXECUTOR_PARAM_STATE_CHANGE_LOGGER}:
+    type: bool
+    default_value: false
+    description: Flag whether to write any behavior tree state changes to rosout.

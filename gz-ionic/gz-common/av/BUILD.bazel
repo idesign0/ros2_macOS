@@ -1,0 +1,66 @@
+load("@rules_gazebo//gazebo:headers.bzl", "gz_export_header")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+# public_headers_no_gen = glob([
+#     "include/gz/common/*.hh",
+#     "include/gz/common/**/*.hh",
+# ])
+
+# sources = glob(
+#     ["src/*.cc"],
+#     exclude = ["src/*_TEST.cc"],
+# )
+
+# test_sources = glob(["src/*_TEST.cc"])
+
+gz_export_header(
+    name = "Export",
+    out = "include/gz/common/av/Export.hh",
+    export_base = "GZ_COMMON_AV",
+    lib_name = "gz-common-av",
+)
+
+# public_headers = public_headers_no_gen + [
+#     "include/gz/common/av/Export.hh",
+# ]
+
+# \todo(iche033) Add av component once ffmpeg dep is available in BCR
+# cc_library(
+#     name = "av",
+#     srcs = sources,
+#     hdrs = public_headers,
+#     includes = ["include"],
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         "//:gz-common",
+#         "@gz-utils//:ImplPtr",
+#         "@gz-utils//:ExtraTestMacros",
+#         "@ffmpeg//:libavcodec",
+#         "@ffmpeg//:libavformat",
+#         "@ffmpeg//:libavutil",
+#         "@ffmpeg//:libswscale",
+#     ],
+# )
+#
+# [cc_test(
+#     name = src.replace("/", "_").replace(".cc", "").replace("src_", ""),
+#     srcs = [src],
+#     data = ["//test:data"],
+#     env = {
+#         "GZ_BAZEL": "1",
+#     },
+#     deps = [
+#         ":av",
+#         "//testing:testing",
+#         "@googletest//:gtest",
+#         "@googletest//:gtest_main",
+#
+#     ],
+# ) for src in test_sources]

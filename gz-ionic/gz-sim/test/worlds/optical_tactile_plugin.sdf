@@ -1,0 +1,96 @@
+<?xml version="1.0" ?>
+
+<sdf version="1.6">
+  <world name="optical_tactile_plugin">
+    <physics name="fast" type="ignored">
+      <real_time_factor>0</real_time_factor>
+    </physics>
+
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+      filename="gz-sim-contact-system"
+      name="gz::sim::systems::Contact">
+    </plugin>
+    <plugin
+      filename="gz-sim-sensors-system"
+      name="gz::sim::systems::Sensors">
+    </plugin>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="tactile_sensor">
+      <pose>0 0 0.0030 0 1.57 -1.57</pose>
+      <link name="contact_surface">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.005 0.02 0.02</size>
+            </box>
+          </geometry>
+        </collision>
+        <sensor name="depth_camera" type="depth_camera">
+          <update_rate>1</update_rate>
+          <topic>depth_camera</topic>
+          <pose relative_to="contact_surface">-0.05 0 0 0 0 0</pose>
+          <camera>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R_FLOAT32</format>
+            </image>
+            <clip>
+              <near>0.030</near>
+              <far>10.0</far>
+            </clip>
+          </camera>
+        </sensor>
+        <sensor name="contact_sensor" type="contact">
+          <contact>
+            <collision>collision</collision>
+          </contact>
+        </sensor>
+      </link>
+      <static>false</static>
+      <plugin
+        filename="gz-sim-opticaltactileplugin-system"
+        name="gz::sim::systems::OpticalTactilePlugin">
+        <enabled>false</enabled>
+        <namespace>optical_tactile_sensor</namespace>
+        <visualize_sensor>false</visualize_sensor>
+        <visualize_contacts>false</visualize_contacts>
+        <visualize_forces>false</visualize_forces>
+        <visualization_resolution>1</visualization_resolution>
+        <force_length>0.01</force_length>
+        <extended_sensing>0.05</extended_sensing>
+      </plugin>
+    </model>
+
+  </world>
+</sdf>

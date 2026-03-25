@@ -1,0 +1,20 @@
+/**:
+  ros__parameters:
+    autostart_node: true
+    environments: ["tf2_pose_tracker_turtlebot"]
+
+    tf2_pose_tracker_turtlebot:
+      plugins: ["executive", "tf2_pose_tracker", "files"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+
+    executive:
+      plugin: "cx::ExecutivePlugin"
+
+    tf2_pose_tracker:
+      plugin: "cx::Tf2PoseTrackerPlugin"
+
+    files:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_tutorial_agents"]
+      load: ["clips/tf2_tracked_pose.clp"]

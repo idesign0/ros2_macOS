@@ -1,0 +1,17 @@
+/**:
+  ros__parameters:
+    environments: ["cx_config"]
+    cx_config:
+      plugins: ["ament_index", "config", "files"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+
+    ament_index:
+      plugin: "cx::AmentIndexPlugin"
+    config:
+      plugin: "cx::ConfigPlugin"
+    files:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_bringup"]
+      load: [
+        "clips/plugin_examples/config.clp"]

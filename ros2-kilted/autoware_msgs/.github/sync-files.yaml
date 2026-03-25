@@ -1,0 +1,39 @@
+- repository: autowarefoundation/sync-file-templates
+  source-dir: sources
+  files:
+    - source: CODE_OF_CONDUCT.md
+    - source: CONTRIBUTING.md
+    - source: DISCLAIMER.md
+    - source: LICENSE
+    - source: .github/ISSUE_TEMPLATE/bug.yaml
+    - source: .github/ISSUE_TEMPLATE/config.yml
+    - source: .github/ISSUE_TEMPLATE/task.yaml
+    - source: .github/pull_request_template.md
+    - source: .github/dependabot.yaml
+    - source: .github/stale.yml
+    - source: .github/workflows/comment-on-pr.yaml
+    - source: .github/workflows/github-release.yaml
+    - source: .github/workflows/pre-commit.yaml
+    - source: .github/workflows/pre-commit-optional.yaml
+    - source: .github/workflows/semantic-pull-request.yaml
+    - source: .github/workflows/spell-check-daily.yaml
+    - source: .github/workflows/spell-check-differential.yaml
+    - source: .github/workflows/sync-files.yaml
+    - source: .github/workflows/update-codeowners-from-packages.yaml
+    - source: .markdown-link-check.json
+    - source: .markdownlint.yaml
+    - source: .pre-commit-config.yaml
+    - source: .pre-commit-config-optional.yaml
+    - source: .prettierignore
+    - source: .prettierrc.yaml
+    - source: .yamllint.yaml
+    - source: .github/workflows/build-and-test.yaml
+      pre-commands: |
+        sed -i '/build-depends-repos/d' {source}
+    - source: .github/workflows/build-and-test-differential.yaml
+      pre-commands: |
+        sed -i '/build-depends-repos/d' {source}
+
+# sed: The stream editor command, used for parsing and transforming text.
+# -i: Edit files in place.
+# '/build-depends-repos/d': Delete the line containing 'build-depends-repos'.

@@ -1,0 +1,15 @@
+syntax = "proto3";
+package gz.custom_msgs;
+
+import "gz/msgs/header.proto";
+
+message Foo
+{
+  double value = 1;
+}
+
+message FooStamped
+{
+  gz.msgs.Header header = 1;
+  gz.custom_msgs.Foo foo = 2;
+}

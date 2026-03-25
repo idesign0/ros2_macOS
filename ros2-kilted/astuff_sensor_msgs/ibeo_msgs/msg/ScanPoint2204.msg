@@ -1,0 +1,11 @@
+float32 x_position
+float32 y_position
+float32 z_position
+float32 echo_width
+uint8 device_id
+uint8 layer
+uint8 echo
+uint32 time_offset
+bool ground
+bool dirt
+bool precipitation

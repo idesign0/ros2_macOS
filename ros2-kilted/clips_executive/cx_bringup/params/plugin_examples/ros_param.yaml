@@ -1,0 +1,16 @@
+/**:
+  ros__parameters:
+    unused_param: "i am not used anywhere"
+    environments: ["cx_ros_param"]
+    cx_ros_param:
+      plugins: ["ros_param", "files"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+
+    ros_param:
+      plugin: "cx::RosParamPlugin"
+    files:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_bringup"]
+      batch: [
+        "clips/plugin_examples/ros-param.clp"]

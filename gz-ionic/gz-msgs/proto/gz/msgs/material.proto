@@ -1,0 +1,143 @@
+/*
+ * Copyright (C) 2017 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "MaterialProtos";
+
+/// \ingroup gz.msgs
+/// \interface Material
+/// \brief Information about a material
+
+import "gz/msgs/color.proto";
+import "gz/msgs/header.proto";
+
+message Material
+{
+  enum ShaderType
+  {
+    VERTEX                  = 0;
+    PIXEL                   = 1;
+    NORMAL_MAP_OBJECT_SPACE = 2;
+    NORMAL_MAP_TANGENT_SPACE = 3;
+  }
+
+  message Script
+  {
+    repeated string uri = 1;
+    string name = 2;
+  }
+
+  /// \brief Physically Based Rendering (PBR) material properties.
+  message PBR
+  {
+    /// \brief Type of PBR workflow
+    enum WorkflowType
+    {
+      /// \brief No workflow
+      NONE                  = 0;
+
+      /// \brief Metallic/Roughness workflow
+      METAL                 = 1;
+
+      /// \brief Specular/Glossiness workflow
+      SPECULAR              = 2;
+    }
+
+    /// \brief Type of PBR workflow
+    WorkflowType type            = 1;
+
+    /// \brief Filename of the albedo map
+    string albedo_map            = 2;
+
+    /// \brief Filename of the normal map
+    string normal_map            = 3;
+
+    /// \brief Metalness value (metal workflow)
+    double metalness             = 4;
+
+    /// \brief Filename of the metalness map (metal workflow)
+    string metalness_map         = 5;
+
+    /// \brief Roughness value (metal workflow)
+    double roughness             = 6;
+
+    /// \brief Filename of the roughness map (metal workflow)
+    string roughness_map         = 7;
+
+    /// \brief Glossiness value (specular workflow)
+    double glossiness            = 8;
+
+    /// \brief Filename of the glossiness map (specular workflow)
+    string glossiness_map        = 9;
+
+    /// \brief Filename of the specular map (specular workflow)
+    string specular_map          = 10;
+
+    /// \brief Filename of the environment map
+    string environment_map       = 11;
+
+    /// \brief Filename of the ambient occlusion map
+    string ambient_occlusion_map = 12;
+
+    /// \brief Filename of the emissive map
+    string emissive_map          = 13;
+
+    /// \brief Filename of the light map.
+    string light_map             = 14;
+
+    /// \brief Texture coordinate set for the light map
+    uint32 light_map_texcoord_set = 15;
+  }
+
+
+  /// \brief Optional header data
+  Header header          = 1;
+
+  Script script          = 2;
+  ShaderType shader_type = 3;
+  string normal_map      = 4;
+
+  /// \brief Ambient color
+  Color ambient          = 5;
+
+  /// \brief Diffuse color
+  Color diffuse          = 6;
+
+  /// \brief Specular color
+  Color specular         = 7;
+
+  /// \brief Emissive color
+  Color emissive         = 8;
+
+  bool lighting          = 9;
+
+  /// \brief Physically Based Rendering (PBR) material properties
+  PBR pbr                = 10;
+
+  /// \brief Render order. The higher value will be rendered on top of the
+  /// other coplanar polygons
+  double render_order    = 11;
+
+  /// \brief If true, the mesh that this material is applied to will be
+  /// rendered as double sided
+  bool double_sided      = 12;
+
+  /// \brief Specular exponent
+  double shininess       = 13;
+}

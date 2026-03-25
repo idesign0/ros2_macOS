@@ -1,0 +1,16 @@
+{
+    "homepage": "https://github.com/gazebosim/gz-utils",
+    "maintainers": [
+        {
+            "email": "mjcarroll@intrinsic.ai",
+            "github": "mjcarroll",
+            "github_user_id": 279701,
+            "name": "Michael Carroll"
+        }
+    ],
+    "repository": [
+        "github:gazebosim/gz-utils"
+    ],
+    "versions": [],
+    "yanked_versions": {}
+}

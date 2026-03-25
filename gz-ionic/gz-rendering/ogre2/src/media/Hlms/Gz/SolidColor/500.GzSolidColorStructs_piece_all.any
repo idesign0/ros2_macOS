@@ -1,0 +1,8 @@
+// Used by SegmentedCamera & SelectionBuffer
+@property( gz_render_solid_color )
+
+@piece( custom_VStoPS_solid_color )
+  FLAT_INTERPOLANT( float4 gzSolidColour, @counter(texcoord) );
+@end
+
+@end

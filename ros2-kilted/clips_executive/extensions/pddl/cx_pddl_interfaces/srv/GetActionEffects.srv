@@ -1,0 +1,6 @@
+cx_pddl_interfaces/Action action
+---
+bool success
+string error
+cx_pddl_interfaces/FunctionEffect[] function_effects
+cx_pddl_interfaces/FluentEffect[] fluent_effects

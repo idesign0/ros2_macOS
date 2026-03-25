@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="cx_ros_msgs_plugin">
+    <class type="cx::RosMsgsPlugin" base_class_type="cx::ClipsPlugin">
+      <description>CLIPS plugin for generic ROS communication</description>
+    </class>
+  </library>
+</class_libraries>

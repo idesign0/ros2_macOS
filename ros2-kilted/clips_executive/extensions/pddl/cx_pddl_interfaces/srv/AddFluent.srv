@@ -1,0 +1,4 @@
+cx_pddl_interfaces/Fluent fluent
+---
+bool success
+string error

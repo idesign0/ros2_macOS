@@ -1,0 +1,217 @@
+# PointOfInterestRequest
+class update_automotive_navigation_msgs_PointOfInterestRequest_32ddedb83d8866a4c42724a85ecf2c80(MessageUpdateRule):
+	old_type = "automotive_navigation_msgs/PointOfInterestRequest"
+	old_full_text = """
+# Point of Interest Request Message
+# Contains information needed to request point of interest information
+
+std_msgs/Header header
+
+string name        # Name of the point of interest list
+
+string module_name # module name of the requesting node
+
+uint16 requestId   # Unique id of this request
+                   # Can make another request with the same requestId and
+                   # different update_num, guid, or tolerance.  New one will
+                   # replace the old one.
+
+uint16 cancel      # Set to 1 to cancel the request with this requestId
+
+uint16 update_num  # The update number of the point list to use
+
+uint16 guid_valid  # Request is for a specific point, not all points in list
+uint64 guid        # The unique Id for the desired point
+
+float32 tolerance  # How close to the current vehicle's position a point needs to be
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "automotive_navigation_msgs/PointOfInterestRequest"
+	new_full_text = """
+# Point of Interest Request Message
+# Contains information needed to request point of interest information
+
+std_msgs/Header header
+
+string name        # Name of the point of interest list
+
+string module_name # module name of the requesting node
+
+uint16 request_id  # Unique id of this request
+                   # Can make another request with the same requestId and
+                   # different update_num, guid, or tolerance.  New one will
+                   # replace the old one.
+
+uint16 cancel      # Set to 1 to cancel the request with this requestId
+
+uint16 update_num  # The update number of the point list to use
+
+uint16 guid_valid  # Request is for a specific point, not all points in list
+uint64 guid        # The unique Id for the desired point
+
+float32 tolerance  # How close to the current vehicle's position a point needs to be
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.name = old_msg.name
+		new_msg.module_name = old_msg.module_name
+		new_msg.request_id = old_msg.requestId
+		new_msg.cancel = old_msg.cancel
+		new_msg.update_num = old_msg.update_num
+		new_msg.guid_valid = old_msg.guid_valid
+		new_msg.guid = old_msg.guid
+		new_msg.tolerance = old_msg.tolerance
+
+# PointOfInterestResponse
+class update_automotive_navigation_msgs_PointOfInterestResponse_358e8fda302368ac6d7d1b651933b309(MessageUpdateRule):
+	old_type = "automotive_navigation_msgs/PointOfInterestResponse"
+	old_full_text = """
+# Point of Interest Response Message
+# Contains status information about the points within the threshold
+
+std_msgs/Header header
+
+string name             # Name of the point of interest list
+
+string module_name      # module name of the requesting node
+
+uint16 requestId        # Unique id of this request
+
+uint16 update_num       # The update number of the point list to use
+
+automotive_navigation_msgs/PointOfInterestStatus[] point_statuses # The status information
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+
+================================================================================
+MSG: automotive_navigation_msgs/PointOfInterestStatus
+# Point of Interest Status Message
+# Contains the distance, heading, a localized position of a point of interest
+
+uint64 guid        # Unique Id for this point
+
+float32 distance   # Great circle distance (meters)
+float32 heading    # Heading (radians)
+float32 x_position # Distance in front of the vehicle (meters)
+float32 y_position # Distance to the left of the vehicle (meters)
+
+string params      # List of parameter:value pairs
+"""
+
+	new_type = "automotive_navigation_msgs/PointOfInterestResponse"
+	new_full_text = """
+# Point of Interest Response Message
+# Contains status information about the points within the threshold
+
+std_msgs/Header header
+
+string name             # Name of the point of interest list
+
+string module_name      # module name of the requesting node
+
+uint16 request_id       # Unique id of this request
+
+uint16 update_num       # The update number of the point list to use
+
+automotive_navigation_msgs/PointOfInterestStatus[] point_statuses # The status information
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+
+================================================================================
+MSG: automotive_navigation_msgs/PointOfInterestStatus
+# Point of Interest Status Message
+# Contains the distance, heading, a localized position of a point of interest
+
+uint64 guid        # Unique Id for this point
+
+float32 distance   # Great circle distance (meters)
+float32 heading    # Heading (radians)
+float32 x_position # Distance in front of the vehicle (meters)
+float32 y_position # Distance to the left of the vehicle (meters)
+
+string params      # List of parameter:value pairs
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),
+		("PointOfInterestStatus","PointOfInterestStatus"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.name = old_msg.name
+		new_msg.module_name = old_msg.module_name
+		new_msg.request_id = old_msg.requestId
+		new_msg.update_num = old_msg.update_num
+		self.migrate_array(old_msg.point_statuses, new_msg.point_statuses, "automotive_navigation_msgs/PointOfInterestStatus")

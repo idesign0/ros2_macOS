@@ -1,0 +1,94 @@
+/*
+ * Copyright (C) 2020 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "StatisticProtos";
+
+/// \ingroup gz.msgs
+/// \interface Statistic
+/// \brief A message that contains statistics data.
+
+import "gz/msgs/header.proto";
+
+message Statistic
+{
+  /// \brief The type of data represented by this statistic.
+  enum DataType
+  {
+    /// \brief The data type has not been initialized.
+    UNINITIALIZED    = 0;
+    /// \brief An average value is represented.
+    AVERAGE          = 1;
+    /// \brief A minimum value is represented.
+    MINIMUM          = 2;
+    /// \brief A maximum value is represented.
+    MAXIMUM          = 3;
+    /// \brief A variance is represented.
+    VARIANCE         = 4;
+    /// \brief A standard deviation is represented.
+    STDDEV           = 5;
+    /// \brief A sample count is represented.
+    SAMPLE_COUNT     = 6;
+    /// \brief A root mean square value is represented.
+    ROOT_MEAN_SQUARE = 7;
+    /// \brief A maximum absolute value is represented.
+    MAX_ABS_VALUE    = 8;
+  }
+
+  /// \brief Optional header data
+  Header header  = 1;
+
+  /// \brief The data type.
+  DataType type  = 2;
+
+  /// \brief Name associated with the statistic.
+  string   name  = 3;
+
+  /// \brief The statistic's value.
+  double   value = 4;
+}
+
+/// \brief A named group of statistics.
+message StatisticsGroup
+{
+  /// \brief Optional header data.
+  Header header                 = 1;
+
+  /// \brief Name of the group.
+  string name                   = 2;
+
+  /// \brief Statistics the belong to this group.
+  repeated Statistic statistics = 3;
+}
+
+message Metric
+{
+  /// \brief Optional header data
+  Header header  = 1;
+
+  /// \brief Unit of measurement such as seconds, meters, liters.
+  string   unit  = 2;
+
+  /// \brief Zero or more named groups of statistics. A statistic group is
+  /// used to bundle data into a logical set with an associated name.
+  repeated StatisticsGroup statistics_groups = 3;
+
+  /// \brief Zero or more statistics.
+  repeated Statistic statistics          = 4;
+}

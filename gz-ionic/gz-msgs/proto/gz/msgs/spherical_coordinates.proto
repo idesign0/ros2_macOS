@@ -1,0 +1,92 @@
+/*
+ * Copyright (C) 2017 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "SphericalCoordinatesProtos";
+
+/// \ingroup gz.msgs
+/// \interface SphericalCoordinates
+/// \brief Spherical coordinates information
+
+import "gz/msgs/entity.proto";
+import "gz/msgs/header.proto";
+
+enum SphericalCoordinatesType
+{
+  /// \brief Latitude, Longitude and Altitude by SurfaceType
+  SPHERICAL = 0;
+
+  /// \brief Earth centered, earth fixed Cartesian
+  ECEF = 1;
+
+  /// \brief Local tangent plane (East, North, Up)
+  GLOBAL = 2;
+
+  /// \brief Heading-adjusted tangent plane (X, Y, Z)
+  LOCAL = 3;
+
+  /// \brief Heading-adjusted tangent plane (X, Y, Z)
+  LOCAL2 = 4  [deprecated=true];
+}
+
+message SphericalCoordinates
+{
+  /// \brief Planetary surface models.
+  enum SurfaceModel
+  {
+    /// \brief World Geodetic System 1984
+    EARTH_WGS84                   = 0;
+
+    /// \brief Model of the moon, based on the Selenographic
+    /// coordinate system, see wikipedia: Selenographic
+    /// Coordinate System.
+    MOON_SCS                      = 1;
+
+    /// \brief Custom surface type
+    CUSTOM_SURFACE                = 2;
+  }
+
+  /// \brief Optional header data.
+  Header header                   = 1;
+
+  /// \brief Planetary surface model.
+  SurfaceModel surface_model      = 2;
+
+  /// \brief Latitude in degrees.
+  double latitude_deg             = 3;
+
+  /// \brief Longitude in degrees.
+  double longitude_deg            = 4;
+
+  /// \brief Elevation in meters.
+  double elevation                = 5;
+
+  /// \brief Heading in degrees.
+  double heading_deg              = 6;
+
+  /// \brief Entity that the coordinates apply to.
+  /// If not set, defaults to the world origin.
+  Entity entity                   = 7;
+
+  /// \brief Equatorial axis in meters.
+  double surface_axis_equatorial  = 8;
+
+  /// \brief Polar axis in meters.
+  double surface_axis_polar       = 9;
+}

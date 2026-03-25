@@ -1,0 +1,84 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_export_header")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+gz_export_header(
+    name = "Export",
+    out = "include/gz/common/testing/Export.hh",
+    export_base = "GZ_COMMON_TESTING",
+    lib_name = "gz-common-testing",
+)
+
+public_headers = glob(
+    include = [
+        "include/gz/common/testing/*.hh",
+        "include/gz/common/testing/detail/*.hh",
+    ],
+) + [
+    "include/gz/common/testing/Export.hh",
+]
+
+cc_library(
+    name = "testing",
+    srcs = [
+        "src/BazelTestPaths.cc",
+        "src/CMakeTestPaths.cc",
+        "src/TestPaths.cc",
+        "src/Utils.cc",
+    ],
+    hdrs = public_headers,
+    copts = ["-fexceptions"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:gz-common",
+        "@gz-utils//:ImplPtr",
+        "@gz-utils//:SuppressWarning",
+    ],
+)
+
+cc_test(
+    name = "AutoLogFixture_TEST",
+    srcs = ["src/AutoLogFixture_TEST.cc"],
+    deps = [
+        ":testing",
+        "//:gz-common",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "BazelTestPaths_TEST",
+    srcs = ["src/BazelTestPaths_TEST.cc"],
+    data = glob(["test_files/**"]),
+    env = {
+        "GZ_BAZEL": "1",
+    },
+    deps = [
+        ":testing",
+        "//:gz-common",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "Utils_TEST",
+    srcs = ["src/Utils_TEST.cc"],
+    env = {
+        "GZ_BAZEL": "1",
+    },
+    deps = [
+        ":testing",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+)

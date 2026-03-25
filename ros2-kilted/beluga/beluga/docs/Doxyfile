@@ -1,0 +1,14 @@
+PROJECT_NAME           = "Beluga"
+INPUT                  = ../include ./_doxygen/beluga-main.md
+EXAMPLE_PATH           = ../test/beluga
+RECURSIVE              = YES
+USE_MDFILE_AS_MAINPAGE = ./_doxygen/beluga-main.md
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+CITE_BIB_FILES         = ./references.bib
+WARN_AS_ERROR          = YES
+SHOW_NAMESPACES        = YES
+USE_MATHJAX            = YES
+HAVE_DOT               = YES
+DOT_IMAGE_FORMAT       = svg
+DOT_TRANSPARENT        = YES

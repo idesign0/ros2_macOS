@@ -1,0 +1,11 @@
+prefix=${pcfiledir}/@GZ_PC_CONFIG_RELATIVE_PATH_TO_PREFIX@
+includedir=@GZ_PC_INCLUDEDIR@
+
+Name: Gazebo @GZ_DESIGNATION@
+Description: Build system package for the Gazebo libraries
+Version: @PROJECT_VERSION_FULL_NO_SUFFIX@
+Requires:
+Requires.private:
+Libs:
+Libs.private:
+CFlags: -I${includedir} @PROJECT_PKGCONFIG_CFLAGS@

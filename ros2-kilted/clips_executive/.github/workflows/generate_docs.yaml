@@ -1,0 +1,60 @@
+name: Generate and Publish Docs
+
+on:
+  push:
+    branches:
+      - master  # Replace with your default branch
+  pull_request:
+
+jobs:
+  generate-docs:
+    name: Build and Deploy Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup ROS 2
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          distribution: jazzy
+
+      - name: Install rosdoc2
+        run: sudo apt-get update && sudo apt-get install -y python3-rosdoc2
+
+      - name: Install Python Dependencies for Sphinx
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install sphinx-copybutton
+
+
+      - name: Discover ROS 2 Packages
+        id: discover-packages
+        run: |
+          colcon list --paths-only > packages.txt
+
+      - name: Generate Documentation for Each Package
+        run: |
+          mkdir -p docs_output
+          while read -r package_path; do
+            rosdoc2 build --package-path "$package_path" --output-directory "docs_output/"
+          done < packages.txt
+
+      - name: Add Default Index
+        run: |
+          echo '<!DOCTYPE html>
+          <html>
+            <head>
+              <meta http-equiv="refresh" content="0; URL='./clips_executive/index.html'" />
+            </head>
+            <body>
+              <p>If you are not redirected, <a href="./clips_executive/index.html">click here</a>.</p>
+            </body>
+          </html>' > docs_output/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs_output

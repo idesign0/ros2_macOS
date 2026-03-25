@@ -1,0 +1,6 @@
+<?xml version='1.0'?>
+<gz version='1.0'>
+  <executable name='ls'>
+    <command>ls</command>
+  </executable>
+</gz>

@@ -1,0 +1,13 @@
+# Control mode constants
+uint8 NO_COMMAND = 0                # No command (ignore)
+uint8 AUTONOMOUS = 1                # Full autonomous control
+uint8 AUTONOMOUS_STEER_ONLY = 2     # Autonomous steering only
+uint8 AUTONOMOUS_VELOCITY_ONLY = 3  # Autonomous velocity control only
+uint8 MANUAL = 4                    # Manual control
+
+builtin_interfaces/Time stamp
+uint8 mode
+
+---
+
+bool success

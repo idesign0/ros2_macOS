@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+SCRIPT_PATH=@GZ_PROFILER_SCRIPT_PATH@/gz_remotery_vis
+VIS_PATH=@GZ_PROFILER_VIS_PATH@/index.html
+
+# Get the full path to this script
+SCRIPT=`realpath $0`
+
+# Strip the known script path off the end of the full path
+INSTALL_ROOT=${SCRIPT%${SCRIPT_PATH}}
+
+# Append the relative vis path
+VIS_PATH=$INSTALL_ROOT/$VIS_PATH
+
+# Open with a system web browser
+if [ -x "$(command -v xdg-open)" ]; then
+  xdg-open $VIS_PATH
+elif [ -x "$(command -v open)" ]; then
+  open $VIS_PATH
+fi

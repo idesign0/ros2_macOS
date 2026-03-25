@@ -1,0 +1,69 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Run run_behavior",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "ros2 run auto_apms_behavior_tree run_behavior",
+            "args": [
+                "${input:treeResourceIdentity}"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) Run tree_executor",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "ros2 run auto_apms_behavior_tree tree_executor",
+            "args": [
+                "${input:treeResourceIdentity}"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) Attach tree_executor",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "ros2 run auto_apms_behavior_tree tree_executor",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+    ],
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "treeResourceIdentity",
+            "description": "Behavior tree resource identity",
+            "default": ""
+        }
+    ]
+}

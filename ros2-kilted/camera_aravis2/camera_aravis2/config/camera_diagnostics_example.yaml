@@ -1,0 +1,15 @@
+- FeatureName: DeviceTemperature
+  Type: float
+  Selectors:
+    - FeatureName: DeviceTemperatureSelector
+      Type: string
+      Value: Sensor    
+#- FeatureName: PtpEnable
+#  Type: bool
+#- FeatureName: PtpClockAccuracy
+#  Type: string
+#- FeatureName: PtpOperationMode
+#  Type: string
+#- FeatureName: PtpStatus
+#  Type: string
+

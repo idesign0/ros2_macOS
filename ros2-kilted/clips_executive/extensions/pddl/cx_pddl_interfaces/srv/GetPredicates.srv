@@ -1,0 +1,5 @@
+string pddl_instance
+---
+bool success
+string error
+cx_pddl_interfaces/Predicate[] predicates

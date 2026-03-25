@@ -1,0 +1,20 @@
+#include "builtin_interfaces/msg/Time.idl"
+
+module autoware_auto_planning_msgs {
+  module msg {
+
+    @verbatim (language="comment", text=
+      " Command for approval when an external input is required"
+      " to make planning related decisions."
+      " A node subscribes this message when it needs an approval"
+      " from an external source.")
+    struct Approval {
+      builtin_interfaces::msg::Time stamp;
+
+      @verbatim (language="comment", text=
+        " Determines if proposed action is approved.")
+      @default (value=FALSE)
+      boolean approval;
+    };
+  };
+};

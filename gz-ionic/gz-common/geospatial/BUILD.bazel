@@ -1,0 +1,86 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_gazebo//gazebo:headers.bzl", "gz_export_header")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    features = [
+        "layering_check",
+        "parse_headers",
+    ],
+)
+
+public_headers_no_gen = glob(
+    include = [
+        "include/gz/common/**/*.hh",
+    ],
+    exclude = ["include/gz/common/geospatial/Dem.hh"],
+)
+
+sources = glob(
+    include = ["src/*.cc"],
+    exclude = [
+        "src/*_TEST.cc",
+        # \todo(iche033) include Dem.cc once gdal dep is available.
+        "src/Dem.cc",
+    ],
+)
+
+test_sources = glob(
+    include = ["src/*_TEST.cc"],
+    # \todo(iche033) include this test once gdal dep is available.
+    exclude = ["src/Dem_TEST.cc"],
+)
+
+gz_export_header(
+    name = "Export",
+    out = "include/gz/common/geospatial/Export.hh",
+    export_base = "GZ_COMMON_GEOSPATIAL",
+    lib_name = "gz-common-geospatial",
+)
+
+public_headers = public_headers_no_gen + [
+    "include/gz/common/geospatial/Export.hh",
+]
+
+cc_library(
+    name = "geospatial",
+    srcs = sources,
+    hdrs = public_headers,
+    copts = [
+        "-Wno-unused-value",
+        "-fexceptions",
+    ],
+    # \todo(iche033) remove this macro once gdal dep is available.
+    defines = [
+        "BAZEL_DISABLE_DEM_LOADER=1",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:gz-common",
+        "//graphics",
+        "@gz-utils//:ImplPtr",
+        "@gz-math",
+        # \todo(iche033) gdal is not in BCR yet
+        # "@gdal",
+    ],
+)
+
+[cc_test(
+    name = src.replace("/", "_").replace(".cc", "").replace("src_", ""),
+    srcs = [src],
+    data = ["//test:data"],
+    # \todo(iche033) remove this macro once gdal dep is available.
+    defines = [
+        "BAZEL_DISABLE_DEM_LOADER=1",
+    ],
+    env = {
+        "GZ_BAZEL": "1",
+    },
+    deps = [
+        ":geospatial",
+        "//testing",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
+    ],
+) for src in test_sources]

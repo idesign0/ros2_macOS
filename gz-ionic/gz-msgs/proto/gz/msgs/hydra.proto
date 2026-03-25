@@ -1,0 +1,76 @@
+/*
+ * Copyright (C) 2017 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "HydraProtos";
+
+/// \ingroup gz.msgs
+/// \interface Hydra
+/// \brief Message that contains information about a Hydra Razer controller
+
+import "gz/msgs/pose.proto";
+import "gz/msgs/header.proto";
+
+message Hydra
+{
+  message Paddle
+  {
+    // Pose of the paddle
+    Pose pose          = 1;
+
+    // The button labeled LB
+    bool button_bumper = 2;
+
+    // Button 1
+    bool button_1      = 3;
+
+    // Button 2
+    bool button_2      = 4;
+
+    // Button 3
+    bool button_3      = 5;
+
+    // Button 4
+    bool button_4      = 6;
+
+    // Button that is activated by pressing down on the joystick.
+    bool button_joy    = 7;
+
+    // The button located between button 1 and 2.
+    bool button_center = 8;
+
+    // Range(-1, 1) where -1 == back, and +1 == forward.
+    double joy_x       = 9;
+
+    // Range(-1, 1) where -1 == left, and +1 == right.
+    double joy_y       = 10;
+
+    // Range(0, 1) where 0 is no press, and 1 is full press.
+    double trigger     = 11;
+  }
+
+  /// \brief Optional header data
+  Header header = 1;
+
+  // Info for the right paddle
+  Paddle right = 2;
+
+  // Info for the left paddle
+  Paddle left  = 3;
+}

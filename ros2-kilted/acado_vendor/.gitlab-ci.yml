@@ -1,0 +1,72 @@
+.all_common: &all_common
+  before_script:
+    - apt-get -qqq update
+    - rosdep update
+    - mkdir -p src/acado_vendor && mv `find -maxdepth 1 -not -name . -not -name src` src/acado_vendor/
+    - rosdep install --from-path src --ignore-src -y
+
+.build_common: &build_common
+  << : *all_common
+  script:
+    - apt-get -qqq update
+    - rosdep update
+    - colcon build
+    - colcon test
+    - colcon test-result --verbose
+
+build_amd64:
+  tags:
+    - shared
+  image: ros:foxy-ros-base
+  << : *build_common
+  except:
+    - schedules
+    - web
+
+build_arm64:
+  tags:
+    - arm64
+  image: ros:foxy-ros-base
+  << : *build_common
+  except:
+    - schedules
+    - web
+  only:
+    - branches@autowarefoundation/autoware.auto/acado_vendor
+    - tags@autowarefoundation/autoware.auto/acado_vendor
+
+build_debian_amd64:
+  tags:
+    - shared
+  image: ros:foxy-ros-base
+  << : *all_common
+  script:
+    - apt-get install -y devscripts dh-make python3-bloom
+    - cd src/acado_vendor
+    - bloom-generate rosdebian --os-name ubuntu --os-version focal --ros-distro foxy .
+    - fakeroot debian/rules binary
+    - cd .. && mv *.deb ..
+  artifacts:
+    name: 'acado_vendor_debian-amd64'
+    paths: ['*.deb']
+  only:
+    - schedules
+    - web
+
+build_debian_arm64:
+  tags:
+    - arm64
+  image: ros:foxy-ros-base
+  << : *all_common
+  script:
+    - apt-get install -y devscripts dh-make python3-bloom
+    - cd src/acado_vendor
+    - bloom-generate rosdebian --os-name ubuntu --os-version focal --ros-distro foxy .
+    - fakeroot debian/rules binary
+    - cd .. && mv *.deb ..
+  artifacts:
+    name: 'acado_vendor_debian-arm64'
+    paths: ['*.deb']
+  only:
+    - schedules
+    - web

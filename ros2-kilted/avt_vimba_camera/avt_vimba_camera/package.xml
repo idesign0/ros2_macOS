@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>avt_vimba_camera</name>
+  <version>2001.1.0</version>
+  <description>Camera driver for Allied Vision Technologies (AVT) cameras, based on their Vimba SDK.</description>
+  <license>BSD</license>
+
+  <url type="website">https://github.com/astuff/avt_vimba_camera</url>
+  <url type="repository">https://github.com/astuff/avt_vimba_camera</url>
+  <url type="bugtracker">https://github.com/astuff/avt_vimba_camera/issues</url>
+
+  <author>Allied Vision Technologies</author>
+  <author email="miquel.massot@gmail.com">Miquel Massot</author>
+  <maintainer email="software@autonomoustuff.com">AutonomouStuff Software Team</maintainer>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>backward_ros</depend>
+
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>camera_info_manager</depend>
+  <depend>diagnostic_updater</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>image_transport</depend>
+  <depend>message_filters</depend>
+  <depend>avt_vimba_camera_msgs</depend>
+
+  <exec_depend>image_proc</exec_depend>
+  <exec_depend>stereo_image_proc</exec_depend>
+
+  <export><build_type>ament_cmake</build_type></export>
+
+</package>

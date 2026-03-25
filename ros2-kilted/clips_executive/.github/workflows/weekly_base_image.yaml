@@ -1,0 +1,49 @@
+name: Weekly ROS Docker Builds
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"   # Weekly, Monday at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ros_distro: [jazzy, humble, rolling, kilted]
+
+    env:
+      QUAY_REPO: quay.io/carologistics/clips_executive_base_image
+      DATE_TAG: ${{ github.run_date }}  # ISO date
+      COMMIT_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Quay
+        uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: carologistics+api_bot
+          password: ${{ secrets.quay_bot }}
+
+      - name: Build Docker image
+        run: |
+          echo "Building ROS distro: ${{ matrix.ros_distro }}"
+          docker build \
+            -f .github/workflows/Dockerfile \
+            --build-arg ROS_DISTRO=${{ matrix.ros_distro }} \
+            -t $QUAY_REPO:${{ matrix.ros_distro }} \
+            -t $QUAY_REPO:${{ matrix.ros_distro }}-${DATE_TAG} \
+            -t $QUAY_REPO:${{ matrix.ros_distro }}-${COMMIT_SHA::8} \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push $QUAY_REPO:${{ matrix.ros_distro }}
+          docker push $QUAY_REPO:${{ matrix.ros_distro }}-${DATE_TAG}
+          docker push $QUAY_REPO:${{ matrix.ros_distro }}-${COMMIT_SHA::8}

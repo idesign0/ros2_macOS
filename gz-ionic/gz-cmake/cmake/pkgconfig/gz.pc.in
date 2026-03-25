@@ -1,0 +1,12 @@
+prefix=${pcfiledir}/@PC_CONFIG_RELATIVE_PATH_TO_PREFIX@
+libdir=@PC_LIBDIR@
+includedir=@PC_INCLUDEDIR@
+
+Name: Gazebo @GZ_DESIGNATION@
+Description: A set of @GZ_DESIGNATION@ classes for robot applications
+Version: @PROJECT_VERSION_FULL_NO_SUFFIX@
+Requires: gz-cmake@GZ_CMAKE_VERSION_MAJOR@ >= 1.1 @PROJECT_PKGCONFIG_REQUIRES@
+Requires.private: @PROJECT_PKGCONFIG_REQUIRES_PRIVATE@
+Libs: -L${libdir} @project_pkgconfig_core_lib@ @PROJECT_PKGCONFIG_LIBS@
+Libs.private: @PROJECT_PKGCONFIG_LIBS_PRIVATE@
+CFlags: -I${includedir} @PROJECT_PKGCONFIG_CFLAGS@

@@ -1,0 +1,41 @@
+- repository: autowarefoundation/sync-file-templates
+  source-dir: sources
+  files:
+    - source: CODE_OF_CONDUCT.md
+    - source: CONTRIBUTING.md
+    - source: DISCLAIMER.md
+    - source: LICENSE
+    - source: .github/ISSUE_TEMPLATE/bug.yaml
+    - source: .github/ISSUE_TEMPLATE/config.yml
+    - source: .github/ISSUE_TEMPLATE/task.yaml
+    - source: .github/dependabot.yaml
+    - source: .github/pull_request_template.md
+    - source: .github/stale.yml
+    - source: .github/workflows/comment-on-pr.yaml
+    - source: .github/workflows/cancel-previous-workflows.yaml
+    - source: .github/workflows/github-release.yaml
+    - source: .github/workflows/pre-commit-autoupdate.yaml
+    - source: .github/workflows/pre-commit-optional.yaml
+    - source: .github/workflows/semantic-pull-request.yaml
+    - source: .github/workflows/spell-check-differential.yaml
+    - source: .github/workflows/sync-files.yaml
+    - source: .github/workflows/update-codeowners-from-packages.yaml
+    - source: .clang-format
+    - source: .clang-tidy
+    - source: .markdown-link-check.json
+    - source: .markdownlint.yaml
+    - source: .pre-commit-config.yaml
+    - source: .pre-commit-config-optional.yaml
+    - source: .prettierignore
+    - source: .prettierrc.yaml
+    - source: .yamllint.yaml
+    - source: .github/workflows/build-and-test.yaml
+      pre-commands: |
+        sed -i '/build-depends-repos/d' {source}
+    - source: .github/workflows/build-and-test-differential.yaml
+      pre-commands: |
+        sed -i '/build-depends-repos/d' {source}
+    - source: CPPLINT.cfg
+      pre-commands: |
+        sd 'filter=-whitespace/braces.*' '\n# https://github.com/cpplint/cpplint/issues/298 for the next filter\nfilter=-readability/nolint        # NOLINTBEGIN(*) and NOLINTEND(*) conflict with clang-tidy\n\nfilter=-whitespace/braces         # we wrap open curly braces for namespaces, classes and functions' {source}
+    - source: setup.cfg

@@ -1,0 +1,1416 @@
+# SrrDebug3
+class update_delphi_srr_msgs_SrrDebug3_83af517ae6abcdcf6b4e46f417ccd4f7(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrDebug3"
+	old_full_text = """
+# Message file for srr_debug3
+
+Header header
+
+bool      Timer_Create_Error
+
+bool      Thread_Create_Error
+
+bool      ARM_Calibration_Error
+
+bool      SPI_FEE_Error
+
+bool      SPI_Comm_Error
+
+bool      Socket_Write_Error
+
+bool      DSP_Cal_Obsolete_62_Error
+
+bool      Socket_Read_error
+
+bool      Socket_Init_Error
+
+bool      Signal_Wait_Error
+
+bool      Signal_Send_Error
+
+bool      Signal_Create_Error
+
+bool      Shared_Mem_Write_Error
+
+bool      Shared_Mem_Read_Error
+
+bool      Shared_Mem_Config_Error
+
+bool      Share_Mem_Init_Error
+
+bool      RAM_Test_Error
+
+bool      Num_Errors
+
+bool      MMAP_Memory_Error
+
+bool      ISR_Attach_Error
+
+bool      IPC_DRV_Write_Error
+
+bool      IPC_DRV_Trigger_Error
+
+bool      IPC_DRV_Sync_Error
+
+bool      IPC_DRV_Read_Error
+
+bool      IPC_DRV_Init_Error
+
+bool      Interrupt_Enable_Error
+
+bool      HIL_Format_Error
+
+bool      Flash_Filesystem_Error
+
+bool      Error_none
+
+bool      DSP_Load_Read_Error
+
+bool      DSP_Load_Open_Error
+
+bool      DSP_Load_Address_Error
+
+bool      DSP_ISP_Write_Error
+
+bool      DSP_IPC_Read_Error
+
+bool      DSP_IPC_Init
+
+bool      DSP_Init_Error
+
+bool      DSP_DRV_Start_Error
+
+bool      DSP_DRV_Load_Error
+
+bool      DSP_DRV_Init_Error
+
+bool      DSP_DRV_Init2_error
+
+bool      DSP_DRV_Init1_error
+
+bool      DSP_Calibration_Error
+
+bool      CAN_XMT_Error
+
+bool      CAN_RCV_Error
+
+bool      CAN_Hardware_Error
+
+bool      Always_True
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrDebug3"
+	new_full_text = """
+# Message file for srr_debug3
+
+std_msgs/Header header
+
+bool      timer_create_error
+bool      thread_create_error
+bool      arm_calibration_error
+bool      spi_fee_error
+bool      spi_comm_error
+bool      socket_write_error
+bool      dsp_cal_obsolete_62_error
+bool      socket_read_error
+bool      socket_init_error
+bool      signal_wait_error
+bool      signal_send_error
+bool      signal_create_error
+bool      shared_mem_write_error
+bool      shared_mem_read_error
+bool      shared_mem_config_error
+bool      share_mem_init_error
+bool      ram_test_error
+bool      num_errors
+bool      mmap_memory_error
+bool      isr_attach_error
+bool      ipc_drv_write_error
+bool      ipc_drv_trigger_error
+bool      ipc_drv_sync_error
+bool      ipc_drv_read_error
+bool      ipc_drv_init_error
+bool      interrupt_enable_error
+bool      hil_format_error
+bool      flash_filesystem_error
+bool      error_none
+bool      dsp_load_read_error
+bool      dsp_load_open_error
+bool      dsp_load_address_error
+bool      dsp_isp_write_error
+bool      dsp_ipc_read_error
+bool      dsp_ipc_init
+bool      dsp_init_error
+bool      dsp_drv_start_error
+bool      dsp_drv_load_error
+bool      dsp_drv_init_error
+bool      dsp_drv_init2_error
+bool      dsp_drv_init1_error
+bool      dsp_calibration_error
+bool      can_xmt_error
+bool      can_rcv_error
+bool      can_hardware_error
+bool      always_true
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.timer_create_error = old_msg.Timer_Create_Error
+		new_msg.thread_create_error = old_msg.Thread_Create_Error
+		new_msg.arm_calibration_error = old_msg.ARM_Calibration_Error
+		new_msg.spi_fee_error = old_msg.SPI_FEE_Error
+		new_msg.spi_comm_error = old_msg.SPI_Comm_Error
+		new_msg.socket_write_error = old_msg.Socket_Write_Error
+		new_msg.dsp_cal_obsolete_62_error = old_msg.DSP_Cal_Obsolete_62_Error
+		new_msg.socket_read_error = old_msg.Socket_Read_error
+		new_msg.socket_init_error = old_msg.Socket_Init_Error
+		new_msg.signal_wait_error = old_msg.Signal_Wait_Error
+		new_msg.signal_send_error = old_msg.Signal_Send_Error
+		new_msg.signal_create_error = old_msg.Signal_Create_Error
+		new_msg.shared_mem_write_error = old_msg.Shared_Mem_Write_Error
+		new_msg.shared_mem_read_error = old_msg.Shared_Mem_Read_Error
+		new_msg.shared_mem_config_error = old_msg.Shared_Mem_Config_Error
+		new_msg.share_mem_init_error = old_msg.Share_Mem_Init_Error
+		new_msg.ram_test_error = old_msg.RAM_Test_Error
+		new_msg.num_errors = old_msg.Num_Errors
+		new_msg.mmap_memory_error = old_msg.MMAP_Memory_Error
+		new_msg.isr_attach_error = old_msg.ISR_Attach_Error
+		new_msg.ipc_drv_write_error = old_msg.IPC_DRV_Write_Error
+		new_msg.ipc_drv_trigger_error = old_msg.IPC_DRV_Trigger_Error
+		new_msg.ipc_drv_sync_error = old_msg.IPC_DRV_Sync_Error
+		new_msg.ipc_drv_read_error = old_msg.IPC_DRV_Read_Error
+		new_msg.ipc_drv_init_error = old_msg.IPC_DRV_Init_Error
+		new_msg.interrupt_enable_error = old_msg.Interrupt_Enable_Error
+		new_msg.hil_format_error = old_msg.HIL_Format_Error
+		new_msg.flash_filesystem_error = old_msg.Flash_Filesystem_Error
+		new_msg.error_none = old_msg.Error_none
+		new_msg.dsp_load_read_error = old_msg.DSP_Load_Read_Error
+		new_msg.dsp_load_open_error = old_msg.DSP_Load_Open_Error
+		new_msg.dsp_load_address_error = old_msg.DSP_Load_Address_Error
+		new_msg.dsp_isp_write_error = old_msg.DSP_ISP_Write_Error
+		new_msg.dsp_ipc_read_error = old_msg.DSP_IPC_Read_Error
+		new_msg.dsp_ipc_init = old_msg.DSP_IPC_Init
+		new_msg.dsp_init_error = old_msg.DSP_Init_Error
+		new_msg.dsp_drv_start_error = old_msg.DSP_DRV_Start_Error
+		new_msg.dsp_drv_load_error = old_msg.DSP_DRV_Load_Error
+		new_msg.dsp_drv_init_error = old_msg.DSP_DRV_Init_Error
+		new_msg.dsp_drv_init2_error = old_msg.DSP_DRV_Init2_error
+		new_msg.dsp_drv_init1_error = old_msg.DSP_DRV_Init1_error
+		new_msg.dsp_calibration_error = old_msg.DSP_Calibration_Error
+		new_msg.can_xmt_error = old_msg.CAN_XMT_Error
+		new_msg.can_rcv_error = old_msg.CAN_RCV_Error
+		new_msg.can_hardware_error = old_msg.CAN_Hardware_Error
+		new_msg.always_true = old_msg.Always_True
+
+# SrrDebug4
+class update_delphi_srr_msgs_SrrDebug4_83af517ae6abcdcf6b4e46f417ccd4f7(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrDebug4"
+	old_full_text = """
+# Message file for srr_debug4
+
+Header header
+
+bool      Timer_Create_Error
+
+bool      Thread_Create_Error
+
+bool      ARM_Calibration_Error
+
+bool      SPI_FEE_Error
+
+bool      SPI_Comm_Error
+
+bool      Socket_Write_Error
+
+bool      DSP_Cal_Obsolete_62_Error
+
+bool      Socket_Read_error
+
+bool      Socket_Init_Error
+
+bool      Signal_Wait_Error
+
+bool      Signal_Send_Error
+
+bool      Signal_Create_Error
+
+bool      Shared_Mem_Write_Error
+
+bool      Shared_Mem_Read_Error
+
+bool      Shared_Mem_Config_Error
+
+bool      Share_Mem_Init_Error
+
+bool      RAM_Test_Error
+
+bool      Num_Errors
+
+bool      MMAP_Memory_Error
+
+bool      ISR_Attach_Error
+
+bool      IPC_DRV_Write_Error
+
+bool      IPC_DRV_Trigger_Error
+
+bool      IPC_DRV_Sync_Error
+
+bool      IPC_DRV_Read_Error
+
+bool      IPC_DRV_Init_Error
+
+bool      Interrupt_Enable_Error
+
+bool      HIL_Format_Error
+
+bool      Flash_Filesystem_Error
+
+bool      Error_none
+
+bool      DSP_Load_Read_Error
+
+bool      DSP_Load_Open_Error
+
+bool      DSP_Load_Address_Error
+
+bool      DSP_ISP_Write_Error
+
+bool      DSP_IPC_Read_Error
+
+bool      DSP_IPC_Init
+
+bool      DSP_Init_Error
+
+bool      DSP_DRV_Start_Error
+
+bool      DSP_DRV_Load_Error
+
+bool      DSP_DRV_Init_Error
+
+bool      DSP_DRV_Init2_error
+
+bool      DSP_DRV_Init1_error
+
+bool      DSP_Calibration_Error
+
+bool      CAN_XMT_Error
+
+bool      CAN_RCV_Error
+
+bool      CAN_Hardware_Error
+
+bool      Always_True
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrDebug4"
+	new_full_text = """
+# Message file for srr_debug4
+
+std_msgs/Header header
+
+bool      timer_create_error
+bool      thread_create_error
+bool      arm_calibration_error
+bool      spi_fee_error
+bool      spi_comm_error
+bool      socket_write_error
+bool      dsp_cal_obsolete_62_error
+bool      socket_read_error
+bool      socket_init_error
+bool      signal_wait_error
+bool      signal_send_error
+bool      signal_create_error
+bool      shared_mem_write_error
+bool      shared_mem_read_error
+bool      shared_mem_config_error
+bool      share_mem_init_error
+bool      ram_test_error
+bool      num_errors
+bool      mmap_memory_error
+bool      isr_attach_error
+bool      ipc_drv_write_error
+bool      ipc_drv_trigger_error
+bool      ipc_drv_sync_error
+bool      ipc_drv_read_error
+bool      ipc_drv_init_error
+bool      interrupt_enable_error
+bool      hil_format_error
+bool      flash_filesystem_error
+bool      error_none
+bool      dsp_load_read_error
+bool      dsp_load_open_error
+bool      dsp_load_address_error
+bool      dsp_isp_write_error
+bool      dsp_ipc_read_error
+bool      dsp_ipc_init
+bool      dsp_init_error
+bool      dsp_drv_start_error
+bool      dsp_drv_load_error
+bool      dsp_drv_init_error
+bool      dsp_drv_init2_error
+bool      dsp_drv_init1_error
+bool      dsp_calibration_error
+bool      can_xmt_error
+bool      can_rcv_error
+bool      can_hardware_error
+bool      always_true
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.timer_create_error = old_msg.Timer_Create_Error
+		new_msg.thread_create_error = old_msg.Thread_Create_Error
+		new_msg.arm_calibration_error = old_msg.ARM_Calibration_Error
+		new_msg.spi_fee_error = old_msg.SPI_FEE_Error
+		new_msg.spi_comm_error = old_msg.SPI_Comm_Error
+		new_msg.socket_write_error = old_msg.Socket_Write_Error
+		new_msg.dsp_cal_obsolete_62_error = old_msg.DSP_Cal_Obsolete_62_Error
+		new_msg.socket_read_error = old_msg.Socket_Read_error
+		new_msg.socket_init_error = old_msg.Socket_Init_Error
+		new_msg.signal_wait_error = old_msg.Signal_Wait_Error
+		new_msg.signal_send_error = old_msg.Signal_Send_Error
+		new_msg.signal_create_error = old_msg.Signal_Create_Error
+		new_msg.shared_mem_write_error = old_msg.Shared_Mem_Write_Error
+		new_msg.shared_mem_read_error = old_msg.Shared_Mem_Read_Error
+		new_msg.shared_mem_config_error = old_msg.Shared_Mem_Config_Error
+		new_msg.share_mem_init_error = old_msg.Share_Mem_Init_Error
+		new_msg.ram_test_error = old_msg.RAM_Test_Error
+		new_msg.num_errors = old_msg.Num_Errors
+		new_msg.mmap_memory_error = old_msg.MMAP_Memory_Error
+		new_msg.isr_attach_error = old_msg.ISR_Attach_Error
+		new_msg.ipc_drv_write_error = old_msg.IPC_DRV_Write_Error
+		new_msg.ipc_drv_trigger_error = old_msg.IPC_DRV_Trigger_Error
+		new_msg.ipc_drv_sync_error = old_msg.IPC_DRV_Sync_Error
+		new_msg.ipc_drv_read_error = old_msg.IPC_DRV_Read_Error
+		new_msg.ipc_drv_init_error = old_msg.IPC_DRV_Init_Error
+		new_msg.interrupt_enable_error = old_msg.Interrupt_Enable_Error
+		new_msg.hil_format_error = old_msg.HIL_Format_Error
+		new_msg.flash_filesystem_error = old_msg.Flash_Filesystem_Error
+		new_msg.error_none = old_msg.Error_none
+		new_msg.dsp_load_read_error = old_msg.DSP_Load_Read_Error
+		new_msg.dsp_load_open_error = old_msg.DSP_Load_Open_Error
+		new_msg.dsp_load_address_error = old_msg.DSP_Load_Address_Error
+		new_msg.dsp_isp_write_error = old_msg.DSP_ISP_Write_Error
+		new_msg.dsp_ipc_read_error = old_msg.DSP_IPC_Read_Error
+		new_msg.dsp_ipc_init = old_msg.DSP_IPC_Init
+		new_msg.dsp_init_error = old_msg.DSP_Init_Error
+		new_msg.dsp_drv_start_error = old_msg.DSP_DRV_Start_Error
+		new_msg.dsp_drv_load_error = old_msg.DSP_DRV_Load_Error
+		new_msg.dsp_drv_init_error = old_msg.DSP_DRV_Init_Error
+		new_msg.dsp_drv_init2_error = old_msg.DSP_DRV_Init2_error
+		new_msg.dsp_drv_init1_error = old_msg.DSP_DRV_Init1_error
+		new_msg.dsp_calibration_error = old_msg.DSP_Calibration_Error
+		new_msg.can_xmt_error = old_msg.CAN_XMT_Error
+		new_msg.can_rcv_error = old_msg.CAN_RCV_Error
+		new_msg.can_hardware_error = old_msg.CAN_Hardware_Error
+		new_msg.always_true = old_msg.Always_True
+
+# SrrDebug5
+class update_delphi_srr_msgs_SrrDebug5_2d7b7323d2ea59a7b18d50769c6ebe8f(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrDebug5"
+	old_full_text = """
+# Message file for srr_debug5
+
+Header header
+
+uint16    CAN_TX_ALIGN_UPDATES
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrDebug5"
+	new_full_text = """
+# Message file for srr_debug5
+
+std_msgs/Header header
+
+uint16    can_tx_align_updates
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.can_tx_align_updates = old_msg.CAN_TX_ALIGN_UPDATES
+
+# SrrFeatureAlert
+class update_delphi_srr_msgs_SrrFeatureAlert_7ccc2c20c174aa66456bfbd940c23205(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrFeatureAlert"
+	old_full_text = """
+# Message file for srr_feature_alert
+
+Header header
+
+uint8     LCMA_blis_ignored_track_id
+
+uint8     LCMA_blis_track_id
+
+float32   LCMA_cvw_TTC                             # seconds
+
+bool      CTA_TTC_Alert
+
+float32   CTA_selected_track_ttc                   # seconds
+
+uint16    CTA_selected_track
+
+uint8     CTA_Alert                                # binary
+
+bool      CTA_Active                               # binary
+
+uint8     LCMA_cvw_cipv
+
+uint8     LCMA_cvw_alert_state
+
+uint8     LCMA_blis_alert_state
+
+bool      LCMA_Active
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrFeatureAlert"
+	new_full_text = """
+# Message file for srr_feature_alert
+
+std_msgs/Header header
+
+uint8     lcma_blis_ignored_track_id
+uint8     lcma_blis_track_id
+float32   lcma_cvw_ttc                             # seconds
+bool      cta_ttc_alert
+float32   cta_selected_track_ttc                   # seconds
+uint16    cta_selected_track
+uint8     cta_alert                                # binary
+bool      cta_active                               # binary
+uint8     lcma_cvw_cipv
+uint8     lcma_cvw_alert_state
+uint8     lcma_blis_alert_state
+bool      lcma_active
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.lcma_blis_ignored_track_id = old_msg.LCMA_blis_ignored_track_id
+		new_msg.lcma_blis_track_id = old_msg.LCMA_blis_track_id
+		new_msg.lcma_cvw_ttc = old_msg.LCMA_cvw_TTC
+		new_msg.cta_ttc_alert = old_msg.CTA_TTC_Alert
+		new_msg.cta_selected_track_ttc = old_msg.CTA_selected_track_ttc
+		new_msg.cta_selected_track = old_msg.CTA_selected_track
+		new_msg.cta_alert = old_msg.CTA_Alert
+		new_msg.cta_active = old_msg.CTA_Active
+		new_msg.lcma_cvw_cipv = old_msg.LCMA_cvw_cipv
+		new_msg.lcma_cvw_alert_state = old_msg.LCMA_cvw_alert_state
+		new_msg.lcma_blis_alert_state = old_msg.LCMA_blis_alert_state
+		new_msg.lcma_active = old_msg.LCMA_Active
+
+# SrrFeatureSwVersion
+class update_delphi_srr_msgs_SrrFeatureSwVersion_69ecccf75547bc51f3acc0bf173d48f7(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrFeatureSwVersion"
+	old_full_text = """
+# Message file for srr_feature_sw_version
+
+Header header
+
+uint8     LCMA_sw_version
+
+uint8     CTA_sw_version
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrFeatureSwVersion"
+	new_full_text = """
+# Message file for srr_feature_sw_version
+
+std_msgs/Header header
+
+uint8     lcma_sw_version
+uint8     cta_sw_version
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.lcma_sw_version = old_msg.LCMA_sw_version
+		new_msg.cta_sw_version = old_msg.CTA_sw_version
+
+# SrrStatus1
+class update_delphi_srr_msgs_SrrStatus1_7218c3cadae8e234a3242d37de450233(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrStatus1"
+	old_full_text = """
+# Message file for srr_status1
+
+Header header
+
+bool      CAN_TX_LOOK_TYPE
+bool          CAN_TX_LOOK_TYPE_Medium_Look=0
+bool          CAN_TX_LOOK_TYPE_Long_Look=1
+
+uint32    CAN_TX_DSP_TIMESTAMP                     # ms
+
+float32   CAN_TX_YAW_RATE_CALC                     # deg/s
+
+float32   CAN_TX_VEHICLE_SPEED_CALC                # m/s
+
+uint16    CAN_TX_SCAN_INDEX
+
+float32   CAN_TX_CURVATURE                         # 1/m
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrStatus1"
+	new_full_text = """
+# Message file for srr_status1
+
+std_msgs/Header header
+
+bool      can_tx_look_type
+uint32    can_tx_dsp_timestamp                     # ms
+float32   can_tx_yaw_rate_calc                     # deg/s
+float32   can_tx_vehicle_speed_calc                # m/s
+uint16    can_tx_scan_index
+float32   can_tx_curvature                         # 1/m
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.can_tx_look_type = old_msg.CAN_TX_LOOK_TYPE
+		new_msg.can_tx_dsp_timestamp = old_msg.CAN_TX_DSP_TIMESTAMP
+		new_msg.can_tx_yaw_rate_calc = old_msg.CAN_TX_YAW_RATE_CALC
+		new_msg.can_tx_vehicle_speed_calc = old_msg.CAN_TX_VEHICLE_SPEED_CALC
+		new_msg.can_tx_scan_index = old_msg.CAN_TX_SCAN_INDEX
+		new_msg.can_tx_curvature = old_msg.CAN_TX_CURVATURE
+
+# SrrStatus2
+class update_delphi_srr_msgs_SrrStatus2_d6c9e5a365813e1b4a1c283a90194218(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrStatus2"
+	old_full_text = """
+# Message file for srr_status2
+
+Header header
+
+uint8     CAN_TX_ALIGNMENT_STATUS
+uint8         CAN_TX_ALIGNMENT_STATUS_Unknown=0
+uint8         CAN_TX_ALIGNMENT_STATUS_Converged=1
+uint8         CAN_TX_ALIGNMENT_STATUS_Failed=2
+uint8         CAN_TX_ALIGNMENT_STATUS_Reserved=3
+
+bool      CAN_TX_COMM_ERROR
+
+bool      CAN_TX_STEERING_ANGLE_SIGN
+
+float32   CAN_TX_YAW_RATE_BIAS
+
+float32   CAN_TX_VEH_SPD_COMP_FACTOR
+
+uint16    CAN_TX_SW_VERSION_DSP
+
+int16     CAN_TX_TEMPERATURE                       # degC
+
+bool      CAN_TX_RANGE_PERF_ERROR
+bool          CAN_TX_RANGE_PERF_ERROR_Not_Blocked=0
+bool          CAN_TX_RANGE_PERF_ERROR_Blocked=1
+
+bool      CAN_TX_OVERHEAT_ERROR
+bool          CAN_TX_OVERHEAT_ERROR_Not_OverTemp=0
+bool          CAN_TX_OVERHEAT_ERROR_OverTemp=1
+
+bool      CAN_TX_INTERNAL_ERROR
+bool          CAN_TX_INTERNAL_ERROR_Not_Failed=0
+bool          CAN_TX_INTERNAL_ERROR_Failed=1
+
+bool      CAN_TX_XCVR_OPERATIONAL
+bool          CAN_TX_XCVR_OPERATIONAL_Off=0
+bool          CAN_TX_XCVR_OPERATIONAL_On=1
+
+uint16    CAN_TX_STEERING_ANGLE                    # deg
+
+uint8     CAN_TX_ROLLING_COUNT_2
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrStatus2"
+	new_full_text = """
+# Message file for srr_status2
+
+std_msgs/Header header
+
+uint8     can_tx_alignment_status
+uint8     CAN_TX_ALIGNMENT_STATUS_UNKNOWN=0
+uint8     CAN_TX_ALIGNMENT_STATUS_CONVERGED=1
+uint8     CAN_TX_ALIGNMENT_STATUS_FAILED=2
+uint8     CAN_TX_ALIGNMENT_STATUS_RESERVED=3
+
+bool      can_tx_comm_error
+bool      can_tx_steering_angle_sign
+float32   can_tx_yaw_rate_bias
+float32   can_tx_veh_spd_comp_factor
+uint16    can_tx_sw_version_dsp
+int16     can_tx_temperature                       # degc
+bool      can_tx_range_perf_error
+bool      can_tx_overheat_error
+bool      can_tx_internal_error
+bool      can_tx_xcvr_operational
+uint16    can_tx_steering_angle                    # deg
+uint8     can_tx_rolling_count_2
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.can_tx_alignment_status = old_msg.CAN_TX_ALIGNMENT_STATUS
+		new_msg.can_tx_comm_error = old_msg.CAN_TX_COMM_ERROR
+		new_msg.can_tx_steering_angle_sign = old_msg.CAN_TX_STEERING_ANGLE_SIGN
+		new_msg.can_tx_yaw_rate_bias = old_msg.CAN_TX_YAW_RATE_BIAS
+		new_msg.can_tx_veh_spd_comp_factor = old_msg.CAN_TX_VEH_SPD_COMP_FACTOR
+		new_msg.can_tx_sw_version_dsp = old_msg.CAN_TX_SW_VERSION_DSP
+		new_msg.can_tx_temperature = old_msg.CAN_TX_TEMPERATURE
+		new_msg.can_tx_range_perf_error = old_msg.CAN_TX_RANGE_PERF_ERROR
+		new_msg.can_tx_overheat_error = old_msg.CAN_TX_OVERHEAT_ERROR
+		new_msg.can_tx_internal_error = old_msg.CAN_TX_INTERNAL_ERROR
+		new_msg.can_tx_xcvr_operational = old_msg.CAN_TX_XCVR_OPERATIONAL
+		new_msg.can_tx_steering_angle = old_msg.CAN_TX_STEERING_ANGLE
+		new_msg.can_tx_rolling_count_2 = old_msg.CAN_TX_ROLLING_COUNT_2
+
+# SrrStatus3
+class update_delphi_srr_msgs_SrrStatus3_b101ee95bfdae3b068ba15b3a182b1e2(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrStatus3"
+	old_full_text = """
+# Message file for srr_status3
+
+Header header
+
+uint8     CAN_TX_ALIGNMENT_STATE
+uint8         CAN_TX_ALIGNMENT_STATE_Off=0
+uint8         CAN_TX_ALIGNMENT_STATE_Init=1
+uint8         CAN_TX_ALIGNMENT_STATE_Automatic_Alignment=2
+uint8         CAN_TX_ALIGNMENT_STATE_Factory_Alignment=3
+uint8         CAN_TX_ALIGNMENT_STATE_Service_Alignment=4
+
+uint8     CAN_TX_INTERFACE_VER_MINOR
+
+uint32    CAN_TX_SW_VERSION_ARM
+
+uint8     CAN_TX_HW_VERSION
+
+uint8     CAN_TX_INTERFACE_VERSION
+
+uint32    CAN_TX_SERIAL_NUM
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrStatus3"
+	new_full_text = """
+# Message file for srr_status3
+
+std_msgs/Header header
+
+uint8     can_tx_alignment_state
+uint8     CAN_TX_ALIGNMENT_STATE_OFF=0
+uint8     CAN_TX_ALIGNMENT_STATE_INIT=1
+uint8     CAN_TX_ALIGNMENT_STATE_AUTOMATIC_ALIGNMENT=2
+uint8     CAN_TX_ALIGNMENT_STATE_FACTORY_ALIGNMENT=3
+uint8     CAN_TX_ALIGNMENT_STATE_SERVICE_ALIGNMENT=4
+
+uint8     can_tx_interface_ver_minor
+uint32    can_tx_sw_version_arm
+uint8     can_tx_hw_version
+uint8     can_tx_interface_version
+uint32    can_tx_serial_num
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.can_tx_alignment_state = old_msg.CAN_TX_ALIGNMENT_STATE
+		new_msg.can_tx_interface_ver_minor = old_msg.CAN_TX_INTERFACE_VER_MINOR
+		new_msg.can_tx_sw_version_arm = old_msg.CAN_TX_SW_VERSION_ARM
+		new_msg.can_tx_hw_version = old_msg.CAN_TX_HW_VERSION
+		new_msg.can_tx_interface_version = old_msg.CAN_TX_INTERFACE_VERSION
+		new_msg.can_tx_serial_num = old_msg.CAN_TX_SERIAL_NUM
+
+# SrrStatus4
+class update_delphi_srr_msgs_SrrStatus4_5888431f2fe93e9b1c17ca7520274fa9(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrStatus4"
+	old_full_text = """
+# Message file for srr_status4
+
+Header header
+
+uint16    CAN_TX_SW_VERSION_HOST
+
+uint8     CAN_TX_PATH_ID_BLIS_IGNORE
+
+uint8     CAN_TX_PATH_ID_BLIS
+
+float32   CAN_TX_ANGLE_MISALIGNMENT
+
+float32   CAN_TX_AUTO_ALIGN_ANGLE
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrStatus4"
+	new_full_text = """
+# Message file for srr_status4
+
+std_msgs/Header header
+
+uint16    can_tx_sw_version_host
+uint8     can_tx_path_id_blis_ignore
+uint8     can_tx_path_id_blis
+float32   can_tx_angle_misalignment
+float32   can_tx_auto_align_angle
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.can_tx_sw_version_host = old_msg.CAN_TX_SW_VERSION_HOST
+		new_msg.can_tx_path_id_blis_ignore = old_msg.CAN_TX_PATH_ID_BLIS_IGNORE
+		new_msg.can_tx_path_id_blis = old_msg.CAN_TX_PATH_ID_BLIS
+		new_msg.can_tx_angle_misalignment = old_msg.CAN_TX_ANGLE_MISALIGNMENT
+		new_msg.can_tx_auto_align_angle = old_msg.CAN_TX_AUTO_ALIGN_ANGLE
+
+# SrrStatus5
+class update_delphi_srr_msgs_SrrStatus5_8ac0881115410e342c76d82d29edaf36(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrStatus5"
+	old_full_text = """
+# Message file for srr_status5
+
+Header header
+
+bool      Disable_Auto_Align
+
+uint8     CAN_TX_YAW_RATE_REF_QF
+uint8         CAN_TX_YAW_RATE_REF_QF_Undefined=0
+uint8         CAN_TX_YAW_RATE_REF_QF_Temp_Undefined=1
+uint8         CAN_TX_YAW_RATE_REF_QF_Not_Accurate=2
+uint8         CAN_TX_YAW_RATE_REF_QF_Accurate=3
+
+uint8     CAN_TX_YAW_RATE_RAW_QF
+uint8         CAN_TX_YAW_RATE_RAW_QF_Undefined=0
+uint8         CAN_TX_YAW_RATE_RAW_QF_Temp_Undefined=1
+uint8         CAN_TX_YAW_RATE_RAW_QF_Not_Accurate=2
+uint8         CAN_TX_YAW_RATE_RAW_QF_Accurate=3
+
+float32   CAN_TX_YAW_RATE_REFERENCE                # deg/s
+
+float32   CAN_TX_YAW_RATE_RAW                      # deg/s
+
+uint8     CAN_TX_SYSTEM_STATUS
+uint8         CAN_TX_SYSTEM_STATUS_Configuration=0
+uint8         CAN_TX_SYSTEM_STATUS_StartUp=1
+uint8         CAN_TX_SYSTEM_STATUS_Running=2
+uint8         CAN_TX_SYSTEM_STATUS_Blocked=3
+uint8         CAN_TX_SYSTEM_STATUS_Faulty=4
+uint8         CAN_TX_SYSTEM_STATUS_ShutDown=5
+uint8         CAN_TX_SYSTEM_STATUS_Hot=6
+
+int16     CAN_TX_OUTSIDE_TEMPERATURE               # degC
+
+bool      CAN_BLOCKAGE_MNR_BLOCKED
+
+bool      CAN_BLOCKAGE_BB_BLOCKED
+
+bool      CAN_BLOCKAGE_RADAR_BLOCKED
+
+bool      CAN_TD_BLOCKED
+
+bool      Radar_TX_Power_Error
+
+bool      Radar_LO_Power_Error
+
+bool      Radar_Data_sync_error
+
+bool      Linearizer_SPI_Transfer_Error
+
+bool      Saturated_Tuning_Freq_Error
+
+bool      RTN_SPI_Transfer_Error
+
+bool      RRN_SPI_Transfer_Error
+
+bool      Video_Port_Capture_Error
+
+bool      Vertical_Misalignment_error
+
+bool      TX_Temperature_Fault
+
+bool      Transmitter_ID_Error
+
+bool      DSP_Unit_Cal_Checksum_Error
+
+bool      DSP_Unit_Cal_Block_Chcksm_Error
+
+bool      DSP_Tuning_Sensitivity_Error
+
+bool      DSP_Loop_Overrun_Error
+
+bool      ADC_SPI_Transfer_Error
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrStatus5"
+	new_full_text = """
+# Message file for srr_status5
+
+std_msgs/Header header
+
+bool      disable_auto_align
+
+uint8     can_tx_yaw_rate_ref_qf
+uint8     CAN_TX_YAW_RATE_REF_QF_UNDEFINED=0
+uint8     CAN_TX_YAW_RATE_REF_QF_TEMP_UNDEFINED=1
+uint8     CAN_TX_YAW_RATE_REF_QF_NOT_ACCURATE=2
+uint8     CAN_TX_YAW_RATE_REF_QF_ACCURATE=3
+
+uint8     can_tx_yaw_rate_raw_qf
+uint8     CAN_TX_YAW_RATE_RAW_QF_UNDEFINED=0
+uint8     CAN_TX_YAW_RATE_RAW_QF_TEMP_UNDEFINED=1
+uint8     CAN_TX_YAW_RATE_RAW_QF_NOT_ACCURATE=2
+uint8     CAN_TX_YAW_RATE_RAW_QF_ACCURATE=3
+
+float32   can_tx_yaw_rate_reference                # deg/s
+float32   can_tx_yaw_rate_raw                      # deg/s
+
+uint8     can_tx_system_status
+uint8     CAN_TX_SYSTEM_STATUS_CONFIGURATION=0
+uint8     CAN_TX_SYSTEM_STATUS_STARTUP=1
+uint8     CAN_TX_SYSTEM_STATUS_RUNNING=2
+uint8     CAN_TX_SYSTEM_STATUS_BLOCKED=3
+uint8     CAN_TX_SYSTEM_STATUS_FAULTY=4
+uint8     CAN_TX_SYSTEM_STATUS_SHUTDOWN=5
+uint8     CAN_TX_SYSTEM_STATUS_HOT=6
+
+int16     can_tx_outside_temperature               # degc
+bool      can_blockage_mnr_blocked
+bool      can_blockage_bb_blocked
+bool      can_blockage_radar_blocked
+bool      can_td_blocked
+bool      radar_tx_power_error
+bool      radar_lo_power_error
+bool      radar_data_sync_error
+bool      linearizer_spi_transfer_error
+bool      saturated_tuning_freq_error
+bool      rtn_spi_transfer_error
+bool      rrn_spi_transfer_error
+bool      video_port_capture_error
+bool      vertical_misalignment_error
+bool      tx_temperature_fault
+bool      transmitter_id_error
+bool      dsp_unit_cal_checksum_error
+bool      dsp_unit_cal_block_chcksm_error
+bool      dsp_tuning_sensitivity_error
+bool      dsp_loop_overrun_error
+bool      adc_spi_transfer_error
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.disable_auto_align = old_msg.Disable_Auto_Align
+		new_msg.can_tx_yaw_rate_ref_qf = old_msg.CAN_TX_YAW_RATE_REF_QF
+		new_msg.can_tx_yaw_rate_raw_qf = old_msg.CAN_TX_YAW_RATE_RAW_QF
+		new_msg.can_tx_yaw_rate_reference = old_msg.CAN_TX_YAW_RATE_REFERENCE
+		new_msg.can_tx_yaw_rate_raw = old_msg.CAN_TX_YAW_RATE_RAW
+		new_msg.can_tx_system_status = old_msg.CAN_TX_SYSTEM_STATUS
+		new_msg.can_tx_outside_temperature = old_msg.CAN_TX_OUTSIDE_TEMPERATURE
+		new_msg.can_blockage_mnr_blocked = old_msg.CAN_BLOCKAGE_MNR_BLOCKED
+		new_msg.can_blockage_bb_blocked = old_msg.CAN_BLOCKAGE_BB_BLOCKED
+		new_msg.can_blockage_radar_blocked = old_msg.CAN_BLOCKAGE_RADAR_BLOCKED
+		new_msg.can_td_blocked = old_msg.CAN_TD_BLOCKED
+		new_msg.radar_tx_power_error = old_msg.Radar_TX_Power_Error
+		new_msg.radar_lo_power_error = old_msg.Radar_LO_Power_Error
+		new_msg.radar_data_sync_error = old_msg.Radar_Data_sync_error
+		new_msg.linearizer_spi_transfer_error = old_msg.Linearizer_SPI_Transfer_Error
+		new_msg.saturated_tuning_freq_error = old_msg.Saturated_Tuning_Freq_Error
+		new_msg.rtn_spi_transfer_error = old_msg.RTN_SPI_Transfer_Error
+		new_msg.rrn_spi_transfer_error = old_msg.RRN_SPI_Transfer_Error
+		new_msg.video_port_capture_error = old_msg.Video_Port_Capture_Error
+		new_msg.vertical_misalignment_error = old_msg.Vertical_Misalignment_error
+		new_msg.tx_temperature_fault = old_msg.TX_Temperature_Fault
+		new_msg.transmitter_id_error = old_msg.Transmitter_ID_Error
+		new_msg.dsp_unit_cal_checksum_error = old_msg.DSP_Unit_Cal_Checksum_Error
+		new_msg.dsp_unit_cal_block_chcksm_error = old_msg.DSP_Unit_Cal_Block_Chcksm_Error
+		new_msg.dsp_tuning_sensitivity_error = old_msg.DSP_Tuning_Sensitivity_Error
+		new_msg.dsp_loop_overrun_error = old_msg.DSP_Loop_Overrun_Error
+		new_msg.adc_spi_transfer_error = old_msg.ADC_SPI_Transfer_Error
+
+# SrrTrack
+class update_delphi_srr_msgs_SrrTrack_fe266d1721e555c55d5d9c747938f98b(MessageUpdateRule):
+	old_type = "delphi_srr_msgs/SrrTrack"
+	old_full_text = """
+# Message file for srr_track
+
+Header header
+
+uint8     CAN_TX_DETECT_VALID_LEVEL
+uint8         CAN_TX_DETECT_VALID_LEVEL_Suspect_Detection=0
+uint8         CAN_TX_DETECT_VALID_LEVEL_Level_1=1
+uint8         CAN_TX_DETECT_VALID_LEVEL_Level_2=2
+uint8         CAN_TX_DETECT_VALID_LEVEL_Level_3=3
+uint8         CAN_TX_DETECT_VALID_LEVEL_Level_4=4
+uint8         CAN_TX_DETECT_VALID_LEVEL_Level_5=5
+uint8         CAN_TX_DETECT_VALID_LEVEL_Level_6=6
+uint8         CAN_TX_DETECT_VALID_LEVEL_Level_7=7
+
+bool      CAN_TX_DETECT_STATUS
+bool          CAN_TX_DETECT_STATUS_No_Data=0
+bool          CAN_TX_DETECT_STATUS_Valid_Data_Present=1
+
+float32   CAN_TX_DETECT_RANGE_RATE                 # m/s
+
+float32   CAN_TX_DETECT_RANGE                      # m
+
+float32   CAN_TX_DETECT_ANGLE                      # deg
+
+float32   CAN_TX_DETECT_AMPLITUDE                  # dBsm
+
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	new_type = "delphi_srr_msgs/SrrTrack"
+	new_full_text = """
+# Message file for srr_track
+
+std_msgs/Header header
+
+uint8     can_tx_detect_valid_level
+uint8     CAN_TX_DETECT_VALID_LEVEL_SUSPECT_DETECTION=0
+uint8     CAN_TX_DETECT_VALID_LEVEL_LEVEL_1=1
+uint8     CAN_TX_DETECT_VALID_LEVEL_LEVEL_2=2
+uint8     CAN_TX_DETECT_VALID_LEVEL_LEVEL_3=3
+uint8     CAN_TX_DETECT_VALID_LEVEL_LEVEL_4=4
+uint8     CAN_TX_DETECT_VALID_LEVEL_LEVEL_5=5
+uint8     CAN_TX_DETECT_VALID_LEVEL_LEVEL_6=6
+uint8     CAN_TX_DETECT_VALID_LEVEL_LEVEL_7=7
+
+bool      can_tx_detect_status
+bool      CAN_TX_DETECT_STATUS_NO_DATA=0
+bool      CAN_TX_DETECT_STATUS_VALID_DATA_PRESENT=1
+
+float32   can_tx_detect_range_rate                 # m/s
+float32   can_tx_detect_range                      # m
+float32   can_tx_detect_angle                      # deg
+float32   can_tx_detect_amplitude                  # dbsm
+
+================================================================================
+MSG: std_msgs/Header
+# Standard metadata for higher-level stamped data types.
+# This is generally used to communicate timestamped data
+# in a particular coordinate frame.
+#
+# sequence ID: consecutively increasing ID
+uint32 seq
+#Two-integer timestamp that is expressed as:
+# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')
+# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')
+# time-handling sugar is provided by the client library
+time stamp
+#Frame this data is associated with
+string frame_id
+"""
+
+	order = 0
+	migrated_types = [
+		("Header","Header"),]
+
+	valid = True
+
+	def update(self, old_msg, new_msg):
+		self.migrate(old_msg.header, new_msg.header)
+		new_msg.can_tx_detect_valid_level = old_msg.CAN_TX_DETECT_VALID_LEVEL
+		new_msg.can_tx_detect_status = old_msg.CAN_TX_DETECT_STATUS
+		new_msg.can_tx_detect_range_rate = old_msg.CAN_TX_DETECT_RANGE_RATE
+		new_msg.can_tx_detect_range = old_msg.CAN_TX_DETECT_RANGE
+		new_msg.can_tx_detect_angle = old_msg.CAN_TX_DETECT_ANGLE
+		new_msg.can_tx_detect_amplitude = old_msg.CAN_TX_DETECT_AMPLITUDE

@@ -1,0 +1,193 @@
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Library General Public License for more details.
+#
+# Read the full text in the LICENSE.GPL file in the doc directory.
+default_stages: [pre-commit, pre-push, manual]
+# General
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '^.*\.pgm$'
+      - id: end-of-file-fixer
+        exclude: '^.*\.pgm$'
+      - id: check-added-large-files
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: double-quote-string-fixer
+      - id: check-xml
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v19.1.4
+    hooks:
+      - id: clang-format
+        types_or: [c++, c]
+  # - repo: https://github.com/pocc/pre-commit-hooks
+  #   rev: v1.3.5
+  #   hooks:
+  #     - id: clang-tidy
+  #       args: [-checks=clang-diagnostic-return-type]
+  #       files: src/.*\.c
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: ['--config-file=.config.yaml']
+  - repo: https://github.com/jorisroovers/gitlint
+    rev: v0.19.1
+    hooks:
+      - id: gitlint
+        stages: [commit-msg]
+      - id: gitlint-ci
+        args: ["--commits", "origin/HEAD..HEAD"]
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.5
+    hooks:
+      - id: forbid-crlf
+      - id: remove-crlf
+      - id: insert-license
+        files: \.(clp|pddl)$
+        args:
+          - --fuzzy-match-generates-todo
+          - --license-filepath
+          - .LICENSE
+          - --license-filepath
+          - .LICENSE.gpl
+          - --comment-style
+          - ;
+          - --use-current-year
+          - --allow-past-years
+      - id: insert-license
+        files: \.(cpp|hpp)$
+        args:
+          - --fuzzy-match-generates-todo
+          - --license-filepath
+          - .LICENSE
+          - --license-filepath
+          - .LICENSE.gpl
+          - --comment-style
+          - //
+          - --use-current-year
+          - --allow-past-years
+      - id: insert-license
+        files: \.(py|bash|sh)$
+        args:
+          - --fuzzy-match-generates-todo
+          - --license-filepath
+          - .LICENSE
+          - --license-filepath
+          - .LICENSE.gpl
+          - --use-current-year
+          - --allow-past-years
+  # C++
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
+      - id: cmake-format
+        args: [--in-place, --config, .cmake-format]
+      - id: cmake-lint
+        args: [-c=.cmakelint.py]
+        exclude: etc/cmake/
+  # Python
+  - repo: https://github.com/PyCQA/autoflake.git
+    rev: 'v2.3.1'
+    hooks:
+      - id: autoflake
+        name: Remove unused variables and imports
+        args:
+          - --in-place
+          - --expand-star-imports
+          - --remove-duplicate-keys
+          - --remove-unused-variables
+          - --remove-all-unused-imports
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args:
+          - --profile=black
+          - --line-length=99
+          - --force-sort-within-sections
+
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=99, --skip-string-normalization]
+        additional_dependencies: [pip-autoremove]
+
+  # XML
+  - repo: local
+    hooks:
+      - id: xmllint
+        name: xmllint
+        entry: xmllint
+        args: ["--noout"]
+        language: system
+        types: [xml]
+
+  - repo: https://github.com/KAUTH/pre-commit-git-checks
+    rev: v0.0.1
+    hooks:
+      - id: git-signoff
+        stages: [commit-msg]
+
+  - repo: local
+    hooks:
+      # -------------------------------
+      # C++ Linters
+      # -------------------------------
+      - id: ament_cpplint
+        name: ament_cpplint
+        entry: ament_cpplint
+        language: system
+        stages: [manual]
+        pass_filenames: true
+        exclude: 'jinja'
+
+      # -------------------------------
+      # Python Linters
+      # -------------------------------
+      - id: ament_flake8
+        name: ament_flake8
+        entry: ament_flake8
+        language: system
+        types: [python]
+        exclude: .cmakelint.py
+        stages: [manual]
+
+      - id: ament_pep257
+        name: ament_pep257
+        entry: ament_pep257
+        language: system
+        types: [python]
+        stages: [manual]
+
+      # -------------------------------
+      # Copyright / License checks
+      # -------------------------------
+      - id: ament_copyright
+        name: ament_copyright
+        entry: ament_copyright
+        language: system
+        files: \.(c|cpp|h|hpp|py)$
+        stages: [manual]
+        exclude: ^cx_plugins/protobuf_plugin/
+
+      - id: ament_xmllint
+        name: ament_xmllint
+        entry: ament_xmllint
+        language: system
+        files: \.(launch|xml)$
+        stages: [manual]
+
+exclude: (^extensions/pddl/cx_z3_vendor/|^extensions/pddl/cx_up_nextflap/)

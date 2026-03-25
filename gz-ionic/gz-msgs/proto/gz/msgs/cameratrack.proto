@@ -1,0 +1,69 @@
+/*
+ * Copyright (C) 2024 Rudis Laboratories
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "CameraTrackProtos";
+
+/// \ingroup gz.msgs
+/// \interface CameraTrack
+/// \brief Message for camera tracking
+
+import "gz/msgs/entity.proto";
+import "gz/msgs/header.proto";
+import "gz/msgs/vector3d.proto";
+
+message CameraTrack
+{
+  enum TrackMode
+  {
+    /// \brief Defaults to no tracking mode.
+    NONE              = 0;
+    /// \brief TRACK observes a target from fixed x,y,z world
+    ///   camera point with pgain allowing only for orientation change.
+    TRACK             = 1;
+    /// \brief FOLLOW moves with a target with an offset x,y,z camera and pgain.
+    FOLLOW            = 2;
+    /// \brief FOLLOW_FREE_LOOK moves with a target with an offset x,y,z camera
+    ///   and pgain but allows for changing orientation for free looking around.
+    FOLLOW_FREE_LOOK  = 3;
+    /// \brief FOLLOW_LOOK_AT moves with a target with an offset x,y,z camera
+    ///   and pgain while looking at a specified target.
+    FOLLOW_LOOK_AT    = 4;
+    /// \brief USE_LAST updates offsets and pgains without changing the
+    ///   fundamental track_mode or target(s)
+    USE_LAST          = 5;
+  }
+
+  /// \brief Optional header data
+  Header header           = 1;
+  /// \brief Tracking mode.
+  TrackMode track_mode    = 2;
+  /// \brief Target entity to follow.
+  Entity follow_target    = 3;
+  /// \brief Target entity to track.
+  Entity track_target     = 4;
+  /// \brief Follow offset in local target frame.
+  Vector3d follow_offset  = 5;
+  /// \brief Track offset in local target frame.
+  Vector3d track_offset   = 6;
+  /// \brief Follow pgain for following a target.
+  double follow_pgain     = 7;
+  /// \brief Track pgain for following a target.
+  double track_pgain      = 8;
+}

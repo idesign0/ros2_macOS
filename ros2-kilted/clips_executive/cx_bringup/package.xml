@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>cx_bringup</name>
+  <version>0.1.3</version>
+  <description>Central CX bringup scripts and parameters for launching CLIPS example programs</description>
+
+  <maintainer email="viehmann@kbsg.rwth-aachen.de">Tarik Viehmann</maintainer>
+
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>launch_ros</build_depend>
+
+  <depend>cx_ros_comm_gen</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>example_interfaces</depend>
+  <depend>cx_protobuf_plugin</depend>
+
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>cx_clips_env_manager</exec_depend>
+  <exec_depend>cx_ament_index_plugin</exec_depend>
+  <exec_depend>cx_config_plugin</exec_depend>
+  <exec_depend>cx_example_plugin</exec_depend>
+  <exec_depend>cx_executive_plugin</exec_depend>
+  <exec_depend>cx_file_load_plugin</exec_depend>
+  <exec_depend>cx_ros_msgs_plugin</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

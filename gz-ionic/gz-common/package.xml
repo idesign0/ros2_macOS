@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>gz-common6</name>
+  <version>6.3.0</version>
+  <description>Gazebo Common : AV, Graphics, Events, and much more.</description>
+  <maintainer email="natekoenig@gmail.com">Nate Koenig</maintainer>
+  <license>Apache License 2.0</license>
+  <url type="website">https://github.com/gazebosim/gz-common</url>
+
+  <buildtool_depend>cmake</buildtool_depend>
+  <buildtool_depend>pkg-config</buildtool_depend>
+
+  <build_depend>gz-cmake4</build_depend>
+
+  <depend>assimp-dev</depend>
+  <depend>ffmpeg-dev</depend>
+  <depend>gz-math8</depend>
+  <depend>gz-utils3</depend>
+  <depend>libfreeimage-dev</depend>
+  <depend>libgdal-dev</depend>
+  <depend>spdlog</depend>
+  <depend>tinyxml2</depend>
+  <depend>uuid</depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

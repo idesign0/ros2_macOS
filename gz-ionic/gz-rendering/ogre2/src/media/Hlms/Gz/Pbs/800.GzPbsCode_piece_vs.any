@@ -1,0 +1,12 @@
+// This file interfaces all modular pieces into one
+
+@piece( custom_vs_uniformDeclaration )
+  @insertpiece( custom_vs_uniformDeclaration_solid_color )
+  @insertpiece( custom_vs_uniformDeclaration_terra )
+@end
+
+@piece( custom_vs_posExecution )
+  @insertpiece( custom_vs_posExecution_solid_color )
+  @insertpiece( custom_vs_posExecution_spherical_clip_min_distance )
+  @insertpiece( custom_vs_posExecution_terra )
+@end

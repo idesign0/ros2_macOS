@@ -1,0 +1,13 @@
+#include "autoware_auto_planning_msgs/msg/PathChangeModuleId.idl"
+#include "std_msgs/msg/Header.idl"
+
+module autoware_auto_planning_msgs {
+  module msg {
+
+    struct PathChangeModuleArray {
+      std_msgs::msg::Header header;
+
+      sequence<autoware_auto_planning_msgs::msg::PathChangeModuleId> modules;
+    };
+  };
+};

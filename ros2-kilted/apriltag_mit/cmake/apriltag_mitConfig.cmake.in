@@ -1,0 +1,8 @@
+include(CMakeFindDependencyMacro)
+
+find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED core)
+find_package(Boost REQUIRED headers)
+
+# Add the targets file
+include("${CMAKE_CURRENT_LIST_DIR}/apriltag_mitTargets.cmake")

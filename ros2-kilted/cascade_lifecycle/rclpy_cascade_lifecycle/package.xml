@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>rclpy_cascade_lifecycle</name>
+  <version>2.0.4</version>
+  <description>Provides a mechanism to make trees of lifecycle nodes to propagate state changes in python</description>
+  <maintainer email="jc.manzanares.serrano@gmail.com"> Juan Carlos Manzanares Serrano</maintainer>
+  <license>Apache License, Version 2.0</license>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>lifecycle_msgs</depend>
+  <depend>cascade_lifecycle_msgs</depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

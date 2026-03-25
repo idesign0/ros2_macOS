@@ -1,0 +1,5 @@
+### Automatically generated from package.xml ###
+autoware_lanelet2_extension/** kosuke.takeuchi@tier4.jp mamoru.sobue@tier4.jp masahiro.sakamoto@tier4.jp ryohsuke.mitsudome@tier4.jp takayuki.murooka@tier4.jp yutaka.kondo@tier4.jp
+autoware_lanelet2_extension_python/** junya.sasaki@tier4.jp kotaro.uetake@tier4.jp mamoru.sobue@tier4.jp yutaka.kondo@tier4.jp
+
+### Copied from .github/CODEOWNERS-manual ###

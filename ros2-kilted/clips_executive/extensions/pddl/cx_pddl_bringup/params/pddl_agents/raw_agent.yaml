@@ -1,0 +1,33 @@
+/**:
+  ros__parameters:
+    autostart_node: true
+    environments: ["cx_bringup_raw_agent"]
+
+    cx_bringup_raw_agent:
+      plugins: ["executive", "ros_msgs",
+                "ament_index",
+                "plan_temporal_action",
+                "timed_plan_action_msg",
+                "files"]
+      log_clips_to_file: true
+      watch: ["facts", "rules"]
+
+    ament_index:
+      plugin: "cx::AmentIndexPlugin"
+
+    executive:
+      plugin: "cx::ExecutivePlugin"
+
+    ros_msgs:
+      plugin: "cx::RosMsgsPlugin"
+
+    files:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_pddl_bringup"]
+      load: ["clips/cx_pddl_bringup/raw_agent.clp"]
+
+    plan_temporal_action:
+      plugin: "cx::CXCxPddlInterfacesPlanTemporalPlugin"
+
+    timed_plan_action_msg:
+      plugin: "cx::CXCxPddlInterfacesTimedPlanActionPlugin"

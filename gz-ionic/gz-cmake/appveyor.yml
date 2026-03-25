@@ -1,0 +1,18 @@
+os:
+  - Visual Studio 2017
+  - Visual Studio 2015
+
+environment:
+  CTEST_OUTPUT_ON_FAILURE: 1
+
+build_script:
+  - md build
+  - cd build
+  - cmake .. -DCMAKE_CXX_FLAGS="-WX"
+  - cmake --build .
+
+after_build:
+  - cmake --build . --target INSTALL
+
+test_script:
+  - cmake --build . --target RUN_TESTS

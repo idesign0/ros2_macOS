@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>gz-rendering9</name>
+  <version>9.5.0</version>
+  <description>Gazebo Rendering: Rendering library for robot applications</description>
+  <maintainer email="ichen@openrobotics.org">Ian Chen</maintainer>
+  <license>Apache License 2.0</license>
+  <url type="website">https://github.com/gazebosim/gz-rendering</url>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <build_depend>gz-cmake4</build_depend>
+
+  <depend>glut</depend>
+  <depend>gz-common6</depend>
+  <depend>gz-math8</depend>
+  <depend>gz-plugin3</depend>
+  <depend>gz-utils3</depend>
+  <depend>libfreeimage-dev</depend>
+  <depend>libglew-dev</depend>
+  <depend>libogre-dev</depend>
+  <depend>libogre-next-2.3-dev</depend>
+  <depend>libvulkan-dev</depend>
+  <depend>libxi-dev</depend>
+  <depend>libxmu-dev</depend>
+  <depend>uuid</depend>
+
+  <test_depend>xvfb</test_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>

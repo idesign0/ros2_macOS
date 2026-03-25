@@ -1,0 +1,12 @@
+/**:  # placeholder to work with any ROS node regardless of namespace
+  ros__parameters:
+    autostart_node: true
+    environments: ["hello_world"]
+    hello_world:
+      plugins: ["files"]
+      watch: ["facts", "rules"]
+
+    files:
+      plugin: "cx::FileLoadPlugin"
+      pkg_share_dirs: ["cx_tutorial_agents"]
+      load: ["clips/hello_world.clp"]

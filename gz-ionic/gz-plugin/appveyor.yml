@@ -1,0 +1,33 @@
+os:
+  - Visual Studio 2017
+
+configuration:
+  - Debug
+  - Release
+
+environment:
+  CTEST_OUTPUT_ON_FAILURE: 1
+
+install:
+  - vcpkg install dlfcn-win32
+  # gz-cmake
+  - git clone https://github.com/gazebosim/gz-cmake -b gz11
+  - cd gz-cmake
+  - md build
+  - cd build
+  - cmake .. -DBUILD_TESTING=OFF
+  - cmake --build . --target INSTALL
+  - cd ../..
+build_script:
+  - md build
+  - cd build
+  - cmake ..
+      -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake
+      -DCMAKE_CXX_FLAGS="-WX"
+  - cmake --build . --config %CONFIGURATION%
+
+after_build:
+  - cmake --build . --config %CONFIGURATION% --target INSTALL
+
+test_script:
+  - cmake --build . --config %CONFIGURATION% --target RUN_TESTS

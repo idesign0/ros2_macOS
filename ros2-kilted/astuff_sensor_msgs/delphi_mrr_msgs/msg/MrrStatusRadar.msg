@@ -1,0 +1,14 @@
+std_msgs/Header header
+
+uint8 can_interference_type
+bool  can_recommend_unconverge
+uint8 can_blockage_sidelobe_filter_val
+bool  can_radar_align_incomplete
+bool  can_blockage_sidelobe
+bool  can_blockage_mnr
+bool  can_radar_ext_cond_nok
+bool  can_radar_align_out_range
+bool  can_radar_align_not_start
+bool  can_radar_overheat_error
+bool  can_radar_not_op
+bool  can_xcvr_operational

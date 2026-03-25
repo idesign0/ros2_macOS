@@ -1,0 +1,88 @@
+/*
+ * Copyright (C) 2019 Open Source Robotics Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+*/
+
+syntax = "proto3";
+package gz.msgs;
+option java_package = "com.gz.msgs";
+option java_outer_classname = "EntityProtos";
+
+/// \ingroup gz.msgs
+/// \interface Entity
+/// \brief A message for identifying an entity.
+///
+/// Whenever a single entity should be identified by this message,
+/// it is expected that the message is used as follows:
+///
+///     if id not null
+///       use id
+///     else if name not null and type not null
+///       use name + type
+///     else
+///       error
+///     end
+
+import "gz/msgs/header.proto";
+
+message Entity
+{
+  /// \brief Entity type
+  enum Type
+  {
+    /// \brief No type specified
+    NONE = 0;
+
+    /// \brief Light
+    LIGHT = 1;
+
+    /// \brief Model
+    MODEL = 2;
+
+    /// \brief Link
+    LINK = 3;
+
+    /// \brief Visual
+    VISUAL = 4;
+
+    /// \brief Collision
+    COLLISION = 5;
+
+    /// \brief Sensor
+    SENSOR = 6;
+
+    /// \brief Joint
+    JOINT = 7;
+
+    /// \brief Actor
+    ACTOR = 8;
+
+    /// \brief World
+    WORLD = 9;
+  }
+
+  /// \brief Optional header data
+  Header header = 1;
+
+  /// \brief Entity unique identifier across all types. Defaults to null
+  /// entity (0).
+  uint64 id = 2;
+
+  /// \brief Entity name, which is not guaranteed to be unique.
+  string name = 3;
+
+  /// \brief Entity type.
+  Type type = 4;
+}

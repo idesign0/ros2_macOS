@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>ament_pep257</name>
+  <version>0.19.2</version>
+  <description>
+    The ability to check code against the docstring style conventions in
+    PEP 257 and generate xUnit test result files.
+  </description>
+
+  <maintainer email="clalancette@gmail.com">Chris Lalancette</maintainer>
+
+  <license>Apache License 2.0</license>
+  <license>MIT</license>
+
+  <author email="audrow@openrobotics.org">Audrow Nash</author>
+  <author email="brandon@openrobotics.org">Brandon Ong</author>
+  <author>Claire Wang</author>
+  <author>Dirk Thomas</author>
+  <author email="michel@ekumenlabs.com">Michel Hidalgo</author>
+
+  <exec_depend>ament_lint</exec_depend>
+  <exec_depend>pydocstyle</exec_depend>
+
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

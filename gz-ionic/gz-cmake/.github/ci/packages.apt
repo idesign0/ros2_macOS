@@ -1,0 +1,3 @@
+build-essential
+cmake
+pkg-config

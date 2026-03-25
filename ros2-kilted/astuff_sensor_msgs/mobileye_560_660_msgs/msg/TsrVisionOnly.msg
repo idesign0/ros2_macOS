@@ -1,0 +1,10 @@
+std_msgs/Header header
+
+uint8 vision_only_sign_type_display1
+uint8 vision_only_supplementary_sign_type_display1
+uint8 vision_only_sign_type_display2
+uint8 vision_only_supplementary_sign_type_display2
+uint8 vision_only_sign_type_display3
+uint8 vision_only_supplementary_sign_type_display3
+uint8 vision_only_sign_type_display4
+uint8 vision_only_supplementary_sign_type_display4

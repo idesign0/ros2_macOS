@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+message SearchRequest {
+  enum CompType {
+    COMP_ID = 100;
+    MSG_TYPE = 1;
+  }
+  required string query = 1;
+  required int32 page_number = 2;
+  required int32 results_per_page = 3;
+}

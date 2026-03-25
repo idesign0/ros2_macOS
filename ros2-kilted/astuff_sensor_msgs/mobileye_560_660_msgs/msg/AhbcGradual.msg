@@ -1,0 +1,14 @@
+std_msgs/Header header
+
+float32 boundary_domain_bottom_non_glare_hlb
+float32 boundary_domain_non_glare_left_hand_hlb
+float32 boundary_domain_non_glare_right_hand_hlb
+uint16 object_distance_hlb
+uint8 status_boundary_domain_bottom_non_glare_hlb
+uint8 status_boundary_domain_non_glare_left_hand_hlb
+uint8 status_boundary_domain_non_glare_right_hand_hlb
+uint8 status_object_distance_hlb
+bool left_target_change
+bool right_target_change
+bool too_many_cars
+bool busy_scene

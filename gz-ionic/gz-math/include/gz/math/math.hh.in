@@ -1,0 +1,3 @@
+// Automatically generated
+#include <gz/math/config.hh>
+${gz_headers}

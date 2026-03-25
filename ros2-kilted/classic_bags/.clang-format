@@ -1,0 +1,38 @@
+Language: Cpp
+Standard: Cpp11
+ColumnLimit: 120
+
+# Braces (Breaks for all, EXCEPT enum)
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+
+# Whitespace
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerIndentWidth: 2
+SpacesBeforeTrailingComments: 2
+UseTab: Never
+
+# Types
+AlwaysBreakTemplateDeclarations: true
+PointerBindsToType: true
+
+# Turn stuff off
+FixNamespaceComments: false
+IndentPPDirectives: None
+KeepEmptyLinesAtTheStartOfBlocks: true
+ReflowComments: false
+SortIncludes: false
+SortUsingDeclarations: false

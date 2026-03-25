@@ -1,0 +1,4 @@
+string output_path
+---
+bool result
+string message

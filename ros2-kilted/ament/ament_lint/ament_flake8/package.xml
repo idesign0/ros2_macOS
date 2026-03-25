@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="2">
+  <name>ament_flake8</name>
+  <version>0.19.2</version>
+  <description>
+    The ability to check code for style and syntax conventions with flake8.
+  </description>
+
+  <maintainer email="clalancette@gmail.com">Chris Lalancette</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <author email="audrow@openrobotics.org">Audrow Nash</author>
+  <author email="brandon@openrobotics.org">Brandon Ong</author>
+  <author>Claire Wang</author>
+  <author>D. Hood</author>
+  <author email="michel@ekumenlabs.com">Michel Hidalgo</author>
+
+  <exec_depend>ament_lint</exec_depend>
+  <exec_depend>python3-flake8</exec_depend>
+  <exec_depend>python3-flake8-blind-except</exec_depend>
+  <exec_depend>python3-flake8-builtins</exec_depend>
+  <exec_depend>python3-flake8-class-newline</exec_depend>
+  <exec_depend>python3-flake8-comprehensions</exec_depend>
+  <exec_depend>python3-flake8-deprecated</exec_depend>
+  <exec_depend>python3-flake8-docstrings</exec_depend>
+  <exec_depend>python3-flake8-import-order</exec_depend>
+  <exec_depend>python3-flake8-quotes</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

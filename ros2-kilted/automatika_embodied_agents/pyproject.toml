@@ -1,0 +1,59 @@
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format="[%(levelname)s] [%(asctime)s] [%(name)s] [%(process)d-%(thread)d] %(message)s"
+testpaths = [
+    "tests"
+]
+markers = [
+    "local_only: tests requiring external servers (cannot run in CI)",
+]
+
+[tool.interrogate]
+ignore-init-method = true
+ignore-init-module = true
+ignore-magic = false
+ignore-semiprivate = false
+ignore-private = false
+ignore-property-decorators = false
+ignore-module = true
+ignore-nested-functions = false
+ignore-nested-classes = true
+ignore-setters = false
+exclude = ["setup.py", "docs", "build", "log", "install", "agents/tests", "examples"]
+ignore-regex = ["^get$", "^mock_.*", ".*BaseClass.*", "^main"]
+quiet = false
+whitelist-regex = []
+color = true
+generate-badge = "."
+badge-format = "svg"
+
+[tool.ruff]
+extend-exclude = [".mypy_cache", ".tox", ".venv", "buck-out", "build", ".pytest_cache"]
+fix = true
+line-length = 88
+preview = true
+[tool.ruff.lint]
+ignore = ["E203", "E266", "E501", "F403", "F401"]
+select = ["B","C","E","F","W","B9"]
+[tool.ruff.lint.mccabe]
+max-complexity = 11
+
+[tool.bumpver]
+current_version = "0.3.1"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "(chore) bump version {old_version} -> {new_version}"
+tag_message = "{new_version}"
+tag_scope = "default"
+pre_commit_hook = ""
+post_commit_hook = ""
+commit = true
+tag = true
+push = true
+
+[tool.bumpver.file_patterns]
+"agents/package.xml" = [
+    "<version>{version}</version>",
+]

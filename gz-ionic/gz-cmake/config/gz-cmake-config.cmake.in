@@ -1,0 +1,70 @@
+# - Config file for gz-cmake (not for any other Gazebo libraries).
+#
+# To find and load gz-cmake modules into your project, simply invoke:
+#
+# find_package(@PKG_NAME@)
+#
+# That will define the variable @PKG_NAME@_FOUND, and will open up access
+# to all the cmake-modules and find-modules that are provided by gz-cmake.
+
+# We explicitly set the desired cmake version to ensure that the policy settings
+# of users or of toolchains do not result in the wrong behavior for our modules.
+# Note that the call to find_package(~) will PUSH a new policy stack before
+# taking on these version settings, and then that stack will POP after the
+# find_package(~) has exited, so this will not affect the cmake policy settings
+# of a caller.
+cmake_minimum_required(VERSION 3.22.1 FATAL_ERROR)
+
+if(@PKG_NAME@_CONFIG_INCLUDED)
+  return()
+endif()
+set(@PKG_NAME@_CONFIG_INCLUDED TRUE)
+
+@PACKAGE_INIT@
+
+if(NOT TARGET @gz_utilities_import_target_name@)
+  include("${CMAKE_CURRENT_LIST_DIR}/@gz_utilities_target_output_filename@")
+
+  # Create a simplified imported target name for the utilities library
+  add_library(@simple_utilities_import_name@ INTERFACE IMPORTED)
+  set_target_properties(@simple_utilities_import_name@ PROPERTIES
+    INTERFACE_LINK_LIBRARIES @gz_utilities_import_target_name@)
+
+endif()
+
+# We should only perform these operations if either
+#  1. gz-cmake has not been included yet, or
+#  2. we need a higher version of gz-cmake than the last one that was included
+#
+# The only time we should need to switch to a higher version of gz-cmake is
+# when importing targets for dependencies, i.e. using the find-modules of
+# gz-cmake. All find-modules that are available in older versions of gz-cmake
+# should be available in newer versions of gz-cmake, so this should not create
+# any conflicts.
+if( NOT GZ_CMAKE_VERSION_MAJOR
+    OR (GZ_CMAKE_VERSION_MAJOR LESS @PROJECT_VERSION_MAJOR@) )
+
+  #--------------------------------------
+  # Create a variable to indicate what version of gz-cmake we are using.
+  # This variable does not follow the usual cmake naming convention because it
+  # is a non-standard package variable.
+  set(GZ_CMAKE_VERSION_MAJOR @PROJECT_VERSION_MAJOR@)
+
+  #--------------------------------------
+  # Initialize the GZ_CMAKE_DIR variable with the location of the cmake
+  # directory that sits next to this find-module.
+  set(GZ_CMAKE_DIR "${CMAKE_CURRENT_LIST_DIR}/cmake@PROJECT_VERSION_MAJOR@")
+
+  #--------------------------------------
+  # Add the location of this package's cmake directory to the CMAKE_MODULE_PATH
+  list(APPEND CMAKE_MODULE_PATH "${GZ_CMAKE_DIR}")
+
+  #--------------------------------------
+  # include the master GzCMake module
+  include(GzCMake)
+
+  set(GZ_CMAKE_DOXYGEN_DIR "@PACKAGE_GZ_DATA_INSTALL_DIR@/doxygen")
+  set(GZ_CMAKE_CODECHECK_DIR "@PACKAGE_GZ_DATA_INSTALL_DIR@/codecheck")
+  set(GZ_CMAKE_BENCHMARK_DIR "@PACKAGE_GZ_DATA_INSTALL_DIR@/benchmark")
+  set(GZ_CMAKE_TOOLS_DIR "@PACKAGE_GZ_DATA_INSTALL_DIR@/tools")
+endif()

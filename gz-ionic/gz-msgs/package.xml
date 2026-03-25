@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>gz-msgs11</name>
+  <version>11.1.0</version>
+  <description>Gazebo Messages: Protobuf messages and functions for robot applications</description>
+  <maintainer email="caguero@openrobotics.org">Carlos Agüero</maintainer>
+  <license>Apache License 2.0</license>
+  <url type="website">https://github.com/gazebosim/gz-msgs</url>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <build_depend>gz-cmake4</build_depend>
+
+  <depend>gz-math8</depend>
+  <depend>gz-tools2</depend>
+  <depend>protobuf-dev</depend>
+  <depend>python3-protobuf</depend>
+  <depend>python3</depend>
+  <depend>tinyxml2</depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
