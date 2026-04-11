@@ -11,7 +11,7 @@ jobs:
     runs-on: macos-15
     env:
       CI_BUILD: TRUE
-    timeout-minutes: 360
+    timeout-minutes: 240
 
     steps:
     # --------------------------------------------------
