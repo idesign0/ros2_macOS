@@ -74,5 +74,4 @@
         "vector": "cpp",
         "algorithm": "cpp"
     },
-    "cmake.sourceDirectory": "/Users/dhruvpatel29/humble-ros2/src/gzsim/gz-cmake"
 }
