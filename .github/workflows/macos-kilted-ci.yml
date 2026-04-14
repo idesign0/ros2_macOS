@@ -8,10 +8,10 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-latest
     env:
       CI_BUILD: TRUE
-    timeout-minutes: 360
+    timeout-minutes: 240
 
     steps:
     # --------------------------------------------------
