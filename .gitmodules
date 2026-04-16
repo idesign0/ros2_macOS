@@ -421,7 +421,7 @@
 [submodule "moveit/moveit_task_constructor"]
 	path = moveit/moveit_task_constructor
 	url = https://github.com/idesign0/id_moveit_task_constructor.git
-	branch = humble
+	branch = ros2
 [submodule "moveit/geometric_shapes"]
 	path = moveit/geometric_shapes
 	url = https://github.com/idesign0/id_geometric_shapes.git
