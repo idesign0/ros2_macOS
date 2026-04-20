@@ -746,3 +746,7 @@
 	path = ros-drivers/ackermann_msgs
 	url = https://github.com/ros-drivers/ackermann_msgs.git
 	branch = ros2
+[submodule "gzsim/marine_msgs"]
+	path = gzsim/marine_msgs
+	url = https://github.com/apl-ocean-engineering/marine_msgs.git
+	branch = ros2
