@@ -12,7 +12,7 @@ NPROC=$(sysctl -n hw.ncpu)
 
 if [ "$DISTRO" == "jazzy" ]; then
     MAIN_BRANCH="jazzy"
-    GZ_BRANCH="ionic"
+    GZ_BRANCH="harmonic"
 else
     MAIN_BRANCH="humble"
     GZ_BRANCH="harmonic"
