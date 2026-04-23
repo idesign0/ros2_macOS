@@ -121,40 +121,42 @@ jobs:
       shell: bash
       run: |
         # Create the specific directory structure you requested
-        mkdir -p gz-ionic/src
-        cd gz-ionic/src
-        git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b ionic .
+        mkdir -p gz-harmonic/src
+        cd gz-harmonic/src
+        git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b harmonic .
         cd ..
+        
         brew unlink protobuf || true
-        colcon build \
-          --packages-select protobuf \
-          --executor parallel \
-          --parallel-workers $(sysctl -n hw.ncpu) \
-          --cmake-args -DBUILD_TESTING=OFF \
-                  -DCMAKE_BUILD_TYPE=Release \
-                  -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
-          --merge-install \
-          --continue-on-error
 
         colcon build \
-          --packages-ignore protobuf \
-          --executor parallel \
-          --parallel-workers $(sysctl -n hw.ncpu) \
-          --cmake-args \
-              -DBUILD_TESTING=OFF \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
-              -DCMAKE_MACOSX_RPATH=FALSE \
-              -DCMAKE_INSTALL_NAME_DIR=$(pwd)/install/lib \
-          --merge-install \
-          --continue-on-error
+            --packages-select protobuf \
+            --executor parallel \
+            --parallel-workers $(sysctl -n hw.ncpu) \
+            --cmake-args -DBUILD_TESTING=OFF \
+                    -DCMAKE_BUILD_TYPE=Release \
+                    -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
+            --merge-install \
+            --continue-on-error
+
+        colcon build \
+            --packages-ignore protobuf \
+            --executor parallel \
+            --parallel-workers $(sysctl -n hw.ncpu) \
+            --cmake-args \
+                -DBUILD_TESTING=OFF \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DBOOST_ROOT=$(pwd)/src/dependencies/boost-1.89 \
+                -DCMAKE_MACOSX_RPATH=FALSE \
+                -DCMAKE_INSTALL_NAME_DIR=$(pwd)/install/lib \
+            --merge-install \
+            --continue-on-error
 
         # EXPORT TO GITHUB_ENV: This replaces "sourcing" for future steps
         touch src/COLCON_IGNORE
-        echo "GZ_INSTALL_DIR=${{ github.workspace }}/gz-ionic/install" >> $GITHUB_ENV
-        echo "CMAKE_PREFIX_PATH=${{ github.workspace }}/gz-ionic/install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
-        echo "DYLD_LIBRARY_PATH=${{ github.workspace }}/gz-ionic/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "PATH=${{ github.workspace }}/gz-ionic/install/bin:$PATH" >> $GITHUB_ENV
+        echo "GZ_INSTALL_DIR=${{ github.workspace }}/gz-harmonic/install" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=${{ github.workspace }}/gz-harmonic/install:$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
+        echo "DYLD_LIBRARY_PATH=${{ github.workspace }}/gz-harmonic/install/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "PATH=${{ github.workspace }}/gz-harmonic/install/bin:$PATH" >> $GITHUB_ENV
 
     # --------------------------------------------------
     # Homebrew: Unlink packages (ALWAYS run)
