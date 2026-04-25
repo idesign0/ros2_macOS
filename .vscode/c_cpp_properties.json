@@ -5,7 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/homebrew/include/**",
-                "${HOME}/kitled-ros2/install/include/**"
+                "${HOME}/jazzy-ros2/install/include/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",
