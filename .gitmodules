@@ -9,7 +9,7 @@
 [submodule "ros-planning/dependencies/ceres-solver"]
 	path = ros-planning/dependencies/ceres-solver
 	url = https://github.com/idesign0/id_ceres-solver-main
-	branch = master
+	branch = 1.14.x
 [submodule "ros-planning/dependencies/robot_localization"]
 	path = ros-planning/dependencies/robot_localization
 	url = https://github.com/cra-ros-pkg/robot_localization.git
@@ -748,5 +748,9 @@
 	branch = ros2
 [submodule "gzsim/marine_msgs"]
 	path = gzsim/marine_msgs
+	url = https://github.com/apl-ocean-engineering/marine_msgs.git
+	branch = ros2
+[submodule "gzsim/dependencies/marine_msgs"]
+	path = gzsim/dependencies/marine_msgs
 	url = https://github.com/apl-ocean-engineering/marine_msgs.git
 	branch = ros2

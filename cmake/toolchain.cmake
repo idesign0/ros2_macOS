@@ -117,6 +117,27 @@ set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
 set(Ceres_DIR "${WORKSPACE_ROOT}/install/lib/cmake/Ceres" CACHE PATH "Ceres Solver CMake path" FORCE)
 
+# --- Ceres 1.14.x shim: manually wire paths since find_package cannot be used in toolchain ---
+set(CERES_INSTALL "${WORKSPACE_ROOT}/install")
+
+if (NOT TARGET Ceres::ceres)
+    add_library(Ceres::ceres INTERFACE IMPORTED GLOBAL)
+    set_target_properties(Ceres::ceres PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES
+            "${CERES_INSTALL}/include"
+        INTERFACE_COMPILE_DEFINITIONS
+            "GLOG_USE_GLOG_EXPORT;GLOG_EXPORT=;GLOG_NO_EXPORT=;GOOGLE_GLOG_DLL_DECL="
+        INTERFACE_LINK_LIBRARIES
+            "${CERES_INSTALL}/lib/libceres.a;\
+OpenMP::OpenMP_CXX;\
+/opt/homebrew/lib/libcholmod.dylib;\
+/opt/homebrew/lib/libcxsparse.dylib;\
+/opt/homebrew/lib/libglog.dylib;\
+/opt/homebrew/lib/libgflags.dylib;\
+-framework Accelerate"
+    )
+endif()
+
 # --- yaml-cpp from Kilted ROS 2 (opt/vendor install) ---
 # Path to the vendor install prefix
 set(YAML_CPP_PREFIX "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor" CACHE PATH "yaml-cpp vendor prefix")
@@ -176,6 +197,7 @@ add_compile_options(
         -Wno-error=sign-conversion
         -Wno-error=format
         -Wno-error=missing-template-arg-list-after-template-kw
+        -Wno-error=-deprecated-literal-operator
  )
 
 # macOS specific linker
