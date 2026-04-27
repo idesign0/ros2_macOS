@@ -118,28 +118,6 @@ set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
 set(Ceres_DIR "${WORKSPACE_ROOT}/install/lib/cmake/Ceres" CACHE PATH "Ceres Solver CMake path" FORCE)
 
-
-# --- Ceres 1.14.x shim: manually wire paths since find_package cannot be used in toolchain ---
-set(CERES_INSTALL "${WORKSPACE_ROOT}/install")
-
-if (NOT TARGET Ceres::ceres)
-    add_library(Ceres::ceres INTERFACE IMPORTED GLOBAL)
-    set_target_properties(Ceres::ceres PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES
-            "${CERES_INSTALL}/include"
-        INTERFACE_COMPILE_DEFINITIONS
-            "GLOG_USE_GLOG_EXPORT;GLOG_EXPORT=;GLOG_NO_EXPORT=;GOOGLE_GLOG_DLL_DECL="
-        INTERFACE_LINK_LIBRARIES
-            "${CERES_INSTALL}/lib/libceres.a;\
-OpenMP::OpenMP_CXX;\
-/opt/homebrew/lib/libcholmod.dylib;\
-/opt/homebrew/lib/libcxsparse.dylib;\
-/opt/homebrew/lib/libglog.dylib;\
-/opt/homebrew/lib/libgflags.dylib;\
--framework Accelerate"
-    )
-endif()
-
 # --- yaml-cpp from jazzy ROS 2 (opt/vendor install) ---
 # Path to the vendor install prefix
 set(YAML_CPP_PREFIX "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor" CACHE PATH "yaml-cpp vendor prefix")
@@ -299,8 +277,8 @@ set(Qt5Gui_OPENGL_LIBRARIES "/opt/homebrew/lib/libGL.dylib" CACHE FILEPATH "")
 
 # moveit_ros_perception
 # Toolchain for macOS Homebrew OpenGL dependencies
-set(GLEW_INCLUDE_DIR "/opt/homebrew/opt/glew/include" CACHE PATH "GLEW include directory")
-set(GLEW_LIBRARY "/opt/homebrew/opt/glew/lib/libGLEW.dylib" CACHE FILEPATH "GLEW library")
+set(GLEW_INCLUDE_DIR "/opt/homebrew/opt/glew/include" CACHE PATH "GLEW include directory" FORCE)
+set(GLEW_LIBRARY "/opt/homebrew/opt/glew/lib/libGLEW.dylib" CACHE FILEPATH "GLEW library" FORCE)
 
 set(GLUT_INCLUDE_DIR "/opt/homebrew/opt/freeglut/include" CACHE PATH "GLUT/FreeGLUT include directory")
 set(GLUT_LIBRARY "/opt/homebrew/lib/libglut.dylib" CACHE FILEPATH "GLUT/FreeGLUT library")
