@@ -126,7 +126,7 @@ jobs:
         git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b harmonic .
         cd ..
         
-        brew unlink protobuf || true
+        brew uninstall protobuf --ignore-dependencies || true
 
         colcon build \
             --packages-select protobuf \
@@ -175,7 +175,7 @@ jobs:
         brew unlink qt || true
         brew unlink asio || true
         brew unlink orocos-kdl || true
-        brew unlink protobuf || true
+        brew uninstall protobuf --ignore-dependencies || true
         brew unlink ceres-solver || true
         brew unlink osqp || true
 

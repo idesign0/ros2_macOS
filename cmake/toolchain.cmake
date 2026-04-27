@@ -178,8 +178,6 @@ add_compile_options(
         -Wno-error=format
         -Wno-error=missing-template-arg-list-after-template-kw
         -Wno-error=deprecated-literal-operator
-        -Wno-error=nontrivial-memcall
-        -Wno-error=unknown-warning-option
         -Wno-error=braced-scalar-init
  )
 
