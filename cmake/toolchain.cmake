@@ -176,7 +176,7 @@ add_compile_options(
         -Wno-error=sign-conversion
         -Wno-error=format
         -Wno-error=missing-template-arg-list-after-template-kw
-        -Wno-error=-deprecated-literal-operator
+        -Wno-error=deprecated-literal-operator
  )
 
 # macOS specific linker
