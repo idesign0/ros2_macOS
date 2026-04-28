@@ -117,7 +117,7 @@ echo "🔥 Building Gazebo ($GZ_BRANCH)..."
 cd "$ROOT_DIR/$GZ_WORKSPACE"
 
 # NO SUDO HERE - brew unlink must run as user
-brew uninstall protobuf --ignore-dependencies || true
+brew list --formula | grep -qw "protobuf" && brew unlink protobuf
 
 colcon build --packages-select protobuf --executor parallel \
   --parallel-workers "$NPROC" \
