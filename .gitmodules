@@ -296,7 +296,7 @@
 	branch = jazzy
 [submodule "ros2/rosbag2"]
 	path = ros2/rosbag2
-	url = https://github.com/ros2/rosbag2.git
+	url = https://github.com/idesign0/rosbag2.git
 	branch = jazzy
 [submodule "ros2/sros2"]
 	path = ros2/sros2
