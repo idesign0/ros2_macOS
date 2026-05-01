@@ -758,3 +758,7 @@
 	path = gzsim/dependencies/marine_msgs
 	url = https://github.com/apl-ocean-engineering/marine_msgs.git
 	branch = ros2
+[submodule "ros-planning/nav2_minimal_turtlebot_simulation"]
+	path = ros-planning/nav2_minimal_turtlebot_simulation
+	url = https://github.com/ros-navigation/nav2_minimal_turtlebot_simulation.git
+	branch = jazzy
