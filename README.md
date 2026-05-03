@@ -1,20 +1,3 @@
-> [!CAUTION]
-> **WORK IN PROGRESS: ROS 2 JAZZY JALISCO MIGRATION**
->
-> This repository is currently undergoing a major transition from **ROS 2 Humble** to **ROS 2 Jazzy Jalisco**. 
-> 
-> * **Current State:** The `.gitmodules` and repository lists have been updated for **Jazzy**, but the build instructions and automated scripts below still refer to **Humble**.
-> * **Stability:** Build failures are expected on macOS (Apple Silicon) until the patching process for Jazzy is finalized.
-> * **Documentation:** The README content below is **OUTDATED** and will be updated once the Jazzy + MoveIt2 + Gazebo Ionic stack is verified.
->
-> **Proceed with caution if you are attempting a Jazzy build!**
-
-# ROS 2 jazzy + MoveIt2 + Nav2 + Gazebo Ionic Setup on macOS (Apple Silicon)
-
-This repository provides a streamlined setup for running **ROS 2 Humble** and **Gazebo Sim Ionic** on **macOS with Apple Silicon (M1/M2/M3)**. ROS 2 is built from source with macOS patches, and Gazebo is built from source.
-
----
-
 ## ✅ What's Included
 
 This repository provides a full build of **ROS 2 jazzy** from source for **ARM64 macOS**, including core packages and key frameworks such as:
