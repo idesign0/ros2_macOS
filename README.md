@@ -23,7 +23,7 @@ This repository provides a full build of **ROS 2 jazzy** from source for **ARM64
 - **SLAM_toolbox** (`ros-planning/`)  
 
 Additionally, this setup includes:  
-- **Gazebo Ionic** built from source.  
+- **Gazebo Harmonic** built from source.  
 - macOS-specific fixes and configurations  
 - A clean, tested installation process and environment 
 
@@ -137,14 +137,14 @@ alias pip3.11="python3.11 -m pip"
 # OpenSSL root directory (Homebrew)
 export OPENSSL_ROOT_DIR=/opt/homebrew/opt/openssl@3
 
-# Gazebo ionic variables
-export GZ_VERSION=ionic
+# Gazebo harmonic variables
+export GZ_VERSION=harmonic
 export GZ_SIM_SYSTEM_PLUGIN_PATH=~/jazzy-ros2/install/lib/
 export GZ_BUILD_FROM_SOURCE=1
 export GZ_RELAX_VERSION_MATCH=1
 
 # sourcing
-#source ~/gz-ionic/install/setup.zsh
+#source ~/gz-harmonic/install/setup.zsh
 #source ~/jazzy-ros2/install/setup.zsh
 #source ~/ros2_ws/install/setup.zsh
 
@@ -204,23 +204,23 @@ which pip
 
 ## 🛠️ Installation Steps
 
-Follow these steps to install Gazebo Ionic and build ROS 2 from source.
+Follow these steps to install Gazebo Harmonic and build ROS 2 from source.
 
-### 1. Install Gazebo Ionic (from source)
+### 1. Install Gazebo Harmonic (from source)
 
-Gazebo Ionic is built **from source** on macOS to avoid dependency and ABI mismatches introduced by Homebrew—most notably **protobuf**.
+Gazebo Harmonic is built **from source** on macOS to avoid dependency and ABI mismatches introduced by Homebrew—most notably **protobuf**.
 
-Clone and build Gazebo Ionic using the instructions provided in the following repository:
+Clone and build Gazebo Harmonic using the instructions provided in the following repository:
 
-👉 https://github.com/idesign0/gz-macOS/tree/ionic
+👉 https://github.com/idesign0/gz-macOS/tree/harmonic
 
 This repository includes:
-- Gazebo Ionic and required GZ libraries as submodules
+- Gazebo Harmonic and required GZ libraries as submodules
 - A source-built protobuf version compatible with `gz-msgs11`
 - macOS-specific patches and configuration for Apple Silicon
 
 > **Note**  
-> Homebrew currently installs a newer protobuf version that is ABI-incompatible with Gazebo Ionic. This causes build failures in `gz-msgs11`, `gz-fuel-tools10`, and `ros_gz_bridge`. Building everything from source ensures a consistent protobuf runtime across the entire stack.
+> Homebrew currently installs a newer protobuf version that is ABI-incompatible with Gazebo Harmonic. This causes build failures in `gz-msgs11`, `gz-fuel-tools10`, and `ros_gz_bridge`. Building everything from source ensures a consistent protobuf runtime across the entire stack.
 
 ### 2. 🔨 Build
 ```bash
