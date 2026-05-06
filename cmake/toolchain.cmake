@@ -180,6 +180,7 @@ add_compile_options(
         -Wno-error=deprecated-literal-operator
         -Wno-error=braced-scalar-init
         -Wno-error=unknown-warning-option
+        -Wno-error=nontrivial-memcall
  )
 
 # macOS specific linker
