@@ -218,7 +218,7 @@ jobs:
     - name: Deploy to Separate Repo
       if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
       env:
-        DEST_REPO: "idesign0/brew_ros2"
+        DEST_REPO: "idesign0/homebrew-ros2"
         TARGET_BRANCH: ${{ github.ref_name }}
         API_TOKEN_GITHUB: ${{ secrets.CATS_DEPLOY_TOKEN }}
       run: |
