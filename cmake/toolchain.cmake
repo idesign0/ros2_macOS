@@ -158,7 +158,6 @@ set(BUILD_CLOUD_CLIENT OFF CACHE BOOL "Disable cloud client")
 
 # Suppress warning as errors
 add_compile_options(
-        -Wno-error=unknown-warning-option
         -Wno-error=unused-command-line-argument
         -Wno-error=pessimizing-move
         -Wno-error=unused-variable
@@ -180,9 +179,6 @@ add_compile_options(
         -Wno-error=missing-template-arg-list-after-template-kw
         -Wno-error=deprecated-literal-operator
         -Wno-error=braced-scalar-init
-        -Wno-error=unknown-warning-option
-        -Wno-error=nontrivial-memcall
-        -Wno-error=nontrivial-memaccess
  )
 
 # macOS specific linker
