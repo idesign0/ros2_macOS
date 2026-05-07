@@ -192,6 +192,7 @@ jobs:
         export CMAKE_TOOLCHAIN_FILE="${GITHUB_WORKSPACE}/cmake/toolchain.cmake"
 
         colcon build \
+          --merge-install \
           --executor parallel \
           --parallel-workers $(sysctl -n hw.ncpu) \
           --cmake-clean-cache \
