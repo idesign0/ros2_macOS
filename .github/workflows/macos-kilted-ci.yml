@@ -212,6 +212,11 @@ jobs:
     # --------------------------------------------------
     # Deploy to Separate Repository
     # --------------------------------------------------
+    - name: Install Git LFS
+      run: |
+        brew install git-lfs
+        git lfs install --system
+    
     - name: Deploy to Separate Repo
       if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
       env:
@@ -219,29 +224,52 @@ jobs:
         TARGET_BRANCH: ${{ github.ref_name }}
         API_TOKEN_GITHUB: ${{ secrets.CATS_DEPLOY_TOKEN }}
       run: |
-        # Setup metadata
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        
+    
         # Prepare the deployment folder
         mkdir -p deploy_out
-        
+    
         if [ -d "install" ]; then
           cp -R install/* deploy_out/
         else
           echo "Error: install directory not found!"
           exit 1
         fi
-        
-        # Generate a timestamp
+    
         DEPLOY_DATE=$(date +'%Y-%m-%d %H:%M:%S')
-        
-        # Initialize and commit
+    
         cd deploy_out
+    
         git init
         git checkout -b "$TARGET_BRANCH"
+    
+        # Initialize LFS in this repo
+        git lfs install
+    
+        # Track known large binary types
+        git lfs track "*.a"
+        git lfs track "*.dylib"
+        git lfs track "*.so"
+        git lfs track "*.so.*"
+    
+        # Auto-track any file over 50MB not already covered (catches edge cases)
+        find . -type f -size +50M ! -path "./.git/*" | while read -r f; do
+          ext="${f##*.}"
+          if [ -n "$ext" ] && [ "$ext" != "${f#./}" ]; then
+            git lfs track "*.${ext}"
+          else
+            git lfs track "${f#./}"
+          fi
+        done
+    
+        # Commit .gitattributes FIRST — LFS only works for files added after tracking is registered
+        git add .gitattributes
+        git commit -m "chore: configure Git LFS tracking"
+    
+        # Now stage and commit everything else
         git add .
         git commit -m "Build: ${DEPLOY_DATE} | Source: ${GITHUB_REPOSITORY}@${GITHUB_SHA}"
-        
-        # Force push using the PAT
+    
+        # Push — LFS objects upload automatically
         git push --force "https://${API_TOKEN_GITHUB}@github.com/${DEST_REPO}.git" "$TARGET_BRANCH:refs/heads/$TARGET_BRANCH"
