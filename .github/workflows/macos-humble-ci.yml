@@ -211,68 +211,122 @@ jobs:
         source install/setup.bash
         ros2 --help
         timeout 5s ros2 run demo_nodes_cpp talker || true
- 
+
     # --------------------------------------------------
-    # Deploy to Separate Repository
+    # Deploy Release + Update Homebrew Formula
     # --------------------------------------------------
-    - name: Install Git LFS
-      run: |
-        brew install git-lfs
-        git lfs install --system
-    
-    - name: Deploy to Separate Repo
+    - name: Deploy Release + Update Formula
       if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      shell: bash
       env:
-        DEST_REPO: "idesign0/homebrew-ros2"
-        TARGET_BRANCH: ${{ github.ref_name }}
+        TAP_REPO: "idesign0/homebrew-ros2"
         API_TOKEN_GITHUB: ${{ secrets.CATS_DEPLOY_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        set -e
+
+        # --------------------------------------------------
+        # Git config
+        # --------------------------------------------------
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-    
-        # Prepare the deployment folder
-        mkdir -p deploy_out
-    
-        if [ -d "install" ]; then
-          cp -R install/* deploy_out/
-        else
-          echo "Error: install directory not found!"
+
+        # --------------------------------------------------
+        # Determine distro from branch
+        # --------------------------------------------------
+        DISTRO="${GITHUB_REF_NAME}"
+
+        echo "DISTRO=${DISTRO}"
+
+        # --------------------------------------------------
+        # Version format: YY.MM.DD.RUN
+        # Example: 26.05.11.1
+        # --------------------------------------------------
+        DATE_VERSION=$(date +"%y.%m.%d")
+        VERSION="${DATE_VERSION}.${GITHUB_RUN_NUMBER}"
+
+        echo "VERSION=${VERSION}"
+
+        # --------------------------------------------------
+        # Archive naming
+        # --------------------------------------------------
+        ARCHIVE_NAME="ros2-${DISTRO}-macos-${VERSION}.tar.gz"
+
+        echo "ARCHIVE_NAME=${ARCHIVE_NAME}"
+
+        # --------------------------------------------------
+        # Verify install folder
+        # --------------------------------------------------
+        if [ ! -d "install" ]; then
+          echo "ERROR: install directory not found!"
           exit 1
         fi
-    
-        DEPLOY_DATE=$(date +'%Y-%m-%d %H:%M:%S')
-    
-        cd deploy_out
-    
-        git init
-        git checkout -b "$TARGET_BRANCH"
-    
-        # Initialize LFS in this repo
-        git lfs install
-    
-        # Track known large binary types
-        git lfs track "*.a"
-        git lfs track "*.dylib"
-        git lfs track "*.so"
-        git lfs track "*.so.*"
-    
-        # Auto-track any file over 50MB not already covered (catches edge cases)
-        find . -type f -size +50M ! -path "./.git/*" | while read -r f; do
-          ext="${f##*.}"
-          if [ -n "$ext" ] && [ "$ext" != "${f#./}" ]; then
-            git lfs track "*.${ext}"
-          else
-            git lfs track "${f#./}"
-          fi
-        done
-    
-        # Commit .gitattributes FIRST — LFS only works for files added after tracking is registered
-        git add .gitattributes
-        git commit -m "chore: configure Git LFS tracking"
-    
-        # Now stage and commit everything else
-        git add .
-        git commit -m "Build: ${DEPLOY_DATE} | Source: ${GITHUB_REPOSITORY}@${GITHUB_SHA}"
-    
-        # Push — LFS objects upload automatically
-        git push --force "https://${API_TOKEN_GITHUB}@github.com/${DEST_REPO}.git" "$TARGET_BRANCH:refs/heads/$TARGET_BRANCH"
+
+        # --------------------------------------------------
+        # Create tar.gz
+        # --------------------------------------------------
+        tar -czf "${ARCHIVE_NAME}" install
+
+        # --------------------------------------------------
+        # Generate SHA256
+        # --------------------------------------------------
+        SHA256=$(shasum -a 256 "${ARCHIVE_NAME}" | awk '{print $1}')
+
+        echo "SHA256=${SHA256}"
+
+        # --------------------------------------------------
+        # Release tag
+        # Example:
+        # jazzy-26.05.11.1
+        # --------------------------------------------------
+        RELEASE_TAG="${DISTRO}-${VERSION}"
+
+        echo "RELEASE_TAG=${RELEASE_TAG}"
+
+        # --------------------------------------------------
+        # Create GitHub Release
+        # --------------------------------------------------
+        gh release create "${RELEASE_TAG}" \
+          --title "${DISTRO} ${VERSION}" \
+          --notes "ROS 2 ${DISTRO} macOS build ${VERSION}" \
+          "${ARCHIVE_NAME}"
+
+        # --------------------------------------------------
+        # Clone Homebrew tap repo
+        # --------------------------------------------------
+        git clone "https://${API_TOKEN_GITHUB}@github.com/${TAP_REPO}.git" tap_repo
+
+        cd tap_repo
+
+        # --------------------------------------------------
+        # Formula file
+        # --------------------------------------------------
+        FORMULA_FILE="Formula/ros2-${DISTRO}.rb"
+
+        if [ ! -f "${FORMULA_FILE}" ]; then
+          echo "ERROR: Formula file not found: ${FORMULA_FILE}"
+          exit 1
+        fi
+
+        # --------------------------------------------------
+        # Update version
+        # --------------------------------------------------
+        sed -i '' "s/version \".*\"/version \"${VERSION}\"/" "${FORMULA_FILE}"
+
+        # --------------------------------------------------
+        # Update SHA256
+        # --------------------------------------------------
+        sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" "${FORMULA_FILE}"
+
+        # --------------------------------------------------
+        # Commit changes
+        # --------------------------------------------------
+        git add "${FORMULA_FILE}"
+
+        git commit -m "Update ros2-${DISTRO} to ${VERSION}" || echo "No changes"
+
+        # --------------------------------------------------
+        # Push changes
+        # --------------------------------------------------
+        git push
+ 
