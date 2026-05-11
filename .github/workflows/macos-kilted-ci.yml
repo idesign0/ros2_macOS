@@ -284,7 +284,8 @@ jobs:
         # --------------------------------------------------
         # Create GitHub Release
         # --------------------------------------------------
-        gh release create "${RELEASE_TAG}" \
+        GH_TOKEN="${API_TOKEN_GITHUB}" gh release create "${RELEASE_TAG}" \
+          --repo "${TAP_REPO}" \
           --title "${DISTRO} ${VERSION}" \
           --notes "ROS 2 ${DISTRO} macOS build ${VERSION}" \
           "${ARCHIVE_NAME}"
