@@ -146,6 +146,8 @@ jobs:
           -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \
           -DCI_BUILD=TRUE
 
+        touch gz-ionic/COLCON_IGNORE
+
     # --------------------------------------------------
     # Homebrew: Unlink packages (ALWAYS run)
     # --------------------------------------------------
