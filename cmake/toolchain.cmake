@@ -179,6 +179,7 @@ add_compile_options(
         -Wno-error=missing-template-arg-list-after-template-kw
         -Wno-error=deprecated-literal-operator
         -Wno-error=braced-scalar-init
+        -Wno-error=unknown-warning-option
  )
 
 # macOS specific linker
