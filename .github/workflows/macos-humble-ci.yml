@@ -112,6 +112,7 @@ jobs:
         echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
         echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5):$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
         echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
+        echo "CMAKE_TOOLCHAIN_FILE=${GITHUB_WORKSPACE}/cmake/toolchain.cmake" >> $GITHUB_ENV
 
     # --------------------------------------------------
     # Build External Gazebo Workspace
