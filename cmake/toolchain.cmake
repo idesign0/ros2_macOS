@@ -67,14 +67,26 @@ set(Boost_PYTHON_INCLUDE_DIR "${BOOST_INCLUDEDIR}" CACHE PATH "Boost Python incl
 set(CMAKE_PREFIX_PATH "${BOOST_ROOT}/lib/cmake/Boost-1.89.0;${CMAKE_PREFIX_PATH}" CACHE PATH "Boost CMake path")
 
 # RPATH settings for macOS
-set(CMAKE_MACOSX_RPATH ON)
 set(CMAKE_SKIP_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(BASE_RPATH "@loader_path/../lib")
-list(APPEND BASE_RPATH "${BOOST_LIBRARYDIR}")
-set(CMAKE_BUILD_RPATH "${BASE_RPATH}")
-set(CMAKE_INSTALL_RPATH "${BASE_RPATH}")
+if(IS_CI)
+    # CI: boost will be copied into install/lib, so @loader_path/../lib covers it.
+    # Don't add absolute runner paths to install rpath.
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+    set(CMAKE_BUILD_RPATH "@loader_path/../lib;${BOOST_LIBRARYDIR}")
+    set(CMAKE_INSTALL_RPATH
+        "@loader_path/../lib"       # lib/libfoo.dylib
+        "@loader_path/.."           # lib/sub/libfoo.dylib
+        "@loader_path/../.."        # lib/sub/plugins/libfoo.dylib
+        "@loader_path/../../.."     # lib/python3.11/site-packages/pkg/libfoo.dylib
+        "@loader_path/../../../.."  # lib/sub/plugins/gui/GzSim/libfoo.dylib
+    )
+else()
+    # Local: boost lives outside install/, so embed its path explicitly.
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+    set(CMAKE_BUILD_RPATH "@loader_path/../lib;${BOOST_LIBRARYDIR}")
+    set(CMAKE_INSTALL_RPATH "@loader_path/../lib;${BOOST_LIBRARYDIR}")
+endif()
 
 # Ceres, yaml-cpp, PCL Conversions, pybind11 (Non-Homebrew/Vendor dependencies)
 set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 

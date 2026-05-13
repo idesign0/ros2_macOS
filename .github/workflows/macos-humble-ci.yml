@@ -249,6 +249,37 @@ jobs:
         fi
 
         # --------------------------------------------------
+        # Bundle Boost into install/lib and fix install names
+        # --------------------------------------------------
+        BOOST_LIB_DIR="${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/lib"
+
+        echo "Copying Boost dylibs into install/lib..."
+        cp -P "${BOOST_LIB_DIR}"/libboost_*.dylib install/lib/
+
+        echo "Fixing Boost install names..."
+        for lib in install/lib/libboost_*.dylib; do
+          [ -L "$lib" ] && continue
+          basename=$(basename "$lib")
+          install_name_tool -id "@rpath/${basename}" "$lib"
+        done
+
+        echo "Boost bundled."
+
+        # --------------------------------------------------
+        # Rewrite hardcoded runner paths in text files ---
+        # --------------------------------------------------
+
+        RUNNER_PREFIX="/Users/runner/work/ros2_macOS/ros2_macOS/install"
+        PLACEHOLDER="/opt/homebrew/opt/ros2-${DISTRO}"
+
+        echo "Rewriting runner paths in text files..."
+        grep -rlI "${RUNNER_PREFIX}" install/ | while IFS= read -r f; do
+          [ -L "$f" ] && continue   # skip symlinks
+          sed -i "s|${RUNNER_PREFIX}|${PLACEHOLDER}|g" "$f"
+        done
+        echo "Path rewriting done."
+
+        # --------------------------------------------------
         # Create tar.gz
         # --------------------------------------------------
         tar -czf "${ARCHIVE_NAME}" install
