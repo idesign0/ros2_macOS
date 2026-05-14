@@ -78,6 +78,7 @@ jobs:
       run: |
         chmod +x brew-packages/install_brew_packages.sh
         ./brew-packages/install_brew_packages.sh
+        brew update
 
     # --------------------------------------------------
     # Python 3.11
@@ -134,6 +135,10 @@ jobs:
           --merge-install \
           --continue-on-error \
           --cmake-args \
+          -DBUILD_SHARED_LIBS=ON \
+          -Dprotobuf_BUILD_TESTS=OFF \
+          -Dprotobuf_BUILD_CONFORMANCE=OFF \
+          -Dprotobuf_BUILD_EXAMPLES=OFF \
           -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \
           -DCI_BUILD=TRUE
 
