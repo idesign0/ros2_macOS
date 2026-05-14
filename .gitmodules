@@ -525,7 +525,7 @@
 [submodule "ros-planning/dependencies/PickNickRobotics/cpp_polyfills"]
 	path = ros-planning/dependencies/PickNickRobotics/cpp_polyfills
 	url = https://github.com/PickNikRobotics/cpp_polyfills.git
-	branch = main
+	branch = humble
 [submodule "ros-commondep/asio-1.10.8"]
 	path = ros-commondep/asio-1.10.8
 	url = https://github.com/chriskohlhoff/asio.git
