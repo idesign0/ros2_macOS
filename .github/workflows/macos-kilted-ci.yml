@@ -275,8 +275,8 @@ jobs:
 
         echo "Rewriting runner paths in text files..."
         grep -rlI "${RUNNER_PREFIX}" install/ | while IFS= read -r f; do
-          [ -L "$f" ] && continue   # skip symlinks
-          sed -i "s|${RUNNER_PREFIX}|${PLACEHOLDER}|g" "$f"
+          [ -L "$f" ] && continue
+          sed -i '' "s|${RUNNER_PREFIX}|${PLACEHOLDER}|g" "$f"
         done
         echo "Path rewriting done."
 
