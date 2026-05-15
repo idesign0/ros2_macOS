@@ -38,7 +38,21 @@ This guide will walk you through:
 - Installing required build tools (`colcon`, `vcstool`, etc.)
 - Creating the ROS 2 workspace structure
 
-## ⚡ One-Step Installation (Recommended)
+## 🍺 Homebrew Installation (Recommended)
+
+The fastest way to get ROS 2 running on macOS. No build required — pre-compiled and ready in 10–15 minutes.
+
+```bash
+brew tap idesign0/ros2
+brew install ros2-humble
+
+# upgrade time to time :)
+brew upgrade ros2-humble
+
+source /opt/homebrew/opt/ros2-humble/setup.bash
+```
+
+## ⚡ One-Step Installation
 
 To automate the entire setup—including dependency installation, repository cloning, and the full workspace build—copy and paste the following command into your terminal:
 
