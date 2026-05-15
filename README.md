@@ -50,12 +50,12 @@ The fastest way to get ROS 2 running on macOS. No build required — pre-compile
 
 ```bash
 brew tap idesign0/ros2
-brew install ros2-humble
+brew install ros2-kilted
 
 # upgrade time to time :)
-brew upgrade ros2-humble
+brew upgrade ros2-kilted
 
-source /opt/homebrew/opt/ros2-humble/setup.bash
+source /opt/homebrew/opt/ros2-kilted/setup.bash
 ```
 
 ## ⚡ One-Step Installation (Recommended)
