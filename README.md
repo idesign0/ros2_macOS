@@ -44,12 +44,12 @@ The fastest way to get ROS 2 running on macOS. No build required — pre-compile
 
 ```bash
 brew tap idesign0/ros2
-brew install ros2-humble
+brew install ros2-jazzy
 
 # upgrade time to time :)
-brew upgrade ros2-humble
+brew upgrade ros2-jazzy
 
-source /opt/homebrew/opt/ros2-humble/setup.bash
+source /opt/homebrew/opt/ros2-jazzy/setup.bash
 ```
 
 ## ⚡ One-Step Installation
