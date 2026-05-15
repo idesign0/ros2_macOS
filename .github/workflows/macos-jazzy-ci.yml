@@ -268,9 +268,23 @@ jobs:
           [ -L "$lib" ] && continue
           basename=$(basename "$lib")
           install_name_tool -id "@rpath/${basename}" "$lib"
+          codesign --force --sign - "$lib"   # ← ADD THIS
         done
 
         echo "Boost bundled."
+
+        echo "Rewriting absolute Boost references in all dylibs..."
+        find install/lib -name "*.dylib" ! -type l | while read dylib; do
+          changed=0
+          for ref in $(otool -L "$dylib" 2>/dev/null | awk '{print $1}' | grep "libboost_" | grep -v "^@"); do
+            basename_ref=$(basename "$ref")
+            if [ -f "install/lib/${basename_ref}" ]; then
+              install_name_tool -change "$ref" "@rpath/${basename_ref}" "$dylib"
+              changed=1
+            fi
+          done
+          [ $changed -eq 1 ] && codesign --force --sign - "$dylib"
+        done
 
         # --------------------------------------------------
         # Rewrite hardcoded runner paths in text files ---
@@ -285,6 +299,19 @@ jobs:
           sed -i '' "s|${RUNNER_PREFIX}|${PLACEHOLDER}|g" "$f"
         done
         echo "Path rewriting done."
+
+        echo "Rewriting runner paths in binary dylibs..."
+        find install/lib -name "*.dylib" ! -type l | while read dylib; do
+          changed=0
+          for ref in $(otool -L "$dylib" 2>/dev/null | awk '{print $1}' | grep "/Users/runner/" | grep -v "^@"); do
+            basename_ref=$(basename "$ref")
+            if [ -f "install/lib/${basename_ref}" ]; then
+              install_name_tool -change "$ref" "@rpath/${basename_ref}" "$dylib"
+              changed=1
+            fi
+          done
+          [ $changed -eq 1 ] && codesign --force --sign - "$dylib"
+        done
 
         # --------------------------------------------------
         # Create tar.gz
