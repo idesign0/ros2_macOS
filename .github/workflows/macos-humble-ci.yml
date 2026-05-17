@@ -281,7 +281,7 @@ jobs:
               changed=1
             fi
           done
-          [ $changed -eq 1 ] && codesign --force --sign - "$dylib"
+          if [ $changed -eq 1 ]; then codesign --force --sign - "$dylib"; fi
         done
 
         # --------------------------------------------------
@@ -308,7 +308,7 @@ jobs:
               changed=1
             fi
           done
-          [ $changed -eq 1 ] && codesign --force --sign - "$dylib"
+        if [ $changed -eq 1 ]; then codesign --force --sign - "$dylib"; fi
         done
 
         # --------------------------------------------------
