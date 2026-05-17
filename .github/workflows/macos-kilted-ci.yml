@@ -276,7 +276,7 @@ jobs:
         echo "Rewriting absolute Boost references in all dylibs..."
         find install/lib -name "*.dylib" ! -type l | while read dylib; do
           changed=0
-          for ref in $(otool -L "$dylib" 2>/dev/null | awk '{print $1}' | grep "libboost_" | grep -v "^@"); do
+          for ref in $(otool -L "$dylib" 2>/dev/null | awk '{print $1}' | grep "libboost_" | grep -v "^@" || true); do
             basename_ref=$(basename "$ref")
             if [ -f "install/lib/${basename_ref}" ]; then
               install_name_tool -change "$ref" "@rpath/${basename_ref}" "$dylib"
@@ -303,7 +303,7 @@ jobs:
         echo "Rewriting runner paths in binary dylibs..."
         find install/lib -name "*.dylib" ! -type l | while read dylib; do
           changed=0
-          for ref in $(otool -L "$dylib" 2>/dev/null | awk '{print $1}' | grep "/Users/runner/" | grep -v "^@"); do
+          for ref in $(otool -L "$dylib" 2>/dev/null | awk '{print $1}' | grep "/Users/runner/" | grep -v "^@" || true); do
             basename_ref=$(basename "$ref")
             if [ -f "install/lib/${basename_ref}" ]; then
               install_name_tool -change "$ref" "@rpath/${basename_ref}" "$dylib"
