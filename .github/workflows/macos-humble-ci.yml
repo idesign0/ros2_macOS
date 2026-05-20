@@ -254,37 +254,6 @@ jobs:
         fi
 
         # --------------------------------------------------
-        # Bundle Boost into install/lib and fix install names
-        # --------------------------------------------------
-        BOOST_LIB_DIR="${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/lib"
-
-        echo "Copying Boost dylibs into install/lib..."
-        cp -P "${BOOST_LIB_DIR}"/libboost_*.dylib install/lib/
-
-        echo "Fixing Boost install names..."
-        for lib in install/lib/libboost_*.dylib; do
-          [ -L "$lib" ] && continue
-          basename=$(basename "$lib")
-          install_name_tool -id "@rpath/${basename}" "$lib"
-          codesign --force --sign - "$lib"   # ← ADD THIS
-        done
-
-        echo "Boost bundled."
-
-        echo "Rewriting absolute Boost references in all dylibs..."
-        find install/lib -name "*.dylib" ! -type l | while read dylib; do
-          changed=0
-          for ref in $(otool -L "$dylib" 2>/dev/null | awk '{print $1}' | grep "libboost_" | grep -v "^@" || true); do
-            basename_ref=$(basename "$ref")
-            if [ -f "install/lib/${basename_ref}" ]; then
-              install_name_tool -change "$ref" "@rpath/${basename_ref}" "$dylib"
-              changed=1
-            fi
-          done
-          if [ $changed -eq 1 ]; then codesign --force --sign - "$dylib"; fi
-        done
-
-        # --------------------------------------------------
         # Rewrite hardcoded runner paths in text files ---
         # --------------------------------------------------
 
@@ -309,6 +278,57 @@ jobs:
             fi
           done
         if [ $changed -eq 1 ]; then codesign --force --sign - "$dylib"; fi
+        done
+
+        # --------------------------------------------------
+        # Bundle Boost into install/lib and fix install names
+        # --------------------------------------------------
+        BOOST_SRC="${GITHUB_WORKSPACE}/ros-commondep/boost-1.89"
+        BOOST_LIB_DIR="${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/lib"
+        BOOST_INC_DIR="${BOOST_SRC}/include"
+        BOOST_CMAKE_DIR="${BOOST_SRC}/lib/cmake"
+
+        # headers
+        echo "Copying Boost headers into install/include..."
+        cp -r "${BOOST_INC_DIR}/boost" install/include/
+
+        # CMake configs
+        echo "Copying Boost CMake configs into install/lib/cmake..."
+        mkdir -p install/lib/cmake
+        cp -r "${BOOST_CMAKE_DIR}"/Boost* install/lib/cmake/ 2>/dev/null || true
+        cp -r "${BOOST_CMAKE_DIR}"/boost* install/lib/cmake/ 2>/dev/null || true
+
+        # Rewrite boost source paths in CMake configs
+        echo "Rewriting Boost source paths in CMake configs..."
+        grep -rlI "${BOOST_SRC}" install/lib/cmake/ | while IFS= read -r f; do
+          [ -L "$f" ] && continue
+          sed -i '' "s|${BOOST_SRC}|${PLACEHOLDER}|g" "$f"
+        done
+        
+        echo "Copying Boost dylibs into install/lib..."
+        cp -P "${BOOST_LIB_DIR}"/libboost_*.dylib install/lib/
+
+        echo "Fixing Boost install names..."
+        for lib in install/lib/libboost_*.dylib; do
+          [ -L "$lib" ] && continue
+          basename=$(basename "$lib")
+          install_name_tool -id "@rpath/${basename}" "$lib"
+          codesign --force --sign - "$lib"   # ← ADD THIS
+        done
+
+        echo "Boost bundled."
+
+        echo "Rewriting absolute Boost references in all dylibs..."
+        find install/lib -name "*.dylib" ! -type l | while read dylib; do
+          changed=0
+          for ref in $(otool -L "$dylib" 2>/dev/null | awk '{print $1}' | grep "libboost_" | grep -v "^@" || true); do
+            basename_ref=$(basename "$ref")
+            if [ -f "install/lib/${basename_ref}" ]; then
+              install_name_tool -change "$ref" "@rpath/${basename_ref}" "$dylib"
+              changed=1
+            fi
+          done
+          if [ $changed -eq 1 ]; then codesign --force --sign - "$dylib"; fi
         done
 
         # --------------------------------------------------
