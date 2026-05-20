@@ -302,9 +302,9 @@ jobs:
 
         # Rewrite boost source paths in CMake configs
         echo "Rewriting Boost source paths in CMake configs..."
-        grep -rlI "${BOOST_SRC}" install/lib/cmake/ | while IFS= read -r f; do
-          [ -L "$f" ] && continue
-          sed -i '' "s|${BOOST_SRC}|${PLACEHOLDER}|g" "$f"
+        find install/lib/cmake -name "*.cmake" ! -type l | while IFS= read -r f; do
+          grep -qI "boost-1\.89" "$f" 2>/dev/null || continue
+          sed -i '' "s|[^\"]*/boost-1\.89|${PLACEHOLDER}|g" "$f"
         done
         
         echo "Copying Boost dylibs into install/lib..."
