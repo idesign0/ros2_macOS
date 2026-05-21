@@ -15,10 +15,10 @@ mark_as_advanced(boost_stacktrace_noop_DIR)
 get_filename_component(_BOOST_CMAKEDIR "${CMAKE_CURRENT_LIST_DIR}/../" REALPATH)
 
 # If the computed and the original directories are symlink-equivalent, use original
-if(EXISTS "/Users/dhruvpatel29/kilted-ros2/src/ros-commondep/boost-1.89/lib/cmake")
-  get_filename_component(_BOOST_CMAKEDIR_ORIGINAL "/Users/dhruvpatel29/kilted-ros2/src/ros-commondep/boost-1.89/lib/cmake" REALPATH)
+if(EXISTS "/Users/dhruvpatel29/jazzy-ros2/src/ros-commondep/boost-1.89/lib/cmake")
+  get_filename_component(_BOOST_CMAKEDIR_ORIGINAL "/Users/dhruvpatel29/jazzy-ros2/src/ros-commondep/boost-1.89/lib/cmake" REALPATH)
   if(_BOOST_CMAKEDIR STREQUAL _BOOST_CMAKEDIR_ORIGINAL)
-    set(_BOOST_CMAKEDIR "/Users/dhruvpatel29/kilted-ros2/src/ros-commondep/boost-1.89/lib/cmake")
+    set(_BOOST_CMAKEDIR "/Users/dhruvpatel29/jazzy-ros2/src/ros-commondep/boost-1.89/lib/cmake")
   endif()
   unset(_BOOST_CMAKEDIR_ORIGINAL)
 endif()

@@ -294,11 +294,14 @@ jobs:
         echo "Copying Boost headers into install/include..."
         cp -r "${BOOST_INC_DIR}/boost" install/include/
 
-        # CMake configs
+        # CMake configs (shared only — skip -static dirs, no .a bundled)
         echo "Copying Boost CMake configs into install/lib/cmake..."
         mkdir -p install/lib/cmake
         cp -r "${BOOST_CMAKE_DIR}"/Boost* install/lib/cmake/ 2>/dev/null || true
-        cp -r "${BOOST_CMAKE_DIR}"/boost* install/lib/cmake/ 2>/dev/null || true
+        for d in "${BOOST_CMAKE_DIR}"/boost*/; do
+          [[ "$d" == *-static/ ]] && continue
+          cp -r "$d" install/lib/cmake/
+        done
 
         # Rewrite boost source paths in CMake configs
         echo "Rewriting Boost source paths in CMake configs..."
