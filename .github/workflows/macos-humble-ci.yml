@@ -266,6 +266,15 @@ jobs:
         done
         echo "Path rewriting done."
 
+        # Rewrite runner's boost include path baked into cmake export files
+        RUNNER_BOOST_INC="/Users/runner/work/ros2_macOS/ros2_macOS/ros-commondep/boost-1.89/include"
+        echo "Rewriting runner boost include paths in cmake exports..."
+        (grep -rlI "ros-commondep/boost-1.89" install/ || true) | while IFS= read -r f; do
+          [ -L "$f" ] && continue
+          sed -i '' "s|${RUNNER_BOOST_INC}|${PLACEHOLDER}/include|g" "$f"
+        done
+        echo "Boost include path rewriting done."
+
         echo "Rewriting runner paths in binary dylibs..."
         find install/lib -name "*.dylib" ! -type l | while read dylib; do
           changed=0
