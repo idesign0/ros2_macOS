@@ -309,6 +309,7 @@ jobs:
         cp -r "${BOOST_CMAKE_DIR}"/Boost* install/lib/cmake/ 2>/dev/null || true
         for d in "${BOOST_CMAKE_DIR}"/boost*/; do
           [[ "$d" == *-static/ ]] && continue
+          d="${d%/}"
           cp -r "$d" install/lib/cmake/
         done
 
