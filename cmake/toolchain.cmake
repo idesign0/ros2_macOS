@@ -186,7 +186,22 @@ add_compile_options(
         -Wno-error=deprecated-literal-operator
         -Wno-error=braced-scalar-init
         -Wno-error=unknown-warning-option
+        -Wno-error=thread-safety-analysis
+        -Wno-thread-safety-analysis
  )
+
+# --- macOS SDK sysroot (must use xcrun — xcodebuild -n was removed in Xcode 26) ---
+if(NOT DEFINED CMAKE_OSX_SYSROOT OR CMAKE_OSX_SYSROOT STREQUAL "")
+    execute_process(
+        COMMAND xcrun --sdk macosx --show-sdk-path
+        OUTPUT_VARIABLE _detected_sysroot
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(_detected_sysroot)
+        set(CMAKE_OSX_SYSROOT "${_detected_sysroot}" CACHE PATH "macOS SDK sysroot" FORCE)
+    endif()
+endif()
 
 # macOS specific linker
 set(CMAKE_MACOSX_RPATH ON)
