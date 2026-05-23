@@ -23,14 +23,6 @@ jobs:
         submodules: false
         fetch-depth: 0
 
-    - name: Cache git submodules
-      uses: actions/cache@v4
-      with:
-        path: .git/modules
-        key: ${{ runner.os }}-git-submodules-${{ github.ref }}
-        restore-keys: |
-          ${{ runner.os }}-git-submodules-
-
     - name: Update submodules
       run: |
         git submodule sync --recursive
@@ -40,6 +32,15 @@ jobs:
       run: |
         chmod +x scripts/sync-submodules-branches.sh
         ./scripts/sync-submodules-branches.sh
+
+    - name: Configure git credentials for fork updates
+      run: |
+        git config --global url."https://${{ secrets.CATS_DEPLOY_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+    - name: Update forked submodules from upstream
+      run: |
+        chmod +x scripts/update_forked_submodules.sh
+        ./scripts/update_forked_submodules.sh
 
     # --------------------------------------------------
     # Homebrew cache
