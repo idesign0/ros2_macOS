@@ -612,7 +612,7 @@
 	branch = jazzy
 [submodule "gazebo-release/gz_ogre_next_vendor"]
 	path = gazebo-release/gz_ogre_next_vendor
-	url = https://github.com/gazebo-release/gz_ogre_next_vendor.git
+	url = https://github.com/idesign0/id_gz_ogre_next_vendor.git
 	branch = jazzy
 [submodule "ros-visualization/rqt_plot"]
 	path = ros-visualization/rqt_plot
@@ -696,7 +696,7 @@
 	branch = jazzy
 [submodule "gazebo-release/gz_dartsim_vendor"]
 	path = gazebo-release/gz_dartsim_vendor
-	url = https://github.com/gazebo-release/gz_dartsim_vendor.git
+	url = https://github.com/idesign0/id_gz_dartsim_vendor.git
 	branch = jazzy
 [submodule "ros2/rosidl_dynamic_typesupport_fastrtps"]
 	path = ros2/rosidl_dynamic_typesupport_fastrtps
