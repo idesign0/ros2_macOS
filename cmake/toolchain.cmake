@@ -139,6 +139,9 @@ if(NOT DEFINED CMAKE_OSX_SYSROOT OR CMAKE_OSX_SYSROOT STREQUAL "")
         ERROR_QUIET
     )
     if(_detected_sysroot)
+        # Strip embedded newlines — xcrun may mix warnings into stdout on some Xcode versions
+        string(REGEX REPLACE "[\r\n].*" "" _detected_sysroot "${_detected_sysroot}")
+        string(STRIP "${_detected_sysroot}" _detected_sysroot)
         set(CMAKE_OSX_SYSROOT "${_detected_sysroot}" CACHE PATH "macOS SDK sysroot" FORCE)
     endif()
 endif()
