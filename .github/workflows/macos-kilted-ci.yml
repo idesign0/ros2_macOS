@@ -183,7 +183,6 @@ jobs:
     # --------------------------------------------------
     - name: Build full workspace
       shell: bash
-      continue-on-error: true
       run: |
         colcon build \
           --merge-install \
