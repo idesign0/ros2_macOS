@@ -1,0 +1,31 @@
+name: Nightly dispatch (all distros)
+
+# Scheduled workflows only run from the default branch (jazzy), and they only
+# run the workflow file as it exists there. To build all three distros on a
+# timer we therefore dispatch each branch's own CI workflow with its own ref:
+# each dispatched run executes on that branch, so GITHUB_REF_NAME (and the
+# DISTRO it derives) is correct without changing the build workflows at all.
+#
+# Requirement: each macos-<distro>-ci.yml must also exist on this default
+# branch to be dispatchable (their push: filters keep them from running here).
+
+on:
+  schedule:
+    - cron: "0 3 * * *"     # every day at 03:00 UTC
+  workflow_dispatch:         # manual trigger for testing
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest   # cheap runner — the macOS builds run as their own dispatched runs
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [humble, jazzy, kilted]
+    steps:
+      - name: Trigger ${{ matrix.branch }} build
+        env:
+          GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+        run: |
+          gh workflow run "macos-${{ matrix.branch }}-ci.yml" \
+            --repo idesign0/ros2_macOS \
+            --ref "${{ matrix.branch }}"

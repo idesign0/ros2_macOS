@@ -1,0 +1,414 @@
+name: macOS ROS 2 Humble CI (Apple Silicon)
+
+on:
+  push:
+    branches: [humble]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    env:
+      CI_BUILD: TRUE
+    timeout-minutes: 240
+
+    steps:
+    # --------------------------------------------------
+    # Checkout repository
+    # --------------------------------------------------
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+        fetch-depth: 0
+
+    - name: Update submodules
+      run: |
+        git submodule sync --recursive
+        git submodule update --init --recursive --jobs 8
+
+    - name: Sync submodule branches
+      run: |
+        chmod +x scripts/sync-submodules-branches.sh
+        ./scripts/sync-submodules-branches.sh
+
+    - name: Configure git credentials for fork updates
+      run: |
+        git config --global url."https://${{ secrets.CATS_DEPLOY_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+    - name: Update forked submodules from upstream
+      run: |
+        chmod +x scripts/update_forked_submodules.sh
+        ./scripts/update_forked_submodules.sh
+
+    # --------------------------------------------------
+    # Homebrew cache
+    # --------------------------------------------------
+    - name: Cache Homebrew directories
+      uses: actions/cache@v4
+      id: cache-brew
+      with:
+        path: /opt/homebrew
+        key: ${{ runner.os }}-brew-v2-${{ hashFiles('brew-packages/install_brew_packages.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-brew-v2-
+
+    - name: Configure Homebrew parallelism
+      run: |
+        echo "HOMEBREW_MAKE_JOBS=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
+        echo "HOMEBREW_CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
+
+    # --------------------------------------------------
+    # Homebrew install
+    # --------------------------------------------------
+    - name: Update Homebrew and install base packages
+      run: |
+        brew tap osrf/simulation
+        brew install \
+          graphviz \
+          eigen@3 \
+          GeographicLib \
+          vtk
+      
+        # Symlink eigen3 for standard discovery
+        sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
+
+    - name: Install Homebrew packages via script
+      run: |
+        chmod +x brew-packages/install_brew_packages.sh
+        ./brew-packages/install_brew_packages.sh
+        brew update
+
+    # --------------------------------------------------
+    # Python 3.11
+    # --------------------------------------------------
+    - name: Python 3.11
+      run: |
+        export PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
+        which python3
+        python3 --version
+
+        echo "/Library/Frameworks/Python.framework/Versions/3.11/bin" >> $GITHUB_PATH
+        
+        python3 -m pip install --upgrade pip --break-system-packages
+        python3 -m pip install -U \
+          --break-system-packages \
+          --config-settings="--global-option=build_ext" \
+          --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
+          --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
+          argcomplete catkin_pkg colcon-common-extensions coverage \
+          cryptography empy==3.3.4 flake8 flake8-blind-except==0.1.1 flake8-builtins \
+          flake8-class-newline flake8-comprehensions flake8-deprecated \
+          flake8-docstrings flake8-import-order flake8-quotes \
+          importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
+          nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
+          pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard jinja2
+
+    # --------------------------------------------------
+    # Environment
+    # --------------------------------------------------
+    - name: Setup build environment
+      run: |
+        echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> $GITHUB_ENV
+        echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5):$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
+        echo "GZ_VERSION=harmonic" >> $GITHUB_ENV
+        echo "CMAKE_TOOLCHAIN_FILE=${GITHUB_WORKSPACE}/cmake/toolchain.cmake" >> $GITHUB_ENV
+
+    # --------------------------------------------------
+    # Build External Gazebo Workspace
+    # --------------------------------------------------
+    - name: Build External Gazebo
+      shell: bash
+      run: |
+        # Create the specific directory structure you requested
+        mkdir -p gz-harmonic
+        cd gz-harmonic
+        git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b harmonic .
+        cd ..
+        brew unlink protobuf || true
+        colcon build \
+          --packages-select protobuf \
+          --executor parallel \
+          --parallel-workers $(sysctl -n hw.ncpu) \
+          --merge-install \
+          --continue-on-error \
+          --cmake-args \
+          -DBUILD_SHARED_LIBS=ON \
+          -Dprotobuf_BUILD_TESTS=OFF \
+          -Dprotobuf_BUILD_CONFORMANCE=OFF \
+          -Dprotobuf_BUILD_EXAMPLES=OFF \
+          -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \
+          -DCI_BUILD=TRUE
+
+        colcon build \
+          --base-paths gz-harmonic/ --packages-ignore protobuf \
+          --executor parallel \
+          --parallel-workers $(sysctl -n hw.ncpu) \
+          --merge-install \
+          --continue-on-error \
+          --cmake-args \
+          -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \
+          -DCI_BUILD=TRUE
+
+        touch gz-harmonic/COLCON_IGNORE
+
+    # --------------------------------------------------
+    # Homebrew: Unlink packages (ALWAYS run)
+    # --------------------------------------------------
+    - name: Unlink unwanted Homebrew packages
+      run: |
+        set +e
+        echo "Cleaning conflicting Homebrew packages..."
+
+        # Unlink (headers/libs stay but are not active)
+        brew unlink boost || true
+        brew unlink boost-python3 || true
+        brew unlink xtensor || true
+        brew unlink xdm || true
+        brew unlink xtl || true
+        brew unlink qt || true
+        brew unlink asio || true
+        brew unlink orocos-kdl || true
+        brew unlink ceres-solver || true
+        brew unlink yaml-cpp || true
+
+        echo "Homebrew cleanup completed."
+        
+    # --------------------------------------------------
+    # Build full workspace
+    # --------------------------------------------------
+    - name: Build full workspace
+      shell: bash
+      run: |
+        colcon build \
+          --merge-install \
+          --executor parallel \
+          --parallel-workers $(sysctl -n hw.ncpu) \
+          --cmake-clean-cache \
+          --continue-on-error \
+          --packages-ignore qt_gui_cpp rqt_gui_cpp nav2_system_tests \
+          --cmake-args \
+          -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" \
+          -DCI_BUILD=TRUE       
+    # --------------------------------------------------
+    # Sanity check
+    # --------------------------------------------------
+    - name: Source workspace & sanity check
+      shell: bash
+      continue-on-error: true
+      run: |
+        source install/setup.bash
+        ros2 --help
+        timeout 5s ros2 run demo_nodes_cpp talker || true
+
+    # --------------------------------------------------
+    # Deploy Release + Update Homebrew Formula
+    # --------------------------------------------------
+    - name: Deploy Release + Update Formula
+      if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      shell: bash
+      env:
+        TAP_REPO: "idesign0/homebrew-ros2"
+        API_TOKEN_GITHUB: ${{ secrets.CATS_DEPLOY_TOKEN }}
+      run: |
+        set -e
+
+        # --------------------------------------------------
+        # Git config
+        # --------------------------------------------------
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+        # --------------------------------------------------
+        # Determine distro from branch
+        # --------------------------------------------------
+        DISTRO="${GITHUB_REF_NAME}"
+
+        echo "DISTRO=${DISTRO}"
+
+        # --------------------------------------------------
+        # Version format: YY.MM.DD.RUN
+        # Example: 26.05.11.1
+        # --------------------------------------------------
+        DATE_VERSION=$(date +"%y.%m.%d")
+        VERSION="${DATE_VERSION}.${GITHUB_RUN_NUMBER}"
+
+        echo "VERSION=${VERSION}"
+
+        # --------------------------------------------------
+        # Archive naming
+        # --------------------------------------------------
+        ARCHIVE_NAME="ros2-${DISTRO}-macos-${VERSION}.tar.gz"
+
+        echo "ARCHIVE_NAME=${ARCHIVE_NAME}"
+
+        # --------------------------------------------------
+        # Verify install folder
+        # --------------------------------------------------
+        if [ ! -d "install" ]; then
+          echo "ERROR: install directory not found!"
+          exit 1
+        fi
+
+        # --------------------------------------------------
+        # Rewrite hardcoded runner paths in text files ---
+        # --------------------------------------------------
+
+        RUNNER_PREFIX="/Users/runner/work/ros2_macOS/ros2_macOS/install"
+        PLACEHOLDER="/opt/homebrew/opt/ros2-${DISTRO}"
+
+        echo "Rewriting runner paths in text files..."
+        grep -rlI "${RUNNER_PREFIX}" install/ | while IFS= read -r f; do
+          [ -L "$f" ] && continue
+          sed -i '' "s|${RUNNER_PREFIX}|${PLACEHOLDER}|g" "$f"
+        done
+        echo "Path rewriting done."
+
+        # Rewrite runner's boost include path baked into cmake export files
+        RUNNER_BOOST_INC="/Users/runner/work/ros2_macOS/ros2_macOS/ros-commondep/boost-1.89/include"
+        echo "Rewriting runner boost include paths in cmake exports..."
+        (grep -rlI "ros-commondep/boost-1.89" install/ || true) | while IFS= read -r f; do
+          [ -L "$f" ] && continue
+          sed -i '' "s|${RUNNER_BOOST_INC}|${PLACEHOLDER}/include|g" "$f"
+        done
+        echo "Boost include path rewriting done."
+
+        echo "Rewriting runner paths in binary dylibs..."
+        find install/lib -name "*.dylib" ! -type l | while read dylib; do
+          changed=0
+          for ref in $(otool -L "$dylib" 2>/dev/null | awk '{print $1}' | grep "/Users/runner/" | grep -v "^@" || true); do
+            basename_ref=$(basename "$ref")
+            if [ -f "install/lib/${basename_ref}" ]; then
+              install_name_tool -change "$ref" "@rpath/${basename_ref}" "$dylib"
+              changed=1
+            fi
+          done
+        if [ $changed -eq 1 ]; then codesign --force --sign - "$dylib"; fi
+        done
+
+        # --------------------------------------------------
+        # Bundle Boost into install/lib and fix install names
+        # --------------------------------------------------
+        BOOST_SRC="${GITHUB_WORKSPACE}/ros-commondep/boost-1.89"
+        BOOST_LIB_DIR="${GITHUB_WORKSPACE}/ros-commondep/boost-1.89/lib"
+        BOOST_INC_DIR="${BOOST_SRC}/include"
+        BOOST_CMAKE_DIR="${BOOST_SRC}/lib/cmake"
+
+        # headers
+        echo "Copying Boost headers into install/include..."
+        cp -r "${BOOST_INC_DIR}/boost" install/include/
+
+        # CMake configs (shared only — skip -static dirs, no .a bundled)
+        echo "Copying Boost CMake configs into install/lib/cmake..."
+        mkdir -p install/lib/cmake
+        cp -r "${BOOST_CMAKE_DIR}"/Boost* install/lib/cmake/ 2>/dev/null || true
+        for d in "${BOOST_CMAKE_DIR}"/boost*/; do
+          [[ "$d" == *-static/ ]] && continue
+          d="${d%/}"
+          cp -r "$d" install/lib/cmake/
+        done
+
+        # Rewrite boost source paths in CMake configs
+        echo "Rewriting Boost source paths in CMake configs..."
+        find install/lib/cmake -name "*.cmake" ! -type l | while IFS= read -r f; do
+          grep -qI "boost-1\.89" "$f" 2>/dev/null || continue
+          sed -i '' "s|[^\"]*/boost-1\.89|${PLACEHOLDER}|g" "$f"
+        done
+        
+        echo "Copying Boost dylibs into install/lib..."
+        cp -P "${BOOST_LIB_DIR}"/libboost_*.dylib install/lib/
+
+        echo "Fixing Boost install names..."
+        for lib in install/lib/libboost_*.dylib; do
+          [ -L "$lib" ] && continue
+          basename=$(basename "$lib")
+          install_name_tool -id "@rpath/${basename}" "$lib"
+          codesign --force --sign - "$lib"   # ← ADD THIS
+        done
+
+        echo "Boost bundled."
+
+        echo "Rewriting absolute Boost references in all dylibs..."
+        find install/lib -name "*.dylib" ! -type l | while read dylib; do
+          changed=0
+          for ref in $(otool -L "$dylib" 2>/dev/null | awk '{print $1}' | grep "libboost_" | grep -v "^@" || true); do
+            basename_ref=$(basename "$ref")
+            if [ -f "install/lib/${basename_ref}" ]; then
+              install_name_tool -change "$ref" "@rpath/${basename_ref}" "$dylib"
+              changed=1
+            fi
+          done
+          if [ $changed -eq 1 ]; then codesign --force --sign - "$dylib"; fi
+        done
+
+        # --------------------------------------------------
+        # Create tar.gz
+        # --------------------------------------------------
+        tar -czf "${ARCHIVE_NAME}" install
+
+        # --------------------------------------------------
+        # Generate SHA256
+        # --------------------------------------------------
+        SHA256=$(shasum -a 256 "${ARCHIVE_NAME}" | awk '{print $1}')
+
+        echo "SHA256=${SHA256}"
+
+        # --------------------------------------------------
+        # Release tag
+        # Example:
+        # jazzy-26.05.11.1
+        # --------------------------------------------------
+        RELEASE_TAG="${DISTRO}-${VERSION}"
+
+        echo "RELEASE_TAG=${RELEASE_TAG}"
+
+        # --------------------------------------------------
+        # Create GitHub Release
+        # --------------------------------------------------
+        GH_TOKEN="${API_TOKEN_GITHUB}" gh release create "${RELEASE_TAG}" \
+          --repo "${TAP_REPO}" \
+          --title "${DISTRO} ${VERSION}" \
+          --notes "ROS 2 ${DISTRO} macOS build ${VERSION}" \
+          "${ARCHIVE_NAME}"
+
+        # --------------------------------------------------
+        # Clone Homebrew tap repo
+        # --------------------------------------------------
+        git clone "https://${API_TOKEN_GITHUB}@github.com/${TAP_REPO}.git" tap_repo
+
+        cd tap_repo
+
+        # --------------------------------------------------
+        # Formula file
+        # --------------------------------------------------
+        FORMULA_FILE="Formula/ros2-${DISTRO}.rb"
+
+        if [ ! -f "${FORMULA_FILE}" ]; then
+          echo "ERROR: Formula file not found: ${FORMULA_FILE}"
+          exit 1
+        fi
+
+        # --------------------------------------------------
+        # Update version
+        # --------------------------------------------------
+        sed -i '' "s/version \".*\"/version \"${VERSION}\"/" "${FORMULA_FILE}"
+
+        # --------------------------------------------------
+        # Update SHA256
+        # --------------------------------------------------
+        sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" "${FORMULA_FILE}"
+
+        # --------------------------------------------------
+        # Commit changes
+        # --------------------------------------------------
+        git add "${FORMULA_FILE}"
+
+        git commit -m "Update ros2-${DISTRO} to ${VERSION}" || echo "No changes"
+
+        # --------------------------------------------------
+        # Push changes
+        # --------------------------------------------------
+        git push
+ 
