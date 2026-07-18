@@ -365,3 +365,6 @@ if(CMAKE_PROJECT_NAME STREQUAL "orocos_kdl_vendor")
     set(orocos_kdl_FOUND OFF CACHE BOOL "" FORCE)
     set(FORCE_BUILD_VENDOR_PKG ON CACHE BOOL "" FORCE)
 endif()
+
+# OpenCV (Homebrew)
+set(OpenCV_DIR "/opt/homebrew/opt/opencv@4/lib/cmake/opencv4" CACHE PATH "" FORCE)
