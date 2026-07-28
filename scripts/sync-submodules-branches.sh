@@ -1,6 +1,11 @@
 #!/bin/bash
-set -e
-set -o pipefail
+# Intentionally NOT `set -e` / `set -o pipefail`: this script walks EVERY
+# submodule and must tolerate individual failures (non-GitHub URLs where the
+# owner `grep` finds no match, missing branches, un-clonable repos) without
+# aborting the whole run. Failures are collected in MISSING_BRANCHES and
+# reported in the summary instead.
+set +e
+set +o pipefail
 
 MISSING_BRANCHES=()
 
@@ -50,8 +55,8 @@ while read -r key path; do
     UPSTREAM_URL=$(git config -f "$MAIN_ROOT/.gitmodules" --get submodule."$path".url)
     ORIGIN_URL=$(git remote get-url origin)
 
-    origin_owner=$(echo "$ORIGIN_URL" | grep -oE 'github.com/([^/]+)/' | cut -d'/' -f2)
-    upstream_owner=$(echo "$UPSTREAM_URL" | grep -oE 'github.com/([^/]+)/' | cut -d'/' -f2)
+    origin_owner=$(echo "$ORIGIN_URL" | grep -oE 'github.com/([^/]+)/' | cut -d'/' -f2 || true)
+    upstream_owner=$(echo "$UPSTREAM_URL" | grep -oE 'github.com/([^/]+)/' | cut -d'/' -f2 || true)
 
     if [ -n "$UPSTREAM_URL" ] && [ "$origin_owner" != "$upstream_owner" ]; then
         if ! git remote | grep -q upstream; then
