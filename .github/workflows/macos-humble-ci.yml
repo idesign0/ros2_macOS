@@ -2,7 +2,7 @@ name: macOS ROS 2 Humble CI (Apple Silicon)
 
 on:
   push:
-    branches: [humble]
+    branches: [humble, humble-new]
   pull_request:
   workflow_dispatch:
 
@@ -180,6 +180,8 @@ jobs:
     # Build full workspace
     # --------------------------------------------------
     - name: Build full workspace
+      # tolerant on -new branches (see all package failures), strict on release
+      continue-on-error: ${{ endsWith(github.ref_name, '-new') }}
       shell: bash
       run: |
         colcon build \
@@ -207,7 +209,7 @@ jobs:
     # Deploy Release + Update Homebrew Formula
     # --------------------------------------------------
     - name: Deploy Release + Update Formula
-      if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && !endsWith(github.ref_name, '-new')
       shell: bash
       env:
         TAP_REPO: "idesign0/homebrew-ros2"

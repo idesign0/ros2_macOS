@@ -1,0 +1,245 @@
+[2026-07-28 20:41:29] === refresh start ===
+humble: 2296 packages, 800 repos (11 packages had no source_repository)
+jazzy: 2245 packages, 764 repos (20 packages had no source_repository)
+kilted: 1744 packages, 637 repos (11 packages had no source_repository)
+[2026-07-28 20:41:31] rsdistro.py ok
+wrote /Users/dhruvpatel29/humble-ros2/src/scripts/ros2pkg/manifests/submodule_index.json
+  humble: 163 submodules indexed
+  jazzy: 191 submodules indexed
+  kilted: 188 submodules indexed
+[2026-07-28 20:41:31] index rebuilt
+
+humble: 800 repos  (146 already installed, 654 to add)
+classified: 673/800 (84%)   _incoming: 127
+
+  aerial         -> aerial             11 repos
+  autonomous_driving -> autonomous_driving   29 repos
+  build_system   -> ament              37 repos
+  control        -> ros2_control       38 repos
+  core           -> ros2               81 repos
+      interfaces     49
+  drivers        -> ros-drivers       157 repos
+      arm            25
+      camera         17
+      imu_gnss       20
+      lidar          23
+      mobile_base    30
+  fleet          -> fleet              19 repos
+  geometry_tf    -> geometry           20 repos
+  manipulation   -> moveit             36 repos
+  micro_ros      -> micro_ros           3 repos
+  middleware     -> middleware         19 repos
+  navigation     -> ros-planning       55 repos
+  perception     -> ros-perception     53 repos
+      pointcloud     15
+      vision         33
+  simulation     -> gzsim              31 repos
+  teleop         -> teleop             10 repos
+  tooling        -> ros-tooling        23 repos
+  visualization  -> ros-visualization   51 repos
+  _incoming      -> _incoming         127 repos
+
+  wrote /Users/dhruvpatel29/humble-ros2/src/scripts/ros2pkg/manifests/humble_domains.json
+  humble: 643 add-commands across 26 scripts -> /Users/dhruvpatel29/humble-ros2/src/scripts/ros2pkg/manifests/adds/humble/
+[2026-07-28 20:41:31] --- humble ---
+humble: 654 not-yet-added (0 new since last refresh, 654 still pending, 11 need manual url)
+  [PENDING] _incoming/adaptive_component
+  [PENDING] _incoming/agni_tf_tools
+  [PENDING] _incoming/apex_containers
+  [PENDING] _incoming/apex_test_tools
+  [PENDING] _incoming/async_web_server_cpp
+  [PENDING] _incoming/automatika_embodied_agents
+  [PENDING] _incoming/automatika_ros_sugar
+  [PENDING] _incoming/aws-robomaker-small-warehouse-world
+  [PENDING] _incoming/bag2_to_image
+  [PENDING] _incoming/bcr_bot
+  [PENDING] _incoming/bob_llm
+  [PENDING] _incoming/boost_geometry_util
+  [PENDING] _incoming/camera_ros
+  [PENDING] _incoming/classic_bags
+  [PENDING] _incoming/coal
+  [PENDING] _incoming/color_names
+  [PENDING] _incoming/color_util
+  [PENDING] _incoming/connection_inspector
+  [PENDING] _incoming/crocoddyl
+  [PENDING] _incoming/crx_kinematics
+  [PENDING] _incoming/ecl_core
+  [PENDING] _incoming/ecl_lite
+  [PENDING] _incoming/ecl_tools
+  [PENDING] _incoming/eigenpy
+  [PENDING] _incoming/eiquadprog
+  [PENDING] _incoming/fast_gicp
+  [PENDING] _incoming/ffmpeg_encoder_decoder
+  [PENDING] _incoming/ffmpeg_image_transport
+  [PENDING] _incoming/ffmpeg_image_transport_tools
+  [PENDING] _incoming/fields2cover
+  [PENDING] _incoming/fkie_message_filters
+  [PENDING] _incoming/flex_sync
+  [PENDING] _incoming/fmi_adapter
+  [PENDING] _incoming/fogros2
+  [PENDING] _incoming/grbl_ros
+  [PENDING] _incoming/gtsam
+  [PENDING] _incoming/hatchbed_common
+  [PENDING] _incoming/hebi_cpp_api
+  [PENDING] _incoming/hpp-fcl
+  [PENDING] _incoming/hri
+  ... and 614 more (raise --limit or see *_pending.json)
+  wrote /Users/dhruvpatel29/humble-ros2/src/scripts/ros2pkg/manifests/humble_pending.json
+  snapshot updated (800 rosdistro repos recorded)
+
+jazzy: 764 repos  (176 already installed, 588 to add)
+classified: 631/764 (83%)   _incoming: 133
+
+  aerial         -> aerial              6 repos
+  autonomous_driving -> autonomous_driving   23 repos
+  build_system   -> ament              43 repos
+  control        -> ros2_control       24 repos
+  core           -> ros2               76 repos
+      interfaces     44
+  drivers        -> ros-drivers       137 repos
+      arm            21
+      camera         14
+      imu_gnss       16
+      lidar          19
+      mobile_base    29
+  fleet          -> fleet              18 repos
+  geometry_tf    -> geometry           19 repos
+  manipulation   -> moveit             33 repos
+  micro_ros      -> micro_ros           3 repos
+  middleware     -> middleware         21 repos
+  navigation     -> ros-planning       53 repos
+  perception     -> ros-perception     54 repos
+      pointcloud     16
+      vision         33
+  simulation     -> gzsim              33 repos
+  teleop         -> teleop             11 repos
+  tooling        -> ros-tooling        23 repos
+  visualization  -> ros-visualization   54 repos
+  _incoming      -> _incoming         133 repos
+
+  wrote /Users/dhruvpatel29/humble-ros2/src/scripts/ros2pkg/manifests/jazzy_domains.json
+  jazzy: 576 add-commands across 26 scripts -> /Users/dhruvpatel29/humble-ros2/src/scripts/ros2pkg/manifests/adds/jazzy/
+[2026-07-28 20:41:31] --- jazzy ---
+jazzy: 588 not-yet-added (0 new since last refresh, 588 still pending, 12 need manual url)
+  [PENDING] _incoming/adaptive_bridge
+  [PENDING] _incoming/adaptive_component
+  [PENDING] _incoming/agni_tf_tools
+  [PENDING] _incoming/apex_test_tools
+  [PENDING] _incoming/async_web_server_cpp
+  [PENDING] _incoming/automatika_embodied_agents
+  [PENDING] _incoming/automatika_ros_sugar
+  [PENDING] _incoming/aws-robomaker-small-warehouse-world
+  [PENDING] _incoming/azure_iot_sdk_c
+  [PENDING] _incoming/bag2_to_image
+  [PENDING] _incoming/bcr_bot
+  [PENDING] _incoming/boost_geometry_util
+  [PENDING] _incoming/camera_ros
+  [PENDING] _incoming/classic_bags
+  [PENDING] _incoming/cm_executors
+  [PENDING] _incoming/coal
+  [PENDING] _incoming/color_names
+  [PENDING] _incoming/color_util
+  [PENDING] _incoming/connection_inspector
+  [PENDING] _incoming/cras_ros_utils
+  [PENDING] _incoming/crocoddyl
+  [PENDING] _incoming/crx_kinematics
+  [PENDING] _incoming/data_tamer_tools
+  [PENDING] _incoming/ecl_core
+  [PENDING] _incoming/ecl_lite
+  [PENDING] _incoming/ecl_tools
+  [PENDING] _incoming/eigenpy
+  [PENDING] _incoming/eiquadprog
+  [PENDING] _incoming/ffmpeg_encoder_decoder
+  [PENDING] _incoming/ffmpeg_image_transport
+  [PENDING] _incoming/ffmpeg_image_transport_tools
+  [PENDING] _incoming/fields2cover
+  [PENDING] _incoming/fkie_message_filters
+  [PENDING] _incoming/flex_sync
+  [PENDING] _incoming/fmi_adapter
+  [PENDING] _incoming/frame_editor
+  [PENDING] _incoming/grbl_ros
+  [PENDING] _incoming/gstreamer_ros_babel_fish
+  [PENDING] _incoming/gtsam
+  [PENDING] _incoming/hatchbed_common
+  ... and 548 more (raise --limit or see *_pending.json)
+  wrote /Users/dhruvpatel29/humble-ros2/src/scripts/ros2pkg/manifests/jazzy_pending.json
+  snapshot updated (764 rosdistro repos recorded)
+
+kilted: 637 repos  (172 already installed, 465 to add)
+classified: 525/637 (82%)   _incoming: 112
+
+  aerial         -> aerial              3 repos
+  autonomous_driving -> autonomous_driving   17 repos
+  build_system   -> ament              40 repos
+  control        -> ros2_control       20 repos
+  core           -> ros2               69 repos
+      interfaces     38
+  drivers        -> ros-drivers        88 repos
+      arm            14
+      camera         10
+      imu_gnss       14
+      lidar          16
+      mobile_base    10
+  fleet          -> fleet              19 repos
+  geometry_tf    -> geometry           18 repos
+  manipulation   -> moveit             24 repos
+  micro_ros      -> micro_ros           3 repos
+  middleware     -> middleware         22 repos
+  navigation     -> ros-planning       48 repos
+  perception     -> ros-perception     48 repos
+      pointcloud     13
+      vision         30
+  simulation     -> gzsim              27 repos
+  teleop         -> teleop              8 repos
+  tooling        -> ros-tooling        21 repos
+  visualization  -> ros-visualization   50 repos
+  _incoming      -> _incoming         112 repos
+
+  wrote /Users/dhruvpatel29/humble-ros2/src/scripts/ros2pkg/manifests/kilted_domains.json
+  kilted: 458 add-commands across 26 scripts -> /Users/dhruvpatel29/humble-ros2/src/scripts/ros2pkg/manifests/adds/kilted/
+[2026-07-28 20:41:32] --- kilted ---
+kilted: 465 not-yet-added (0 new since last refresh, 465 still pending, 7 need manual url)
+  [PENDING] _incoming/adaptive_component
+  [PENDING] _incoming/apex_test_tools
+  [PENDING] _incoming/async_web_server_cpp
+  [PENDING] _incoming/automatika_embodied_agents
+  [PENDING] _incoming/automatika_ros_sugar
+  [PENDING] _incoming/aws-robomaker-small-warehouse-world
+  [PENDING] _incoming/azure_iot_sdk_c
+  [PENDING] _incoming/bag2_to_image
+  [PENDING] _incoming/boost_geometry_util
+  [PENDING] _incoming/camera_ros
+  [PENDING] _incoming/classic_bags
+  [PENDING] _incoming/coal
+  [PENDING] _incoming/color_names
+  [PENDING] _incoming/color_util
+  [PENDING] _incoming/cras_ros_utils
+  [PENDING] _incoming/crocoddyl
+  [PENDING] _incoming/crx_kinematics
+  [PENDING] _incoming/ecl_core
+  [PENDING] _incoming/ecl_lite
+  [PENDING] _incoming/ecl_tools
+  [PENDING] _incoming/eigenpy
+  [PENDING] _incoming/eiquadprog
+  [PENDING] _incoming/ffmpeg_encoder_decoder
+  [PENDING] _incoming/ffmpeg_image_transport
+  [PENDING] _incoming/ffmpeg_image_transport_tools
+  [PENDING] _incoming/fields2cover
+  [PENDING] _incoming/fkie_message_filters
+  [PENDING] _incoming/flex_sync
+  [PENDING] _incoming/fmi_adapter
+  [PENDING] _incoming/grbl_ros
+  [PENDING] _incoming/gstreamer_ros_babel_fish
+  [PENDING] _incoming/gtsam
+  [PENDING] _incoming/hatchbed_common
+  [PENDING] _incoming/hebi_cpp_api
+  [PENDING] _incoming/hpp-fcl
+  [PENDING] _incoming/jacro
+  [PENDING] _incoming/laser_segmentation
+  [PENDING] _incoming/libnabo
+  [PENDING] _incoming/libpointmatcher
+  [PENDING] _incoming/linux_isolate_process
+  ... and 425 more (raise --limit or see *_pending.json)
+  wrote /Users/dhruvpatel29/humble-ros2/src/scripts/ros2pkg/manifests/kilted_pending.json
+  snapshot updated (637 rosdistro repos recorded)
+[2026-07-28 20:41:32] === refresh done ===

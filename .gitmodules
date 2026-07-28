@@ -650,3 +650,2047 @@
 	path = ros-drivers/ackermann_msgs
 	url = https://github.com/ros-drivers/ackermann_msgs.git
 	branch = ros2
+[submodule "micro_ros/micro_ros_msgs"]
+	path = micro_ros/micro_ros_msgs
+	url = https://github.com/micro-ROS/micro_ros_msgs.git
+	branch = humble
+[submodule "aerial/aerostack2"]
+	path = aerial/aerostack2
+	url = https://github.com/aerostack2/aerostack2.git
+	branch = main
+[submodule "aerial/ardrone_ros"]
+	path = aerial/ardrone_ros
+	url = https://github.com/vtalpaert/ardrone-ros2.git
+	branch = main
+[submodule "aerial/as2_platform_crazyflie"]
+	path = aerial/as2_platform_crazyflie
+	url = https://github.com/aerostack2/as2_platform_crazyflie.git
+	branch = main
+[submodule "aerial/as2_platform_dji_osdk"]
+	path = aerial/as2_platform_dji_osdk
+	url = https://github.com/aerostack2/as2_platform_dji_osdk.git
+	branch = main
+[submodule "aerial/as2_platform_dji_psdk"]
+	path = aerial/as2_platform_dji_psdk
+	url = https://github.com/aerostack2/as2_platform_dji_psdk.git
+	branch = main
+[submodule "aerial/as2_platform_mavlink"]
+	path = aerial/as2_platform_mavlink
+	url = https://github.com/aerostack2/as2_platform_mavlink.git
+	branch = main
+[submodule "aerial/as2_platform_tello"]
+	path = aerial/as2_platform_tello
+	url = https://github.com/aerostack2/as2_platform_tello.git
+	branch = main
+[submodule "aerial/crazyswarm2"]
+	path = aerial/crazyswarm2
+	url = https://github.com/IMRCLab/crazyswarm2.git
+	branch = main
+[submodule "aerial/mavlink"]
+	path = aerial/mavlink
+	url = https://github.com/ros2-gbp/mavlink-gbp-release.git
+	branch = release/humble/mavlink
+[submodule "aerial/mavros"]
+	path = aerial/mavros
+	url = https://github.com/mavlink/mavros.git
+	branch = ros2
+[submodule "aerial/webots_ros2"]
+	path = aerial/webots_ros2
+	url = https://github.com/cyberbotics/webots_ros2.git
+	branch = master
+[submodule "ament/ament_acceleration"]
+	path = ament/ament_acceleration
+	url = https://github.com/ros-acceleration/ament_acceleration.git
+	branch = rolling
+[submodule "ament/ament_black"]
+	path = ament/ament_black
+	url = https://github.com/botsandus/ament_black.git
+	branch = main
+[submodule "ament/ament_download"]
+	path = ament/ament_download
+	url = https://github.com/samsung-ros/ament_download.git
+	branch = ros2
+[submodule "ament/ament_nodl"]
+	path = ament/ament_nodl
+	url = https://github.com/ubuntu-robotics/ament_nodl.git
+	branch = master
+[submodule "ament/ament_vitis"]
+	path = ament/ament_vitis
+	url = https://github.com/ros-acceleration/ament_vitis.git
+	branch = rolling
+[submodule "ament/aws_sdk_cpp_vendor"]
+	path = ament/aws_sdk_cpp_vendor
+	url = https://github.com/wep21/aws_sdk_cpp_vendor.git
+	branch = main
+[submodule "ament/boost_plugin_loader"]
+	path = ament/boost_plugin_loader
+	url = https://github.com/tesseract-robotics/boost_plugin_loader.git
+	branch = main
+[submodule "ament/catch_ros2"]
+	path = ament/catch_ros2
+	url = https://github.com/ngmor/catch_ros2.git
+	branch = humble
+[submodule "ament/clips_vendor"]
+	path = ament/clips_vendor
+	url = https://github.com/carologistics/clips_vendor.git
+	branch = main
+[submodule "ament/fmilibrary_vendor"]
+	path = ament/fmilibrary_vendor
+	url = https://github.com/boschresearch/fmilibrary_vendor.git
+	branch = humble
+[submodule "ament/jrl_cmakemodules"]
+	path = ament/jrl_cmakemodules
+	url = https://github.com/jrl-umi3218/jrl-cmakemodules.git
+	branch = master
+[submodule "ament/mrt_cmake_modules"]
+	path = ament/mrt_cmake_modules
+	url = https://github.com/KIT-MRT/mrt_cmake_modules.git
+	branch = master
+[submodule "ament/ros2_medkit"]
+	path = ament/ros2_medkit
+	url = https://github.com/selfpatch/ros2_medkit.git
+	branch = main
+[submodule "ament/rosidl_rust"]
+	path = ament/rosidl_rust
+	url = https://github.com/ros2-rust/rosidl_rust.git
+	branch = main
+[submodule "ament/sol_vendor"]
+	path = ament/sol_vendor
+	url = https://github.com/OUXT-Polaris/sol_vendor.git
+	branch = main
+[submodule "ament/tinyspline_vendor"]
+	path = ament/tinyspline_vendor
+	url = https://github.com/wep21/tinyspline_vendor.git
+	branch = main
+[submodule "autonomous_driving/acado_vendor"]
+	path = autonomous_driving/acado_vendor
+	url = https://gitlab.com/autowarefoundation/autoware.auto/acado_vendor.git
+	branch = main
+[submodule "autonomous_driving/agnocast"]
+	path = autonomous_driving/agnocast
+	url = https://github.com/autowarefoundation/agnocast.git
+	branch = main
+[submodule "autonomous_driving/autoware_adapi_msgs"]
+	path = autonomous_driving/autoware_adapi_msgs
+	url = https://github.com/autowarefoundation/autoware_adapi_msgs.git
+	branch = main
+[submodule "autonomous_driving/autoware_auto_msgs"]
+	path = autonomous_driving/autoware_auto_msgs
+	url = https://gitlab.com/autowarefoundation/autoware.auto/autoware_auto_msgs.git
+	branch = master
+[submodule "autonomous_driving/autoware_cmake"]
+	path = autonomous_driving/autoware_cmake
+	url = https://github.com/autowarefoundation/autoware_cmake.git
+	branch = main
+[submodule "autonomous_driving/autoware_core"]
+	path = autonomous_driving/autoware_core
+	url = https://github.com/autowarefoundation/autoware_core.git
+	branch = main
+[submodule "autonomous_driving/autoware_internal_msgs"]
+	path = autonomous_driving/autoware_internal_msgs
+	url = https://github.com/autowarefoundation/autoware_internal_msgs.git
+	branch = main
+[submodule "autonomous_driving/autoware_lanelet2_extension"]
+	path = autonomous_driving/autoware_lanelet2_extension
+	url = https://github.com/autowarefoundation/autoware_lanelet2_extension.git
+	branch = main
+[submodule "autonomous_driving/autoware_msgs"]
+	path = autonomous_driving/autoware_msgs
+	url = https://github.com/autowarefoundation/autoware_msgs.git
+	branch = main
+[submodule "autonomous_driving/autoware_rviz_plugins"]
+	path = autonomous_driving/autoware_rviz_plugins
+	url = https://github.com/autowarefoundation/autoware_rviz_plugins.git
+	branch = main
+[submodule "autonomous_driving/autoware_utils"]
+	path = autonomous_driving/autoware_utils
+	url = https://github.com/autowarefoundation/autoware_utils.git
+	branch = main
+[submodule "autonomous_driving/callback_isolated_executor"]
+	path = autonomous_driving/callback_isolated_executor
+	url = https://github.com/tier4/callback_isolated_executor.git
+	branch = main
+[submodule "autonomous_driving/caret_analyze"]
+	path = autonomous_driving/caret_analyze
+	url = https://github.com/tier4/caret_analyze.git
+	branch = main
+[submodule "autonomous_driving/caret_analyze_cpp_impl"]
+	path = autonomous_driving/caret_analyze_cpp_impl
+	url = https://github.com/tier4/caret_analyze_cpp_impl.git
+	branch = main
+[submodule "autonomous_driving/caret_trace"]
+	path = autonomous_driving/caret_trace
+	url = https://github.com/tier4/caret_trace.git
+	branch = main
+[submodule "autonomous_driving/cudnn_cmake_module"]
+	path = autonomous_driving/cudnn_cmake_module
+	url = https://github.com/tier4/cudnn_cmake_module.git
+	branch = main
+[submodule "autonomous_driving/digestible"]
+	path = autonomous_driving/digestible
+	url = https://github.com/tier4/digestible.git
+	branch = main
+[submodule "autonomous_driving/hash_library_vendor"]
+	path = autonomous_driving/hash_library_vendor
+	url = https://github.com/tier4/hash_library_vendor.git
+	branch = main
+[submodule "autonomous_driving/heaphook"]
+	path = autonomous_driving/heaphook
+	url = https://github.com/tier4/heaphook.git
+	branch = main
+[submodule "autonomous_driving/lanelet2"]
+	path = autonomous_driving/lanelet2
+	url = https://github.com/fzi-forschungszentrum-informatik/lanelet2.git
+	branch = master
+[submodule "autonomous_driving/nebula"]
+	path = autonomous_driving/nebula
+	url = https://github.com/tier4/nebula.git
+	branch = main
+[submodule "autonomous_driving/osqp_vendor"]
+	path = autonomous_driving/osqp_vendor
+	url = https://github.com/tier4/osqp_vendor.git
+	branch = main
+[submodule "autonomous_driving/qpoases_vendor"]
+	path = autonomous_driving/qpoases_vendor
+	url = https://github.com/Autoware-AI/qpoases_vendor.git
+	branch = ros2
+[submodule "autonomous_driving/ros2_socketcan"]
+	path = autonomous_driving/ros2_socketcan
+	url = https://github.com/autowarefoundation/ros2_socketcan.git
+	branch = main
+[submodule "autonomous_driving/ros2caret"]
+	path = autonomous_driving/ros2caret
+	url = https://github.com/tier4/ros2caret.git
+	branch = main
+[submodule "autonomous_driving/sync_tooling_msgs"]
+	path = autonomous_driving/sync_tooling_msgs
+	url = https://github.com/tier4/sync_tooling_msgs.git
+	branch = main
+[submodule "autonomous_driving/tensorrt_cmake_module"]
+	path = autonomous_driving/tensorrt_cmake_module
+	url = https://github.com/tier4/tensorrt_cmake_module.git
+	branch = main
+[submodule "autonomous_driving/tvm_vendor"]
+	path = autonomous_driving/tvm_vendor
+	url = https://github.com/autowarefoundation/tvm_vendor.git
+	branch = main
+[submodule "autonomous_driving/zmqpp_vendor"]
+	path = autonomous_driving/zmqpp_vendor
+	url = https://github.com/autowarefoundation/zmqpp_vendor.git
+	branch = main
+[submodule "fleet/ament_cmake_catch2"]
+	path = fleet/ament_cmake_catch2
+	url = https://github.com/open-rmf/ament_cmake_catch2.git
+	branch = humble
+[submodule "fleet/menge_vendor"]
+	path = fleet/menge_vendor
+	url = https://github.com/open-rmf/menge_vendor.git
+	branch = humble
+[submodule "fleet/nlohmann_json_schema_validator_vendor"]
+	path = fleet/nlohmann_json_schema_validator_vendor
+	url = https://github.com/open-rmf/nlohmann_json_schema_validator_vendor.git
+	branch = humble
+[submodule "fleet/pybind11_json_vendor"]
+	path = fleet/pybind11_json_vendor
+	url = https://github.com/open-rmf/pybind11_json_vendor.git
+	branch = humble
+[submodule "fleet/rmf_api_msgs"]
+	path = fleet/rmf_api_msgs
+	url = https://github.com/open-rmf/rmf_api_msgs.git
+	branch = humble
+[submodule "fleet/rmf_battery"]
+	path = fleet/rmf_battery
+	url = https://github.com/open-rmf/rmf_battery.git
+	branch = humble
+[submodule "fleet/rmf_building_map_msgs"]
+	path = fleet/rmf_building_map_msgs
+	url = https://github.com/open-rmf/rmf_building_map_msgs.git
+	branch = humble
+[submodule "fleet/rmf_cmake_uncrustify"]
+	path = fleet/rmf_cmake_uncrustify
+	url = https://github.com/open-rmf/rmf_cmake_uncrustify.git
+	branch = rolling
+[submodule "fleet/rmf_internal_msgs"]
+	path = fleet/rmf_internal_msgs
+	url = https://github.com/open-rmf/rmf_internal_msgs.git
+	branch = humble
+[submodule "fleet/rmf_ros2"]
+	path = fleet/rmf_ros2
+	url = https://github.com/open-rmf/rmf_ros2.git
+	branch = humble
+[submodule "fleet/rmf_simulation"]
+	path = fleet/rmf_simulation
+	url = https://github.com/open-rmf/rmf_simulation.git
+	branch = humble
+[submodule "fleet/rmf_task"]
+	path = fleet/rmf_task
+	url = https://github.com/open-rmf/rmf_task.git
+	branch = humble
+[submodule "fleet/rmf_traffic"]
+	path = fleet/rmf_traffic
+	url = https://github.com/open-rmf/rmf_traffic.git
+	branch = humble
+[submodule "fleet/rmf_traffic_editor"]
+	path = fleet/rmf_traffic_editor
+	url = https://github.com/open-rmf/rmf_traffic_editor.git
+	branch = humble
+[submodule "fleet/rmf_utils"]
+	path = fleet/rmf_utils
+	url = https://github.com/open-rmf/rmf_utils.git
+	branch = humble
+[submodule "fleet/rmf_variants"]
+	path = fleet/rmf_variants
+	url = https://github.com/open-rmf/rmf_variants.git
+	branch = main
+[submodule "fleet/rmf_visualization"]
+	path = fleet/rmf_visualization
+	url = https://github.com/open-rmf/rmf_visualization.git
+	branch = humble
+[submodule "fleet/rmf_visualization_msgs"]
+	path = fleet/rmf_visualization_msgs
+	url = https://github.com/open-rmf/rmf_visualization_msgs.git
+	branch = humble
+[submodule "fleet/stubborn_buddies"]
+	path = fleet/stubborn_buddies
+	url = https://github.com/open-rmf/stubborn_buddies.git
+	branch = main
+[submodule "geometry/geometry_tutorials"]
+	path = geometry/geometry_tutorials
+	url = https://github.com/ros/geometry_tutorials.git
+	branch = humble
+[submodule "geometry/pal_urdf_utils"]
+	path = geometry/pal_urdf_utils
+	url = https://github.com/pal-robotics/pal_urdf_utils.git
+	branch = humble-devel
+[submodule "geometry/tf2_web_republisher"]
+	path = geometry/tf2_web_republisher
+	url = https://github.com/RobotWebTools/tf2_web_republisher.git
+	branch = ros2
+[submodule "geometry/urdf_launch"]
+	path = geometry/urdf_launch
+	url = https://github.com/ros/urdf_launch.git
+	branch = main
+[submodule "geometry/urdf_parser_py"]
+	path = geometry/urdf_parser_py
+	url = https://github.com/ros/urdf_parser_py.git
+	branch = ros2
+[submodule "geometry/urdf_sim_tutorial"]
+	path = geometry/urdf_sim_tutorial
+	url = https://github.com/ros/urdf_sim_tutorial.git
+	branch = ros2
+[submodule "geometry/urdf_test"]
+	path = geometry/urdf_test
+	url = https://github.com/pal-robotics/urdf_test.git
+	branch = humble-devel
+[submodule "geometry/urdf_tutorial"]
+	path = geometry/urdf_tutorial
+	url = https://github.com/ros/urdf_tutorial.git
+	branch = ros2
+[submodule "gzsim/astuff_sensor_msgs"]
+	path = gzsim/astuff_sensor_msgs
+	url = https://github.com/astuff/astuff_sensor_msgs.git
+	branch = master
+[submodule "gzsim/create3_sim"]
+	path = gzsim/create3_sim
+	url = https://github.com/iRobotEducation/create3_sim.git
+	branch = main
+[submodule "gzsim/dolly"]
+	path = gzsim/dolly
+	url = https://github.com/chapulina/dolly.git
+	branch = galactic
+[submodule "gzsim/fusioncore"]
+	path = gzsim/fusioncore
+	url = https://github.com/manankharwar/fusioncore.git
+	branch = main
+[submodule "gzsim/gazebo_model_attachment_plugin"]
+	path = gzsim/gazebo_model_attachment_plugin
+	url = https://github.com/Boeing/gazebo_model_attachment_plugin.git
+	branch = humble
+[submodule "gzsim/gazebo_no_physics_plugin"]
+	path = gzsim/gazebo_no_physics_plugin
+	url = https://github.com/Boeing/gazebo_no_physics_plugin.git
+	branch = humble
+[submodule "gzsim/gazebo_planar_move_plugin"]
+	path = gzsim/gazebo_planar_move_plugin
+	url = https://github.com/Boeing/gazebo_planar_move_plugin.git
+	branch = humble
+[submodule "gzsim/gazebo_ros_pkgs"]
+	path = gzsim/gazebo_ros_pkgs
+	url = https://github.com/ros-simulation/gazebo_ros_pkgs.git
+	branch = ros2
+[submodule "gzsim/gazebo_set_joint_positions_plugin"]
+	path = gzsim/gazebo_set_joint_positions_plugin
+	url = https://github.com/Boeing/gazebo_set_joint_positions_plugin.git
+	branch = humble
+[submodule "gzsim/gazebo_video_monitors"]
+	path = gzsim/gazebo_video_monitors
+	url = https://github.com/nlamprian/gazebo_video_monitors.git
+	branch = ros2
+[submodule "gzsim/ign_rviz"]
+	path = gzsim/ign_rviz
+	url = https://github.com/ignitionrobotics/ign-rviz.git
+	branch = main
+[submodule "gzsim/ignition_cmake2_vendor"]
+	path = gzsim/ignition_cmake2_vendor
+	url = https://github.com/ignition-release/ignition_cmake2_vendor.git
+	branch = humble
+[submodule "gzsim/ignition_math6_vendor"]
+	path = gzsim/ignition_math6_vendor
+	url = https://github.com/ignition-release/ignition_math6_vendor.git
+	branch = humble
+[submodule "gzsim/leo_simulator"]
+	path = gzsim/leo_simulator
+	url = https://github.com/LeoRover/leo_simulator-ros2.git
+	branch = humble
+[submodule "gzsim/mujoco_vendor"]
+	path = gzsim/mujoco_vendor
+	url = https://github.com/pal-robotics/mujoco_vendor.git
+	branch = master
+[submodule "gzsim/omni_base_simulation"]
+	path = gzsim/omni_base_simulation
+	url = https://github.com/pal-robotics/omni_base_simulation.git
+	branch = humble-devel
+[submodule "gzsim/pal_gazebo_plugins"]
+	path = gzsim/pal_gazebo_plugins
+	url = https://github.com/pal-robotics/pal_gazebo_plugins.git
+	branch = humble-devel
+[submodule "gzsim/pal_gazebo_worlds"]
+	path = gzsim/pal_gazebo_worlds
+	url = https://github.com/pal-robotics/pal_gazebo_worlds.git
+	branch = humble-devel
+[submodule "gzsim/pal_sea_arm_simulation"]
+	path = gzsim/pal_sea_arm_simulation
+	url = https://github.com/pal-robotics/pal_sea_arm_simulation.git
+	branch = humble-devel
+[submodule "gzsim/pmb2_simulation"]
+	path = gzsim/pmb2_simulation
+	url = https://github.com/pal-robotics/pmb2_simulation.git
+	branch = humble-devel
+[submodule "gzsim/raspimouse_sim"]
+	path = gzsim/raspimouse_sim
+	url = https://github.com/rt-net/raspimouse_sim.git
+	branch = humble-devel
+[submodule "gzsim/simulation_interfaces"]
+	path = gzsim/simulation_interfaces
+	url = https://github.com/ros-simulation/simulation_interfaces.git
+	branch = main
+[submodule "gzsim/talos_simulation"]
+	path = gzsim/talos_simulation
+	url = https://github.com/pal-robotics/talos_simulation.git
+	branch = humble-devel
+[submodule "gzsim/tiago_pro_head_simulation"]
+	path = gzsim/tiago_pro_head_simulation
+	url = https://github.com/pal-robotics/tiago_pro_head_simulation.git
+	branch = humble-devel
+[submodule "gzsim/tiago_pro_simulation"]
+	path = gzsim/tiago_pro_simulation
+	url = https://github.com/pal-robotics/tiago_pro_simulation.git
+	branch = humble-devel
+[submodule "gzsim/tiago_simulation"]
+	path = gzsim/tiago_simulation
+	url = https://github.com/pal-robotics/tiago_simulation.git
+	branch = humble-devel
+[submodule "gzsim/turtlebot3_simulations"]
+	path = gzsim/turtlebot3_simulations
+	url = https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git
+	branch = humble
+[submodule "gzsim/turtlebot4_simulator"]
+	path = gzsim/turtlebot4_simulator
+	url = https://github.com/turtlebot/turtlebot4_simulator.git
+	branch = humble
+[submodule "gzsim/velodyne_simulator"]
+	path = gzsim/velodyne_simulator
+	url = https://bitbucket.org/DataspeedInc/velodyne_simulator.git
+	branch = foxy-devel
+[submodule "micro_ros/micro_ros_diagnostics"]
+	path = micro_ros/micro_ros_diagnostics
+	url = https://github.com/micro-ROS/micro_ros_diagnostics.git
+	branch = master
+[submodule "micro_ros/system_modes"]
+	path = micro_ros/system_modes
+	url = https://github.com/micro-ROS/system_modes.git
+	branch = master
+[submodule "middleware/ecal"]
+	path = middleware/ecal
+	url = https://github.com/eclipse-ecal/ecal.git
+	branch = master
+[submodule "middleware/graph_monitor"]
+	path = middleware/graph_monitor
+	url = https://github.com/ros-tooling/graph-monitor.git
+	branch = main
+[submodule "middleware/rmw_desert"]
+	path = middleware/rmw_desert
+	url = https://github.com/signetlabdei/rmw_desert.git
+	branch = humble
+[submodule "middleware/rmw_gurumdds"]
+	path = middleware/rmw_gurumdds
+	url = https://github.com/ros2/rmw_gurumdds.git
+	branch = humble
+[submodule "middleware/rmw_zenoh"]
+	path = middleware/rmw_zenoh
+	url = https://github.com/ros2/rmw_zenoh.git
+	branch = humble
+[submodule "middleware/zenoh_bridge_dds"]
+	path = middleware/zenoh_bridge_dds
+	url = https://github.com/eclipse-zenoh/zenoh-plugin-dds.git
+	branch = master
+[submodule "moveit/affordance_primitives"]
+	path = moveit/affordance_primitives
+	url = https://github.com/PickNikRobotics/affordance_primitives.git
+	branch = main
+[submodule "moveit/bcr_arm"]
+	path = moveit/bcr_arm
+	url = https://github.com/blackcoffeerobotics/bcr_arm.git
+	branch = ros2
+[submodule "moveit/crane_plus"]
+	path = moveit/crane_plus
+	url = https://github.com/rt-net/crane_plus.git
+	branch = humble-devel
+[submodule "moveit/data_tamer"]
+	path = moveit/data_tamer
+	url = https://github.com/PickNikRobotics/data_tamer.git
+	branch = main
+[submodule "moveit/ewellix_lift_common"]
+	path = moveit/ewellix_lift_common
+	url = https://github.com/clearpathrobotics/ewellix_lift_common.git
+	branch = humble
+[submodule "moveit/grasping_msgs"]
+	path = moveit/grasping_msgs
+	url = https://github.com/mikeferguson/grasping_msgs.git
+	branch = ros2
+[submodule "moveit/kuka_robot_descriptions"]
+	path = moveit/kuka_robot_descriptions
+	url = https://github.com/kroshu/kuka_robot_descriptions.git
+	branch = humble
+[submodule "moveit/open_manipulator"]
+	path = moveit/open_manipulator
+	url = https://github.com/ROBOTIS-GIT/open_manipulator.git
+	branch = humble
+[submodule "moveit/pal_sea_arm_moveit_config"]
+	path = moveit/pal_sea_arm_moveit_config
+	url = https://github.com/pal-robotics/pal_sea_arm_moveit_config.git
+	branch = humble-devel
+[submodule "moveit/pick_ik"]
+	path = moveit/pick_ik
+	url = https://github.com/PickNikRobotics/pick_ik.git
+	branch = main
+[submodule "moveit/picknik_controllers"]
+	path = moveit/picknik_controllers
+	url = https://github.com/PickNikRobotics/picknik_controllers.git
+	branch = main
+[submodule "moveit/pymoveit2"]
+	path = moveit/pymoveit2
+	url = https://github.com/AndrejOrsula/pymoveit2.git
+	branch = main
+[submodule "moveit/ros2_kortex"]
+	path = moveit/ros2_kortex
+	url = https://github.com/Kinovarobotics/ros2_kortex.git
+	branch = main
+[submodule "moveit/ros2_robotiq_gripper"]
+	path = moveit/ros2_robotiq_gripper
+	url = https://github.com/PickNikRobotics/ros2_robotiq_gripper.git
+	branch = main
+[submodule "moveit/rqt_moveit"]
+	path = moveit/rqt_moveit
+	url = https://github.com/ros-visualization/rqt_moveit.git
+	branch = ros2
+[submodule "moveit/simple_grasping"]
+	path = moveit/simple_grasping
+	url = https://github.com/mikeferguson/simple_grasping.git
+	branch = jazzy
+[submodule "moveit/snowbot_operating_system"]
+	path = moveit/snowbot_operating_system
+	url = https://github.com/PickNikRobotics/snowbot_operating_system.git
+	branch = ros2
+[submodule "moveit/talos_moveit_config"]
+	path = moveit/talos_moveit_config
+	url = https://github.com/pal-robotics/talos_moveit_config.git
+	branch = humble-devel
+[submodule "moveit/tiago_moveit_config"]
+	path = moveit/tiago_moveit_config
+	url = https://github.com/pal-robotics/tiago_moveit_config.git
+	branch = humble-devel
+[submodule "moveit/tiago_pro_moveit_config"]
+	path = moveit/tiago_pro_moveit_config
+	url = https://github.com/pal-robotics/tiago_pro_moveit_config.git
+	branch = humble-devel
+[submodule "moveit/turtlebot3_manipulation"]
+	path = moveit/turtlebot3_manipulation
+	url = https://github.com/ROBOTIS-GIT/turtlebot3_manipulation.git
+	branch = humble
+[submodule "moveit/tuw_msgs"]
+	path = moveit/tuw_msgs
+	url = https://github.com/tuw-robotics/tuw_msgs.git
+	branch = ros2
+[submodule "ros-drivers/aandd_ekew_driver_py"]
+	path = ros-drivers/aandd_ekew_driver_py
+	url = https://github.com/TechMagicKK/aandd_ekew_driver_py.git
+	branch = humble
+[submodule "ros-drivers/adi_3dtof_image_stitching"]
+	path = ros-drivers/adi_3dtof_image_stitching
+	url = https://github.com/analogdevicesinc/adi_3dtof_image_stitching.git
+	branch = humble-devel
+[submodule "ros-drivers/adi_iio"]
+	path = ros-drivers/adi_iio
+	url = https://github.com/analogdevicesinc/iio_ros2.git
+	branch = humble
+[submodule "ros-drivers/adi_tmcl"]
+	path = ros-drivers/adi_tmcl
+	url = https://github.com/analogdevicesinc/tmcl_ros2.git
+	branch = humble
+[submodule "ros-drivers/arm/coin_d4_driver"]
+	path = ros-drivers/arm/coin_d4_driver
+	url = https://github.com/ROBOTIS-GIT/coin_d4_driver.git
+	branch = humble
+[submodule "ros-drivers/arm/dynamixel_interfaces"]
+	path = ros-drivers/arm/dynamixel_interfaces
+	url = https://github.com/ROBOTIS-GIT/dynamixel_interfaces.git
+	branch = humble
+[submodule "ros-drivers/arm/dynamixel_workbench"]
+	path = ros-drivers/arm/dynamixel_workbench
+	url = https://github.com/ROBOTIS-GIT/dynamixel-workbench.git
+	branch = humble-devel
+[submodule "ros-drivers/arm/dynamixel_workbench_msgs"]
+	path = ros-drivers/arm/dynamixel_workbench_msgs
+	url = https://github.com/ROBOTIS-GIT/dynamixel-workbench-msgs.git
+	branch = humble-devel
+[submodule "ros-drivers/arm/franka_description"]
+	path = ros-drivers/arm/franka_description
+	url = https://github.com/frankaemika/franka_description.git
+	branch = main
+[submodule "ros-drivers/arm/franka_ros2"]
+	path = ros-drivers/arm/franka_ros2
+	url = https://github.com/frankaemika/franka_ros2.git
+	branch = humble
+[submodule "ros-drivers/arm/hls_lfcd_lds_driver"]
+	path = ros-drivers/arm/hls_lfcd_lds_driver
+	url = https://github.com/ROBOTIS-GIT/hls_lfcd_lds_driver.git
+	branch = rolling-devel
+[submodule "ros-drivers/arm/inverse_dynamics_solver"]
+	path = ros-drivers/arm/inverse_dynamics_solver
+	url = https://github.com/unisa-acg/inverse-dynamics-solver.git
+	branch = humble
+[submodule "ros-drivers/arm/kuka_external_control_sdk"]
+	path = ros-drivers/arm/kuka_external_control_sdk
+	url = https://github.com/kroshu/kuka-external-control-sdk.git
+	branch = master
+[submodule "ros-drivers/arm/ld08_driver"]
+	path = ros-drivers/arm/ld08_driver
+	url = https://github.com/ROBOTIS-GIT/ld08_driver.git
+	branch = humble
+[submodule "ros-drivers/arm/libfranka"]
+	path = ros-drivers/arm/libfranka
+	url = https://github.com/frankaemika/libfranka.git
+	branch = main
+[submodule "ros-drivers/arm/schunk_svh_library"]
+	path = ros-drivers/arm/schunk_svh_library
+	url = https://github.com/SCHUNK-GmbH-Co-KG/schunk_svh_library.git
+	branch = main
+[submodule "ros-drivers/arm/turtlebot3_applications"]
+	path = ros-drivers/arm/turtlebot3_applications
+	url = https://github.com/ROBOTIS-GIT/turtlebot3_applications.git
+	branch = humble
+[submodule "ros-drivers/arm/turtlebot3_applications_msgs"]
+	path = ros-drivers/arm/turtlebot3_applications_msgs
+	url = https://github.com/ROBOTIS-GIT/turtlebot3_applications_msgs.git
+	branch = humble
+[submodule "ros-drivers/arm/turtlebot3_autorace"]
+	path = ros-drivers/arm/turtlebot3_autorace
+	url = https://github.com/ROBOTIS-GIT/turtlebot3_autorace.git
+	branch = humble
+[submodule "ros-drivers/arm/turtlebot3_home_service_challenge"]
+	path = ros-drivers/arm/turtlebot3_home_service_challenge
+	url = https://github.com/ROBOTIS-GIT/turtlebot3_home_service_challenge.git
+	branch = humble
+[submodule "ros-drivers/arm/turtlebot3_msgs"]
+	path = ros-drivers/arm/turtlebot3_msgs
+	url = https://github.com/ROBOTIS-GIT/turtlebot3_msgs.git
+	branch = humble
+[submodule "ros-drivers/arm/ur_client_library"]
+	path = ros-drivers/arm/ur_client_library
+	url = https://github.com/UniversalRobots/Universal_Robots_Client_Library.git
+	branch = master
+[submodule "ros-drivers/arm/ur_description"]
+	path = ros-drivers/arm/ur_description
+	url = https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git
+	branch = humble
+[submodule "ros-drivers/arm/ur_msgs"]
+	path = ros-drivers/arm/ur_msgs
+	url = https://github.com/ros-industrial/ur_msgs.git
+	branch = humble-devel
+[submodule "ros-drivers/arm/ur_robot_driver"]
+	path = ros-drivers/arm/ur_robot_driver
+	url = https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver.git
+	branch = humble
+[submodule "ros-drivers/arm/ur_simulation_gz"]
+	path = ros-drivers/arm/ur_simulation_gz
+	url = https://github.com/UniversalRobots/Universal_Robots_ROS2_GZ_Simulation.git
+	branch = humble
+[submodule "ros-drivers/arm/urinterfaces"]
+	path = ros-drivers/arm/urinterfaces
+	url = https://github.com/UniversalRobots/urinterfaces.git
+	branch = master
+[submodule "ros-drivers/at_sonde_ros_driver"]
+	path = ros-drivers/at_sonde_ros_driver
+	url = https://github.com/ma-shangao/at_sonde_ros_driver.git
+	branch = main
+[submodule "ros-drivers/audio_common"]
+	path = ros-drivers/audio_common
+	url = https://github.com/ros-drivers/audio_common.git
+	branch = master
+[submodule "ros-drivers/automotive_autonomy_msgs"]
+	path = ros-drivers/automotive_autonomy_msgs
+	url = https://github.com/astuff/automotive_autonomy_msgs.git
+	branch = master
+[submodule "ros-drivers/avt_vimba_camera"]
+	path = ros-drivers/avt_vimba_camera
+	url = https://github.com/astuff/avt_vimba_camera.git
+	branch = ros2_master
+[submodule "ros-drivers/axis_camera"]
+	path = ros-drivers/axis_camera
+	url = https://github.com/ros-drivers/axis_camera.git
+	branch = humble-devel
+[submodule "ros-drivers/bno055"]
+	path = ros-drivers/bno055
+	url = https://github.com/flynneva/bno055.git
+	branch = main
+[submodule "ros-drivers/camera/depthai"]
+	path = ros-drivers/camera/depthai
+	url = https://github.com/luxonis/depthai-core.git
+	branch = ros-release
+[submodule "ros-drivers/camera/depthai-ros"]
+	path = ros-drivers/camera/depthai-ros
+	url = https://github.com/luxonis/depthai-ros.git
+	branch = humble
+[submodule "ros-drivers/camera/flir_camera_driver"]
+	path = ros-drivers/camera/flir_camera_driver
+	url = https://github.com/ros-drivers/flir_camera_driver.git
+	branch = ros2-release
+[submodule "ros-drivers/camera/gscam"]
+	path = ros-drivers/camera/gscam
+	url = https://github.com/ros-drivers/gscam.git
+	branch = ros2
+[submodule "ros-drivers/camera/inuitive-camera-ros2"]
+	path = ros-drivers/camera/inuitive-camera-ros2
+	url = https://bitbucket.org/inuitive/inuros2.git
+	branch = master
+[submodule "ros-drivers/camera/libcamera"]
+	path = ros-drivers/camera/libcamera
+	url = https://git.libcamera.org/libcamera/libcamera.git
+	branch = master
+[submodule "ros-drivers/camera/librealsense2"]
+	path = ros-drivers/camera/librealsense2
+	url = https://github.com/IntelRealSense/librealsense.git
+	branch = master
+[submodule "ros-drivers/camera/nerian_stereo_ros2"]
+	path = ros-drivers/camera/nerian_stereo_ros2
+	url = https://github.com/nerian-vision/nerian_stereo_ros2.git
+	branch = default
+[submodule "ros-drivers/camera/orbbec_camera_v2"]
+	path = ros-drivers/camera/orbbec_camera_v2
+	url = https://github.com/orbbec/OrbbecSDK_ROS2.git
+	branch = v2-main
+[submodule "ros-drivers/camera/realsense2_camera"]
+	path = ros-drivers/camera/realsense2_camera
+	url = https://github.com/IntelRealSense/realsense-ros.git
+	branch = ros2-master
+[submodule "ros-drivers/camera/usb_cam"]
+	path = ros-drivers/camera/usb_cam
+	url = https://github.com/ros-drivers/usb_cam.git
+	branch = main
+[submodule "ros-drivers/camera/v4l2_camera"]
+	path = ros-drivers/camera/v4l2_camera
+	url = https://gitlab.com/boldhearts/ros2_v4l2_camera.git
+	branch = humble
+[submodule "ros-drivers/camera/vimbax_ros2_driver"]
+	path = ros-drivers/camera/vimbax_ros2_driver
+	url = https://github.com/alliedvision/vimbax_ros2_driver.git
+	branch = humble
+[submodule "ros-drivers/camera/zed-ros2-description"]
+	path = ros-drivers/camera/zed-ros2-description
+	url = https://github.com/stereolabs/zed-ros2-description.git
+	branch = main
+[submodule "ros-drivers/fadecandy_ros"]
+	path = ros-drivers/fadecandy_ros
+	url = https://github.com/eurogroep/fadecandy_ros.git
+	branch = ros2
+[submodule "ros-drivers/feetech_ros2_driver"]
+	path = ros-drivers/feetech_ros2_driver
+	url = https://github.com/ros-physical-ai/feetech_ros2_driver.git
+	branch = main
+[submodule "ros-drivers/flir_ptu"]
+	path = ros-drivers/flir_ptu
+	url = https://github.com/ros-drivers/flir_ptu.git
+	branch = ros2
+[submodule "ros-drivers/four_wheel_steering_msgs"]
+	path = ros-drivers/four_wheel_steering_msgs
+	url = https://github.com/ros-drivers/four_wheel_steering_msgs.git
+	branch = ros2
+[submodule "ros-drivers/hey5_description"]
+	path = ros-drivers/hey5_description
+	url = https://github.com/pal-robotics/hey5_description.git
+	branch = humble-devel
+[submodule "ros-drivers/human_description"]
+	path = ros-drivers/human_description
+	url = https://github.com/ros4hri/human_description.git
+	branch = humble-devel
+[submodule "ros-drivers/imu_gnss/adi_imu"]
+	path = ros-drivers/imu_gnss/adi_imu
+	url = https://github.com/analogdevicesinc/imu_ros2.git
+	branch = humble
+[submodule "ros-drivers/imu_gnss/clearpath_simulator"]
+	path = ros-drivers/imu_gnss/clearpath_simulator
+	url = https://github.com/clearpathrobotics/clearpath_simulator.git
+	branch = main
+[submodule "ros-drivers/imu_gnss/ess_imu_driver2"]
+	path = ros-drivers/imu_gnss/ess_imu_driver2
+	url = https://github.com/cubicleguy/ess_imu_driver2.git
+	branch = humble
+[submodule "ros-drivers/imu_gnss/imu_calib"]
+	path = ros-drivers/imu_gnss/imu_calib
+	url = https://github.com/Nathan85001/imu_calib.git
+	branch = ros2
+[submodule "ros-drivers/imu_gnss/imu_pipeline"]
+	path = ros-drivers/imu_gnss/imu_pipeline
+	url = https://github.com/ros-perception/imu_pipeline.git
+	branch = jazzy
+[submodule "ros-drivers/imu_gnss/marvelmind_ros2_release"]
+	path = ros-drivers/imu_gnss/marvelmind_ros2_release
+	url = https://github.com/MarvelmindRobotics/marvelmind_ros2_upstream.git
+	branch = main
+[submodule "ros-drivers/imu_gnss/microstrain_inertial"]
+	path = ros-drivers/imu_gnss/microstrain_inertial
+	url = https://github.com/LORD-MicroStrain/microstrain_inertial.git
+	branch = ros2
+[submodule "ros-drivers/imu_gnss/mobile_robot_simulator"]
+	path = ros-drivers/imu_gnss/mobile_robot_simulator
+	url = https://github.com/nobleo/mobile_robot_simulator.git
+	branch = main
+[submodule "ros-drivers/imu_gnss/novatel_gps_driver"]
+	path = ros-drivers/imu_gnss/novatel_gps_driver
+	url = https://github.com/swri-robotics/novatel_gps_driver.git
+	branch = ros2-devel
+[submodule "ros-drivers/imu_gnss/novatel_oem7_driver"]
+	path = ros-drivers/imu_gnss/novatel_oem7_driver
+	url = https://github.com/novatel/novatel_oem7_driver.git
+	branch = humble
+[submodule "ros-drivers/imu_gnss/ntrip_client"]
+	path = ros-drivers/imu_gnss/ntrip_client
+	url = https://github.com/LORD-MicroStrain/ntrip_client.git
+	branch = ros2
+[submodule "ros-drivers/imu_gnss/rt_usb_9axisimu_driver"]
+	path = ros-drivers/imu_gnss/rt_usb_9axisimu_driver
+	url = https://github.com/rt-net/rt_usb_9axisimu_driver.git
+	branch = humble-devel
+[submodule "ros-drivers/imu_gnss/sbg_driver"]
+	path = ros-drivers/imu_gnss/sbg_driver
+	url = https://github.com/SBG-Systems/sbg_ros2.git
+	branch = master
+[submodule "ros-drivers/imu_gnss/septentrio_gnss_driver"]
+	path = ros-drivers/imu_gnss/septentrio_gnss_driver
+	url = https://github.com/septentrio-gnss/septentrio_gnss_driver.git
+	branch = master
+[submodule "ros-drivers/imu_gnss/ublox"]
+	path = ros-drivers/imu_gnss/ublox
+	url = https://github.com/KumarRobotics/ublox.git
+	branch = ros2
+[submodule "ros-drivers/imu_gnss/ublox_dgnss"]
+	path = ros-drivers/imu_gnss/ublox_dgnss
+	url = https://github.com/aussierobots/ublox_dgnss.git
+	branch = main
+[submodule "ros-drivers/imu_gnss/vrpn"]
+	path = ros-drivers/imu_gnss/vrpn
+	url = https://github.com/vrpn/vrpn.git
+	branch = master
+[submodule "ros-drivers/imu_gnss/vrpn_mocap"]
+	path = ros-drivers/imu_gnss/vrpn_mocap
+	url = https://github.com/alvinsunyixiao/vrpn_mocap.git
+	branch = main
+[submodule "ros-drivers/libbno055_linux"]
+	path = ros-drivers/libbno055_linux
+	url = https://github.com/lazytatzv/libbno055-linux.git
+	branch = main
+[submodule "ros-drivers/libcaer_driver"]
+	path = ros-drivers/libcaer_driver
+	url = https://github.com/ros-event-camera/libcaer_driver.git
+	branch = release
+[submodule "ros-drivers/lidar/depthimage_to_laserscan"]
+	path = ros-drivers/lidar/depthimage_to_laserscan
+	url = https://github.com/ros-perception/depthimage_to_laserscan.git
+	branch = ros2
+[submodule "ros-drivers/lidar/dual_laser_merger"]
+	path = ros-drivers/lidar/dual_laser_merger
+	url = https://github.com/pradyum/dual_laser_merger.git
+	branch = humble
+[submodule "ros-drivers/lidar/lidar_situational_graphs"]
+	path = ros-drivers/lidar/lidar_situational_graphs
+	url = https://github.com/snt-arg/lidar_situational_graphs.git
+	branch = feature/ros2
+[submodule "ros-drivers/lidar/lsc_ros2_driver"]
+	path = ros-drivers/lidar/lsc_ros2_driver
+	url = https://github.com/AutonicsLiDAR/lsc_ros2_driver.git
+	branch = main
+[submodule "ros-drivers/lidar/omni_base_navigation"]
+	path = ros-drivers/lidar/omni_base_navigation
+	url = https://github.com/pal-robotics/omni_base_navigation.git
+	branch = humble-devel
+[submodule "ros-drivers/lidar/ouster-ros"]
+	path = ros-drivers/lidar/ouster-ros
+	url = https://github.com/ouster-lidar/ouster-ros.git
+	branch = humble-devel
+[submodule "ros-drivers/lidar/pmb2_navigation"]
+	path = ros-drivers/lidar/pmb2_navigation
+	url = https://github.com/pal-robotics/pmb2_navigation.git
+	branch = humble-devel
+[submodule "ros-drivers/lidar/pointcloud_to_laserscan"]
+	path = ros-drivers/lidar/pointcloud_to_laserscan
+	url = https://github.com/ros-perception/pointcloud_to_laserscan.git
+	branch = humble
+[submodule "ros-drivers/lidar/rplidar_driver"]
+	path = ros-drivers/lidar/rplidar_driver
+	url = https://github.com/frozenreboot/rplidar_driver.git
+	branch = main
+[submodule "ros-drivers/lidar/rplidar_ros"]
+	path = ros-drivers/lidar/rplidar_ros
+	url = https://github.com/Slamtec/rplidar_ros.git
+	branch = ros2
+[submodule "ros-drivers/lidar/sick_safetyscanners2"]
+	path = ros-drivers/lidar/sick_safetyscanners2
+	url = https://github.com/SICKAG/sick_safetyscanners2.git
+	branch = master
+[submodule "ros-drivers/lidar/sick_safetyscanners2_interfaces"]
+	path = ros-drivers/lidar/sick_safetyscanners2_interfaces
+	url = https://github.com/SICKAG/sick_safetyscanners2_interfaces.git
+	branch = master
+[submodule "ros-drivers/lidar/sick_safetyscanners_base"]
+	path = ros-drivers/lidar/sick_safetyscanners_base
+	url = https://github.com/SICKAG/sick_safetyscanners_base.git
+	branch = ros2
+[submodule "ros-drivers/lidar/sick_safevisionary_base"]
+	path = ros-drivers/lidar/sick_safevisionary_base
+	url = https://github.com/SICKAG/sick_safevisionary_base.git
+	branch = main
+[submodule "ros-drivers/lidar/sick_safevisionary_ros2"]
+	path = ros-drivers/lidar/sick_safevisionary_ros2
+	url = https://github.com/SICKAG/sick_safevisionary_ros2.git
+	branch = main
+[submodule "ros-drivers/lidar/sick_scan_xd"]
+	path = ros-drivers/lidar/sick_scan_xd
+	url = https://github.com/SICKAG/sick_scan_xd.git
+	branch = master
+[submodule "ros-drivers/lidar/sicks300_ros2"]
+	path = ros-drivers/lidar/sicks300_ros2
+	url = https://github.com/ajtudela/sicks300_ros2.git
+	branch = humble
+[submodule "ros-drivers/lidar/tiago_navigation"]
+	path = ros-drivers/lidar/tiago_navigation
+	url = https://github.com/pal-robotics/tiago_navigation.git
+	branch = humble-devel
+[submodule "ros-drivers/lidar/tiago_pro_navigation"]
+	path = ros-drivers/lidar/tiago_pro_navigation
+	url = https://github.com/pal-robotics/tiago_pro_navigation.git
+	branch = humble-devel
+[submodule "ros-drivers/lidar/urg_c"]
+	path = ros-drivers/lidar/urg_c
+	url = https://github.com/ros-drivers/urg_c.git
+	branch = ros2-devel
+[submodule "ros-drivers/lidar/urg_node"]
+	path = ros-drivers/lidar/urg_node
+	url = https://github.com/ros-drivers/urg_node.git
+	branch = jazzy
+[submodule "ros-drivers/lidar/urg_node_msgs"]
+	path = ros-drivers/lidar/urg_node_msgs
+	url = https://github.com/ros-drivers/urg_node_msgs.git
+	branch = master
+[submodule "ros-drivers/lidar/velodyne"]
+	path = ros-drivers/lidar/velodyne
+	url = https://github.com/ros-drivers/velodyne.git
+	branch = ros2
+[submodule "ros-drivers/metavision_driver"]
+	path = ros-drivers/metavision_driver
+	url = https://github.com/ros-event-camera/metavision_driver.git
+	branch = release
+[submodule "ros-drivers/mobile_base/aruco_opencv"]
+	path = ros-drivers/mobile_base/aruco_opencv
+	url = https://github.com/fictionlab/ros_aruco_opencv.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/clearpath_common"]
+	path = ros-drivers/mobile_base/clearpath_common
+	url = https://github.com/clearpathrobotics/clearpath_common.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/clearpath_config"]
+	path = ros-drivers/mobile_base/clearpath_config
+	url = https://github.com/clearpathrobotics/clearpath_config.git
+	branch = main
+[submodule "ros-drivers/mobile_base/clearpath_desktop"]
+	path = ros-drivers/mobile_base/clearpath_desktop
+	url = https://github.com/clearpathrobotics/clearpath_desktop.git
+	branch = main
+[submodule "ros-drivers/mobile_base/clearpath_msgs"]
+	path = ros-drivers/mobile_base/clearpath_msgs
+	url = https://github.com/clearpathrobotics/clearpath_msgs.git
+	branch = main
+[submodule "ros-drivers/mobile_base/clearpath_ros2_socketcan_interface"]
+	path = ros-drivers/mobile_base/clearpath_ros2_socketcan_interface
+	url = https://github.com/clearpathrobotics/clearpath_ros2_socketcan_interface.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/cob_common"]
+	path = ros-drivers/mobile_base/cob_common
+	url = https://github.com/4am-robotics/cob_common.git
+	branch = foxy
+[submodule "ros-drivers/mobile_base/create_robot"]
+	path = ros-drivers/mobile_base/create_robot
+	url = https://github.com/AutonomyLab/create_robot.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/husarion_components_description"]
+	path = ros-drivers/mobile_base/husarion_components_description
+	url = https://github.com/husarion/husarion_components_description.git
+	branch = ros2
+[submodule "ros-drivers/mobile_base/husarion_ugv_ros"]
+	path = ros-drivers/mobile_base/husarion_ugv_ros
+	url = https://github.com/husarion/husarion_ugv_ros.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/kobuki_core"]
+	path = ros-drivers/mobile_base/kobuki_core
+	url = https://github.com/kobuki-base/kobuki_core.git
+	branch = release/1.4.x
+[submodule "ros-drivers/mobile_base/kobuki_ros_interfaces"]
+	path = ros-drivers/mobile_base/kobuki_ros_interfaces
+	url = https://github.com/kobuki-base/kobuki_ros_interfaces.git
+	branch = release/1.0.x
+[submodule "ros-drivers/mobile_base/kobuki_velocity_smoother"]
+	path = ros-drivers/mobile_base/kobuki_velocity_smoother
+	url = https://github.com/kobuki-base/kobuki_velocity_smoother.git
+	branch = release/0.15.x
+[submodule "ros-drivers/mobile_base/leo_desktop"]
+	path = ros-drivers/mobile_base/leo_desktop
+	url = https://github.com/LeoRover/leo_desktop-ros2.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/leo_robot"]
+	path = ros-drivers/mobile_base/leo_robot
+	url = https://github.com/LeoRover/leo_robot-ros2.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/libcreate"]
+	path = ros-drivers/mobile_base/libcreate
+	url = https://github.com/AutonomyLab/libcreate.git
+	branch = master
+[submodule "ros-drivers/mobile_base/lms1xx"]
+	path = ros-drivers/mobile_base/lms1xx
+	url = https://github.com/clearpathrobotics/LMS1xx.git
+	branch = humble-devel
+[submodule "ros-drivers/mobile_base/ptz_action_server"]
+	path = ros-drivers/mobile_base/ptz_action_server
+	url = https://github.com/clearpathrobotics/ptz_action_server.git
+	branch = ros2
+[submodule "ros-drivers/mobile_base/puma_motor_driver"]
+	path = ros-drivers/mobile_base/puma_motor_driver
+	url = https://github.com/clearpathrobotics/puma_motor_driver.git
+	branch = foxy-devel
+[submodule "ros-drivers/mobile_base/robot_upstart"]
+	path = ros-drivers/mobile_base/robot_upstart
+	url = https://github.com/clearpathrobotics/robot_upstart.git
+	branch = foxy-devel
+[submodule "ros-drivers/mobile_base/robotont_driver"]
+	path = ros-drivers/mobile_base/robotont_driver
+	url = https://github.com/robotont/robotont_driver.git
+	branch = humble-devel
+[submodule "ros-drivers/mobile_base/rosbag2_to_video"]
+	path = ros-drivers/mobile_base/rosbag2_to_video
+	url = https://github.com/fictionlab/rosbag2_to_video.git
+	branch = ros2
+[submodule "ros-drivers/mobile_base/simple_term_menu_vendor"]
+	path = ros-drivers/mobile_base/simple_term_menu_vendor
+	url = https://github.com/clearpathrobotics/simple-term-menu.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/turtlebot4"]
+	path = ros-drivers/mobile_base/turtlebot4
+	url = https://github.com/turtlebot/turtlebot4.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/turtlebot4_desktop"]
+	path = ros-drivers/mobile_base/turtlebot4_desktop
+	url = https://github.com/turtlebot/turtlebot4_desktop.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/turtlebot4_robot"]
+	path = ros-drivers/mobile_base/turtlebot4_robot
+	url = https://github.com/turtlebot/turtlebot4_robot.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/turtlebot4_setup"]
+	path = ros-drivers/mobile_base/turtlebot4_setup
+	url = https://github.com/turtlebot/turtlebot4_setup.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/turtlebot4_tutorials"]
+	path = ros-drivers/mobile_base/turtlebot4_tutorials
+	url = https://github.com/turtlebot/turtlebot4_tutorials.git
+	branch = humble
+[submodule "ros-drivers/mobile_base/wireless"]
+	path = ros-drivers/mobile_base/wireless
+	url = https://github.com/clearpathrobotics/wireless.git
+	branch = foxy-devel
+[submodule "ros-drivers/mocap_optitrack"]
+	path = ros-drivers/mocap_optitrack
+	url = https://github.com/ros-drivers/mocap_optitrack.git
+	branch = foxy-devel
+[submodule "ros-drivers/nao_meshes"]
+	path = ros-drivers/nao_meshes
+	url = https://github.com/ros-naoqi/nao_meshes2.git
+	branch = main
+[submodule "ros-drivers/naoqi_bridge_msgs2"]
+	path = ros-drivers/naoqi_bridge_msgs2
+	url = https://github.com/ros-naoqi/naoqi_bridge_msgs2.git
+	branch = main
+[submodule "ros-drivers/naoqi_driver"]
+	path = ros-drivers/naoqi_driver
+	url = https://github.com/ros-naoqi/naoqi_driver2.git
+	branch = main
+[submodule "ros-drivers/naoqi_libqi"]
+	path = ros-drivers/naoqi_libqi
+	url = https://github.com/ros-naoqi/libqi.git
+	branch = ros2
+[submodule "ros-drivers/naoqi_libqicore"]
+	path = ros-drivers/naoqi_libqicore
+	url = https://github.com/ros-naoqi/libqicore.git
+	branch = ros2
+[submodule "ros-drivers/network_interface"]
+	path = ros-drivers/network_interface
+	url = https://github.com/astuff/network_interface.git
+	branch = ros2_master
+[submodule "ros-drivers/nmea_msgs"]
+	path = ros-drivers/nmea_msgs
+	url = https://github.com/ros-drivers/nmea_msgs.git
+	branch = ros2
+[submodule "ros-drivers/nmea_navsat_driver"]
+	path = ros-drivers/nmea_navsat_driver
+	url = https://github.com/ros-drivers/nmea_navsat_driver.git
+	branch = ros2
+[submodule "ros-drivers/ntpd_driver"]
+	path = ros-drivers/ntpd_driver
+	url = https://github.com/vooon/ntpd_driver.git
+	branch = ros2
+[submodule "ros-drivers/off_highway_sensor_drivers"]
+	path = ros-drivers/off_highway_sensor_drivers
+	url = https://github.com/bosch-engineering/off_highway_sensor_drivers.git
+	branch = humble-devel
+[submodule "ros-drivers/olive-interfaces"]
+	path = ros-drivers/olive-interfaces
+	url = https://github.com/olive-robotics/olive-ros2-interfaces.git
+	branch = humble
+[submodule "ros-drivers/openni2_camera"]
+	path = ros-drivers/openni2_camera
+	url = https://github.com/ros-drivers/openni2_camera.git
+	branch = iron
+[submodule "ros-drivers/pal_navigation_cfg_public"]
+	path = ros-drivers/pal_navigation_cfg_public
+	url = https://github.com/pal-robotics/pal_navigation_cfg_public.git
+	branch = humble-devel
+[submodule "ros-drivers/pepper_meshes"]
+	path = ros-drivers/pepper_meshes
+	url = https://github.com/ros-naoqi/pepper_meshes2.git
+	branch = main
+[submodule "ros-drivers/phidgets_drivers"]
+	path = ros-drivers/phidgets_drivers
+	url = https://github.com/ros-drivers/phidgets_drivers.git
+	branch = humble
+[submodule "ros-drivers/raspimouse_description"]
+	path = ros-drivers/raspimouse_description
+	url = https://github.com/rt-net/raspimouse_description.git
+	branch = humble-devel
+[submodule "ros-drivers/rc_genicam_driver"]
+	path = ros-drivers/rc_genicam_driver
+	url = https://github.com/roboception/rc_genicam_driver_ros2.git
+	branch = master
+[submodule "ros-drivers/tecgihan_driver"]
+	path = ros-drivers/tecgihan_driver
+	url = https://github.com/tecgihan/tecgihan_driver.git
+	branch = main
+[submodule "ros-drivers/trackdlo_perception"]
+	path = ros-drivers/trackdlo_perception
+	url = https://github.com/HayatoShimada/trackdlo_perception.git
+	branch = master
+[submodule "ros-drivers/transport_drivers"]
+	path = ros-drivers/transport_drivers
+	url = https://github.com/ros-drivers/transport_drivers.git
+	branch = main
+[submodule "ros-drivers/zbar_ros"]
+	path = ros-drivers/zbar_ros
+	url = https://github.com/ros-drivers/zbar_ros.git
+	branch = humble
+[submodule "ros-perception/laser_filters"]
+	path = ros-perception/laser_filters
+	url = https://github.com/ros-perception/laser_filters.git
+	branch = ros2
+[submodule "ros-perception/laser_proc"]
+	path = ros-perception/laser_proc
+	url = https://github.com/ros-perception/laser_proc.git
+	branch = ros2-devel
+[submodule "ros-perception/perception_open3d"]
+	path = ros-perception/perception_open3d
+	url = https://github.com/ros-perception/perception_open3d.git
+	branch = humble
+[submodule "ros-perception/pointcloud/octomap_mapping"]
+	path = ros-perception/pointcloud/octomap_mapping
+	url = https://github.com/OctoMap/octomap_mapping.git
+	branch = ros2
+[submodule "ros-perception/pointcloud/octomap_ros"]
+	path = ros-perception/pointcloud/octomap_ros
+	url = https://github.com/OctoMap/octomap_ros.git
+	branch = ros2
+[submodule "ros-perception/pointcloud/point_cloud_msg_wrapper"]
+	path = ros-perception/pointcloud/point_cloud_msg_wrapper
+	url = https://gitlab.com/ApexAI/point_cloud_msg_wrapper
+	branch = rolling
+[submodule "ros-perception/pointcloud/point_cloud_transport"]
+	path = ros-perception/pointcloud/point_cloud_transport
+	url = https://github.com/ros-perception/point_cloud_transport.git
+	branch = humble
+[submodule "ros-perception/pointcloud/point_cloud_transport_plugins"]
+	path = ros-perception/pointcloud/point_cloud_transport_plugins
+	url = https://github.com/ros-perception/point_cloud_transport_plugins.git
+	branch = humble
+[submodule "ros-perception/pointcloud/pointcloud_conversions"]
+	path = ros-perception/pointcloud/pointcloud_conversions
+	url = https://github.com/li9i/pointcloud-conversions.git
+	branch = humble-devel
+[submodule "ros-perception/pointcloud/pointcloud_to_ply"]
+	path = ros-perception/pointcloud/pointcloud_to_ply
+	url = https://github.com/li9i/pointcloud-to-ply.git
+	branch = humble-devel
+[submodule "ros-perception/pointcloud/rko_lio"]
+	path = ros-perception/pointcloud/rko_lio
+	url = https://github.com/PRBonn/rko_lio.git
+	branch = master
+[submodule "ros-perception/pointcloud/yasmin"]
+	path = ros-perception/pointcloud/yasmin
+	url = https://github.com/uleroboticsgroup/yasmin.git
+	branch = main
+[submodule "ros-perception/vision/apriltag"]
+	path = ros-perception/vision/apriltag
+	url = https://github.com/AprilRobotics/apriltag.git
+	branch = master
+[submodule "ros-perception/vision/apriltag_detector"]
+	path = ros-perception/vision/apriltag_detector
+	url = https://github.com/ros-misc-utilities/apriltag_detector.git
+	branch = release
+[submodule "ros-perception/vision/apriltag_mit"]
+	path = ros-perception/vision/apriltag_mit
+	url = https://github.com/ros-misc-utilities/apriltag_mit.git
+	branch = release
+[submodule "ros-perception/vision/apriltag_msgs"]
+	path = ros-perception/vision/apriltag_msgs
+	url = https://github.com/christianrauch/apriltag_msgs.git
+	branch = master
+[submodule "ros-perception/vision/apriltag_ros"]
+	path = ros-perception/vision/apriltag_ros
+	url = https://github.com/christianrauch/apriltag_ros.git
+	branch = master
+[submodule "ros-perception/vision/aruco_markers"]
+	path = ros-perception/vision/aruco_markers
+	url = https://github.com/namo-robotics/aruco_markers.git
+	branch = humble
+[submodule "ros-perception/vision/aruco_ros"]
+	path = ros-perception/vision/aruco_ros
+	url = https://github.com/pal-robotics/aruco_ros.git
+	branch = humble-devel
+[submodule "ros-perception/vision/event_camera_codecs"]
+	path = ros-perception/vision/event_camera_codecs
+	url = https://github.com/ros-event-camera/event_camera_codecs.git
+	branch = release
+[submodule "ros-perception/vision/event_camera_msgs"]
+	path = ros-perception/vision/event_camera_msgs
+	url = https://github.com/ros-event-camera/event_camera_msgs.git
+	branch = release
+[submodule "ros-perception/vision/event_camera_py"]
+	path = ros-perception/vision/event_camera_py
+	url = https://github.com/ros-event-camera/event_camera_py.git
+	branch = release
+[submodule "ros-perception/vision/event_camera_renderer"]
+	path = ros-perception/vision/event_camera_renderer
+	url = https://github.com/ros-event-camera/event_camera_renderer.git
+	branch = release
+[submodule "ros-perception/vision/event_camera_tools"]
+	path = ros-perception/vision/event_camera_tools
+	url = https://github.com/ros-event-camera/event_camera_tools.git
+	branch = release
+[submodule "ros-perception/vision/event_image_reconstruction_fibar"]
+	path = ros-perception/vision/event_image_reconstruction_fibar
+	url = https://github.com/ros-event-camera/event_image_reconstruction_fibar.git
+	branch = release
+[submodule "ros-perception/vision/fibar_lib"]
+	path = ros-perception/vision/fibar_lib
+	url = https://github.com/ros-event-camera/fibar_lib.git
+	branch = release
+[submodule "ros-perception/vision/find_object_2d"]
+	path = ros-perception/vision/find_object_2d
+	url = https://github.com/introlab/find-object.git
+	branch = humble-devel
+[submodule "ros-perception/vision/frequency_cam"]
+	path = ros-perception/vision/frequency_cam
+	url = https://github.com/ros-event-camera/frequency_cam.git
+	branch = release
+[submodule "ros-perception/vision/hitch_estimation_apriltag_array"]
+	path = ros-perception/vision/hitch_estimation_apriltag_array
+	url = https://github.com/li9i/hitch-estimation-apriltag-array.git
+	branch = humble-devel
+[submodule "ros-perception/vision/image_pipeline"]
+	path = ros-perception/vision/image_pipeline
+	url = https://github.com/ros-perception/image_pipeline.git
+	branch = humble
+[submodule "ros-perception/vision/image_transport_plugins"]
+	path = ros-perception/vision/image_transport_plugins
+	url = https://github.com/ros-perception/image_transport_plugins.git
+	branch = humble
+[submodule "ros-perception/vision/libcaer_vendor"]
+	path = ros-perception/vision/libcaer_vendor
+	url = https://github.com/ros-event-camera/libcaer_vendor.git
+	branch = release
+[submodule "ros-perception/vision/marti_common"]
+	path = ros-perception/vision/marti_common
+	url = https://github.com/swri-robotics/marti_common.git
+	branch = ros2-devel
+[submodule "ros-perception/vision/nicla_vision_ros2"]
+	path = ros-perception/vision/nicla_vision_ros2
+	url = https://github.com/ADVRHumanoids/nicla_vision_ros2.git
+	branch = humble
+[submodule "ros-perception/vision/openeb_vendor"]
+	path = ros-perception/vision/openeb_vendor
+	url = https://github.com/ros-event-camera/openeb_vendor.git
+	branch = release
+[submodule "ros-perception/vision/rc_common_msgs"]
+	path = ros-perception/vision/rc_common_msgs
+	url = https://github.com/roboception/rc_common_msgs_ros2.git
+	branch = master
+[submodule "ros-perception/vision/rc_dynamics_api"]
+	path = ros-perception/vision/rc_dynamics_api
+	url = https://github.com/roboception/rc_dynamics_api.git
+	branch = master
+[submodule "ros-perception/vision/rc_genicam_api"]
+	path = ros-perception/vision/rc_genicam_api
+	url = https://github.com/roboception/rc_genicam_api.git
+	branch = master
+[submodule "ros-perception/vision/rc_reason_clients"]
+	path = ros-perception/vision/rc_reason_clients
+	url = https://github.com/roboception/rc_reason_clients_ros2.git
+	branch = master
+[submodule "ros-perception/vision/rcdiscover"]
+	path = ros-perception/vision/rcdiscover
+	url = https://github.com/roboception/rcdiscover.git
+	branch = master
+[submodule "ros-perception/vision/soccer_interfaces"]
+	path = ros-perception/vision/soccer_interfaces
+	url = https://github.com/ros-sports/soccer_interfaces.git
+	branch = humble
+[submodule "ros-perception/vision/vision_msgs_layers"]
+	path = ros-perception/vision/vision_msgs_layers
+	url = https://github.com/ros-sports/vision_msgs_layers.git
+	branch = humble
+[submodule "ros-planning/andino_gz"]
+	path = ros-planning/andino_gz
+	url = https://github.com/Ekumen-OS/andino_gz.git
+	branch = humble
+[submodule "ros-planning/beluga"]
+	path = ros-planning/beluga
+	url = https://github.com/Ekumen-OS/beluga.git
+	branch = main
+[submodule "ros-planning/cartographer"]
+	path = ros-planning/cartographer
+	url = https://github.com/ros2/cartographer.git
+	branch = ros2
+[submodule "ros-planning/cartographer_ros"]
+	path = ros-planning/cartographer_ros
+	url = https://github.com/ros2/cartographer_ros.git
+	branch = ros2
+[submodule "ros-planning/clearpath_nav2_demos"]
+	path = ros-planning/clearpath_nav2_demos
+	url = https://github.com/clearpathrobotics/clearpath_nav2_demos.git
+	branch = main
+[submodule "ros-planning/control_box_rst"]
+	path = ros-planning/control_box_rst
+	url = https://github.com/rst-tu-dortmund/control_box_rst.git
+	branch = foxy-devel
+[submodule "ros-planning/grid_map"]
+	path = ros-planning/grid_map
+	url = https://github.com/ANYbotics/grid_map.git
+	branch = humble
+[submodule "ros-planning/gtsam2mrpt_serial"]
+	path = ros-planning/gtsam2mrpt_serial
+	url = https://github.com/MRPT/gtsam2mrpt_serial.git
+	branch = develop
+[submodule "ros-planning/mola"]
+	path = ros-planning/mola
+	url = https://github.com/MOLAorg/mola.git
+	branch = develop
+[submodule "ros-planning/mola_academic_datasets"]
+	path = ros-planning/mola_academic_datasets
+	url = https://github.com/MOLAorg/mola_academic_datasets.git
+	branch = develop
+[submodule "ros-planning/mola_common"]
+	path = ros-planning/mola_common
+	url = https://github.com/MOLAorg/mola_common.git
+	branch = develop
+[submodule "ros-planning/mola_gnss_to_markers"]
+	path = ros-planning/mola_gnss_to_markers
+	url = https://github.com/MOLAorg/mola_gnss_to_markers.git
+	branch = develop
+[submodule "ros-planning/mola_imu_preintegration"]
+	path = ros-planning/mola_imu_preintegration
+	url = https://github.com/MOLAorg/mola_imu_preintegration.git
+	branch = develop
+[submodule "ros-planning/mola_input_ouster"]
+	path = ros-planning/mola_input_ouster
+	url = https://github.com/MOLAorg/mola_input_ouster.git
+	branch = develop
+[submodule "ros-planning/mola_input_rosbag1"]
+	path = ros-planning/mola_input_rosbag1
+	url = https://github.com/MOLAorg/mola_input_rosbag1.git
+	branch = develop
+[submodule "ros-planning/mola_lidar_odometry"]
+	path = ros-planning/mola_lidar_odometry
+	url = https://github.com/MOLAorg/mola_lidar_odometry.git
+	branch = develop
+[submodule "ros-planning/mola_sm_loop_closure"]
+	path = ros-planning/mola_sm_loop_closure
+	url = https://github.com/MOLAorg/mola_sm_loop_closure.git
+	branch = develop
+[submodule "ros-planning/mola_state_estimation"]
+	path = ros-planning/mola_state_estimation
+	url = https://github.com/MOLAorg/mola_state_estimation.git
+	branch = develop
+[submodule "ros-planning/mola_test_datasets"]
+	path = ros-planning/mola_test_datasets
+	url = https://github.com/MOLAorg/mola_test_datasets.git
+	branch = develop
+[submodule "ros-planning/mp2p_icp"]
+	path = ros-planning/mp2p_icp
+	url = https://github.com/MOLAorg/mp2p_icp.git
+	branch = develop
+[submodule "ros-planning/mrpt3"]
+	path = ros-planning/mrpt3
+	url = https://github.com/MRPT/mrpt.git
+	branch = develop
+[submodule "ros-planning/mrpt_msgs"]
+	path = ros-planning/mrpt_msgs
+	url = https://github.com/mrpt-ros-pkg/mrpt_msgs.git
+	branch = master
+[submodule "ros-planning/mrpt_navigation"]
+	path = ros-planning/mrpt_navigation
+	url = https://github.com/mrpt-ros-pkg/mrpt_navigation.git
+	branch = ros2
+[submodule "ros-planning/mrpt_path_planning"]
+	path = ros-planning/mrpt_path_planning
+	url = https://github.com/MRPT/mrpt_path_planning.git
+	branch = develop
+[submodule "ros-planning/mrpt_ros"]
+	path = ros-planning/mrpt_ros
+	url = https://github.com/MRPT/mrpt_ros.git
+	branch = main
+[submodule "ros-planning/mrpt_ros_bridge"]
+	path = ros-planning/mrpt_ros_bridge
+	url = https://github.com/MRPT/mrpt_ros_bridge.git
+	branch = ros2
+[submodule "ros-planning/mrpt_sensors"]
+	path = ros-planning/mrpt_sensors
+	url = https://github.com/mrpt-ros-pkg/mrpt_sensors.git
+	branch = ros2
+[submodule "ros-planning/mvsim"]
+	path = ros-planning/mvsim
+	url = https://github.com/MRPT/mvsim.git
+	branch = develop
+[submodule "ros-planning/neo_nav2_bringup"]
+	path = ros-planning/neo_nav2_bringup
+	url = https://github.com/neobotix/neo_nav2_bringup.git
+	branch = humble
+[submodule "ros-planning/opennav_docking"]
+	path = ros-planning/opennav_docking
+	url = https://github.com/open-navigation/opennav_docking.git
+	branch = humble
+[submodule "ros-planning/pose_cov_ops"]
+	path = ros-planning/pose_cov_ops
+	url = https://github.com/mrpt-ros-pkg/pose_cov_ops.git
+	branch = master
+[submodule "ros-planning/python_mrpt_ros"]
+	path = ros-planning/python_mrpt_ros
+	url = https://github.com/MRPT/python_mrpt_ros.git
+	branch = main
+[submodule "ros-planning/raspimouse_slam_navigation_ros2"]
+	path = ros-planning/raspimouse_slam_navigation_ros2
+	url = https://github.com/rt-net/raspimouse_slam_navigation_ros2.git
+	branch = humble-devel
+[submodule "ros-planning/ros2_ouster_drivers"]
+	path = ros-planning/ros2_ouster_drivers
+	url = https://github.com/SteveMacenski/ros2_ouster_drivers.git
+	branch = foxy-devel
+[submodule "ros-planning/ros2_planning_system"]
+	path = ros-planning/ros2_planning_system
+	url = https://github.com/IntelligentRoboticsLabs/ros2_planning_system.git
+	branch = humble-devel
+[submodule "ros-planning/rosbag_timing_inspector"]
+	path = ros-planning/rosbag_timing_inspector
+	url = https://github.com/MOLAorg/rosbag_timing_inspector.git
+	branch = develop
+[submodule "ros-planning/rtabmap_ros"]
+	path = ros-planning/rtabmap_ros
+	url = https://github.com/introlab/rtabmap_ros.git
+	branch = humble-devel
+[submodule "ros-planning/smacc2"]
+	path = ros-planning/smacc2
+	url = https://github.com/robosoft-ai/SMACC2.git
+	branch = humble
+[submodule "ros-planning/smach"]
+	path = ros-planning/smach
+	url = https://github.com/ros/executive_smach.git
+	branch = ros2
+[submodule "ros-planning/turtlebot3"]
+	path = ros-planning/turtlebot3
+	url = https://github.com/ROBOTIS-GIT/turtlebot3.git
+	branch = humble
+[submodule "ros-planning/warehouse_ros_mongo"]
+	path = ros-planning/warehouse_ros_mongo
+	url = https://github.com/ros-planning/warehouse_ros_mongo.git
+	branch = ros2
+[submodule "ros-planning/warehouse_ros_sqlite"]
+	path = ros-planning/warehouse_ros_sqlite
+	url = https://github.com/ros-planning/warehouse_ros_sqlite.git
+	branch = ros2
+[submodule "ros-tooling/launch_frontend_py"]
+	path = ros-tooling/launch_frontend_py
+	url = https://github.com/ros-tooling/launch_frontend_py.git
+	branch = main
+[submodule "ros-tooling/launch_pal"]
+	path = ros-tooling/launch_pal
+	url = https://github.com/pal-robotics/launch_pal.git
+	branch = master
+[submodule "ros-tooling/nodl_to_policy"]
+	path = ros-tooling/nodl_to_policy
+	url = https://github.com/osrf/nodl_to_policy.git
+	branch = master
+[submodule "ros-tooling/py_trees_ros_tutorials"]
+	path = ros-tooling/py_trees_ros_tutorials
+	url = https://github.com/splintered-reality/py_trees_ros_tutorials.git
+	branch = devel
+[submodule "ros-tooling/raspimouse_ros2_examples"]
+	path = ros-tooling/raspimouse_ros2_examples
+	url = https://github.com/rt-net/raspimouse_ros2_examples.git
+	branch = humble-devel
+[submodule "ros-tooling/ros2launch_security"]
+	path = ros-tooling/ros2launch_security
+	url = https://github.com/osrf/ros2launch_security.git
+	branch = main
+[submodule "ros-tooling/rosbag2_bag_v2"]
+	path = ros-tooling/rosbag2_bag_v2
+	url = https://github.com/ros2/rosbag2_bag_v2.git
+	branch = master
+[submodule "ros-tooling/rosbag2_broll"]
+	path = ros-tooling/rosbag2_broll
+	url = https://github.com/ros-tooling/rosbag2_broll.git
+	branch = main
+[submodule "ros-tooling/topic_tools"]
+	path = ros-tooling/topic_tools
+	url = https://github.com/ros-tooling/topic_tools.git
+	branch = humble
+[submodule "ros-visualization/cloudini"]
+	path = ros-visualization/cloudini
+	url = https://github.com/facontidavide/cloudini.git
+	branch = main
+[submodule "ros-visualization/etsi_its_messages"]
+	path = ros-visualization/etsi_its_messages
+	url = https://github.com/ika-rwth-aachen/etsi_its_messages.git
+	branch = main
+[submodule "ros-visualization/fluent_rviz"]
+	path = ros-visualization/fluent_rviz
+	url = https://github.com/ForteFibre/FluentRviz.git
+	branch = ros2
+[submodule "ros-visualization/foxglove-sdk"]
+	path = ros-visualization/foxglove-sdk
+	url = https://github.com/foxglove/foxglove-sdk.git
+	branch = main
+[submodule "ros-visualization/foxglove_compressed_video_transport"]
+	path = ros-visualization/foxglove_compressed_video_transport
+	url = https://github.com/ros-misc-utilities/foxglove_compressed_video_transport.git
+	branch = release
+[submodule "ros-visualization/hri_rviz"]
+	path = ros-visualization/hri_rviz
+	url = https://github.com/ros4hri/hri_rviz.git
+	branch = humble-devel
+[submodule "ros-visualization/imu_tools"]
+	path = ros-visualization/imu_tools
+	url = https://github.com/CCNYRoboticsLab/imu_tools.git
+	branch = humble
+[submodule "ros-visualization/interactive_marker_twist_server"]
+	path = ros-visualization/interactive_marker_twist_server
+	url = https://github.com/ros-visualization/interactive_marker_twist_server.git
+	branch = humble-devel
+[submodule "ros-visualization/mapoi"]
+	path = ros-visualization/mapoi
+	url = https://github.com/shimz-robotics/mapoi.git
+	branch = main
+[submodule "ros-visualization/marker_msgs"]
+	path = ros-visualization/marker_msgs
+	url = https://github.com/tuw-robotics/marker_msgs.git
+	branch = ros2
+[submodule "ros-visualization/move_base_flex"]
+	path = ros-visualization/move_base_flex
+	url = https://github.com/naturerobots/move_base_flex.git
+	branch = ros2
+[submodule "ros-visualization/octomap_rviz_plugins"]
+	path = ros-visualization/octomap_rviz_plugins
+	url = https://github.com/OctoMap/octomap_rviz_plugins.git
+	branch = ros2
+[submodule "ros-visualization/play_motion_builder"]
+	path = ros-visualization/play_motion_builder
+	url = https://github.com/pal-robotics/play_motion_builder.git
+	branch = humble-devel
+[submodule "ros-visualization/plotjuggler"]
+	path = ros-visualization/plotjuggler
+	url = https://github.com/facontidavide/PlotJuggler.git
+	branch = main
+[submodule "ros-visualization/plotjuggler_msgs"]
+	path = ros-visualization/plotjuggler_msgs
+	url = https://github.com/facontidavide/plotjuggler_msgs.git
+	branch = ros2
+[submodule "ros-visualization/plotjuggler_ros"]
+	path = ros-visualization/plotjuggler_ros
+	url = https://github.com/PlotJuggler/plotjuggler-ros-plugins.git
+	branch = main
+[submodule "ros-visualization/polygon_ros"]
+	path = ros-visualization/polygon_ros
+	url = https://github.com/MetroRobots/polygon_ros.git
+	branch = kilted_and_prior
+[submodule "ros-visualization/roadmap_explorer"]
+	path = ros-visualization/roadmap_explorer
+	url = https://github.com/suchetanrs/roadmap-explorer.git
+	branch = main
+[submodule "ros-visualization/rosx_introspection"]
+	path = ros-visualization/rosx_introspection
+	url = https://github.com/facontidavide/rosx_introspection.git
+	branch = master
+[submodule "ros-visualization/rqt_common_plugins"]
+	path = ros-visualization/rqt_common_plugins
+	url = https://github.com/ros-visualization/rqt_common_plugins.git
+	branch = ros2
+[submodule "ros-visualization/rqt_dotgraph"]
+	path = ros-visualization/rqt_dotgraph
+	url = https://github.com/niwcpac/rqt_dotgraph.git
+	branch = main
+[submodule "ros-visualization/rqt_gauges"]
+	path = ros-visualization/rqt_gauges
+	url = https://github.com/ToyotaResearchInstitute/gauges2.git
+	branch = main
+[submodule "ros-visualization/rqt_image_overlay"]
+	path = ros-visualization/rqt_image_overlay
+	url = https://github.com/ros-sports/rqt_image_overlay.git
+	branch = humble
+[submodule "ros-visualization/rqt_image_view"]
+	path = ros-visualization/rqt_image_view
+	url = https://github.com/ros-visualization/rqt_image_view.git
+	branch = humble-devel
+[submodule "ros-visualization/rqt_robot_dashboard"]
+	path = ros-visualization/rqt_robot_dashboard
+	url = https://github.com/ros-visualization/rqt_robot_dashboard.git
+	branch = ROS2
+[submodule "ros-visualization/rqt_robot_monitor"]
+	path = ros-visualization/rqt_robot_monitor
+	url = https://github.com/ros-visualization/rqt_robot_monitor.git
+	branch = dashing-devel
+[submodule "ros-visualization/rqt_robot_steering"]
+	path = ros-visualization/rqt_robot_steering
+	url = https://github.com/ros-visualization/rqt_robot_steering.git
+	branch = humble
+[submodule "ros-visualization/rqt_runtime_monitor"]
+	path = ros-visualization/rqt_runtime_monitor
+	url = https://github.com/ros-visualization/rqt_runtime_monitor.git
+	branch = rolling
+[submodule "ros-visualization/rqt_tf_tree"]
+	path = ros-visualization/rqt_tf_tree
+	url = https://github.com/ros-visualization/rqt_tf_tree.git
+	branch = humble
+[submodule "ros-visualization/rviz_2d_overlay_plugins"]
+	path = ros-visualization/rviz_2d_overlay_plugins
+	url = https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git
+	branch = main
+[submodule "ros-visualization/rviz_satellite"]
+	path = ros-visualization/rviz_satellite
+	url = https://github.com/nobleo/rviz_satellite.git
+	branch = main
+[submodule "ros2/cascade_lifecycle"]
+	path = ros2/cascade_lifecycle
+	url = https://github.com/fmrico/cascade_lifecycle.git
+	branch = humble-devel
+[submodule "ros2/domain_bridge"]
+	path = ros2/domain_bridge
+	url = https://github.com/ros2/domain_bridge.git
+	branch = humble
+[submodule "ros2/interfaces/camera_aravis2"]
+	path = ros2/interfaces/camera_aravis2
+	url = https://github.com/FraunhoferIOSB/camera_aravis2.git
+	branch = main
+[submodule "ros2/interfaces/dataspeed_can"]
+	path = ros2/interfaces/dataspeed_can
+	url = https://bitbucket.org/dataspeedinc/dataspeed_can.git
+	branch = ros2
+[submodule "ros2/interfaces/ffmpeg_image_transport_msgs"]
+	path = ros2/interfaces/ffmpeg_image_transport_msgs
+	url = https://github.com/ros-misc-utilities/ffmpeg_image_transport_msgs.git
+	branch = release
+[submodule "ros2/interfaces/flexbe_behavior_engine"]
+	path = ros2/interfaces/flexbe_behavior_engine
+	url = https://github.com/flexbe/flexbe_behavior_engine.git
+	branch = humble
+[submodule "ros2/interfaces/foros"]
+	path = ros2/interfaces/foros
+	url = https://github.com/42dot/foros.git
+	branch = humble
+[submodule "ros2/interfaces/grbl_msgs"]
+	path = ros2/interfaces/grbl_msgs
+	url = https://github.com/flynneva/grbl_msgs.git
+	branch = main
+[submodule "ros2/interfaces/greenwave_monitor"]
+	path = ros2/interfaces/greenwave_monitor
+	url = https://github.com/NVIDIA-ISAAC-ROS/greenwave_monitor.git
+	branch = main
+[submodule "ros2/interfaces/hri_actions_msgs"]
+	path = ros2/interfaces/hri_actions_msgs
+	url = https://github.com/ros4hri/hri_actions_msgs.git
+	branch = humble-devel
+[submodule "ros2/interfaces/hri_msgs"]
+	path = ros2/interfaces/hri_msgs
+	url = https://github.com/ros4hri/hri_msgs.git
+	branch = humble-devel
+[submodule "ros2/interfaces/hri_privacy_msgs"]
+	path = ros2/interfaces/hri_privacy_msgs
+	url = https://github.com/ros4hri/hri_privacy_msgs.git
+	branch = humble-devel
+[submodule "ros2/interfaces/irobot_create_msgs"]
+	path = ros2/interfaces/irobot_create_msgs
+	url = https://github.com/iRobotEducation/irobot_create_msgs.git
+	branch = humble
+[submodule "ros2/interfaces/kinematic_pose_msgs"]
+	path = ros2/interfaces/kinematic_pose_msgs
+	url = https://github.com/qleonardolp/kinematic_pose_msgs.git
+	branch = master
+[submodule "ros2/interfaces/kompass"]
+	path = ros2/interfaces/kompass
+	url = https://github.com/automatika-robotics/kompass.git
+	branch = main
+[submodule "ros2/interfaces/lgsvl_msgs"]
+	path = ros2/interfaces/lgsvl_msgs
+	url = https://github.com/lgsvl/lgsvl_msgs.git
+	branch = foxy-devel
+[submodule "ros2/interfaces/mapviz"]
+	path = ros2/interfaces/mapviz
+	url = https://github.com/swri-robotics/mapviz.git
+	branch = ros2-devel
+[submodule "ros2/interfaces/marine_msgs"]
+	path = ros2/interfaces/marine_msgs
+	url = https://github.com/apl-ocean-engineering/marine_msgs.git
+	branch = ros2
+[submodule "ros2/interfaces/marti_messages"]
+	path = ros2/interfaces/marti_messages
+	url = https://github.com/swri-robotics/marti_messages.git
+	branch = ros2-devel
+[submodule "ros2/interfaces/metrics_msgs"]
+	path = ros2/interfaces/metrics_msgs
+	url = https://github.com/MetroRobots/metrics_msgs.git
+	branch = main
+[submodule "ros2/interfaces/metro_nav"]
+	path = ros2/interfaces/metro_nav
+	url = https://github.com/MetroRobots/metro_nav.git
+	branch = main
+[submodule "ros2/interfaces/mocap4r2_msgs"]
+	path = ros2/interfaces/mocap4r2_msgs
+	url = https://github.com/MOCAP4ROS2-Project/mocap4r2_msgs.git
+	branch = humble-devel
+[submodule "ros2/interfaces/motion_capture_tracking"]
+	path = ros2/interfaces/motion_capture_tracking
+	url = https://github.com/IMRCLab/motion_capture_tracking.git
+	branch = ros2
+[submodule "ros2/interfaces/mqtt_client"]
+	path = ros2/interfaces/mqtt_client
+	url = https://github.com/ika-rwth-aachen/mqtt_client.git
+	branch = main
+[submodule "ros2/interfaces/nao_interfaces"]
+	path = ros2/interfaces/nao_interfaces
+	url = https://github.com/ijnek/nao_interfaces.git
+	branch = humble
+[submodule "ros2/interfaces/pal_statistics"]
+	path = ros2/interfaces/pal_statistics
+	url = https://github.com/pal-robotics/pal_statistics.git
+	branch = humble-devel
+[submodule "ros2/interfaces/play_motion2"]
+	path = ros2/interfaces/play_motion2
+	url = https://github.com/pal-robotics/play_motion2.git
+	branch = humble-devel
+[submodule "ros2/interfaces/psdk_ros2"]
+	path = ros2/interfaces/psdk_ros2
+	url = https://github.com/umdlife/psdk_ros2.git
+	branch = main
+[submodule "ros2/interfaces/py_trees_ros_interfaces"]
+	path = ros2/interfaces/py_trees_ros_interfaces
+	url = https://github.com/splintered-reality/py_trees_ros_interfaces.git
+	branch = release/2.1.x
+[submodule "ros2/interfaces/r2r_spl"]
+	path = ros2/interfaces/r2r_spl
+	url = https://github.com/ros-sports/r2r_spl.git
+	branch = humble
+[submodule "ros2/interfaces/rai_interfaces"]
+	path = ros2/interfaces/rai_interfaces
+	url = https://github.com/RobotecAI/rai_interfaces.git
+	branch = main
+[submodule "ros2/interfaces/raspimouse2"]
+	path = ros2/interfaces/raspimouse2
+	url = https://github.com/rt-net/raspimouse2.git
+	branch = humble-devel
+[submodule "ros2/interfaces/rcss3d_agent"]
+	path = ros2/interfaces/rcss3d_agent
+	url = https://github.com/ros-sports/rcss3d_agent.git
+	branch = humble
+[submodule "ros2/interfaces/robot_calibration"]
+	path = ros2/interfaces/robot_calibration
+	url = https://github.com/mikeferguson/robot_calibration.git
+	branch = humble
+[submodule "ros2/interfaces/ros2_eventdispatch"]
+	path = ros2/interfaces/ros2_eventdispatch
+	url = https://github.com/cyan-at/ros2_eventdispatch.git
+	branch = main
+[submodule "ros2/interfaces/ros_babel_fish"]
+	path = ros2/interfaces/ros_babel_fish
+	url = https://github.com/LOEWE-emergenCITY/ros2_babel_fish.git
+	branch = humble
+[submodule "ros2/interfaces/ros_canopen"]
+	path = ros2/interfaces/ros_canopen
+	url = https://github.com/ros-industrial/ros_canopen.git
+	branch = dashing-devel
+[submodule "ros2/interfaces/ros_snapd_interfaces"]
+	path = ros2/interfaces/ros_snapd_interfaces
+	url = https://github.com/canonical/ros_snapd_interfaces.git
+	branch = ros2
+[submodule "ros2/interfaces/rosbridge_suite"]
+	path = ros2/interfaces/rosbridge_suite
+	url = https://github.com/RobotWebTools/rosbridge_suite.git
+	branch = humble
+[submodule "ros2/interfaces/rtcm_msgs"]
+	path = ros2/interfaces/rtcm_msgs
+	url = https://github.com/tilk/rtcm_msgs.git
+	branch = master
+[submodule "ros2/interfaces/simple_actions"]
+	path = ros2/interfaces/simple_actions
+	url = https://github.com/DLu/simple_actions.git
+	branch = main
+[submodule "ros2/interfaces/situational_graphs_msgs"]
+	path = ros2/interfaces/situational_graphs_msgs
+	url = https://github.com/snt-arg/situational_graphs_msgs.git
+	branch = main
+[submodule "ros2/interfaces/situational_graphs_reasoning_msgs"]
+	path = ros2/interfaces/situational_graphs_reasoning_msgs
+	url = https://github.com/snt-arg/situational_graphs_reasoning_msgs.git
+	branch = main
+[submodule "ros2/interfaces/slg_msgs"]
+	path = ros2/interfaces/slg_msgs
+	url = https://github.com/ajtudela/slg_msgs.git
+	branch = humble
+[submodule "ros2/interfaces/soccer_object_msgs"]
+	path = ros2/interfaces/soccer_object_msgs
+	url = https://github.com/ijnek/soccer_object_msgs.git
+	branch = rolling
+[submodule "ros2/interfaces/social_nav_ros"]
+	path = ros2/interfaces/social_nav_ros
+	url = https://github.com/MetroRobots/social_nav_ros.git
+	branch = main
+[submodule "ros2/interfaces/udp_msgs"]
+	path = ros2/interfaces/udp_msgs
+	url = https://github.com/flynneva/udp_msgs.git
+	branch = main
+[submodule "ros2/interfaces/weight_scale_interfaces"]
+	path = ros2/interfaces/weight_scale_interfaces
+	url = https://github.com/TechMagicKK/weight_scale_interfaces.git
+	branch = main
+[submodule "ros2/interfaces/wrapyfi_ros2_interfaces"]
+	path = ros2/interfaces/wrapyfi_ros2_interfaces
+	url = https://github.com/modular-ml/wrapyfi_ros2_interfaces.git
+	branch = master
+[submodule "ros2/rclc"]
+	path = ros2/rclc
+	url = https://github.com/ros2/rclc.git
+	branch = humble
+[submodule "ros2/ros1_bridge"]
+	path = ros2/ros1_bridge
+	url = https://github.com/ros2/ros1_bridge.git
+	branch = master
+[submodule "ros2/ros_workspace"]
+	path = ros2/ros_workspace
+	url = https://github.com/ros2/ros_workspace.git
+	branch = latest
+[submodule "ros2/rospy_message_converter"]
+	path = ros2/rospy_message_converter
+	url = https://github.com/DFKI-NI/rospy_message_converter.git
+	branch = humble
+[submodule "ros2/variants"]
+	path = ros2/variants
+	url = https://github.com/ros2/variants.git
+	branch = humble
+[submodule "ros2_control/dynamixel_hardware_interface"]
+	path = ros2_control/dynamixel_hardware_interface
+	url = https://github.com/ROBOTIS-GIT/dynamixel_hardware_interface.git
+	branch = humble
+[submodule "ros2_control/game_controller_spl"]
+	path = ros2_control/game_controller_spl
+	url = https://github.com/ros-sports/game_controller_spl.git
+	branch = humble
+[submodule "ros2_control/gazebo_ros2_control"]
+	path = ros2_control/gazebo_ros2_control
+	url = https://github.com/ros-simulation/gazebo_ros2_control.git
+	branch = humble
+[submodule "ros2_control/kinematics_interface_pinocchio"]
+	path = ros2_control/kinematics_interface_pinocchio
+	url = https://github.com/justagist/kinematics_interface_pinocchio.git
+	branch = ros-humble
+[submodule "ros2_control/kuka_drivers"]
+	path = ros2_control/kuka_drivers
+	url = https://github.com/kroshu/kuka_drivers.git
+	branch = humble
+[submodule "ros2_control/linear_feedback_controller"]
+	path = ros2_control/linear_feedback_controller
+	url = https://github.com/loco-3d/linear-feedback-controller.git
+	branch = main
+[submodule "ros2_control/linear_feedback_controller_msgs"]
+	path = ros2_control/linear_feedback_controller_msgs
+	url = https://github.com/loco-3d/linear-feedback-controller-msgs.git
+	branch = main
+[submodule "ros2_control/mocap4r2"]
+	path = ros2_control/mocap4r2
+	url = https://github.com/MOCAP4ROS2-Project/mocap4r2.git
+	branch = humble-devel
+[submodule "ros2_control/mujoco_ros2_control"]
+	path = ros2_control/mujoco_ros2_control
+	url = https://github.com/ros-controls/mujoco_ros2_control.git
+	branch = main
+[submodule "ros2_control/nmea_hardware_interface"]
+	path = ros2_control/nmea_hardware_interface
+	url = https://github.com/OUXT-Polaris/nmea_hardware_interface.git
+	branch = master
+[submodule "ros2_control/omni_base_robot"]
+	path = ros2_control/omni_base_robot
+	url = https://github.com/pal-robotics/omni_base_robot.git
+	branch = humble-devel
+[submodule "ros2_control/onnxruntime_vendor"]
+	path = ros2_control/onnxruntime_vendor
+	url = https://github.com/ros-controls/onnxruntime_vendor.git
+	branch = main
+[submodule "ros2_control/pal_gripper"]
+	path = ros2_control/pal_gripper
+	url = https://github.com/pal-robotics/pal_gripper.git
+	branch = humble-devel
+[submodule "ros2_control/pal_hey5"]
+	path = ros2_control/pal_hey5
+	url = https://github.com/pal-robotics/pal_hey5.git
+	branch = humble-devel
+[submodule "ros2_control/pal_pro_gripper"]
+	path = ros2_control/pal_pro_gripper
+	url = https://github.com/pal-robotics/pal_pro_gripper.git
+	branch = humble-devel
+[submodule "ros2_control/pal_robotiq_gripper"]
+	path = ros2_control/pal_robotiq_gripper
+	url = https://github.com/pal-robotics/pal_robotiq_gripper.git
+	branch = humble-devel
+[submodule "ros2_control/pal_sea_arm"]
+	path = ros2_control/pal_sea_arm
+	url = https://github.com/pal-robotics/pal_sea_arm.git
+	branch = humble-devel
+[submodule "ros2_control/pmb2_robot"]
+	path = ros2_control/pmb2_robot
+	url = https://github.com/pal-robotics/pmb2_robot.git
+	branch = humble-devel
+[submodule "ros2_control/qb_device"]
+	path = ros2_control/qb_device
+	url = https://bitbucket.org/qbrobotics/qbdevice-ros.git
+	branch = production-humble
+[submodule "ros2_control/qb_softhand_industry"]
+	path = ros2_control/qb_softhand_industry
+	url = https://bitbucket.org/qbrobotics/qbshin-ros.git
+	branch = production-humble
+[submodule "ros2_control/robot_controllers"]
+	path = ros2_control/robot_controllers
+	url = https://github.com/fetchrobotics/robot_controllers.git
+	branch = ros2
+[submodule "ros2_control/ros2_canopen"]
+	path = ros2_control/ros2_canopen
+	url = https://github.com/ros-industrial/ros2_canopen.git
+	branch = humble
+[submodule "ros2_control/synapticon_ros2_control"]
+	path = ros2_control/synapticon_ros2_control
+	url = https://github.com/synapticon/synapticon_ros2_control.git
+	branch = humble
+[submodule "ros2_control/talos_robot"]
+	path = ros2_control/talos_robot
+	url = https://github.com/pal-robotics/talos_robot.git
+	branch = humble-devel
+[submodule "ros2_control/tiago_pro_head_robot"]
+	path = ros2_control/tiago_pro_head_robot
+	url = https://github.com/pal-robotics/tiago_pro_head_robot.git
+	branch = humble-devel
+[submodule "ros2_control/tiago_pro_robot"]
+	path = ros2_control/tiago_pro_robot
+	url = https://github.com/pal-robotics/tiago_pro_robot.git
+	branch = humble-devel
+[submodule "ros2_control/tiago_robot"]
+	path = ros2_control/tiago_robot
+	url = https://github.com/pal-robotics/tiago_robot.git
+	branch = humble-devel
+[submodule "ros2_control/vector_pursuit_controller"]
+	path = ros2_control/vector_pursuit_controller
+	url = https://github.com/blackcoffeerobotics/vector_pursuit_controller.git
+	branch = master
+[submodule "teleop/create3_examples"]
+	path = teleop/create3_examples
+	url = https://github.com/iRobotEducation/create3_examples.git
+	branch = humble
+[submodule "teleop/dbw_ros"]
+	path = teleop/dbw_ros
+	url = https://bitbucket.org/dataspeedinc/dbw_ros.git
+	branch = ros2
+[submodule "teleop/joy_tester"]
+	path = teleop/joy_tester
+	url = https://github.com/joshnewans/joy_tester.git
+	branch = main
+[submodule "teleop/joystick_drivers"]
+	path = teleop/joystick_drivers
+	url = https://github.com/ros-drivers/joystick_drivers.git
+	branch = ros2
+[submodule "teleop/leo_common"]
+	path = teleop/leo_common
+	url = https://github.com/LeoRover/leo_common-ros2.git
+	branch = humble
+[submodule "teleop/teleop_tools"]
+	path = teleop/teleop_tools
+	url = https://github.com/ros-teleop/teleop_tools.git
+	branch = humble
+[submodule "teleop/teleop_twist_joy"]
+	path = teleop/teleop_twist_joy
+	url = https://github.com/ros2/teleop_twist_joy.git
+	branch = humble
+[submodule "teleop/teleop_twist_keyboard"]
+	path = teleop/teleop_twist_keyboard
+	url = https://github.com/ros2/teleop_twist_keyboard.git
+	branch = dashing
+[submodule "teleop/twist_mux"]
+	path = teleop/twist_mux
+	url = https://github.com/ros-teleop/twist_mux.git
+	branch = humble
+[submodule "teleop/twist_mux_msgs"]
+	path = teleop/twist_mux_msgs
+	url = https://github.com/ros-teleop/twist_mux_msgs.git
+	branch = master
+[submodule "ros-planning/andino"]
+	path = ros-planning/andino
+	url = https://github.com/Ekumen-OS/andino.git
+	branch = main
+[submodule "ros-drivers/arm/schunk_svh_ros_driver"]
+	path = ros-drivers/arm/schunk_svh_ros_driver
+	url = https://github.com/SCHUNK-GmbH-Co-KG/schunk_svh_ros_driver.git
+	branch = ros2
+[submodule "geometry/sdformat_urdf"]
+	path = geometry/sdformat_urdf
+	url = https://github.com/ros/sdformat_urdf.git
+	branch = rolling
+[submodule "ros-drivers/camera/zed-ros2-interfaces"]
+	path = ros-drivers/camera/zed-ros2-interfaces
+	url = https://github.com/stereolabs/zed-ros2-interfaces.git
+	branch = master
