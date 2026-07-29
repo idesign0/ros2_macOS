@@ -1294,10 +1294,6 @@
 	path = ros-planning/gtsam2mrpt_serial
 	url = https://github.com/MRPT/gtsam2mrpt_serial.git
 	branch = develop
-[submodule "middleware/rmw_gurumdds"]
-	path = middleware/rmw_gurumdds
-	url = https://github.com/ros2/rmw_gurumdds.git
-	branch = jazzy
 [submodule "autonomous_driving/hash_library_vendor"]
 	path = autonomous_driving/hash_library_vendor
 	url = https://github.com/tier4/hash_library_vendor.git
@@ -2034,18 +2030,10 @@
 	path = fleet/rmf_visualization_msgs
 	url = https://github.com/open-rmf/rmf_visualization_msgs.git
 	branch = jazzy
-[submodule "middleware/rmw_desert"]
-	path = middleware/rmw_desert
-	url = https://github.com/signetlabdei/rmw_desert.git
-	branch = jazzy
 [submodule "middleware/graph_monitor"]
 	path = middleware/graph_monitor
 	url = https://github.com/ros-tooling/graph-monitor.git
 	branch = main
-[submodule "middleware/rmw_zenoh"]
-	path = middleware/rmw_zenoh
-	url = https://github.com/ros2/rmw_zenoh.git
-	branch = jazzy
 [submodule "ros2/interfaces/robot_calibration"]
 	path = ros2/interfaces/robot_calibration
 	url = https://github.com/mikeferguson/robot_calibration.git
@@ -2101,10 +2089,6 @@
 [submodule "aerial/rosbot_mavlink_bridge"]
 	path = aerial/rosbot_mavlink_bridge
 	url = https://github.com/husarion/rosbot-firmware.git
-	branch = jazzy
-[submodule "middleware/rosidlcpp"]
-	path = middleware/rosidlcpp
-	url = https://github.com/Tonywelte/rosidlcpp.git
 	branch = jazzy
 [submodule "ros-visualization/rosx_introspection"]
 	path = ros-visualization/rosx_introspection
@@ -2513,8 +2497,4 @@
 [submodule "autonomous_driving/zmqpp_vendor"]
 	path = autonomous_driving/zmqpp_vendor
 	url = https://github.com/autowarefoundation/zmqpp_vendor.git
-	branch = main
-[submodule "ros2-rust/rosidl_rust"]
-	path = ros2-rust/rosidl_rust
-	url = https://github.com/ros2-rust/rosidl_rust.git
 	branch = main

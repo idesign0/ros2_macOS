@@ -20,12 +20,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        branch: [humble, jazzy, kilted]
+        # distro = which macos-<distro>-ci.yml to dispatch; ref = branch it runs on.
+        # The -new branches reuse the same workflow file, only the ref differs.
+        include:
+          - { distro: humble, ref: humble }
+          - { distro: jazzy,  ref: jazzy }
+          - { distro: kilted, ref: kilted }
+          - { distro: humble, ref: humble-new }
+          - { distro: jazzy,  ref: jazzy-new }
+          - { distro: kilted, ref: kilted-new }
     steps:
-      - name: Trigger ${{ matrix.branch }} build
+      - name: Trigger ${{ matrix.distro }} build on ${{ matrix.ref }}
         env:
           GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
         run: |
-          gh workflow run "macos-${{ matrix.branch }}-ci.yml" \
+          gh workflow run "macos-${{ matrix.distro }}-ci.yml" \
             --repo idesign0/ros2_macOS \
-            --ref "${{ matrix.branch }}"
+            --ref "${{ matrix.ref }}"
