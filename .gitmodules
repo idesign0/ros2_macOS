@@ -1146,10 +1146,6 @@
 	path = ros-planning/gtsam2mrpt_serial
 	url = https://github.com/MRPT/gtsam2mrpt_serial.git
 	branch = develop
-[submodule "middleware/rmw_gurumdds"]
-	path = middleware/rmw_gurumdds
-	url = https://github.com/ros2/rmw_gurumdds.git
-	branch = rolling
 [submodule "autonomous_driving/hash_library_vendor"]
 	path = autonomous_driving/hash_library_vendor
 	url = https://github.com/tier4/hash_library_vendor.git
@@ -1750,18 +1746,10 @@
 	path = fleet/rmf_visualization_msgs
 	url = https://github.com/open-rmf/rmf_visualization_msgs.git
 	branch = kilted
-[submodule "middleware/rmw_desert"]
-	path = middleware/rmw_desert
-	url = https://github.com/signetlabdei/rmw_desert.git
-	branch = kilted
 [submodule "middleware/graph_monitor"]
 	path = middleware/graph_monitor
 	url = https://github.com/ros-tooling/graph-monitor.git
 	branch = main
-[submodule "middleware/rmw_zenoh"]
-	path = middleware/rmw_zenoh
-	url = https://github.com/ros2/rmw_zenoh.git
-	branch = kilted
 [submodule "ros2/interfaces/robot_calibration"]
 	path = ros2/interfaces/robot_calibration
 	url = https://github.com/mikeferguson/robot_calibration.git
@@ -1802,14 +1790,6 @@
 	path = ros-planning/rosbag_timing_inspector
 	url = https://github.com/MOLAorg/rosbag_timing_inspector.git
 	branch = develop
-[submodule "ament/rosidl_rust"]
-	path = ament/rosidl_rust
-	url = https://github.com/ros2-rust/rosidl_rust.git
-	branch = main
-[submodule "middleware/rosidlcpp"]
-	path = middleware/rosidlcpp
-	url = https://github.com/Tonywelte/rosidlcpp.git
-	branch = kilted
 [submodule "ros-visualization/rosx_introspection"]
 	path = ros-visualization/rosx_introspection
 	url = https://github.com/facontidavide/rosx_introspection.git
