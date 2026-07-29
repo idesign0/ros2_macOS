@@ -2110,3 +2110,23 @@
 	path = ros-visualization/rqt_publisher
 	url = https://github.com/ros-visualization/rqt_publisher.git
 	branch = kilted
+[submodule "middleware/rmw_gurumdds"]
+	path = middleware/rmw_gurumdds
+	url = https://github.com/ros2/rmw_gurumdds.git
+	branch = rolling
+[submodule "middleware/rmw_desert"]
+	path = middleware/rmw_desert
+	url = https://github.com/signetlabdei/rmw_desert.git
+	branch = kilted
+[submodule "middleware/rmw_zenoh"]
+	path = middleware/rmw_zenoh
+	url = https://github.com/ros2/rmw_zenoh.git
+	branch = kilted
+[submodule "ament/rosidl_rust"]
+	path = ament/rosidl_rust
+	url = https://github.com/ros2-rust/rosidl_rust.git
+	branch = main
+[submodule "middleware/rosidlcpp"]
+	path = _disabled/rosidlcpp
+	url = https://github.com/Tonywelte/rosidlcpp.git
+	branch = kilted
