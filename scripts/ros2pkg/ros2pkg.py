@@ -422,13 +422,28 @@ def _default_branch(url):
     return m.group(1) if m else None
 
 
-def add_one(src, path, url, branch, retry_default=False):
+def add_one(src, path, url, branch, retry_default=False, allow_core_groups=False):
     """Add one submodule robustly. Returns (status, branch_used, error).
-    status: 'added' | 'added-default' | 'failed'. On any failure the tree is
-    cleaned so nothing broken remains."""
+    status: 'added' | 'added-default' | 'core-group' | 'failed'. On any failure
+    the tree is cleaned so nothing broken remains.
+
+    A repo can only be checked for <member_of_group> AFTER it is cloned, so the
+    core-group guard runs post-add and rolls back if it would poison the graph."""
+    def _guard():
+        if allow_core_groups:
+            return None
+        g = core_groups_joined(os.path.join(src, path))
+        if g:
+            _cleanup_partial(src, path)
+            return ("core-group", branch,
+                    "joins core group(s) " + ",".join(sorted(g)) +
+                    " — would inject edges into the rmw/rosidl core and can "
+                    "break colcon ordering (use --allow-core-groups to force)")
+        return None
+
     p = _run(f"git -C {src} submodule add -b {branch} {url} {path}")
     if p.returncode == 0:
-        return ("added", branch, None)
+        return _guard() or ("added", branch, None)
     err = (p.stderr.strip().splitlines() or ["?"])[-1]
     _cleanup_partial(src, path)
     if retry_default:
@@ -436,7 +451,7 @@ def add_one(src, path, url, branch, retry_default=False):
         if db and db != branch:
             p2 = _run(f"git -C {src} submodule add -b {db} {url} {path}")
             if p2.returncode == 0:
-                return ("added-default", db, None)
+                return _guard() or ("added-default", db, None)
             _cleanup_partial(src, path)
             err = (p2.stderr.strip().splitlines() or [err])[-1]
     return ("failed", branch, err)
@@ -470,6 +485,40 @@ def scan_pkg_names(src, subpaths):
         names.setdefault(m.group(1), []).append(
             {"sub": root, "dir": os.path.dirname(pxml), "depth": depth})
     return names
+
+
+# Groups that live at the ROOT of the ROS 2 dependency graph. A package that
+# declares <member_of_group> for one of these is automatically pulled in by the
+# corresponding <group_depend> holder (e.g. rmw_implementation, or
+# rosidl_default_generators, which EVERY message package depends on). Adding a
+# third-party member therefore injects new edges into the foundation of the
+# graph and can create a dependency cycle that colcon cannot order — even though
+# the package itself is perfectly fine. Refuse these unless --allow-core-groups.
+CORE_GROUPS = {
+    "rmw_implementation_packages",
+    "rmw_test_fixture_implementation_packages",
+    "rosidl_generator_packages",
+    "rosidl_runtime_packages",
+    "rosidl_typesupport_c_packages",
+    "rosidl_typesupport_cpp_packages",
+    "rcl_logging_packages",
+}
+_MG_RE = re.compile(r"<member_of_group>\s*([^< ]+)")
+
+
+def core_groups_joined(path):
+    """Core groups declared by any package.xml under `path` (a checked-out dir)."""
+    found = set()
+    out = subprocess.run(f"find {path} -name package.xml -not -path '*/.git/*'",
+                         shell=True, capture_output=True, text=True).stdout
+    for f in out.splitlines():
+        try:
+            t = re.sub(r"<!--.*?-->", "", open(f, encoding="utf-8",
+                                               errors="ignore").read(), flags=re.S)
+        except OSError:
+            continue
+        found |= (set(_MG_RE.findall(t)) & CORE_GROUPS)
+    return found
 
 
 def _base_paths(src, base):
@@ -549,8 +598,9 @@ def cmd_add(cfg, args):
     if not args.yes:
         print("(dry-run; pass --yes to execute)")
         return
-    status, br, err = add_one(src, r["path"], r["url"], r["branch"], args.retry_default_branch)
-    if status == "failed":
+    status, br, err = add_one(src, r["path"], r["url"], r["branch"],
+                              args.retry_default_branch, args.allow_core_groups)
+    if status in ("failed", "core-group"):
         sys.exit(f"FAILED (cleaned up, nothing added): {r['path']}  [{r['branch']}]  {err}")
     print(f"{status} {r['path']}  [{br}]")
 
@@ -585,14 +635,18 @@ def _add_all(cfg, index, repos, src, args):
     if not args.yes:
         return
 
-    added, salvaged, failed = [], [], []
+    added, salvaged, failed, skipped_core = [], [], [], []
     for i, r in enumerate(todo, 1):
-        status, br, err = add_one(src, r["path"], r["url"], r["branch"], args.retry_default_branch)
+        status, br, err = add_one(src, r["path"], r["url"], r["branch"],
+                                  args.retry_default_branch, args.allow_core_groups)
         if status == "added":
             added.append(r["path"])
         elif status == "added-default":
             salvaged.append({"path": r["path"], "branch": br})
             print(f"[{i}/{len(todo)}] salvaged {r['path']} on default branch '{br}'")
+        elif status == "core-group":
+            skipped_core.append({"repo": r["repo"], "path": r["path"], "reason": err})
+            print(f"[{i}/{len(todo)}] SKIP(core-group) {r['path']}")
         else:
             failed.append({"repo": r["repo"], "path": r["path"], "url": r["url"],
                            "branch": r["branch"], "error": err})
@@ -601,7 +655,8 @@ def _add_all(cfg, index, repos, src, args):
     report = os.path.join(cfg["manifest_dir"], f"{args.distro}_failed.json")
     with open(report, "w") as f:
         json.dump(failed, f, indent=2)
-    print(f"\nadded={len(added)}  salvaged={len(salvaged)}  failed={len(failed)}")
+    print(f"\nadded={len(added)}  salvaged={len(salvaged)}  "
+          f"skipped-core-group={len(skipped_core)}  failed={len(failed)}")
     print(f"broken packages (skipped clean, not added) -> {report}")
 
 
@@ -673,6 +728,8 @@ def main():
     a.add_argument("--yes", action="store_true", help="actually run it")
     a.add_argument("--all", action="store_true", help="add every pending classified repo")
     a.add_argument("--include-incoming", action="store_true", help="also add _incoming repos")
+    a.add_argument("--allow-core-groups", action="store_true",
+                   help="permit packages that join rmw/rosidl core groups (can break ordering)")
     a.add_argument("--retry-default-branch", action="store_true",
                    help="if the configured branch is missing, retry the repo's default branch")
     a.set_defaults(fn=cmd_add)

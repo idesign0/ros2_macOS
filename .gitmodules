@@ -750,10 +750,6 @@
 	path = ament/ros2_medkit
 	url = https://github.com/selfpatch/ros2_medkit.git
 	branch = main
-[submodule "ament/rosidl_rust"]
-	path = ament/rosidl_rust
-	url = https://github.com/ros2-rust/rosidl_rust.git
-	branch = main
 [submodule "ament/sol_vendor"]
 	path = ament/sol_vendor
 	url = https://github.com/OUXT-Polaris/sol_vendor.git
@@ -1110,18 +1106,6 @@
 	path = middleware/graph_monitor
 	url = https://github.com/ros-tooling/graph-monitor.git
 	branch = main
-[submodule "middleware/rmw_desert"]
-	path = middleware/rmw_desert
-	url = https://github.com/signetlabdei/rmw_desert.git
-	branch = humble
-[submodule "middleware/rmw_gurumdds"]
-	path = middleware/rmw_gurumdds
-	url = https://github.com/ros2/rmw_gurumdds.git
-	branch = humble
-[submodule "middleware/rmw_zenoh"]
-	path = middleware/rmw_zenoh
-	url = https://github.com/ros2/rmw_zenoh.git
-	branch = humble
 [submodule "middleware/zenoh_bridge_dds"]
 	path = middleware/zenoh_bridge_dds
 	url = https://github.com/eclipse-zenoh/zenoh-plugin-dds.git
