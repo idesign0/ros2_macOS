@@ -496,55 +496,38 @@ def cmd_dedupe_packages(cfg, args):
     subpaths = [l.split(None, 1)[1] for l in
                 _run(f"git -C {src} config -f .gitmodules --get-regexp '\\.path$'").stdout.splitlines()]
     names = scan_pkg_names(src, subpaths)
-    # a name is a real conflict only if >1 DISTINCT submodule provides it
-    dups = {n: ps for n, ps in names.items() if len({p["sub"] for p in ps}) > 1}
 
-    remove_subs, ignore_dirs = [], []       # (name, sub) / (name, dir)
-
-    def rank(p):                            # prefer original(base) + shallowest
-        return (p["sub"] not in orig, p["depth"], p["sub"])
-
-    for name, ps in sorted(dups.items()):
-        canonical = min(ps, key=rank)
+    # Only a DEDICATED submodule (package.xml at/near its root, depth <= 1)
+    # counts as "providing" a workspace package. Deeply nested/vendored copies
+    # (thirdparty/, a bundled ros1 tree, ...) are the submodule's internal
+    # business and are NOT workspace duplicates — colcon in CI doesn't treat
+    # them as such. Flag a conflict only when >= 2 dedicated submodules collide.
+    DEDICATED = 1
+    remove_subs = []
+    for name, ps in sorted(names.items()):
+        best = {}
         for p in ps:
-            if p["sub"] == canonical["sub"]:
-                continue
-            if p["depth"] == 0:             # dedicated duplicate submodule -> remove it
-                remove_subs.append((name, p["sub"], canonical["sub"]))
-            else:                           # vendored/nested copy -> COLCON_IGNORE
-                ignore_dirs.append((name, p["dir"], canonical["sub"]))
+            best[p["sub"]] = min(best.get(p["sub"], 99), p["depth"])
+        ded = sorted(s for s, d in best.items() if d <= DEDICATED)
+        if len(ded) < 2:
+            continue
+        keep = next((s for s in ded if s in orig), ded[0])   # prefer original(base)
+        for s in ded:
+            if s != keep:
+                remove_subs.append((name, s, keep))
 
-    # de-dup the action lists
     remove_subs = sorted(set(remove_subs))
-    seen = set(); ignore_dirs = [x for x in ignore_dirs if x[1] not in seen and not seen.add(x[1])]
-
-    print(f"{distro}: {len(dups)} conflicting package name(s)")
-    print(f"  remove {len(remove_subs)} duplicate submodule(s):")
+    print(f"{distro}: {len(remove_subs)} duplicate submodule(s) to remove")
     for name, sub, keep in remove_subs:
-        print(f"    '{name}': rm {sub}  (keep {keep})")
-    print(f"  COLCON_IGNORE {len(ignore_dirs)} vendored/nested copy(ies):")
-    for name, d, keep in ignore_dirs:
-        print(f"    '{name}': ignore {os.path.relpath(d, src)}  (keep {keep})")
+        print(f"  '{name}': rm {sub}  (keep {keep})")
+    if not remove_subs:
+        return
     if not args.yes:
-        print("(dry-run; pass --yes to apply)")
+        print("(dry-run; pass --yes to remove)")
         return
     for _, sub, _ in remove_subs:
         _cleanup_partial(src, sub)
-    # Record nested-ignore paths in a TRACKED list so CI can re-apply them:
-    # a COLCON_IGNORE placed inside a submodule working tree is not tracked by
-    # the superproject and would be lost on a fresh `git submodule update`.
-    ignore_list = os.path.join(HERE, "colcon_ignore.list")
-    existing = set()
-    if os.path.exists(ignore_list):
-        existing = {l.strip() for l in open(ignore_list) if l.strip()}
-    for _, d, _ in ignore_dirs:
-        rel = os.path.relpath(d, src)
-        existing.add(rel)
-        open(os.path.join(d, "COLCON_IGNORE"), "w").close()   # local build too
-    with open(ignore_list, "w") as f:
-        f.write("\n".join(sorted(existing)) + "\n")
-    print(f"applied: removed {len(remove_subs)} submodule(s), "
-          f"ignored {len(ignore_dirs)} dir(s); list -> {os.path.relpath(ignore_list, src)}")
+    print(f"removed {len(remove_subs)} duplicate submodule(s)")
 
 
 def cmd_add(cfg, args):
@@ -579,7 +562,10 @@ def _add_all(cfg, index, repos, src, args):
     # reserve as we go so we also avoid new-vs-new package collisions.
     subpaths = [l.split(None, 1)[1] for l in
                 _run(f"git -C {src} config -f .gitmodules --get-regexp '\\.path$'").stdout.splitlines()]
-    provided = set(scan_pkg_names(src, subpaths).keys())
+    # only names provided by a DEDICATED submodule (shallow package.xml) count;
+    # vendored/nested copies aren't workspace packages.
+    provided = {n for n, ps in scan_pkg_names(src, subpaths).items()
+                if min(p["depth"] for p in ps) <= 1}
 
     todo, skipped_dup = [], []
     for entry in repos.values():
