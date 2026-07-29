@@ -2670,3 +2670,19 @@
 	path = ros-drivers/camera/zed-ros2-interfaces
 	url = https://github.com/stereolabs/zed-ros2-interfaces.git
 	branch = master
+[submodule "ament/rosidl_rust"]
+	path = ament/rosidl_rust
+	url = https://github.com/ros2-rust/rosidl_rust.git
+	branch = main
+[submodule "middleware/rmw_desert"]
+	path = middleware/rmw_desert
+	url = https://github.com/signetlabdei/rmw_desert.git
+	branch = humble
+[submodule "middleware/rmw_gurumdds"]
+	path = middleware/rmw_gurumdds
+	url = https://github.com/ros2/rmw_gurumdds.git
+	branch = humble
+[submodule "middleware/rmw_zenoh"]
+	path = middleware/rmw_zenoh
+	url = https://github.com/ros2/rmw_zenoh.git
+	branch = humble
