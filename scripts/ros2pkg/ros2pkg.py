@@ -579,6 +579,82 @@ def cmd_dedupe_packages(cfg, args):
     print(f"removed {len(remove_subs)} duplicate submodule(s)")
 
 
+def cmd_check_cycles(cfg, args):
+    """Reproduce colcon's package ordering and report dependency cycles.
+
+    Mirrors colcon: discovery honours COLCON_IGNORE, and <group_depend> /
+    <member_of_group> are expanded into real edges (that expansion is what makes
+    a third-party group member an implicit dependency of the rosidl/rmw core and
+    can produce 'Unable to order packages topologically')."""
+    src = cfg["_src"][args.distro]
+    ign = re.compile(r"(^|/)(\.git|build|install|log)(/|$)")
+    pkgs, groups, gdep, where = {}, {}, {}, {}
+    for root, dirs, files in os.walk(src):
+        if "COLCON_IGNORE" in files:      # colcon stops descending here
+            dirs[:] = []
+            continue
+        dirs[:] = [d for d in dirs if not ign.search(os.path.join(root, d)[len(src):])]
+        if "package.xml" not in files:
+            continue
+        f = os.path.join(root, "package.xml")
+        try:
+            t = re.sub(r"<!--.*?-->", "",
+                       open(f, encoding="utf-8", errors="ignore").read(), flags=re.S)
+        except OSError:
+            continue
+        m = re.search(r"<name>\s*([^< ]+)", t)
+        if not m:
+            continue
+        n = m.group(1)
+        tags = ("buildtool_depend|build_depend|depend|exec_depend|run_depend"
+                "|build_export_depend|buildtool_export_depend")
+        pkgs.setdefault(n, set()).update(re.findall(r"<(?:%s)>\s*([^< ]+)" % tags, t))
+        where[n] = os.path.relpath(root, src)
+        for g in re.findall(r"<member_of_group>\s*([^< ]+)", t):
+            groups.setdefault(g, set()).add(n)
+        for g in re.findall(r"<group_depend>\s*([^< ]+)", t):
+            gdep.setdefault(n, set()).add(g)
+    for p, gs in gdep.items():
+        for g in gs:
+            pkgs[p] |= groups.get(g, set())
+
+    present = set(pkgs)
+    adj = {n: {d for d in pkgs[n] if d in present and d != n} for n in pkgs}
+    sys.setrecursionlimit(300000)
+    idx, low, on, st, cnt, sccs = {}, {}, {}, [], [0], []
+
+    def strong(v):
+        idx[v] = low[v] = cnt[0]; cnt[0] += 1; st.append(v); on[v] = True
+        for w in adj.get(v, ()):
+            if w not in idx:
+                strong(w); low[v] = min(low[v], low[w])
+            elif on.get(w):
+                low[v] = min(low[v], idx[w])
+        if low[v] == idx[v]:
+            comp = []
+            while True:
+                w = st.pop(); on[w] = False; comp.append(w)
+                if w == v:
+                    break
+            if len(comp) > 1:
+                sccs.append(comp)
+    for v in list(adj):
+        if v not in idx:
+            strong(v)
+
+    print(f"{args.distro}: {len(pkgs)} discovered packages, {len(sccs)} cycle(s)")
+    for comp in sccs:
+        print(f"  CYCLE ({len(comp)} packages):")
+        for n in sorted(comp):
+            print(f"    {n:<44} {where.get(n, '?')}")
+    if sccs:
+        print("\n  colcon will fail with 'Unable to order packages topologically'.")
+        print("  Fix: move the offending submodule under a folder containing a")
+        print("  COLCON_IGNORE (e.g. _disabled/) — --packages-ignore does NOT help,")
+        print("  colcon orders before it applies package selection.")
+    return 1 if sccs else 0
+
+
 def cmd_add(cfg, args):
     index = build_index(cfg)
     repos = load_repos(cfg, args.distro)
@@ -702,6 +778,11 @@ def main():
     b = sub.add_parser("backlog", help="write per-domain add scripts under manifests/adds/")
     b.add_argument("distro")
     b.set_defaults(fn=cmd_backlog)
+
+    cc = sub.add_parser("check-cycles",
+                        help="reproduce colcon ordering; report dependency cycles")
+    cc.add_argument("distro")
+    cc.set_defaults(fn=cmd_check_cycles)
 
     dp = sub.add_parser("dedupe-packages",
                         help="remove submodules with a colcon package name already provided elsewhere")

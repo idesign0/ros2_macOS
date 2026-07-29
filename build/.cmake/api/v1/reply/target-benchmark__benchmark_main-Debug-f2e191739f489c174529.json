@@ -1,0 +1,95 @@
+{
+	"abstract" : true,
+	"artifacts" : 
+	[
+		{
+			"path" : "/opt/homebrew/opt/ros2-jazzy/lib/libbenchmark_main.1.8.3.dylib"
+		}
+	],
+	"backtrace" : 5,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"include",
+			"find_package",
+			"set_target_properties"
+		],
+		"files" : 
+		[
+			"/opt/homebrew/opt/ros2-jazzy/lib/cmake/benchmark/benchmarkTargets.cmake",
+			"/opt/homebrew/opt/ros2-jazzy/lib/cmake/benchmark/benchmarkConfig.cmake",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 2,
+				"line" : 9,
+				"parent" : 0
+			},
+			{
+				"file" : 1,
+				"parent" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 14,
+				"parent" : 2
+			},
+			{
+				"file" : 0,
+				"parent" : 3
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 66,
+				"parent" : 4
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 68,
+				"parent" : 4
+			}
+		]
+	},
+	"codemodelVersion" : 
+	{
+		"major" : 2,
+		"minor" : 10
+	},
+	"id" : "benchmark::benchmark_main::@6890427a1f51a3e7e1df",
+	"imported" : true,
+	"interfaceCompileDependencies" : 
+	[
+		{
+			"backtrace" : 6,
+			"id" : "benchmark::benchmark::@6890427a1f51a3e7e1df"
+		}
+	],
+	"interfaceLinkLibraries" : 
+	[
+		{
+			"backtrace" : 6,
+			"id" : "benchmark::benchmark::@6890427a1f51a3e7e1df"
+		}
+	],
+	"local" : true,
+	"name" : "benchmark::benchmark_main",
+	"nameOnDisk" : "libbenchmark_main.1.8.3.dylib",
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	},
+	"sources" : [],
+	"type" : "SHARED_LIBRARY"
+}

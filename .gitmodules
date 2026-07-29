@@ -2498,3 +2498,23 @@
 	path = autonomous_driving/zmqpp_vendor
 	url = https://github.com/autowarefoundation/zmqpp_vendor.git
 	branch = main
+[submodule "middleware/rmw_gurumdds"]
+	path = middleware/rmw_gurumdds
+	url = https://github.com/ros2/rmw_gurumdds.git
+	branch = jazzy
+[submodule "middleware/rmw_desert"]
+	path = middleware/rmw_desert
+	url = https://github.com/signetlabdei/rmw_desert.git
+	branch = jazzy
+[submodule "middleware/rmw_zenoh"]
+	path = middleware/rmw_zenoh
+	url = https://github.com/ros2/rmw_zenoh.git
+	branch = jazzy
+[submodule "middleware/rosidlcpp"]
+	path = middleware/rosidlcpp
+	url = https://github.com/Tonywelte/rosidlcpp.git
+	branch = jazzy
+[submodule "ros2-rust/rosidl_rust"]
+	path = ros2-rust/rosidl_rust
+	url = https://github.com/ros2-rust/rosidl_rust.git
+	branch = main
