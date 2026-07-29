@@ -442,6 +442,111 @@ def add_one(src, path, url, branch, retry_default=False):
     return ("failed", branch, err)
 
 
+def scan_pkg_names(src, subpaths):
+    """Map colcon package name -> list of providers {sub, dir, depth}, by
+    scanning every package.xml. `sub` = owning submodule path, `dir` =
+    directory holding the package.xml, `depth` = levels below the submodule
+    root (0 = the submodule IS that package; >0 = a nested/vendored copy).
+    This catches duplicate PACKAGE names across repos AND distinguishes a
+    dedicated submodule from vendored source (e.g. ROS1 tree inside a repo)."""
+    name_re = re.compile(r"<name>\s*([^< ]+)\s*</name>")
+    out = subprocess.run(f"find {src} -name package.xml -not -path '*/.git/*'",
+                         shell=True, capture_output=True, text=True).stdout
+    roots = sorted(subpaths, key=len, reverse=True)  # longest prefix wins
+    names = {}
+    for pxml in out.splitlines():
+        rel = os.path.relpath(pxml, src)
+        root = next((p for p in roots if rel == p or rel.startswith(p + "/")), None)
+        if not root:
+            continue
+        try:
+            m = name_re.search(open(pxml, encoding="utf-8", errors="ignore").read())
+        except OSError:
+            continue
+        if not m:
+            continue
+        inner = os.path.dirname(rel)[len(root):].strip("/")   # path below submodule root
+        depth = inner.count("/") + 1 if inner else 0
+        names.setdefault(m.group(1), []).append(
+            {"sub": root, "dir": os.path.dirname(pxml), "depth": depth})
+    return names
+
+
+def _base_paths(src, base):
+    """Submodule paths present in <base>:.gitmodules (the 'original' set)."""
+    p = _run(f"git -C {src} show {base}:.gitmodules")
+    if p.returncode != 0:
+        return None
+    return {m.group(1) for m in re.finditer(r"path\s*=\s*(.+)", p.stdout)}
+
+
+def cmd_dedupe_packages(cfg, args):
+    """Remove submodules that duplicate a colcon PACKAGE name already provided
+    by another submodule. Keeps the 'original' (present on the base branch),
+    removes the newly-added duplicate — exactly colcon's 'Duplicate package
+    names not supported' error."""
+    distro = args.distro
+    src = cfg["_src"][distro]
+    cur = _run(f"git -C {src} branch --show-current").stdout.strip()
+    base = args.base or (cur[:-4] if cur.endswith("-new") else cur)
+    orig = _base_paths(src, base)
+    if orig is None:
+        sys.exit(f"cannot read {base}:.gitmodules — pass --base <branch>")
+
+    subpaths = [l.split(None, 1)[1] for l in
+                _run(f"git -C {src} config -f .gitmodules --get-regexp '\\.path$'").stdout.splitlines()]
+    names = scan_pkg_names(src, subpaths)
+    # a name is a real conflict only if >1 DISTINCT submodule provides it
+    dups = {n: ps for n, ps in names.items() if len({p["sub"] for p in ps}) > 1}
+
+    remove_subs, ignore_dirs = [], []       # (name, sub) / (name, dir)
+
+    def rank(p):                            # prefer original(base) + shallowest
+        return (p["sub"] not in orig, p["depth"], p["sub"])
+
+    for name, ps in sorted(dups.items()):
+        canonical = min(ps, key=rank)
+        for p in ps:
+            if p["sub"] == canonical["sub"]:
+                continue
+            if p["depth"] == 0:             # dedicated duplicate submodule -> remove it
+                remove_subs.append((name, p["sub"], canonical["sub"]))
+            else:                           # vendored/nested copy -> COLCON_IGNORE
+                ignore_dirs.append((name, p["dir"], canonical["sub"]))
+
+    # de-dup the action lists
+    remove_subs = sorted(set(remove_subs))
+    seen = set(); ignore_dirs = [x for x in ignore_dirs if x[1] not in seen and not seen.add(x[1])]
+
+    print(f"{distro}: {len(dups)} conflicting package name(s)")
+    print(f"  remove {len(remove_subs)} duplicate submodule(s):")
+    for name, sub, keep in remove_subs:
+        print(f"    '{name}': rm {sub}  (keep {keep})")
+    print(f"  COLCON_IGNORE {len(ignore_dirs)} vendored/nested copy(ies):")
+    for name, d, keep in ignore_dirs:
+        print(f"    '{name}': ignore {os.path.relpath(d, src)}  (keep {keep})")
+    if not args.yes:
+        print("(dry-run; pass --yes to apply)")
+        return
+    for _, sub, _ in remove_subs:
+        _cleanup_partial(src, sub)
+    # Record nested-ignore paths in a TRACKED list so CI can re-apply them:
+    # a COLCON_IGNORE placed inside a submodule working tree is not tracked by
+    # the superproject and would be lost on a fresh `git submodule update`.
+    ignore_list = os.path.join(HERE, "colcon_ignore.list")
+    existing = set()
+    if os.path.exists(ignore_list):
+        existing = {l.strip() for l in open(ignore_list) if l.strip()}
+    for _, d, _ in ignore_dirs:
+        rel = os.path.relpath(d, src)
+        existing.add(rel)
+        open(os.path.join(d, "COLCON_IGNORE"), "w").close()   # local build too
+    with open(ignore_list, "w") as f:
+        f.write("\n".join(sorted(existing)) + "\n")
+    print(f"applied: removed {len(remove_subs)} submodule(s), "
+          f"ignored {len(ignore_dirs)} dir(s); list -> {os.path.relpath(ignore_list, src)}")
+
+
 def cmd_add(cfg, args):
     index = build_index(cfg)
     repos = load_repos(cfg, args.distro)
@@ -470,15 +575,26 @@ def cmd_add(cfg, args):
 def _add_all(cfg, index, repos, src, args):
     """Bulk add every pending classified repo. Broken ones are skipped cleanly
     (auto-cleanup) and written to <distro>_failed.json — never left half-added."""
-    todo = []
+    # package names already provided by the installed tree (colcon-equivalent);
+    # reserve as we go so we also avoid new-vs-new package collisions.
+    subpaths = [l.split(None, 1)[1] for l in
+                _run(f"git -C {src} config -f .gitmodules --get-regexp '\\.path$'").stdout.splitlines()]
+    provided = set(scan_pkg_names(src, subpaths).keys())
+
+    todo, skipped_dup = [], []
     for entry in repos.values():
         r = resolve(cfg, index, args.distro, entry)
         if r["status"] != "TO_ADD":
             continue
         if r["domain"] == "_incoming" and not args.include_incoming:
             continue
+        clash = [p for p in (entry.get("packages") or []) if p in provided]
+        if clash:
+            skipped_dup.append({"path": r["path"], "packages": clash})
+            continue
+        provided.update(entry.get("packages") or [])
         todo.append(r)
-    print(f"{args.distro}: {len(todo)} to add"
+    print(f"{args.distro}: {len(todo)} to add, {len(skipped_dup)} skipped (duplicate package name)"
           + ("" if args.yes else "  (dry-run; pass --yes to execute)"))
     if not args.yes:
         return
@@ -545,6 +661,13 @@ def main():
     b = sub.add_parser("backlog", help="write per-domain add scripts under manifests/adds/")
     b.add_argument("distro")
     b.set_defaults(fn=cmd_backlog)
+
+    dp = sub.add_parser("dedupe-packages",
+                        help="remove submodules with a colcon package name already provided elsewhere")
+    dp.add_argument("distro")
+    dp.add_argument("--base", help="branch holding the 'original' set (default: <distro>)")
+    dp.add_argument("--yes", action="store_true", help="actually remove")
+    dp.set_defaults(fn=cmd_dedupe_packages)
 
     d = sub.add_parser("diff", help="official repos not yet installed")
     d.add_argument("distro")
