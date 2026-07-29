@@ -17,6 +17,22 @@ echo "Initializing and updating submodules..."
 git submodule update --init --recursive
 echo "-------------------------------------------------"
 
+# Re-apply COLCON_IGNORE for vendored/nested duplicate packages living INSIDE
+# submodules (recorded by `ros2pkg dedupe-packages`). These can't be tracked by
+# the superproject, so they must be recreated after each fresh submodule checkout
+# or colcon aborts with "Duplicate package names not supported".
+IGNORE_LIST="$MAIN_ROOT/scripts/ros2pkg/colcon_ignore.list"
+if [ -f "$IGNORE_LIST" ]; then
+    while read -r ip; do
+        [ -z "$ip" ] && continue
+        if [ -d "$MAIN_ROOT/$ip" ]; then
+            touch "$MAIN_ROOT/$ip/COLCON_IGNORE"
+            echo "🚫 COLCON_IGNORE -> $ip"
+        fi
+    done < "$IGNORE_LIST"
+    echo "-------------------------------------------------"
+fi
+
 # ----------------------------
 # 2. Loop through submodules (macOS-safe)
 # ----------------------------

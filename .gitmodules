@@ -1030,14 +1030,6 @@
 	path = gzsim/ign_rviz
 	url = https://github.com/ignitionrobotics/ign-rviz.git
 	branch = main
-[submodule "gzsim/ignition_cmake2_vendor"]
-	path = gzsim/ignition_cmake2_vendor
-	url = https://github.com/ignition-release/ignition_cmake2_vendor.git
-	branch = humble
-[submodule "gzsim/ignition_math6_vendor"]
-	path = gzsim/ignition_math6_vendor
-	url = https://github.com/ignition-release/ignition_math6_vendor.git
-	branch = humble
 [submodule "gzsim/leo_simulator"]
 	path = gzsim/leo_simulator
 	url = https://github.com/LeoRover/leo_simulator-ros2.git
