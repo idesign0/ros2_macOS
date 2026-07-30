@@ -11,7 +11,13 @@ jobs:
     runs-on: macos-26
     env:
       CI_BUILD: TRUE
-    timeout-minutes: 240
+      # Homebrew refuses formulae from third-party taps when resolving via the
+      # API ("Refusing to load formula ... from untrusted tap"), which silently
+      # skipped the gz-* bottles and forced source builds until the job timed out.
+      HOMEBREW_NO_INSTALL_FROM_API: 1
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    # 360 is the GitHub-hosted runner maximum (6 h); jobs are killed past this.
+    timeout-minutes: 360
 
     steps:
     # --------------------------------------------------
@@ -64,7 +70,7 @@ jobs:
     # --------------------------------------------------
     - name: Update Homebrew and install base packages
       run: |
-        brew tap osrf/simulation
+        brew tap osrf/simulation https://github.com/osrf/homebrew-simulation
         brew install \
           graphviz \
           eigen@3 \
