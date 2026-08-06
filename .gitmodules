@@ -952,7 +952,7 @@
 	branch = jazzy
 [submodule "ros-planning/cartographer"]
 	path = ros-planning/cartographer
-	url = https://github.com/ros2/cartographer.git
+	url = https://github.com/idesign0/id_cartographer.git
 	branch = ros2
 [submodule "ros-planning/cartographer_ros"]
 	path = ros-planning/cartographer_ros
@@ -2518,3 +2518,11 @@
 	path = ros2-rust/rosidl_rust
 	url = https://github.com/ros2-rust/rosidl_rust.git
 	branch = main
+[submodule "ros-planning/dependencies/gtsam"]
+	path = ros-planning/dependencies/gtsam
+	url = https://github.com/borglab/gtsam.git
+	branch = 4.2.2
+[submodule "ros-planning/dependencies/lua"]
+	path = ros-planning/dependencies/lua
+	url = https://github.com/idesign0/id_lua.git
+	branch = 5.3
