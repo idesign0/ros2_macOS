@@ -368,3 +368,20 @@ endif()
 
 # OpenCV (Homebrew)
 set(OpenCV_DIR "/opt/homebrew/opt/opencv@4/lib/cmake/opencv4" CACHE PATH "" FORCE)
+# ---------------------------------------------------------------------------
+# GTSAM (borglab/gtsam @ 4.2.2) build options — macOS arm64 / colcon
+# GTSAM_* vars are namespaced, so setting them unconditionally is harmless to
+# every other package. These control build time, bottle portability, Eigen ABI,
+# and the Homebrew oneTBB incompatibility.
+# ---------------------------------------------------------------------------
+set(GTSAM_BUILD_TESTS              OFF CACHE BOOL "" FORCE)  # default ON  - skip tests
+set(GTSAM_BUILD_EXAMPLES_ALWAYS    OFF CACHE BOOL "" FORCE)  # default ON  - skip examples
+set(GTSAM_BUILD_TIMING_ALWAYS      OFF CACHE BOOL "" FORCE)
+set(GTSAM_BUILD_UNSTABLE           OFF CACHE BOOL "" FORCE)  # consumers do not use gtsam_unstable
+set(GTSAM_UNSTABLE_BUILD_PYTHON    OFF CACHE BOOL "" FORCE)
+set(GTSAM_BUILD_PYTHON             OFF CACHE BOOL "" FORCE)
+set(GTSAM_INSTALL_MATLAB_TOOLBOX   OFF CACHE BOOL "" FORCE)
+set(GTSAM_USE_SYSTEM_EIGEN         ON  CACHE BOOL "" FORCE)  # share workspace Homebrew Eigen (avoid ABI mismatch)
+set(GTSAM_WITH_TBB                 OFF CACHE BOOL "" FORCE)  # Homebrew = oneTBB removed tbb::task GTSAM 4.2 uses
+set(GTSAM_BUILD_WITH_MARCH_NATIVE  OFF CACHE BOOL "" FORCE)  # keep bottle portable across Macs
+# --- end GTSAM options ---
