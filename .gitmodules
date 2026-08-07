@@ -240,7 +240,7 @@
 	branch = humble
 [submodule "ros2/rmw"]
 	path = ros2/rmw
-	url = https://github.com/ros2/rmw.git
+	url = https://github.com/idesign0/id_rmw.git
 	branch = humble
 [submodule "ros2/rosidl_typesupport_fastrtps"]
 	path = ros2/rosidl_typesupport_fastrtps
