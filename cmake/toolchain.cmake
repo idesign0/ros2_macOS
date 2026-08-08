@@ -383,3 +383,12 @@ set(GTSAM_USE_SYSTEM_EIGEN         ON  CACHE BOOL "" FORCE)  # share workspace H
 set(GTSAM_WITH_TBB                 OFF CACHE BOOL "" FORCE)  # Homebrew = oneTBB removed tbb::task GTSAM 4.2 uses
 set(GTSAM_BUILD_WITH_MARCH_NATIVE  OFF CACHE BOOL "" FORCE)  # keep bottle portable across Macs
 # --- end GTSAM options ---
+
+# ---------------------------------------------------------------------------
+# Cartographer (ros2 branch) uses legacy unprefixed Abseil thread-safety macros
+# (LOCKS_EXCLUDED / EXCLUSIVE_LOCKS_REQUIRED / GUARDED_BY) removed by newer
+# Abseil. Force-include a shim mapping them to the ABSL_* equivalents.
+# ---------------------------------------------------------------------------
+if(CMAKE_PROJECT_NAME STREQUAL "cartographer")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include ${CMAKE_CURRENT_LIST_DIR}/cartographer_absl_compat.h")
+endif()
