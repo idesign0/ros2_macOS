@@ -193,6 +193,11 @@ jobs:
       continue-on-error: ${{ endsWith(github.ref_name, '-new') }}
       shell: bash
       run: |
+        # Drop ros2_controllers' battery_state_broadcaster: it collides with the
+        # standalone ros_battery_monitoring package we ship, and only appears via
+        # the upstream auto-rebase (not in our tree), so ignore it at build time.
+        [ -d ros2_control/ros2_controllers/battery_state_broadcaster ] && \
+          touch ros2_control/ros2_controllers/battery_state_broadcaster/COLCON_IGNORE || true
         colcon build \
           --merge-install \
           --executor parallel \
