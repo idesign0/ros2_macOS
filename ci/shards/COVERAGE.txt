@@ -1,0 +1,12 @@
+total_packages_after_skip=2204
+skipped=3  (nav2_system_tests, qt_gui_cpp, rqt_gui_cpp)
+base_core=968
+base_vendors=31
+domain_shards=20
+private_packages=1205
+written=2204
+missing=0  (-)
+extra=0
+cross_shard_upward_edges=0
+COVERAGE_OK=True
+SHARDS_INDEPENDENT=True

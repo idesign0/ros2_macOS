@@ -1,0 +1,103 @@
+name: Setup ROS 2 macOS build
+description: >
+  Shared setup for the layered-build jobs: submodule init, Homebrew (cached),
+  Python 3.11 toolchain, ccache, and build environment. The calling job must run
+  actions/checkout BEFORE this action so the action file exists on disk.
+
+inputs:
+  deploy-token:
+    description: Token used to update forked submodules from upstream (CATS_DEPLOY_TOKEN).
+    required: true
+  gz-version:
+    description: Gazebo version for this distro (harmonic | ionic).
+    required: true
+  brew-base-formulae:
+    description: Space-separated base Homebrew formulae for this distro.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Update submodules
+      shell: bash
+      run: |
+        git submodule sync --recursive
+        git submodule update --init --recursive --jobs 8
+
+    - name: Sync submodule branches
+      shell: bash
+      run: |
+        chmod +x scripts/sync-submodules-branches.sh
+        ./scripts/sync-submodules-branches.sh
+
+    - name: Configure git credentials for fork updates
+      shell: bash
+      run: |
+        git config --global url."https://${{ inputs.deploy-token }}@github.com/".insteadOf "https://github.com/"
+
+    - name: Update forked submodules from upstream
+      shell: bash
+      run: |
+        chmod +x scripts/update_forked_submodules.sh
+        ./scripts/update_forked_submodules.sh
+
+    - name: Cache Homebrew directories
+      uses: actions/cache@v4
+      with:
+        path: /opt/homebrew
+        key: ${{ runner.os }}-brew-v2-${{ hashFiles('brew-packages/install_brew_packages.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-brew-v2-
+
+    - name: Configure Homebrew parallelism
+      shell: bash
+      run: |
+        echo "HOMEBREW_MAKE_JOBS=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
+        echo "HOMEBREW_CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
+
+    - name: Update Homebrew and install base packages
+      shell: bash
+      run: |
+        brew tap osrf/simulation https://github.com/osrf/homebrew-simulation
+        brew install ccache ${{ inputs.brew-base-formulae }}
+        # Symlink eigen3 for standard discovery
+        sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
+
+    - name: Install Homebrew packages via script
+      shell: bash
+      run: |
+        chmod +x brew-packages/install_brew_packages.sh
+        ./brew-packages/install_brew_packages.sh
+        brew update
+
+    - name: Python 3.11
+      shell: bash
+      run: |
+        export PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
+        which python3
+        python3 --version
+        echo "/Library/Frameworks/Python.framework/Versions/3.11/bin" >> $GITHUB_PATH
+        python3 -m pip install --upgrade pip --break-system-packages
+        python3 -m pip install -U \
+          --break-system-packages \
+          --config-settings="--global-option=build_ext" \
+          --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
+          --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
+          argcomplete catkin_pkg colcon-common-extensions coverage \
+          cryptography empy==3.3.4 flake8 flake8-blind-except==0.1.1 flake8-builtins \
+          flake8-class-newline flake8-comprehensions flake8-deprecated \
+          flake8-docstrings flake8-import-order flake8-quotes \
+          importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
+          nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
+          pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard jinja2
+
+    - name: Setup build environment
+      shell: bash
+      run: |
+        echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> $GITHUB_ENV
+        echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5):$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
+        echo "GZ_VERSION=${{ inputs.gz-version }}" >> $GITHUB_ENV
+        echo "CMAKE_TOOLCHAIN_FILE=${GITHUB_WORKSPACE}/cmake/toolchain.cmake" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${HOME}/.cache/ccache" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=8G" >> $GITHUB_ENV

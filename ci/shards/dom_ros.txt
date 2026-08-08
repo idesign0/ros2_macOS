@@ -1,0 +1,7 @@
+bond_core
+bondpy
+diagnostic_common_diagnostics
+diagnostic_remote_logging
+diagnostics
+geographic_info
+self_test
