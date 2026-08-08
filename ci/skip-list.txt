@@ -1,0 +1,9 @@
+# ci/skip-list.txt — packages EXCLUDED from the macOS build (Lane 7: unsupported platform).
+# One package name per line. '#' starts a comment.
+# gen_shards.py removes these from the dependency graph before layering, and the
+# workflow COLCON_IGNOREs them, so nothing is assigned to depend on them.
+
+# Migrated from the old workflow's --packages-ignore (Qt6 binding failure + cascade).
+qt_gui_cpp
+rqt_gui_cpp
+pal_carbon_collector

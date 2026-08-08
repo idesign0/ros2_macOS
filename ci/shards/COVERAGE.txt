@@ -1,0 +1,12 @@
+total_packages_after_skip=2142
+skipped=3  (pal_carbon_collector, qt_gui_cpp, rqt_gui_cpp)
+base_core=665
+base_vendors=46
+domain_shards=21
+private_packages=1431
+written=2142
+missing=0  (-)
+extra=0
+cross_shard_upward_edges=0
+COVERAGE_OK=True
+SHARDS_INDEPENDENT=True
