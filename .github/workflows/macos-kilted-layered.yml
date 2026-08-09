@@ -1,8 +1,6 @@
 name: macOS ROS 2 Kilted — Layered Matrix (experimental)
 
-# EXPERIMENTAL, dispatch-only. Runs alongside the existing single-job
-# macos-kilted-ci.yml (unchanged). Once a dispatch run is green, switch the
-# triggers here to `push` and retire the monolithic workflow.
+# EXPERIMENTAL, dispatch-only. Runs alongside macos-kilted-ci.yml (unchanged).
 on:
   workflow_dispatch:
 
@@ -18,9 +16,6 @@ env:
   BREW_BASE: "graphviz eigen@3 eigen GeographicLib vtk opencv@4"
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # 0. Read the committed domain list -> drive the L2 matrix.
-  # ---------------------------------------------------------------------------
   plan:
     runs-on: ubuntu-latest
     outputs:
@@ -32,11 +27,6 @@ jobs:
         run: |
           echo "domains=$(jq -R -s -c 'split("\n") | map(select(length>0))' ci/shards/_domains.txt)" >> "$GITHUB_OUTPUT"
 
-  # ---------------------------------------------------------------------------
-  # BASE — core + vendors together (+ external Gazebo + protobuf). Built in ONE
-  # job so colcon orders low-level vendors (gtest_vendor, fastcdr, ...) before
-  # the core packages that depend on them. Cumulative install/ artifact.
-  # ---------------------------------------------------------------------------
   base:
     needs: plan
     runs-on: macos-26
@@ -49,8 +39,7 @@ jobs:
           deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
-
-      - name: Shard coverage & graph diagnostics (non-fatal)
+      - name: Shard coverage diagnostics (non-fatal)
         run: |
           set +e
           colcon list --names-only 2>/dev/null | sort -u > /tmp/all_names.txt
@@ -58,38 +47,29 @@ jobs:
           cat ci/shards/00_base_core.txt ci/shards/01_base_vendors.txt ci/shards/dom_*.txt ci/skip-list.txt \
             | grep -vE '^\s*#|^\s*$' | sort -u > /tmp/assigned.txt
           comm -23 /tmp/all_names.txt /tmp/assigned.txt > /tmp/unassigned.txt
-          n=$(wc -l < /tmp/unassigned.txt | tr -d ' ')
-          echo "packages not covered by any shard (will NOT build): $n"
-          head -60 /tmp/unassigned.txt
-          if [ "$n" -gt 0 ]; then echo "::warning::$n package(s) not in any shard; regenerate ci/shards."; fi
+          echo "not covered by any shard: $(wc -l < /tmp/unassigned.txt)"
+          head -40 /tmp/unassigned.txt
           exit 0
-
-      - name: Apply skip-list (COLCON_IGNORE unsupported packages)
+      - name: Apply skip-list (COLCON_IGNORE)
         run: |
           grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
             path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
-            if [ -n "$path" ]; then touch "$path/COLCON_IGNORE"; echo "ignore: $pkg ($path)"; fi
+            [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
           done
-
       - name: Build External Gazebo (protobuf + gz)
         run: |
           mkdir -p "$GZ_DIR"
           git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b "$GZ_VERSION" "$GZ_DIR"
           brew unlink protobuf || true
-          colcon build --packages-select protobuf \
-            --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
-            --merge-install --continue-on-error \
-            --cmake-args -DBUILD_SHARED_LIBS=ON -Dprotobuf_BUILD_TESTS=OFF \
+          colcon build --packages-select protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
+            --merge-install --continue-on-error --cmake-args -DBUILD_SHARED_LIBS=ON -Dprotobuf_BUILD_TESTS=OFF \
             -Dprotobuf_BUILD_CONFORMANCE=OFF -Dprotobuf_BUILD_EXAMPLES=OFF \
             -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
-          colcon build --base-paths "$GZ_DIR/" --packages-ignore protobuf \
-            --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
-            --merge-install --continue-on-error \
-            --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+          colcon build --base-paths "$GZ_DIR/" --packages-ignore protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
+            --merge-install --continue-on-error --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
           touch "$GZ_DIR/COLCON_IGNORE"
-
       - name: Unlink conflicting Homebrew packages
         run: |
           set +e
@@ -105,47 +85,40 @@ jobs:
           brew unlink ceres-solver || true
           brew unlink osqp || true
           echo "unlink done"
-
       - name: Restore ccache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
           key: ccache-kilted-base-${{ github.run_id }}
           restore-keys: ccache-kilted-base-
-
-      - name: Build base (core + vendors, colcon-ordered)
+      - name: Build base (core+vendors)
         continue-on-error: true
         run: |
           SEL=$(cat ci/shards/00_base_core.txt ci/shards/01_base_vendors.txt | grep -vE '^\s*#|^\s*$' | tr '\n' ' ')
           colcon build --packages-select $SEL \
-            --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
-            --continue-on-error \
+            --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            2>&1 | tee build_base.log
-          echo "== base summary =="; grep -E 'Summary:|packages failed' build_base.log || true
-
-      - name: Base failure summary
-        if: always()
-        run: |
-          mkdir -p summaries
-          { echo "## base"; grep -E 'Failed +<<<' build_base.log 2>/dev/null | sort -u || true; } > summaries/_base.txt
-
-      - name: Upload base install
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_base.log
+          echo "== summary =="; grep -E 'Summary:|packages failed' build_base.log || true
+      - name: Upload install-base
         uses: actions/upload-artifact@v4
         with:
           name: install-base
           path: install
           retention-days: 2
-      - name: Upload base summary
+      - name: Summary base
+        if: always()
+        run: |
+          mkdir -p summaries
+          { echo "## base"; grep -E 'Failed +<<<' build_base.log 2>/dev/null | sort -u || true; } > summaries/_base.txt
+      - name: Upload summary base
         if: always()
         uses: actions/upload-artifact@v4
-        with: { name: summary-_base, path: summaries, retention-days: 5 }
+        with:
+          name: summary-_base
+          path: summaries
+          retention-days: 5
 
-  # ---------------------------------------------------------------------------
-  # L2 — domain shards, in parallel. Each builds ONLY its packages against the
-  #      base underlay and uploads its delta (install_shard) + a build summary.
-  # ---------------------------------------------------------------------------
   domains:
     needs: [plan, base]
     runs-on: macos-26
@@ -165,11 +138,11 @@ jobs:
           brew-base-formulae: ${{ env.BREW_BASE }}
       - uses: actions/download-artifact@v4
         with: { name: install-base, path: install }
-      - name: Apply skip-list
+      - name: Apply skip-list (COLCON_IGNORE)
         run: |
           grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
             path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
-            [ -n "$path" ] && touch "$path/COLCON_IGNORE" || true
+            [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
           done
       - name: Restore ccache
         uses: actions/cache@v4
@@ -177,28 +150,29 @@ jobs:
           path: ~/.cache/ccache
           key: ccache-kilted-${{ matrix.shard }}-${{ github.run_id }}
           restore-keys: ccache-kilted-${{ matrix.shard }}-
-      - name: Build shard ${{ matrix.shard }} (L2)
+      - name: Build shard ${{ matrix.shard }}
         continue-on-error: true
         run: |
+          # Build INTO the base prefix (install/) so ament_package et al. resolve
+          # in the same prefix (a separate --install-base breaks ros_workspace and
+          # ament-python consumers). Snapshot first, then extract this shard's delta.
+          touch /tmp/base_marker
           source install/setup.sh
           SEL=$(grep -vE '^\s*#|^\s*$' "ci/shards/dom_${{ matrix.shard }}.txt" | tr '\n' ' ')
           [ -z "$SEL" ] && { echo "empty shard"; exit 0; }
-          colcon build --packages-select $SEL \
-            --install-base install_shard --merge-install \
-            --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
-            --continue-on-error \
+          colcon build --packages-select $SEL --merge-install \
+            --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            2>&1 | tee "build_${{ matrix.shard }}.log"
-      - name: Summarize shard result
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "build_${{ matrix.shard }}.log"
+          mkdir -p install_shard
+          find install -type f -newer /tmp/base_marker 2>/dev/null | while read -r f; do
+            rel="${f#install/}"; mkdir -p "install_shard/$(dirname "$rel")"; cp -p "$f" "install_shard/$rel"
+          done
+      - name: Summarize shard
         if: always()
         run: |
           mkdir -p summaries
-          {
-            echo "## shard: ${{ matrix.shard }}"
-            grep -E 'Summary:|packages failed' "build_${{ matrix.shard }}.log" 2>/dev/null || true
-            grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sort -u || true
-          } > "summaries/${{ matrix.shard }}.txt"
+          { echo "## shard: ${{ matrix.shard }}"; grep -E 'Summary:|packages failed' "build_${{ matrix.shard }}.log" 2>/dev/null || true; grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sort -u || true; } > "summaries/${{ matrix.shard }}.txt"
       - name: Upload shard delta
         if: always()
         uses: actions/upload-artifact@v4
@@ -215,9 +189,6 @@ jobs:
           path: summaries
           retention-days: 5
 
-  # ---------------------------------------------------------------------------
-  # Assemble the full merged install/ (base + every shard delta) for deploy.
-  # ---------------------------------------------------------------------------
   assemble:
     needs: domains
     if: always()
@@ -227,13 +198,9 @@ jobs:
         with: { name: install-base, path: install }
       - uses: actions/download-artifact@v4
         with: { pattern: install-dom-*, path: deltas }
-      - name: Merge shard deltas into install/
+      - name: Merge shard deltas
         run: |
-          if [ -d deltas ]; then
-            find deltas -mindepth 1 -maxdepth 1 -type d | while read -r d; do
-              rsync -a "$d/" install/
-            done
-          fi
+          if [ -d deltas ]; then find deltas -mindepth 1 -maxdepth 1 -type d | while read -r d; do rsync -a "$d/" install/; done; fi
           du -sh install || true
       - name: Upload full workspace install
         uses: actions/upload-artifact@v4
@@ -241,12 +208,7 @@ jobs:
           name: install-full-kilted
           path: install
           retention-days: 5
-      # NOTE: the release + Homebrew-formula publish (see macos-kilted-ci.yml,
-      # "Deploy Release + Update Formula") consumes exactly this merged install/.
 
-  # ---------------------------------------------------------------------------
-  # Aggregate per-shard summaries into one pass/fail report.
-  # ---------------------------------------------------------------------------
   report:
     needs: [base, domains]
     if: always()
@@ -257,12 +219,7 @@ jobs:
       - name: Combined report
         run: |
           echo "# Kilted layered build — per-shard results" >> "$GITHUB_STEP_SUMMARY"
-          for f in summaries/*.txt; do
-            [ -f "$f" ] || continue
-            fail=$(grep -c 'Failed  *<<<' "$f" || true)
-            echo "- **$(basename "$f" .txt)**: $fail failed" >> "$GITHUB_STEP_SUMMARY"
-          done
-          echo "" >> "$GITHUB_STEP_SUMMARY"
+          for f in summaries/*.txt; do [ -f "$f" ] || continue; echo "- **$(basename "$f" .txt)**: $(grep -c 'Failed  *<<<' "$f" || true) failed" >> "$GITHUB_STEP_SUMMARY"; done
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           grep -rhE 'Failed +<<<' summaries/ | sort -u >> "$GITHUB_STEP_SUMMARY" || true
           echo '```' >> "$GITHUB_STEP_SUMMARY"
