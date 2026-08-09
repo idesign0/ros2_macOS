@@ -58,6 +58,14 @@ def main():
         domain = p.split(os.sep)[0] if os.sep in p else "(root)"
         dom[name] = domain
     # dependency edges (u depends on v)
+    # colcon >=0.21 emits dot node ids as "<pkgname>_<objectaddress>"; map those
+    # back to the real package name (colcon 0.19 emitted the plain name).
+    known = set(dom)
+    def canon(node):
+        if node in known:
+            return node
+        stripped = re.sub(r'_\d+$', '', node)
+        return stripped if stripped in known else node
     dot = run(["colcon", "graph", "--base-paths", ROOT, "--dot"])
     deps = defaultdict(set)
     rdeps = defaultdict(set)
@@ -66,7 +74,7 @@ def main():
         m = er.match(line)
         if not m:
             continue
-        u, v = m.group(1), m.group(2)
+        u, v = canon(m.group(1)), canon(m.group(2))
         dom.setdefault(u, "(external)")
         dom.setdefault(v, "(external)")
         if u != v:

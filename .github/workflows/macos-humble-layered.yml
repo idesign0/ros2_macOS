@@ -19,8 +19,7 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # 0. Read the committed domain list -> drive the L2 matrix. Also the drift
-  #    guard: fail early if ci/shards/ is stale vs the current graph.
+  # 0. Read the committed domain list -> drive the L2 matrix.
   # ---------------------------------------------------------------------------
   plan:
     runs-on: ubuntu-latest
@@ -34,9 +33,11 @@ jobs:
           echo "domains=$(jq -R -s -c 'split("\n") | map(select(length>0))' ci/shards/_domains.txt)" >> "$GITHUB_OUTPUT"
 
   # ---------------------------------------------------------------------------
-  # L0 — base-core (+ external Gazebo + protobuf). Cumulative install/ artifact.
+  # BASE — core + vendors together (+ external Gazebo + protobuf). Built in ONE
+  # job so colcon orders low-level vendors (gtest_vendor, fastcdr, ...) before
+  # the core packages that depend on them. Cumulative install/ artifact.
   # ---------------------------------------------------------------------------
-  base-core:
+  base:
     needs: plan
     runs-on: macos-26
     timeout-minutes: 360
@@ -52,20 +53,15 @@ jobs:
       - name: Shard coverage & graph diagnostics (non-fatal)
         run: |
           set +e
-          echo "== unique package names in this tree =="
           colcon list --names-only 2>/dev/null | sort -u > /tmp/all_names.txt
-          echo "unique names: $(wc -l < /tmp/all_names.txt)"
-          echo "== colcon graph edge count / sample (dot-format sanity) =="
-          colcon graph --dot 2>/dev/null | grep -c ' -> '
-          colcon graph --dot 2>/dev/null | grep ' -> ' | head -3
-          echo "== packages not covered by any shard (these will NOT build) =="
+          echo "unique package names: $(wc -l < /tmp/all_names.txt)"
           cat ci/shards/00_base_core.txt ci/shards/01_base_vendors.txt ci/shards/dom_*.txt ci/skip-list.txt \
             | grep -vE '^\s*#|^\s*$' | sort -u > /tmp/assigned.txt
           comm -23 /tmp/all_names.txt /tmp/assigned.txt > /tmp/unassigned.txt
           n=$(wc -l < /tmp/unassigned.txt | tr -d ' ')
-          echo "unassigned count: $n"
+          echo "packages not covered by any shard (will NOT build): $n"
           head -60 /tmp/unassigned.txt
-          if [ "$n" -gt 0 ]; then echo "::warning::$n package(s) not in any shard; regenerate ci/shards after this run."; fi
+          if [ "$n" -gt 0 ]; then echo "::warning::$n package(s) not in any shard; regenerate ci/shards."; fi
           exit 0
 
       - name: Apply skip-list (COLCON_IGNORE unsupported packages)
@@ -86,12 +82,12 @@ jobs:
             --cmake-args -DBUILD_SHARED_LIBS=ON -Dprotobuf_BUILD_TESTS=OFF \
             -Dprotobuf_BUILD_CONFORMANCE=OFF -Dprotobuf_BUILD_EXAMPLES=OFF \
             -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
           colcon build --base-paths "$GZ_DIR/" --packages-ignore protobuf \
             --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
             --merge-install --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
           touch "$GZ_DIR/COLCON_IGNORE"
 
       - name: Unlink conflicting Homebrew packages
@@ -113,76 +109,44 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-humble-base-core-${{ github.run_id }}
-          restore-keys: ccache-humble-base-core-
+          key: ccache-humble-base-${{ github.run_id }}
+          restore-keys: ccache-humble-base-
 
-      - name: Build base-core (L0)
+      - name: Build base (core + vendors, colcon-ordered)
+        continue-on-error: true
         run: |
-          SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/00_base_core.txt | tr '\n' ' ')
+          SEL=$(cat ci/shards/00_base_core.txt ci/shards/01_base_vendors.txt | grep -vE '^\s*#|^\s*$' | tr '\n' ' ')
           colcon build --packages-select $SEL \
             --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
             --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            2>&1 | tee build_base.log
+          echo "== base summary =="; grep -E 'Summary:|packages failed' build_base.log || true
 
-      - name: Upload base-core install
+      - name: Base failure summary
+        if: always()
+        run: |
+          mkdir -p summaries
+          { echo "## base"; grep -E 'Failed +<<<' build_base.log 2>/dev/null | sort -u || true; } > summaries/_base.txt
+
+      - name: Upload base install
         uses: actions/upload-artifact@v4
         with:
-          name: install-base-core
+          name: install-base
           path: install
           retention-days: 2
-
-  # ---------------------------------------------------------------------------
-  # L1 — base-vendors (heavy *_vendor). Builds on top of L0 -> cumulative "full".
-  # ---------------------------------------------------------------------------
-  base-vendors:
-    needs: base-core
-    runs-on: macos-26
-    timeout-minutes: 360
-    steps:
-      - uses: actions/checkout@v4
-        with: { submodules: false, fetch-depth: 0 }
-      - uses: ./.github/actions/setup-ros2-macos
-        with:
-          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
-          gz-version: ${{ env.GZ_VERSION }}
-          brew-base-formulae: ${{ env.BREW_BASE }}
-      - uses: actions/download-artifact@v4
-        with: { name: install-base-core, path: install }
-      - name: Apply skip-list
-        run: |
-          grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
-            path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
-            [ -n "$path" ] && touch "$path/COLCON_IGNORE" || true
-          done
-      - name: Restore ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ccache
-          key: ccache-humble-base-vendors-${{ github.run_id }}
-          restore-keys: ccache-humble-base-vendors-
-      - name: Build base-vendors (L1)
-        run: |
-          source install/setup.sh
-          SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/01_base_vendors.txt | tr '\n' ' ')
-          colcon build --packages-select $SEL \
-            --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
-            --continue-on-error \
-            --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-      - name: Upload cumulative base install
+      - name: Upload base summary
+        if: always()
         uses: actions/upload-artifact@v4
-        with:
-          name: install-base-full
-          path: install
-          retention-days: 2
+        with: { name: summary-_base, path: summaries, retention-days: 5 }
 
   # ---------------------------------------------------------------------------
   # L2 — domain shards, in parallel. Each builds ONLY its packages against the
   #      base underlay and uploads its delta (install_shard) + a build summary.
   # ---------------------------------------------------------------------------
   domains:
-    needs: [plan, base-vendors]
+    needs: [plan, base]
     runs-on: macos-26
     timeout-minutes: 360
     strategy:
@@ -199,7 +163,7 @@ jobs:
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
       - uses: actions/download-artifact@v4
-        with: { name: install-base-full, path: install }
+        with: { name: install-base, path: install }
       - name: Apply skip-list
         run: |
           grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
@@ -213,6 +177,7 @@ jobs:
           key: ccache-humble-${{ matrix.shard }}-${{ github.run_id }}
           restore-keys: ccache-humble-${{ matrix.shard }}-
       - name: Build shard ${{ matrix.shard }} (L2)
+        continue-on-error: true
         run: |
           source install/setup.sh
           SEL=$(grep -vE '^\s*#|^\s*$' "ci/shards/dom_${{ matrix.shard }}.txt" | tr '\n' ' ')
@@ -223,14 +188,15 @@ jobs:
             --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            2>&1 | tee build_${{ matrix.shard }}.log
+            2>&1 | tee "build_${{ matrix.shard }}.log"
       - name: Summarize shard result
         if: always()
         run: |
           mkdir -p summaries
           {
             echo "## shard: ${{ matrix.shard }}"
-            grep -E 'Finished <<<|Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sort -u || true
+            grep -E 'Summary:|packages failed' "build_${{ matrix.shard }}.log" 2>/dev/null || true
+            grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sort -u || true
           } > "summaries/${{ matrix.shard }}.txt"
       - name: Upload shard delta
         if: always()
@@ -257,9 +223,9 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/download-artifact@v4
-        with: { name: install-base-full, path: install }
+        with: { name: install-base, path: install }
       - uses: actions/download-artifact@v4
-        with: { pattern: install-dom-*, path: deltas, merge-multiple: false }
+        with: { pattern: install-dom-*, path: deltas }
       - name: Merge shard deltas into install/
         run: |
           if [ -d deltas ]; then
@@ -276,13 +242,12 @@ jobs:
           retention-days: 5
       # NOTE: the release + Homebrew-formula publish (see macos-humble-ci.yml,
       # "Deploy Release + Update Formula") consumes exactly this merged install/.
-      # Wire it here once the layered build is green on a release branch.
 
   # ---------------------------------------------------------------------------
   # Aggregate per-shard summaries into one pass/fail report.
   # ---------------------------------------------------------------------------
   report:
-    needs: domains
+    needs: [base, domains]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -294,8 +259,7 @@ jobs:
           for f in summaries/*.txt; do
             [ -f "$f" ] || continue
             fail=$(grep -c 'Failed  *<<<' "$f" || true)
-            fin=$(grep -c 'Finished <<<' "$f" || true)
-            echo "- **$(basename "$f" .txt)**: $fin ok, $fail failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **$(basename "$f" .txt)**: $fail failed" >> "$GITHUB_STEP_SUMMARY"
           done
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"

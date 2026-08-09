@@ -599,7 +599,6 @@ raspimouse_description
 raspimouse_msgs
 raspimouse_ros2_examples
 rc_common_msgs
-rc_genicam_api
 rc_reason_msgs
 rcgcd_spl_14
 rcgcrd_spl_4
