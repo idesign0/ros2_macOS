@@ -220,13 +220,21 @@ jobs:
       - name: Build shard ${{ matrix.shard }}
         continue-on-error: true
         run: |
+          # Build INTO the base prefix (install/) so ament_package et al. resolve
+          # in the same prefix (a separate --install-base breaks ros_workspace and
+          # ament-python consumers). Snapshot first, then extract this shard's delta.
+          touch /tmp/base_marker
           source install/setup.sh
           SEL=$(grep -vE '^\s*#|^\s*$' "ci/shards/dom_${{ matrix.shard }}.txt" | tr '\n' ' ')
           [ -z "$SEL" ] && { echo "empty shard"; exit 0; }
-          colcon build --packages-select $SEL --install-base install_shard --merge-install \
+          colcon build --packages-select $SEL --merge-install \
             --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "build_${{ matrix.shard }}.log"
+          mkdir -p install_shard
+          find install -type f -newer /tmp/base_marker 2>/dev/null | while read -r f; do
+            rel="${f#install/}"; mkdir -p "install_shard/$(dirname "$rel")"; cp -p "$f" "install_shard/$rel"
+          done
       - name: Summarize shard
         if: always()
         run: |
