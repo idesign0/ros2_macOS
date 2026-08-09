@@ -386,7 +386,6 @@ raspimouse_description
 raspimouse_msgs
 raspimouse_ros2_examples
 rc_common_msgs
-rc_genicam_api
 rcl
 rcl_action
 rcl_interfaces
