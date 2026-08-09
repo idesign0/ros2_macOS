@@ -1,10 +1,10 @@
-total_packages_after_skip=1675
-skipped=6  (demo_nodes_cpp_native_gurumdds, gurumdds_cmake_module, pal_carbon_collector, qt_gui_cpp, rmw_gurumdds_cpp, rqt_gui_cpp)
-base_core=505
+total_packages_after_skip=1674
+skipped=7  (demo_nodes_cpp_native_gurumdds, gurumdds_cmake_module, pal_carbon_collector, qt_gui_cpp, rc_genicam_api, rmw_gurumdds_cpp, rqt_gui_cpp)
+base_core=504
 base_vendors=45
 domain_shards=21
 private_packages=1125
-written=1675
+written=1674
 missing=0  (-)
 extra=0
 cross_shard_upward_edges=0
