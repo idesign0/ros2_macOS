@@ -22,7 +22,13 @@ runs:
       shell: bash
       run: |
         git submodule sync --recursive
-        git submodule update --init --recursive --jobs 8
+        n=0
+        until git submodule update --init --recursive --jobs 8; do
+          n=$((n+1))
+          if [ "$n" -ge 4 ]; then echo "submodule update failed after $n attempts"; exit 1; fi
+          echo "submodule update attempt $n failed (transient clone flake); retrying in 30s…"
+          sleep 30
+        done
 
     - name: Sync submodule branches
       shell: bash
