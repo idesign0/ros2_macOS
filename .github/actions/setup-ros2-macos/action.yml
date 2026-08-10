@@ -47,6 +47,14 @@ runs:
         chmod +x scripts/update_forked_submodules.sh
         ./scripts/update_forked_submodules.sh
 
+    - name: Apply in-tree source patches
+      shell: bash
+      run: |
+        if [ -f ci/patches/apply_source_patches.sh ]; then
+          chmod +x ci/patches/apply_source_patches.sh
+          ./ci/patches/apply_source_patches.sh .
+        fi
+
     - name: Cache Homebrew directories
       uses: actions/cache@v4
       with:
