@@ -18,16 +18,31 @@ inputs:
 runs:
   using: composite
   steps:
+    # Cache all submodule git data so the ~20 parallel domain jobs restore it
+    # instead of each re-cloning ~650 submodules (the flaky-setup root cause).
+    # base runs first (populates on miss); every later job restores -> local
+    # checkout, no network clone. restore-keys reuses it across runs too.
+    - name: Cache submodule git data
+      uses: actions/cache@v4
+      with:
+        path: .git/modules
+        key: submodules-${{ hashFiles('.gitmodules') }}
+        restore-keys: |
+          submodules-
+
     - name: Update submodules
       shell: bash
       run: |
         git submodule sync --recursive
+        # With .git/modules restored from cache this is a fast local checkout;
+        # on a cold cache it clones, with retry+backoff for transient flakes.
         n=0
         until git submodule update --init --recursive --jobs 8; do
           n=$((n+1))
-          if [ "$n" -ge 4 ]; then echo "submodule update failed after $n attempts"; exit 1; fi
-          echo "submodule update attempt $n failed (transient clone flake); retrying in 30s…"
-          sleep 30
+          if [ "$n" -ge 6 ]; then echo "submodule update failed after $n attempts"; exit 1; fi
+          echo "submodule update attempt $n failed (transient); retrying in $((n*20))s…"
+          git submodule sync --recursive || true
+          sleep $((n*20))
         done
 
     - name: Sync submodule branches
