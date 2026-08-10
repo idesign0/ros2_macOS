@@ -392,3 +392,24 @@ set(GTSAM_BUILD_WITH_MARCH_NATIVE  OFF CACHE BOOL "" FORCE)  # keep bottle porta
 if(CMAKE_PROJECT_NAME STREQUAL "cartographer")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include ${CMAKE_CURRENT_LIST_DIR}/cartographer_absl_compat.h")
 endif()
+
+# ---------------------------------------------------------------------------
+# Lane 1b: Homebrew as a general link/search prefix (Apple Silicon)
+# /opt/homebrew is NOT a default search path here, so any package emitting a
+# bare -lglog / -lproj / -lgeos_c / -logg / -ltheoraenc / -lbenchmark / -lzstd
+# died with "ld: library 'X' not found". Adding -L/opt/homebrew/lib once fixes
+# that whole class (the per-glog full-path hack above only helped glog, and not
+# for packages that emit their own -lglog like cartographer).
+# Placed LAST so it captures all prior linker-flag additions and is not wiped by
+# earlier CACHE...FORCE sets. Appended (not prepended) so vendored -L paths
+# (boost-1.89, yaml_cpp_vendor) still win; `brew unlink` keeps conflicting kegs
+# (boost, yaml-cpp, qt, orocos-kdl) out of /opt/homebrew/lib, so no clash.
+# ---------------------------------------------------------------------------
+list(APPEND CMAKE_PREFIX_PATH  "/opt/homebrew")
+list(APPEND CMAKE_LIBRARY_PATH "/opt/homebrew/lib")
+list(APPEND CMAKE_INCLUDE_PATH "/opt/homebrew/include")
+link_directories(/opt/homebrew/lib)
+include_directories(SYSTEM /opt/homebrew/include)
+foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
+  set(${_lf} "${${_lf}} -L/opt/homebrew/lib" CACHE STRING "" FORCE)
+endforeach()
