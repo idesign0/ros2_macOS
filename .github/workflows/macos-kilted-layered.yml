@@ -145,6 +145,21 @@ jobs:
             path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
             [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
           done
+      - name: Unlink conflicting Homebrew packages (use vendored Boost 1.89, not brew 1.90)
+        run: |
+          set +e
+          brew unlink boost || true
+          brew unlink boost-python3 || true
+          brew unlink xtensor || true
+          brew unlink xdm || true
+          brew unlink xtl || true
+          brew unlink qt || true
+          brew unlink asio || true
+          brew unlink orocos-kdl || true
+          brew unlink protobuf || true
+          brew unlink ceres-solver || true
+          brew unlink osqp || true
+          echo "unlink done"
       - name: Restore ccache
         uses: actions/cache@v4
         with:
