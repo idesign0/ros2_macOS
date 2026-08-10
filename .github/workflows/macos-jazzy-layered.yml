@@ -93,6 +93,7 @@ jobs:
       - name: Build base (core+vendors)
         continue-on-error: true
         run: |
+          set +e
           SEL=$(cat ci/shards/00_base_core.txt ci/shards/01_base_vendors.txt | grep -vE '^\s*#|^\s*$' | tr '\n' ' ')
           colcon build --packages-select $SEL \
             --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
@@ -152,6 +153,9 @@ jobs:
       - name: Build shard ${{ matrix.shard }}
         continue-on-error: true
         run: |
+          # set +e: broken package env hooks make `source install/setup.sh` exit
+          # 127 under bash -e, aborting before colcon. Tolerate and press on.
+          set +e
           # Build INTO the base prefix (install/) so ament_package et al. resolve
           # in the same prefix (a separate --install-base breaks ros_workspace and
           # ament-python consumers). Snapshot first, then extract this shard's delta.
