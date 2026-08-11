@@ -56,4 +56,12 @@ d="$(_pkg_dir naoqi_libqi)"; [ -n "$d" ] && for f in $(grep -rl 'boost/process/s
   sed "${SEDI[@]}" 's#boost/process/search_path.hpp#boost/process/v1/search_path.hpp#g' "$f"; echo "  naoqi_libqi process v1: ${f#$ROOT/}"
 done
 
+# --- Lane 4: rt_usb_9axisimu_driver — the out-of-line ctor definition carries a
+#     default arg (`std::string port = ""`) while the header declares it `explicit`
+#     with no default; ill-formed under clang. The only caller passes an arg. ---
+d="$(_pkg_dir rt_usb_9axisimu_driver)"; [ -n "$d" ] && for f in $(grep -rl 'RtUsb9axisimuRosDriver(std::string port = ""' "$d" 2>/dev/null); do
+  sed "${SEDI[@]}" 's/RtUsb9axisimuRosDriver(std::string port = "")/RtUsb9axisimuRosDriver(std::string port)/' "$f"
+  echo "  rt_usb default-arg removed: ${f#$ROOT/}"
+done
+
 echo "source patches applied."
