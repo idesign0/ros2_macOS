@@ -65,4 +65,24 @@ d="$(_pkg_dir rt_usb_9axisimu_driver)"; [ -n "$d" ] && for f in $(grep -rl 'RtUs
   echo "  rt_usb default-arg removed: ${f#$ROOT/}"
 done
 
+# --- Lane 2: sick_safetyscanners_base — full Boost-1.90 asio port.
+#     io_service::work was removed; replace with executor_work_guard and build it
+#     from the io_context's executor. Order matters: do ::work BEFORE the bare
+#     type rename, and fix the construction to pass an executor. ---
+d="$(_pkg_dir sick_safetyscanners_base)"
+if [ -n "$d" ]; then
+  files="$(grep -rl 'io_service' "$d" --include='*.h' --include='*.hpp' --include='*.cpp' --include='*.cc' 2>/dev/null)"
+  echo "$files" | while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    # 1) work type -> executor_work_guard  2) construct from executor  3) bare type rename
+    sed "${SEDI[@]}" \
+      -e 's#boost::asio::io_service::work#boost::asio::executor_work_guard<boost::asio::io_context::executor_type>#g' \
+      -e 's#make_unique<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(m_io_service)#make_unique<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(m_io_service.get_executor())#g' \
+      -e 's#boost::asio::io_service#boost::asio::io_context#g' \
+      -e 's#asio::io_service#asio::io_context#g' \
+      "$f"
+  done
+  echo "  sick_safetyscanners_base: io_service->io_context + work->executor_work_guard ($d)"
+fi
+
 echo "source patches applied."
