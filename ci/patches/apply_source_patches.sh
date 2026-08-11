@@ -35,4 +35,25 @@ patch_io_service_typeonly() {
 
 patch_io_service_typeonly hls_lfcd_lds_driver
 
+# --- add an #include to a file if missing (idempotent). Inserts after the first
+#     existing #include so it lands in the header block. ---
+_add_include() {  # $1=file  $2='#include <x>'
+  local f="$1" inc="$2"
+  [ -f "$f" ] || return 0
+  grep -qF "$inc" "$f" && return 0
+  awk -v inc="$inc" 'BEGIN{d=0} /^[[:space:]]*#include/ && !d {print; print inc; d=1; next} {print} END{if(!d) print inc}' "$f" > "$f.__p" && mv "$f.__p" "$f"
+  echo "  + $inc  ->  ${f#$ROOT/}"
+}
+
+# --- Lane 5: missing standard includes (clang/libc++ is stricter than libstdc++) ---
+# rcdiscover: wol_exception.h uses std::string with only <stdexcept>
+d="$(_pkg_dir rcdiscover)"; [ -n "$d" ] && for f in $(find "$d" -name wol_exception.h 2>/dev/null); do _add_include "$f" '#include <string>'; done
+# urg_node: urg_c_wrapper.cpp uses read()/write() (POSIX) undeclared without <unistd.h>
+d="$(_pkg_dir urg_node)"; [ -n "$d" ] && for f in $(find "$d" -name urg_c_wrapper.cpp 2>/dev/null); do _add_include "$f" '#include <unistd.h>'; done
+
+# --- Lane 2: naoqi_libqi — Boost split process into v1/v2; v1 header moved ---
+d="$(_pkg_dir naoqi_libqi)"; [ -n "$d" ] && for f in $(grep -rl 'boost/process/search_path.hpp' "$d" 2>/dev/null); do
+  sed "${SEDI[@]}" 's#boost/process/search_path.hpp#boost/process/v1/search_path.hpp#g' "$f"; echo "  naoqi_libqi process v1: ${f#$ROOT/}"
+done
+
 echo "source patches applied."
