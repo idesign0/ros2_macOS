@@ -34,6 +34,7 @@ patch_io_service_typeonly() {
 }
 
 patch_io_service_typeonly hls_lfcd_lds_driver
+patch_io_service_typeonly libcreate
 
 # --- add an #include to a file if missing (idempotent). Inserts after the first
 #     existing #include so it lands in the header block. ---
