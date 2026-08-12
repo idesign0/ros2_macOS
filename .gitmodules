@@ -1948,8 +1948,8 @@
 	branch = master
 [submodule "ros-perception/vision/rcdiscover"]
 	path = ros-perception/vision/rcdiscover
-	url = https://github.com/roboception/rcdiscover.git
-	branch = master
+	url = https://github.com/idesign0/id_rcdiscover.git
+	branch = macos-support
 [submodule "ros-perception/vision/soccer_interfaces"]
 	path = ros-perception/vision/soccer_interfaces
 	url = https://github.com/ros-sports/soccer_interfaces.git
