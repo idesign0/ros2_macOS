@@ -47,8 +47,9 @@ _add_include() {  # $1=file  $2='#include <x>'
 }
 
 # --- Lane 5: missing standard includes (clang/libc++ is stricter than libstdc++) ---
-# rcdiscover: wol_exception.h uses std::string with only <stdexcept>
-d="$(_pkg_dir rcdiscover)"; [ -n "$d" ] && for f in $(find "$d" -name wol_exception.h 2>/dev/null); do _add_include "$f" '#include <string>'; done
+# rcdiscover: several headers use std::string with only <stdexcept> — add <string>
+# to ALL of its headers that reference std::string (idempotent; skips ones with it)
+d="$(_pkg_dir rcdiscover)"; [ -n "$d" ] && for f in $(grep -rl 'std::string' "$d" 2>/dev/null | grep '\.h$'); do _add_include "$f" '#include <string>'; done
 # urg_node: urg_c_wrapper.cpp uses read()/write() (POSIX) undeclared without <unistd.h>
 d="$(_pkg_dir urg_node)"; [ -n "$d" ] && for f in $(find "$d" -name urg_c_wrapper.cpp 2>/dev/null); do _add_include "$f" '#include <unistd.h>'; done
 
@@ -83,6 +84,11 @@ if [ -n "$d" ]; then
       "$f"
   done
   echo "  sick_safetyscanners_base: io_service->io_context + work->executor_work_guard ($d)"
+  # deadline_timer.hpp exists in vendored 1.89 but is no longer pulled in by the
+  # <boost/asio.hpp> umbrella — include it explicitly where deadline_timer is used.
+  for f in $(grep -rl 'boost::asio::deadline_timer' "$d" 2>/dev/null); do
+    _add_include "$f" '#include <boost/asio/deadline_timer.hpp>'
+  done
 fi
 
 echo "source patches applied."
