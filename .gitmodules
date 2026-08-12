@@ -1728,7 +1728,7 @@
 	branch = ros2
 [submodule "ros-drivers/network_interface"]
 	path = ros-drivers/network_interface
-	url = https://github.com/astuff/network_interface.git
+	url = https://github.com/idesign0/id_network_interface.git
 	branch = ros2_master
 [submodule "ros-drivers/nmea_msgs"]
 	path = ros-drivers/nmea_msgs
