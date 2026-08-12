@@ -1696,7 +1696,7 @@
 	branch = main
 [submodule "ros-drivers/naoqi_libqi"]
 	path = ros-drivers/naoqi_libqi
-	url = https://github.com/ros-naoqi/libqi.git
+	url = https://github.com/idesign0/id_libqi.git
 	branch = ros2
 [submodule "ros-drivers/naoqi_libqicore"]
 	path = ros-drivers/naoqi_libqicore
