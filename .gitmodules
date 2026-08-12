@@ -944,7 +944,7 @@
 	branch = kilted
 [submodule "ros-planning/control_box_rst"]
 	path = ros-planning/control_box_rst
-	url = https://github.com/rst-tu-dortmund/control_box_rst.git
+	url = https://github.com/idesign0/id_control_box_rst.git
 	branch = foxy-devel
 [submodule "ros2/interfaces/cras_msgs"]
 	path = ros2/interfaces/cras_msgs
