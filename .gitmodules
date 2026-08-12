@@ -1952,8 +1952,8 @@
 	branch = master
 [submodule "ros-perception/vision/rcdiscover"]
 	path = ros-perception/vision/rcdiscover
-	url = https://github.com/roboception/rcdiscover.git
-	branch = master
+	url = https://github.com/idesign0/id_rcdiscover.git
+	branch = macos-support
 [submodule "ros2/rclc"]
 	path = ros2/rclc
 	url = https://github.com/ros2/rclc.git
