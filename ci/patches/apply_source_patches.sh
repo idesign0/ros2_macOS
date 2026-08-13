@@ -60,6 +60,20 @@ d="$(_pkg_dir urg_node)"; [ -n "$d" ] && for f in $(find "$d" -name urg_c_wrappe
 # swri_console_util: progress_bar.cpp calls select()/fd_set undeclared without <sys/select.h>
 d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name progress_bar.cpp 2>/dev/null); do _add_include "$f" '#include <sys/select.h>'; done
 
+# --- Lane 4 cluster: fmt >= 11 (brew ships fmt 12) moved fmt::format out of
+#     <fmt/core.h> into <fmt/format.h>. Packages written for fmt <= 10 include
+#     only core.h and fail with "no member named 'format' in namespace 'fmt'".
+#     Add <fmt/format.h> to every file that uses fmt::format* with only core.h.
+#     Clears control_toolbox (ros2_control root), pick_ik, moveit_task_constructor,
+#     motion_capture_tracking, plotjuggler_ros, the autoware localization cluster, … ---
+for f in $(grep -rlE '#include <fmt/core.h>' "$ROOT" \
+    --include='*.hpp' --include='*.h' --include='*.cpp' --include='*.cc' 2>/dev/null \
+    | grep -vE '/build/|/install/|/thirdparty/|/bundled/'); do
+  if grep -qE 'fmt::(format|format_to|join|print)' "$f" && ! grep -qF '<fmt/format.h>' "$f"; then
+    _add_include "$f" '#include <fmt/format.h>'
+  fi
+done
+
 # --- Lane 2: naoqi_libqi — Boost split process into v1/v2; v1 header moved ---
 d="$(_pkg_dir naoqi_libqi)"; [ -n "$d" ] && for f in $(grep -rl 'boost/process/search_path.hpp' "$d" 2>/dev/null); do
   sed "${SEDI[@]}" 's#boost/process/search_path.hpp#boost/process/v1/search_path.hpp#g' "$f"; echo "  naoqi_libqi process v1: ${f#$ROOT/}"
