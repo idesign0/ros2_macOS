@@ -60,6 +60,17 @@ d="$(_pkg_dir urg_node)"; [ -n "$d" ] && for f in $(find "$d" -name urg_c_wrappe
 # swri_console_util: progress_bar.cpp calls select()/fd_set undeclared without <sys/select.h>
 d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name progress_bar.cpp 2>/dev/null); do _add_include "$f" '#include <sys/select.h>'; done
 
+# --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
+#     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
+#     yaml-cpp_DIR to opt/yaml_cpp_vendor/SHARE/cmake/yaml-cpp, but yaml-cpp 0.8.0
+#     installs its config to CMAKE_INSTALL_LIBDIR/cmake = opt/yaml_cpp_vendor/LIB/
+#     cmake/yaml-cpp (matches cmake/toolchain.cmake's yaml-cpp_DIR). The extras'
+#     plain set() shadows the toolchain cache value in the consumer scope. Fix path. ---
+d="$(_pkg_dir yaml_cpp_vendor)"; [ -n "$d" ] && for f in $(find "$d" -name '*-extras.cmake.in' 2>/dev/null); do
+  sed "${SEDI[@]}" 's#/share/cmake/yaml-cpp#/lib/cmake/yaml-cpp#g' "$f"
+  echo "  yaml_cpp_vendor extras: share->lib cmake dir: ${f#$ROOT/}"
+done
+
 # --- Lane 4 cluster: fmt >= 11 (brew ships fmt 12) moved fmt::format out of
 #     <fmt/core.h> into <fmt/format.h>. Packages written for fmt <= 10 include
 #     only core.h and fail with "no member named 'format' in namespace 'fmt'".
