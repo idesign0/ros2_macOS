@@ -397,7 +397,7 @@ set(GTSAM_BUILD_WITH_MARCH_NATIVE  OFF CACHE BOOL "" FORCE)  # keep bottle porta
 # (LOCKS_EXCLUDED / EXCLUSIVE_LOCKS_REQUIRED / GUARDED_BY) removed by newer
 # Abseil. Force-include a shim mapping them to the ABSL_* equivalents.
 # ---------------------------------------------------------------------------
-if(CMAKE_PROJECT_NAME STREQUAL "cartographer")
+if(CMAKE_PROJECT_NAME MATCHES "^cartographer")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include ${CMAKE_CURRENT_LIST_DIR}/cartographer_absl_compat.h")
 endif()
 
