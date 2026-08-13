@@ -199,4 +199,13 @@ for f in $(find "$ROOT" -path '*nebula_core_hw_interfaces*connections/udp.hpp' -
   echo "  nebula udp.hpp: guarded SO_RXQ_OVFL: ${f#$ROOT/}"
 done
 
+# --- Lane 6: lely_core_libraries (ros2_canopen) builds lely-core via autotools
+#     with -Werror; its libc/time.h shim redefines CLOCK_MONOTONIC (already defined
+#     on macOS) -> -Wmacro-redefined error. Pass CFLAGS to suppress that warning. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'Wno-macro-redefined' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined" --prefix#' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: configure CFLAGS -Wno-macro-redefined"
+fi
+
 echo "source patches applied."
