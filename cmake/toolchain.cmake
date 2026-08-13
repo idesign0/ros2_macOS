@@ -54,6 +54,12 @@ list(APPEND CMAKE_PREFIX_PATH "${ROS_WORKSPACE_INSTALL}")
 set(PYTHON_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 interpreter" FORCE)
 set(Python3_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 executable" FORCE)
 set(Python3_ROOT_DIR "/Library/Frameworks/Python.framework/Versions/3.11" CACHE PATH "Python3 root directory" FORCE)
+# --- versionless FindPython pin: find_package(Python)/mrt AutoDeps derive the Boost
+#     python component from THIS; pin to 3.11 so consumers request boost_python311
+#     (present in the vendored boost-1.89), not boost_python314 (runner default). ---
+set(Python_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 (versionless)" FORCE)
+set(Python_ROOT_DIR "/Library/Frameworks/Python.framework/Versions/3.11" CACHE PATH "Python 3.11 root (versionless)" FORCE)
+set(Python_FIND_STRATEGY "LOCATION" CACHE STRING "" FORCE)
 
 # Optional: if you want CMake to locate headers & libs too
 set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib" CACHE FILEPATH "Python 3.11 library" FORCE)
