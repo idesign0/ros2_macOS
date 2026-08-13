@@ -314,3 +314,11 @@ include_directories(SYSTEM /opt/homebrew/include)
 foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
   set(${_lf} "${${_lf}} -L/opt/homebrew/lib" CACHE STRING "" FORCE)
 endforeach()
+
+# ---------------------------------------------------------------------------
+# OpenCV (Homebrew) — pin to opencv@4. Brew's default `opencv` is now 5.0,
+# which dropped the legacy C-API headers (opencv2/imgproc/types_c.h); cv_bridge
+# and other vision packages still include them. opencv@4 (keg-only) ships them.
+# Mirrors kilted. Requires opencv@4 in the workflow's brew install list.
+# ---------------------------------------------------------------------------
+set(OpenCV_DIR "/opt/homebrew/opt/opencv@4/lib/cmake/opencv4" CACHE PATH "" FORCE)
