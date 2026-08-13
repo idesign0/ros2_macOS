@@ -1236,8 +1236,8 @@
 	branch = main
 [submodule "ros-drivers/arm/franka_ros2"]
 	path = ros-drivers/arm/franka_ros2
-	url = https://github.com/frankaemika/franka_ros2.git
-	branch = humble
+	url = https://github.com/idesign0/id_franka_ros2.git
+	branch = macos-fmt-humble
 [submodule "ros-drivers/arm/hls_lfcd_lds_driver"]
 	path = ros-drivers/arm/hls_lfcd_lds_driver
 	url = https://github.com/ROBOTIS-GIT/hls_lfcd_lds_driver.git
