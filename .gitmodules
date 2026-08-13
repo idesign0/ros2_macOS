@@ -336,7 +336,7 @@
 	branch = jazzy
 [submodule "ros2/yaml_cpp_vendor"]
 	path = ros2/yaml_cpp_vendor
-	url = https://github.com/ros2/yaml_cpp_vendor.git
+	url = https://github.com/idesign0/id_yaml_cpp_vendor.git
 	branch = jazzy
 [submodule "ros2/rcl_logging"]
 	path = ros2/rcl_logging
