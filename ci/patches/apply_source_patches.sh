@@ -142,4 +142,33 @@ if [ -n "$d" ]; then
   done
 fi
 
+# --- Lane 4/6: rc_dynamics_api forces C++11, but its abseil dependency requires
+#     C++17 (`C++ versions less than C++17 are not supported`). Bump to 17. ---
+d="$(_pkg_dir rc_dynamics_api)"; [ -n "$d" ] && for f in $(find "$d" -name CMakeLists.txt 2>/dev/null); do
+  sed "${SEDI[@]}" -e 's/set(CMAKE_CXX_STANDARD 11)/set(CMAKE_CXX_STANDARD 17)/' -e 's/-std=c++11/-std=c++17/g' "$f"
+  echo "  rc_dynamics_api: C++11 -> C++17: ${f#$ROOT/}"
+done
+
+# --- Lane 6: hash_library_vendor FetchContent's stbrumme/hash-library, whose
+#     crc32.cpp includes <endian.h> (glibc-only; absent on macOS) and is compiled
+#     by the vendor with -Werror. (1) drop -Werror on third-party source; (2) shim
+#     <endian.h> -> <machine/endian.h> for this target on APPLE. The include is only
+#     used to optionally define __BYTE_ORDER; arm64 is little-endian so the guarded
+#     big-endian path stays off. ---
+d="$(_pkg_dir hash_library_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ]; then
+  sed "${SEDI[@]}" 's/ -Werror//g' "$d/CMakeLists.txt"
+  if ! grep -q 'MACOS_ENDIAN_SHIM' "$d/CMakeLists.txt"; then
+    cat >> "$d/CMakeLists.txt" <<'EOF2'
+
+# MACOS_ENDIAN_SHIM (ci patch): macOS has no <endian.h>; shim to <machine/endian.h>.
+if(APPLE)
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/compat/endian.h" "#pragma once\n#include <machine/endian.h>\n")
+  target_include_directories(hash_library_vendor BEFORE PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/compat")
+endif()
+EOF2
+    echo "  hash_library_vendor: -Werror dropped + <endian.h> shim added"
+  fi
+fi
+
 echo "source patches applied."
