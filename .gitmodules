@@ -421,7 +421,7 @@
 [submodule "moveit/moveit_task_constructor"]
 	path = moveit/moveit_task_constructor
 	url = https://github.com/idesign0/id_moveit_task_constructor.git
-	branch = macos-fmt-ros2
+	branch = ros2
 [submodule "moveit/geometric_shapes"]
 	path = moveit/geometric_shapes
 	url = https://github.com/idesign0/id_geometric_shapes.git
@@ -497,7 +497,7 @@
 [submodule "ros-planning/dependencies/PickNickRobotics/generate_parameter_library"]
 	path = ros-planning/dependencies/PickNickRobotics/generate_parameter_library
 	url = https://github.com/idesign0/id_generate_parameter_library.git
-	branch = macos-fmt-main
+	branch = main
 [submodule "ros-planning/dependencies/rsl"]
 	path = ros-planning/dependencies/rsl
 	url = https://github.com/ros2-gbp/rsl-release.git
@@ -857,7 +857,7 @@
 [submodule "autonomous_driving/autoware_core"]
 	path = autonomous_driving/autoware_core
 	url = https://github.com/idesign0/id_autoware_core.git
-	branch = macos-fmt-main
+	branch = main
 [submodule "autonomous_driving/autoware_adapi_msgs"]
 	path = autonomous_driving/autoware_adapi_msgs
 	url = https://github.com/autowarefoundation/autoware_adapi_msgs.git
@@ -1193,7 +1193,7 @@
 [submodule "ros-drivers/feetech_ros2_driver"]
 	path = ros-drivers/feetech_ros2_driver
 	url = https://github.com/idesign0/id_feetech_ros2_driver.git
-	branch = macos-fmt-main
+	branch = main
 [submodule "ros2/interfaces/ffmpeg_image_transport_msgs"]
 	path = ros2/interfaces/ffmpeg_image_transport_msgs
 	url = https://github.com/ros-misc-utilities/ffmpeg_image_transport_msgs.git
@@ -1617,7 +1617,7 @@
 [submodule "ros2/interfaces/motion_capture_tracking"]
 	path = ros2/interfaces/motion_capture_tracking
 	url = https://github.com/idesign0/id_motion_capture_tracking.git
-	branch = macos-fmt-ros2
+	branch = ros2
 [submodule "ros-planning/mp2p_icp"]
 	path = ros-planning/mp2p_icp
 	url = https://github.com/MOLAorg/mp2p_icp.git
@@ -1813,7 +1813,7 @@
 [submodule "moveit/pick_ik"]
 	path = moveit/pick_ik
 	url = https://github.com/idesign0/id_pick_ik.git
-	branch = macos-fmt
+	branch = main
 [submodule "moveit/picknik_controllers"]
 	path = moveit/picknik_controllers
 	url = https://github.com/PickNikRobotics/picknik_controllers.git
@@ -1841,7 +1841,7 @@
 [submodule "ros-visualization/plotjuggler_ros"]
 	path = ros-visualization/plotjuggler_ros
 	url = https://github.com/idesign0/id_plotjuggler-ros-plugins.git
-	branch = macos-fmt-main
+	branch = main
 [submodule "ros-perception/pointcloud/point_cloud_msg_wrapper"]
 	path = ros-perception/pointcloud/point_cloud_msg_wrapper
 	url = https://gitlab.com/ApexAI/point_cloud_msg_wrapper
