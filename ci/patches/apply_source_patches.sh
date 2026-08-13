@@ -89,6 +89,18 @@ if [ -n "$d" ]; then
   for f in $(grep -rl 'boost::asio::deadline_timer' "$d" 2>/dev/null); do
     _add_include "$f" '#include <boost/asio/deadline_timer.hpp>'
   done
+  # Boost 1.87 removed the deprecated static ip::address*::from_string(); the
+  # replacement free functions ip::make_address*() exist since 1.66 (safe on old
+  # Boost too). Applies to CommSettings.h and ConfigData.cpp.
+  for f in $(grep -rlE 'ip::address(_v4|_v6)?::from_string' "$d" \
+      --include='*.h' --include='*.hpp' --include='*.cpp' --include='*.cc' 2>/dev/null); do
+    sed "${SEDI[@]}" \
+      -e 's#ip::address_v4::from_string#ip::make_address_v4#g' \
+      -e 's#ip::address_v6::from_string#ip::make_address_v6#g' \
+      -e 's#ip::address::from_string#ip::make_address#g' \
+      "$f"
+    echo "  sick_safetyscanners_base: address_v4::from_string -> make_address_v4: ${f#$ROOT/}"
+  done
 fi
 
 echo "source patches applied."
