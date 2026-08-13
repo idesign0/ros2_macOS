@@ -1153,7 +1153,7 @@
 [submodule "moveit/picknik_controllers"]
 	path = moveit/picknik_controllers
 	url = https://github.com/PickNikRobotics/picknik_controllers.git
-	branch = main
+	branch = humble
 [submodule "moveit/pymoveit2"]
 	path = moveit/pymoveit2
 	url = https://github.com/AndrejOrsula/pymoveit2.git
