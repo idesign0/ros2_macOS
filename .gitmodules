@@ -441,7 +441,7 @@
 [submodule "moveit/moveit_task_constructor"]
 	path = moveit/moveit_task_constructor
 	url = https://github.com/idesign0/id_moveit_task_constructor.git
-	branch = humble
+	branch = macos-fmt-humble
 [submodule "moveit/geometric_shapes"]
 	path = moveit/geometric_shapes
 	url = https://github.com/idesign0/id_geometric_shapes.git
@@ -516,8 +516,8 @@
 	branch = 0.7.5
 [submodule "ros-planning/dependencies/PickNickRobotics/generate_parameter_library"]
 	path = ros-planning/dependencies/PickNickRobotics/generate_parameter_library
-	url = https://github.com/PickNikRobotics/generate_parameter_library.git
-	branch = humble
+	url = https://github.com/idesign0/id_generate_parameter_library.git
+	branch = macos-fmt-humble
 [submodule "ros-planning/dependencies/rsl"]
 	path = ros-planning/dependencies/rsl
 	url = https://github.com/ros2-gbp/rsl-release.git
@@ -780,8 +780,8 @@
 	branch = main
 [submodule "autonomous_driving/autoware_core"]
 	path = autonomous_driving/autoware_core
-	url = https://github.com/autowarefoundation/autoware_core.git
-	branch = main
+	url = https://github.com/idesign0/id_autoware_core.git
+	branch = macos-fmt-main
 [submodule "autonomous_driving/autoware_internal_msgs"]
 	path = autonomous_driving/autoware_internal_msgs
 	url = https://github.com/autowarefoundation/autoware_internal_msgs.git
@@ -1148,8 +1148,8 @@
 	branch = humble-devel
 [submodule "moveit/pick_ik"]
 	path = moveit/pick_ik
-	url = https://github.com/PickNikRobotics/pick_ik.git
-	branch = main
+	url = https://github.com/idesign0/id_pick_ik.git
+	branch = macos-fmt
 [submodule "moveit/picknik_controllers"]
 	path = moveit/picknik_controllers
 	url = https://github.com/PickNikRobotics/picknik_controllers.git
@@ -1392,8 +1392,8 @@
 	branch = ros2
 [submodule "ros-drivers/feetech_ros2_driver"]
 	path = ros-drivers/feetech_ros2_driver
-	url = https://github.com/ros-physical-ai/feetech_ros2_driver.git
-	branch = main
+	url = https://github.com/idesign0/id_feetech_ros2_driver.git
+	branch = macos-fmt-main
 [submodule "ros-drivers/flir_ptu"]
 	path = ros-drivers/flir_ptu
 	url = https://github.com/ros-drivers/flir_ptu.git
@@ -2224,8 +2224,8 @@
 	branch = ros2
 [submodule "ros-visualization/plotjuggler_ros"]
 	path = ros-visualization/plotjuggler_ros
-	url = https://github.com/PlotJuggler/plotjuggler-ros-plugins.git
-	branch = main
+	url = https://github.com/idesign0/id_plotjuggler-ros-plugins.git
+	branch = macos-fmt-main
 [submodule "ros-visualization/polygon_ros"]
 	path = ros-visualization/polygon_ros
 	url = https://github.com/MetroRobots/polygon_ros.git
@@ -2376,8 +2376,8 @@
 	branch = humble-devel
 [submodule "ros2/interfaces/motion_capture_tracking"]
 	path = ros2/interfaces/motion_capture_tracking
-	url = https://github.com/IMRCLab/motion_capture_tracking.git
-	branch = ros2
+	url = https://github.com/idesign0/id_motion_capture_tracking.git
+	branch = macos-fmt-ros2
 [submodule "ros2/interfaces/mqtt_client"]
 	path = ros2/interfaces/mqtt_client
 	url = https://github.com/ika-rwth-aachen/mqtt_client.git
