@@ -35,6 +35,11 @@ patch_io_service_typeonly() {
 
 patch_io_service_typeonly hls_lfcd_lds_driver
 patch_io_service_typeonly libcreate
+# nao_lola + nao_lola_client: bare `boost::asio::io_service` member only (no ::work,
+# no deadline_timer, no resolver) — type-only rename is safe. The variable is also
+# named `io_service`; only the `asio::io_service` TYPE token is rewritten.
+patch_io_service_typeonly nao_lola
+patch_io_service_typeonly nao_lola_client
 
 # --- add an #include to a file if missing (idempotent). Inserts after the first
 #     existing #include so it lands in the header block. ---
@@ -52,6 +57,8 @@ _add_include() {  # $1=file  $2='#include <x>'
 d="$(_pkg_dir rcdiscover)"; [ -n "$d" ] && for f in $(grep -rl 'std::string' "$d" 2>/dev/null | grep '\.h$'); do _add_include "$f" '#include <string>'; done
 # urg_node: urg_c_wrapper.cpp uses read()/write() (POSIX) undeclared without <unistd.h>
 d="$(_pkg_dir urg_node)"; [ -n "$d" ] && for f in $(find "$d" -name urg_c_wrapper.cpp 2>/dev/null); do _add_include "$f" '#include <unistd.h>'; done
+# swri_console_util: progress_bar.cpp calls select()/fd_set undeclared without <sys/select.h>
+d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name progress_bar.cpp 2>/dev/null); do _add_include "$f" '#include <sys/select.h>'; done
 
 # --- Lane 2: naoqi_libqi — Boost split process into v1/v2; v1 header moved ---
 d="$(_pkg_dir naoqi_libqi)"; [ -n "$d" ] && for f in $(grep -rl 'boost/process/search_path.hpp' "$d" 2>/dev/null); do
