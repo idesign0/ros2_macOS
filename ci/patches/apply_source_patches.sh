@@ -66,10 +66,17 @@ d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name pro
 #     installs its config to CMAKE_INSTALL_LIBDIR/cmake = opt/yaml_cpp_vendor/LIB/
 #     cmake/yaml-cpp (matches cmake/toolchain.cmake's yaml-cpp_DIR). The extras'
 #     plain set() shadows the toolchain cache value in the consumer scope. Fix path. ---
-d="$(_pkg_dir yaml_cpp_vendor)"; [ -n "$d" ] && for f in $(find "$d" -name '*-extras.cmake.in' 2>/dev/null); do
-  sed "${SEDI[@]}" 's#/share/cmake/yaml-cpp#/lib/cmake/yaml-cpp#g' "$f"
-  echo "  yaml_cpp_vendor extras: share->lib cmake dir: ${f#$ROOT/}"
-done
+#     VERSION-SPECIFIC: only yaml-cpp 0.8.0 (jazzy/kilted) installs its cmake config
+#     to CMAKE_INSTALL_LIBDIR/cmake = lib/. humble builds yaml-cpp 0.7.0, which installs
+#     to CMAKE_INSTALL_DATADIR/cmake = share/ — there the extras `share` path is CORRECT,
+#     so guard on VCS_VERSION 0.8.x and never touch the 0.7.0 (humble) tree.
+d="$(_pkg_dir yaml_cpp_vendor)"
+if [ -n "$d" ] && grep -qE 'VCS_VERSION[[:space:]]+0\.8' "$d/CMakeLists.txt" 2>/dev/null; then
+  for f in $(find "$d" -name '*-extras.cmake.in' 2>/dev/null); do
+    sed "${SEDI[@]}" 's#/share/cmake/yaml-cpp#/lib/cmake/yaml-cpp#g' "$f"
+    echo "  yaml_cpp_vendor(0.8.0) extras: share->lib cmake dir: ${f#$ROOT/}"
+  done
+fi
 
 # --- Lane 4 cluster: fmt >= 11 (brew ships fmt 12) moved fmt::format out of
 #     <fmt/core.h> into <fmt/format.h>. Packages written for fmt <= 10 include
