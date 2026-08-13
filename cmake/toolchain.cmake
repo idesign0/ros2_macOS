@@ -339,3 +339,6 @@ set(OpenCV_DIR "/opt/homebrew/opt/opencv@4/lib/cmake/opencv4" CACHE PATH "" FORC
 add_compile_options(-Wno-unknown-warning-option -Wno-error=ignored-qualifiers)
 add_compile_definitions(M_PIf=3.14159265358979323846f
                         M_PIl=3.141592653589793238462643383279502884L)
+# libc++ removed std::result_of etc. in C++20; re-enable for older third-party
+# code (e.g. libcaer_driver device.cpp) instead of patching each.
+add_compile_definitions(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
