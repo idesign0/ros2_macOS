@@ -1165,7 +1165,7 @@
 [submodule "moveit/ros2_robotiq_gripper"]
 	path = moveit/ros2_robotiq_gripper
 	url = https://github.com/PickNikRobotics/ros2_robotiq_gripper.git
-	branch = main
+	branch = humble
 [submodule "moveit/rqt_moveit"]
 	path = moveit/rqt_moveit
 	url = https://github.com/ros-visualization/rqt_moveit.git
