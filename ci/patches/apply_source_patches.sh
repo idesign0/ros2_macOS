@@ -171,4 +171,32 @@ EOF2
   fi
 fi
 
+# --- Lane 6: qpoases_vendor ExternalProject uses the dead coin-or SVN
+#     (svn E170013). Repoint to the GitHub mirror at the same 3.2 release. ---
+d="$(_pkg_dir qpoases_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ]; then
+  sed "${SEDI[@]}" \
+    -e 's#SVN_REPOSITORY https://projects.coin-or.org/svn/qpOASES/stable/3.2#GIT_REPOSITORY https://github.com/coin-or/qpOASES.git#' \
+    -e 's#SVN_TRUST_CERT TRUE#GIT_TAG releases/3.2.2#' \
+    "$d/CMakeLists.txt"
+  echo "  qpoases_vendor: dead coin-or SVN -> github releases/3.2.2"
+fi
+
+# --- Lane 4: nebula_core_common/util/errno.hpp assumes the GNU strerror_r
+#     (returns char*); macOS/BSD use the XSI form (returns int, fills the buffer).
+#     Guard both. Clears the nebula errno cluster (decoders, hw_interfaces, …). ---
+for f in $(find "$ROOT" -path '*nebula_core_common*util/errno.hpp' -not -path '*/build/*' 2>/dev/null); do
+  perl -0pi -e 's{std::string_view msg = strerror_r\(err_no, msg_buf\.data\(\), msg_buf\.size\(\)\);}{#if defined(__GLIBC__) \&\& defined(_GNU_SOURCE)\n  std::string_view msg = strerror_r(err_no, msg_buf.data(), msg_buf.size());\n#else\n  strerror_r(err_no, msg_buf.data(), msg_buf.size());  /* XSI/macOS: int, fills buf */\n  std::string_view msg = msg_buf.data();\n#endif}' "$f"
+  echo "  nebula errno.hpp: XSI strerror_r guard: ${f#$ROOT/}"
+done
+
+# --- Lane 7-guard: nebula udp.hpp uses SO_RXQ_OVFL (Linux-only rx-overflow
+#     counter). Guard the setsockopt and the cmsg case so macOS just skips the
+#     drop-reporting feature instead of failing to compile. ---
+for f in $(find "$ROOT" -path '*nebula_core_hw_interfaces*connections/udp.hpp' -not -path '*/build/*' 2>/dev/null); do
+  perl -0pi -e 's{(\n[ \t]*sock_fd_\.setsockopt\(SOL_SOCKET, SO_RXQ_OVFL, 1\)\.value_or_throw\(\);)}{\n#ifdef SO_RXQ_OVFL$1\n#endif}' "$f"
+  perl -0pi -e 's!(case SO_RXQ_OVFL: \{[^}]*\})!#ifdef SO_RXQ_OVFL\n        $1\n#endif!s' "$f"
+  echo "  nebula udp.hpp: guarded SO_RXQ_OVFL: ${f#$ROOT/}"
+done
+
 echo "source patches applied."
