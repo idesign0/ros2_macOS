@@ -322,3 +322,14 @@ endforeach()
 # Mirrors kilted. Requires opencv@4 in the workflow's brew install list.
 # ---------------------------------------------------------------------------
 set(OpenCV_DIR "/opt/homebrew/opt/opencv@4/lib/cmake/opencv4" CACHE PATH "" FORCE)
+
+# ---------------------------------------------------------------------------
+# macOS / libc++ portability shims (Lane 4 clusters)
+#  - clang errors on GCC-only warning flags (e.g. -Wmaybe-uninitialized) under
+#    -Werror; ignore unknown warning options instead of failing.
+#  - -Wignored-qualifiers (const on return type) is benign — don't make it fatal.
+#  - glibc float/long-double math macros (M_PIf/M_PIl) are absent on macOS.
+# ---------------------------------------------------------------------------
+add_compile_options(-Wno-unknown-warning-option -Wno-error=ignored-qualifiers)
+add_compile_definitions(M_PIf=3.14159265358979323846f
+                        M_PIl=3.141592653589793238462643383279502884L)
