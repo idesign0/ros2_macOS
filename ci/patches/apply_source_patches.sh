@@ -227,4 +227,51 @@ if [ -n "$d" ] && [ -f "$d/cmake/Modules/FindBoostPython.cmake" ] && ! grep -q '
   echo "  mrt_cmake_modules FindBoostPython: pin python component -> 311 (vendored boost)"
 fi
 
+# --- Lane 2: websocketpp 0.8.2 (brew, header-only) vs Boost 1.87+ removed APIs.
+#     rmf_websocket includes brew websocketpp, whose asio transport uses a pile of
+#     APIs deleted in Boost 1.87: io_service, io_service::strand, strand::wrap,
+#     io_context::post/reset, io_service::work, socket_base::max_connections,
+#     basic_waitable_timer::expires_from_now, and resolver::iterator/query.
+#     Patch the installed brew headers in place (ephemeral runner; header-only).
+#     VERIFIED: patched tree compiles clean vs Boost 1.89 (server + client connect
+#     paths, clang -std=c++17). Idempotent via the ci-wspp-boost187 marker.
+#     Cascade root: rmf_traffic_ros2 (aborts) -> rmf_battery,
+#     rmf_visualization_rviz2_plugins, rmf_traffic_editor, rmf_traffic_examples. ---
+WSPP="$(cd /opt/homebrew/include/websocketpp 2>/dev/null && pwd -P || true)"
+if [ -n "${WSPP:-}" ] && [ -f "$WSPP/common/asio.hpp" ] && ! grep -q 'ci-wspp-boost187' "$WSPP/common/asio.hpp" 2>/dev/null; then
+  _AS="$WSPP/common/asio.hpp"
+  _CX="$WSPP/transport/asio/connection.hpp"
+  _EP="$WSPP/transport/asio/endpoint.hpp"
+  _NO="$WSPP/transport/asio/security/none.hpp"
+  _TL="$WSPP/transport/asio/security/tls.hpp"
+  # io_service -> io_context alias (fixes every bare io_service type reference)
+  perl -0pi -e 's/(using namespace boost::asio;)/$1  \/\/ ci-wspp-boost187\n        using io_service = io_context;/' "$_AS"
+  # strand: construction (needs executor) then member type
+  perl -0pi -e 's/new lib::asio::io_service::strand\(\*io_service\)/new lib::asio::strand<lib::asio::io_context::executor_type>(io_service->get_executor())/g' "$_CX"
+  perl -0pi -e 's/lib::asio::io_service::strand/lib::asio::strand<lib::asio::io_context::executor_type>/g' "$_CX" "$_NO" "$_TL"
+  # strand::wrap(h) -> bind_executor(strand, h)  (two exact receivers)
+  perl -0pi -e 's/m_strand->wrap\(/lib::asio::bind_executor(*m_strand, /g' "$_CX" "$_TL"
+  perl -0pi -e 's/tcon->get_strand\(\)->wrap\(/lib::asio::bind_executor(*tcon->get_strand(), /g' "$_EP"
+  # io_context::post(h) -> asio::post(io_context, h)
+  perl -0pi -e 's/m_io_service->post\(/lib::asio::post(*m_io_service, /g' "$_CX"
+  # timer->expires_from_now() -> remaining duration via expiry()
+  perl -0pi -e 's/->expires_from_now\(\)/->expiry() - lib::asio::steady_timer::clock_type::now()/g' "$_CX" "$_EP"
+  # io_service::work -> executor_work_guard (construction then type)
+  perl -0pi -e 's/new lib::asio::io_service::work\(\*m_io_service\)/new lib::asio::executor_work_guard<lib::asio::io_context::executor_type>(m_io_service->get_executor())/g' "$_EP"
+  perl -0pi -e 's/lib::asio::io_service::work/lib::asio::executor_work_guard<lib::asio::io_context::executor_type>/g' "$_EP"
+  # socket_base::max_connections -> max_listen_connections
+  perl -0pi -e 's/socket_base::max_connections/socket_base::max_listen_connections/g' "$_EP"
+  # resolver::iterator -> results_type (sync listen path, async handler param, debug loop)
+  perl -0777 -pi -e 's/tcp::resolver::iterator endpoint_iterator = r\.resolve\(query\);\n(\s*)tcp::resolver::iterator end;/tcp::resolver::results_type results = r.resolve(query);\n$1tcp::resolver::results_type::const_iterator endpoint_iterator = results.begin();\n$1tcp::resolver::results_type::const_iterator end = results.end();/' "$_EP"
+  perl -0pi -e 's/lib::asio::ip::tcp::resolver::iterator iterator\)/lib::asio::ip::tcp::resolver::results_type iterator)/g' "$_EP"
+  perl -0777 -pi -e 's/lib::asio::ip::tcp::resolver::iterator it, end;\n(\s*)for \(it = iterator; it != end; \+\+it\) \{/for (auto it = iterator.begin(); it != iterator.end(); ++it) {/' "$_EP"
+  # resolver::query removed -> host/service string overloads
+  perl -0777 -pi -e 's/^[ \t]*tcp::resolver::query query\([^)]*\);\n//mg' "$_EP"
+  perl -0pi -e 's/r\.resolve\(query\)/r.resolve(host, service)/g' "$_EP"
+  perl -0777 -pi -e 's/(async_resolve\(\n[ \t]*)query,/${1}host, port,/g' "$_EP"
+  # io_context::reset() renamed to restart()
+  perl -0pi -e 's/m_io_service->reset\(\)/m_io_service->restart()/g' "$_EP" "$_CX"
+  echo "  websocketpp 0.8.2: patched for Boost 1.87+ (io_service/strand/work/post/resolver/timer)"
+fi
+
 echo "source patches applied."
