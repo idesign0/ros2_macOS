@@ -3,19 +3,37 @@
 # gen_shards.py removes these from the dependency graph before layering, and the
 # workflow COLCON_IGNOREs them, so nothing is assigned to depend on them.
 
-# GurumDDS is a proprietary DDS with no macOS SDK. rmw_gurumdds_cpp already
-# no-ops when GurumDDS is absent, but gurumdds_cmake_module's FindGurumDDS.cmake
-# errors at configure (unconditional set_target_properties with empty
-# IMPORTED_LOCATION), which strands rmw_implementation and ~968 downstream
-# packages. Excluding the tree drops it from rmw_implementation's group.
-gurumdds_cmake_module
-rmw_gurumdds_cpp
-demo_nodes_cpp_native_gurumdds
-
 # Migrated from the old workflow's --packages-ignore (Qt6 binding failure + cascade).
 qt_gui_cpp
 rqt_gui_cpp
-pal_carbon_collector
+nav2_system_tests
 
 # GenICam has no arm64 build -> rc_genicam_api fails "Unknown architecture".
 rc_genicam_api
+
+# ── Lane 7 sweep (2026-08-14): confirmed Linux-kernel-header deps, no macOS
+# equivalent. These are hardware drivers that can't run on macOS anyway.
+# (Fixable ones deliberately NOT here: ess_imu_driver2 [B2000000 baud],
+#  plansys2_bringup [sched_setscheduler] — leave for a real macOS guard.)
+
+# SocketCAN (linux/can.h, linux/can/raw.h) — no macOS SocketCAN.
+adi_tmcl
+clearpath_socketcan_interface
+ds_dbw_can
+ros2_socketcan
+
+# V4L2 video (linux/videodev2.h) — no macOS V4L2.
+usb_cam
+v4l2_camera
+
+# Linux serial / ioctls (asm/ioctls.h, linux/serial.h) — physical-HW drivers.
+coin_d4_driver
+ld08_driver
+sicks300_ros2
+septentrio_gnss_driver
+rplidar_driver
+
+# Other Linux-only kernel/sysfs interfaces.
+synapticon_ros2_control
+libbno055_linux
+adi_imu
