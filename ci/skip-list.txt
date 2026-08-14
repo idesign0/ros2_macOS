@@ -21,6 +21,7 @@ adi_tmcl
 clearpath_socketcan_interface
 ds_dbw_can
 ros2_socketcan
+nebula_continental_hw_interfaces
 
 # V4L2 video (linux/videodev2.h) — no macOS V4L2.
 usb_cam

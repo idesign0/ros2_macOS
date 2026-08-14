@@ -436,6 +436,10 @@ endforeach()
 # ---------------------------------------------------------------------------
 add_compile_options(-Wno-unknown-warning-option -Wno-error=ignored-qualifiers)
 add_compile_definitions(M_PIf=3.14159265358979323846f
+                        M_PI_2f=1.57079632679489661923f
+                        M_PI_4f=0.78539816339744830962f
+                        M_1_PIf=0.31830988618379067154f
+                        M_2_PIf=0.63661977236758134308f
                         M_PIl=3.141592653589793238462643383279502884L)
 # libc++ removed std::result_of etc. in C++20; re-enable for older third-party
 # code (e.g. libcaer_driver device.cpp) instead of patching each.
