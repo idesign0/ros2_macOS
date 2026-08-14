@@ -61,6 +61,16 @@ d="$(_pkg_dir urg_node)"; [ -n "$d" ] && for f in $(find "$d" -name urg_c_wrappe
 d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name progress_bar.cpp 2>/dev/null); do _add_include "$f" '#include <sys/select.h>'; done
 # nebula_velodyne_hw_interfaces: velodyne_hw_interface.cpp uses boost::format without <boost/format.hpp>
 d="$(_pkg_dir nebula_velodyne_hw_interfaces)"; [ -n "$d" ] && for f in $(find "$d" -name velodyne_hw_interface.cpp 2>/dev/null); do _add_include "$f" '#include <boost/format.hpp>'; done
+# event_camera_tools: trigger_delay.cpp uses getopt/optarg/optind undeclared without <unistd.h>
+d="$(_pkg_dir event_camera_tools)"; [ -n "$d" ] && for f in $(find "$d" -name trigger_delay.cpp 2>/dev/null); do _add_include "$f" '#include <unistd.h>'; done
+# ros2_ouster: declare_parameter(name) with no default/type was removed from rclcpp; the
+# no-default calls (lidar_ip, computer_ip) need an explicit type. Add rclcpp::ParameterType.
+# NOTE: PR-material (real rclcpp API-drift fix) — fork ros2_ouster_drivers when opening PRs.
+d="$(_pkg_dir ros2_ouster)"
+if [ -n "$d" ] && [ -f "$d/src/ouster_driver.cpp" ]; then
+  perl -0pi -e 's/declare_parameter\(("(?:lidar_ip|computer_ip)")\);/declare_parameter($1, rclcpp::ParameterType::PARAMETER_STRING);/g' "$d/src/ouster_driver.cpp"
+  echo "  ros2_ouster: declare_parameter(name) -> +rclcpp::ParameterType::PARAMETER_STRING"
+fi
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
