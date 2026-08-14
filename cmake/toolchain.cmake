@@ -101,6 +101,7 @@ set(yaml-cpp_DIR "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/share/cmake/yaml
 set(YAML_CPP_INCLUDE_DIRS "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/include" CACHE PATH "yaml-cpp include directory")
 set(YAML_CPP_LIBRARIES "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
 include_directories(${YAML_CPP_INCLUDE_DIRS})
+link_directories("${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib")  # resolve bare -lyaml-cpp from consumers
 set(CMAKE_EXE_LINKER_FLAGS "${backward_ros_full_path_LIBRARIES} ${CMAKE_EXE_LINKER_FLAGS}" CACHE STRING "Linker flags" FORCE)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   add_compile_options(-O3 -march=native)
