@@ -140,6 +140,12 @@ if [ -n "$d" ]; then
       "$f"
     echo "  sick_safetyscanners_base: address_v4::from_string -> make_address_v4: ${f#$ROOT/}"
   done
+  # Boost removed address_v4::to_ulong() (deprecated 1.71, gone 1.87). The only
+  # use is on an ip::address_v4 (ChangeCommSettingsCommand.cpp) -> to_uint().
+  for f in $(grep -rlE '\.to_ulong\(\)' "$d" --include='*.cpp' --include='*.cc' 2>/dev/null); do
+    sed "${SEDI[@]}" 's#\.to_ulong()#.to_uint()#g' "$f"
+    echo "  sick_safetyscanners_base: to_ulong -> to_uint: ${f#$ROOT/}"
+  done
 fi
 
 # --- Lane 4/6: rc_dynamics_api forces C++11, but its abseil dependency requires
