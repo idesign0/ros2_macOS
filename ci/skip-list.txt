@@ -10,3 +10,30 @@ nav2_system_tests
 
 # GenICam has no arm64 build -> rc_genicam_api fails "Unknown architecture".
 rc_genicam_api
+
+# ── Lane 7 sweep (2026-08-14): confirmed Linux-kernel-header deps, no macOS
+# equivalent. These are hardware drivers that can't run on macOS anyway.
+# (Fixable ones deliberately NOT here: ess_imu_driver2 [B2000000 baud],
+#  plansys2_bringup [sched_setscheduler] — leave for a real macOS guard.)
+
+# SocketCAN (linux/can.h, linux/can/raw.h) — no macOS SocketCAN.
+adi_tmcl
+clearpath_socketcan_interface
+ds_dbw_can
+ros2_socketcan
+
+# V4L2 video (linux/videodev2.h) — no macOS V4L2.
+usb_cam
+v4l2_camera
+
+# Linux serial / ioctls (asm/ioctls.h, linux/serial.h) — physical-HW drivers.
+coin_d4_driver
+ld08_driver
+sicks300_ros2
+septentrio_gnss_driver
+rplidar_driver
+
+# Other Linux-only kernel/sysfs interfaces.
+synapticon_ros2_control
+libbno055_linux
+adi_imu
