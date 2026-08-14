@@ -146,6 +146,7 @@ set(YAML_CPP_LIBRARIES "${YAML_CPP_PREFIX}/lib/libyaml-cpp.dylib" CACHE FILEPATH
 
 # Make headers visible globally (optional)
 include_directories(${YAML_CPP_INCLUDE_DIRS})
+link_directories("${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib")  # resolve bare -lyaml-cpp from consumers
 
 # Backward ROS
 # On macOS, do NOT add Linux-only flags
