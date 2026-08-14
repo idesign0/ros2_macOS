@@ -77,6 +77,14 @@ if [ -n "$d" ] && [ -f "$d/src/ouster_driver.cpp" ]; then
   perl -0pi -e 's/declare_parameter\(("(?:lidar_ip|computer_ip)")\);/declare_parameter($1, rclcpp::ParameterType::PARAMETER_STRING);/g' "$d/src/ouster_driver.cpp"
   echo "  ros2_ouster: declare_parameter(name) -> +rclcpp::ParameterType::PARAMETER_STRING"
 fi
+# kuka_drivers_core: control_node.cpp sets CPU affinity via Linux-only cpu_set_t /
+# pthread_setaffinity_np. Guard the block with #ifdef __linux__ (macOS has no cpu_set_t).
+# PR-material (portability) — fork kuka_drivers when opening PRs. Cascade root for kuka stack.
+d="$(_pkg_dir kuka_drivers_core)"
+if [ -n "$d" ] && [ -f "$d/src/control_node.cpp" ] && ! grep -q 'CPU affinity not supported on this platform' "$d/src/control_node.cpp"; then
+  perl -0777 -pi -e 's/([ \t]*)(cpu_set_t cpuset;.*?RCLCPP_INFO\(controller_manager->get_logger\(\), "CPU affinity set to core %d", cpu\);\n[ \t]*\})/$1#ifdef __linux__\n$1$2\n$1#else\n$1(void)cpu;\n$1RCLCPP_WARN(controller_manager->get_logger(), "CPU affinity not supported on this platform (non-Linux)");\n$1#endif/s' "$d/src/control_node.cpp"
+  echo "  kuka_drivers_core: #ifdef __linux__ guard around cpu_set_t affinity block"
+fi
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
