@@ -63,6 +63,12 @@ d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name pro
 d="$(_pkg_dir nebula_velodyne_hw_interfaces)"; [ -n "$d" ] && for f in $(find "$d" -name velodyne_hw_interface.cpp 2>/dev/null); do _add_include "$f" '#include <boost/format.hpp>'; done
 # event_camera_tools: trigger_delay.cpp uses getopt/optarg/optind undeclared without <unistd.h>
 d="$(_pkg_dir event_camera_tools)"; [ -n "$d" ] && for f in $(find "$d" -name trigger_delay.cpp 2>/dev/null); do _add_include "$f" '#include <unistd.h>'; done
+# libcreate: serial_query.h declares boost::asio::deadline_timer, but on Boost 1.89 the
+# umbrella <boost/asio.hpp> no longer pulls in deadline_timer.hpp -> add the explicit
+# include (posix_time bits are header-only, no date_time link needed). The io_service->
+# io_context rename is already handled above by patch_io_service_typeonly libcreate;
+# create.cpp's "no viable overloaded '='" cascades from the incomplete SerialQuery.
+d="$(_pkg_dir libcreate)"; [ -n "$d" ] && for f in $(find "$d" -name serial_query.h 2>/dev/null); do _add_include "$f" '#include <boost/asio/deadline_timer.hpp>'; done
 # ros2_ouster: declare_parameter(name) with no default/type was removed from rclcpp; the
 # no-default calls (lidar_ip, computer_ip) need an explicit type. Add rclcpp::ParameterType.
 # NOTE: PR-material (real rclcpp API-drift fix) — fork ros2_ouster_drivers when opening PRs.
