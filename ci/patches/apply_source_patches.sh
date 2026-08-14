@@ -59,6 +59,8 @@ d="$(_pkg_dir rcdiscover)"; [ -n "$d" ] && for f in $(grep -rl 'std::string' "$d
 d="$(_pkg_dir urg_node)"; [ -n "$d" ] && for f in $(find "$d" -name urg_c_wrapper.cpp 2>/dev/null); do _add_include "$f" '#include <unistd.h>'; done
 # swri_console_util: progress_bar.cpp calls select()/fd_set undeclared without <sys/select.h>
 d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name progress_bar.cpp 2>/dev/null); do _add_include "$f" '#include <sys/select.h>'; done
+# nebula_velodyne_hw_interfaces: velodyne_hw_interface.cpp uses boost::format without <boost/format.hpp>
+d="$(_pkg_dir nebula_velodyne_hw_interfaces)"; [ -n "$d" ] && for f in $(find "$d" -name velodyne_hw_interface.cpp 2>/dev/null); do _add_include "$f" '#include <boost/format.hpp>'; done
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
