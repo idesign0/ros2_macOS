@@ -214,4 +214,15 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'Wno-macro-redefined' 
   echo "  lely_core_libraries: configure CFLAGS -Wno-macro-redefined"
 fi
 
+# --- Lane 2: boost-python component version. mrt_cmake_modules FindBoostPython
+#     derives the component from find_package(Python3), which resolves the runner's
+#     newest Python (3.14) -> boost_python314, absent from the vendored boost-1.89
+#     (ships python311/313, built against the toolchain Python 3.11). Pin to 311 when
+#     the vendored 311 lib is present. Fixes lanelet2_python, libfranka, etc. ---
+d="$(_pkg_dir mrt_cmake_modules)"
+if [ -n "$d" ] && [ -f "$d/cmake/Modules/FindBoostPython.cmake" ] && ! grep -q 'ci-pin-python311' "$d/cmake/Modules/FindBoostPython.cmake"; then
+  perl -0pi -e 's{(\n[ \t]*find_package\(Boost COMPONENTS python\$\{_python_version\} numpy\$\{_python_version\}\))}{\n    # ci-pin-python311: vendored boost-1.89 ships python311/313 (built vs Python 3.11);\n    # find_package(Python3) may resolve 3.14 -> boost_python314 which does not exist.\n    if(DEFINED BOOST_LIBRARYDIR AND EXISTS "\$\{BOOST_LIBRARYDIR\}/libboost_python311.dylib")\n      set(_python_version 311)\n    endif()$1}' "$d/cmake/Modules/FindBoostPython.cmake"
+  echo "  mrt_cmake_modules FindBoostPython: pin python component -> 311 (vendored boost)"
+fi
+
 echo "source patches applied."
