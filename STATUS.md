@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-15 23:18 UTC** · refreshed every autofix cycle_
+_updated **2026-08-15 23:19 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 3 package(s): live555_vendor multisensor_calibration rmf_traffic_ros2  — 2026-08-15 23:18 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-15 23:18 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
