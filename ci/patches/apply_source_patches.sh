@@ -63,6 +63,14 @@ d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name pro
 d="$(_pkg_dir nebula_velodyne_hw_interfaces)"; [ -n "$d" ] && for f in $(find "$d" -name velodyne_hw_interface.cpp 2>/dev/null); do _add_include "$f" '#include <boost/format.hpp>'; done
 # event_camera_tools: trigger_delay.cpp uses getopt/optarg/optind undeclared without <unistd.h>
 d="$(_pkg_dir event_camera_tools)"; [ -n "$d" ] && for f in $(find "$d" -name trigger_delay.cpp 2>/dev/null); do _add_include "$f" '#include <unistd.h>'; done
+# sick_safetyscanners_base: Types.h:76 uses boost::posix_time::time_duration but only
+# includes <boost/asio/ip/address_v4.hpp> — relied on a transitive include (asio's old
+# deadline_timer support pulled in date_time) that Boost 1.87+ no longer provides.
+# Exceptions.h/TCPClient.h in this same package already explicitly include
+# <boost/date_time/posix_time/posix_time_types.hpp> for the identical symbol — Types.h
+# just never got it. Compile-tested the narrow include alone (time_duration_t alias +
+# boost::posix_time::seconds()) against brew boost 1.89.
+d="$(_pkg_dir sick_safetyscanners_base)"; [ -n "$d" ] && for f in $(find "$d" -name Types.h 2>/dev/null); do _add_include "$f" '#include <boost/date_time/posix_time/posix_time_types.hpp>'; done
 # libcreate: serial_query.h declares boost::asio::deadline_timer, but on Boost 1.89 the
 # umbrella <boost/asio.hpp> no longer pulls in deadline_timer.hpp -> add the explicit
 # include (posix_time bits are header-only, no date_time link needed). The io_service->
@@ -122,6 +130,19 @@ done
 d="$(_pkg_dir naoqi_libqi)"; [ -n "$d" ] && for f in $(grep -rl 'boost/process/search_path.hpp' "$d" 2>/dev/null); do
   sed "${SEDI[@]}" 's#boost/process/search_path.hpp#boost/process/v1/search_path.hpp#g' "$f"; echo "  naoqi_libqi process v1: ${f#$ROOT/}"
 done
+
+# --- Lane 2: naoqi_libqi/src/eventloop.cpp:10 has a stray raw
+#     `#include <boost/asio/io_service.hpp>` — removed in Boost 1.87+ (fatal
+#     error: file not found). The file already includes the package's own
+#     boostasiocompat.hpp shim (line 6, BOOST_VERSION-gated AsioIoService/
+#     AsioWork aliases) and uses qi::newAsioWork() from it — the raw include
+#     is dead/redundant, just delete it. Compile-tested the shim alone
+#     (qi::AsioIoService + qi::newAsioWork) against brew boost 1.89. ---
+d="$(_pkg_dir naoqi_libqi)"; [ -n "$d" ] && [ -f "$d/src/eventloop.cpp" ] && \
+  grep -q '^#include <boost/asio/io_service.hpp>' "$d/src/eventloop.cpp" && {
+  sed "${SEDI[@]}" '/^#include <boost\/asio\/io_service.hpp>$/d' "$d/src/eventloop.cpp"
+  echo "  naoqi_libqi eventloop.cpp: dropped stray boost/asio/io_service.hpp include"
+}
 
 # --- Lane 4: rt_usb_9axisimu_driver — the out-of-line ctor definition carries a
 #     default arg (`std::string port = ""`) while the header declares it `explicit`
@@ -352,6 +373,96 @@ PATCHEOF
   sed -e "/^[[:space:]]*TIMEOUT 60[[:space:]]*\$/r $_FMI_SNIPPET" "$d/CMakeLists.txt" > "$d/CMakeLists.txt.__p" && mv "$d/CMakeLists.txt.__p" "$d/CMakeLists.txt"
   rm -f "$_FMI_SNIPPET"
   echo "  fmilibrary_vendor: PATCH_COMMAND fixes CMP0026 LOCATION reads in mergestaticlibs.cmake"
+fi
+
+# --- Lane 6: ecal — CMakeLists.txt:299 `find_package(CMakeFunctions REQUIRED)`
+#     only resolves via a CMake dependency provider
+#     (cmake_language(SET_DEPENDENCY_PROVIDER ...) in cmake/submodule_dependencies.cmake)
+#     that eCAL's own build never activates unless CMAKE_PROJECT_TOP_LEVEL_INCLUDES
+#     is set before the top-level project() call — upstream only does that via
+#     CMakePresets.json, which colcon does not use, so find_package() falls
+#     through to a normal search and fails ("Findcatkin"-style "could not find
+#     a package configuration file"). Turning the provider on globally would
+#     default-build ~15 more vendored thirdparty libs from source
+#     (ecal_submodule_dependencies: asio, HDF5, Protobuf, spdlog, yaml-cpp...)
+#     since each ECAL_THIRDPARTY_BUILD_<NAME> option defaults ON — far more
+#     than this needs. CMakeFunctionsConfig.cmake.in's @PACKAGE_INIT@ body is
+#     itself just `include(.../cmake_functions.cmake)` (plain macro
+#     definitions: git_revision_information, msvc_macros,
+#     protoc_generate_files, targets_protobuf — no compiled artifact) — so
+#     swap the find_package() for that same include directly, bypassing the
+#     provider entirely. Same submodule commit (e9ca7cf) + identical
+#     CMakeLists.txt across all 3 distros -> shared fix. ---
+d="$(find "$ROOT" -maxdepth 4 -type d -path '*/middleware/ecal' -not -path '*/build/*' 2>/dev/null | head -1)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'find_package(CMakeFunctions REQUIRED)' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" 's|find_package(CMakeFunctions REQUIRED)|include(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cmakefunctions/cmake_functions/cmake_functions.cmake)|' "$d/CMakeLists.txt"
+  echo "  ecal: find_package(CMakeFunctions) -> direct include (dependency provider never activated by colcon)"
+fi
+
+# --- Lane 4 (real bug, per-distro): rmf_traffic's schedule::Database and
+#     schedule::Mirror classes override Viewer::get_participant /
+#     ItineraryViewer::get_itinerary / get_current_plan_id — the base virtuals
+#     take `ParticipantId` (uint64_t), but Database.hpp/Mirror.hpp (and their
+#     .cpp definitions) declare these three overrides with `std::size_t`
+#     instead. On 64-bit Linux/glibc, uint64_t is `unsigned long` == size_t,
+#     so the mismatch is silently invisible there; on macOS/clang, uint64_t is
+#     `unsigned long long`, a genuinely distinct type from size_t, so these
+#     become non-overriding `final` members that hide the base virtuals ->
+#     hard error. Genuine upstream bug (already fixed in the commit kilted
+#     pins — grep confirms 0 occurrences of "std::size_t participant_id"
+#     there); humble/jazzy pin older commits that still have it -> per-distro
+#     fix, no-ops cleanly on kilted. Compile-tested: built a probe
+#     ItineraryViewer subclass implementing the 3 overrides with ParticipantId
+#     against the real Viewer.hpp/rmf_utils headers -> clean compile. ---
+for _rf in \
+  "$ROOT/fleet/rmf_traffic/rmf_traffic/include/rmf_traffic/schedule/Database.hpp" \
+  "$ROOT/fleet/rmf_traffic/rmf_traffic/include/rmf_traffic/schedule/Mirror.hpp" \
+  "$ROOT/fleet/rmf_traffic/rmf_traffic/src/rmf_traffic/schedule/Database.cpp" \
+  "$ROOT/fleet/rmf_traffic/rmf_traffic/src/rmf_traffic/schedule/Mirror.cpp"; do
+  if [ -f "$_rf" ] && grep -q 'std::size_t participant_id' "$_rf"; then
+    sed "${SEDI[@]}" 's/std::size_t participant_id/ParticipantId participant_id/g' "$_rf"
+    echo "  rmf_traffic: std::size_t -> ParticipantId in ${_rf#$ROOT/}"
+  fi
+done
+
+# --- Lane 3: rmf_traffic_editor's gui_lib target_link_libraries() lists the
+#     bare word `yaml-cpp` (not an imported target in this scope, not
+#     ${YAML_CPP_LIBRARIES}) -> CMake emits a raw `-lyaml-cpp` link flag ->
+#     "ld: library 'yaml-cpp' not found". toolchain.cmake's global
+#     link_directories(.../opt/yaml_cpp_vendor/lib) covers most bare -lyaml-cpp
+#     consumers, but this target still fails, so swap the bare name for the
+#     toolchain's own ${YAML_CPP_LIBRARIES} absolute-path CACHE variable
+#     (set in cmake/toolchain.cmake) — the same idiom already used natively by
+#     other packages in this tree (camera_calibration_parsers, aruco_opencv,
+#     velodyne_pointcloud, etc), so it's a proven-working substitution, not a
+#     novel one. Same bare-`yaml-cpp` construct present in all 3 distros
+#     (different per-distro rmf commits, same bug) -> shared fix. Not
+#     compile-tested end-to-end (needs a full Qt5 GUI build of gui_lib/
+#     traffic-editor); verified instead that ${YAML_CPP_LIBRARIES} is set
+#     unconditionally in toolchain.cmake and is the exact pattern already
+#     working elsewhere in-tree. ---
+for _rf in \
+  "$ROOT/fleet/rmf_traffic_editor/rmf_traffic_editor/CMakeLists.txt"; do
+  if [ -f "$_rf" ] && grep -qE '^[[:space:]]*yaml-cpp[[:space:]]*$' "$_rf"; then
+    sed "${SEDI[@]}" 's/^\([[:space:]]*\)yaml-cpp\([[:space:]]*\)$/\1${YAML_CPP_LIBRARIES}\2/' "$_rf"
+    echo "  rmf_traffic_editor: bare yaml-cpp -> \${YAML_CPP_LIBRARIES} in ${_rf#$ROOT/}"
+  fi
+done
+
+# --- Lane 7-guard: rmw_stats_shim's `if(CMAKE_COMPILER_IS_GNUCXX OR
+#     CMAKE_CXX_COMPILER_ID MATCHES "Clang")` unconditionally adds
+#     `-Wl,--no-undefined` — a GNU-ld-only flag. MATCHES does a regex search,
+#     so "AppleClang" matches the "Clang" pattern too -> Apple's ld64 rejects
+#     the flag ("ld: unknown options: --no-undefined"). Apple's linker already
+#     errors on undefined symbols by default for a shared lib (no dynamic_lookup
+#     override here), so the flag is a no-op on Linux/GNU anyway if simply
+#     dropped for APPLE -- just guard it. Compile-tested: reproduced the exact
+#     guarded add_link_options() against a minimal SHARED-lib CMake probe;
+#     built clean with AppleClang. ---
+d="$(_pkg_dir rmw_stats_shim)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'add_link_options("-Wl,--no-undefined")' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/if\(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"\)\n(\s*)add_compile_options\(-Wall -Wextra -Wpedantic\)\n(\s*)add_link_options\("-Wl,--no-undefined"\)\n(\s*)endif\(\)/if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")\n${1}add_compile_options(-Wall -Wextra -Wpedantic)\n${1}if(NOT APPLE)\n${2}add_link_options("-Wl,--no-undefined")\n${2}endif()\n${3}endif()/' "$d/CMakeLists.txt"
+  echo "  rmw_stats_shim: guarded -Wl,--no-undefined with NOT APPLE"
 fi
 
 echo "source patches applied."

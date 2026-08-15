@@ -813,7 +813,7 @@
 [submodule "ros-drivers/audio_common"]
 	path = ros-drivers/audio_common
 	url = https://github.com/ros-drivers/audio_common.git
-	branch = master
+	branch = ros2
 [submodule "ros2/interfaces/autoapms"]
 	path = ros2/interfaces/autoapms
 	url = https://github.com/AutoAPMS/auto-apms.git
