@@ -4,7 +4,7 @@ _updated **2026-08-15 15:15 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 1 package(s): wiimote  — 2026-08-15 15:15 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-15 15:15 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
