@@ -298,4 +298,60 @@ if [ -n "${WSPP:-}" ] && [ -f "$WSPP/common/asio.hpp" ] && ! grep -q 'ci-wspp-bo
   echo "  websocketpp 0.8.2: patched for Boost 1.87+ (io_service/strand/work/post/resolver/timer)"
 fi
 
+# --- Lane 6: canboat_vendor's CANBOAT_TOOLS list unconditionally installs
+#     socketcan-writer, but canboat's own Makefile (socketcan-writer/Makefile)
+#     gates that binary to Linux only (`ifeq ($(OS),Linux)` -> TARGETS empty
+#     elsewhere), so it is never built on macOS and `install(PROGRAMS ...)`
+#     fails with "file INSTALL cannot find .../rel/socketcan-writer". This repo
+#     only ever builds on macOS, so drop the entry (BUILD_BYPRODUCTS + tool
+#     list) rather than add a runtime guard. Present in jazzy/kilted only
+#     (same submodule commit fc04c4f, absent from humble) -> no-op there. ---
+d="$(_pkg_dir canboat_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'socketcan-writer' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e '/<SOURCE_DIR>\/rel\/socketcan-writer/d' \
+    -e '/^[[:space:]]*socketcan-writer[[:space:]]*$/d' \
+    "$d/CMakeLists.txt"
+  echo "  canboat_vendor: dropped Linux-only socketcan-writer from install list"
+fi
+
+# --- Lane 6: fmilibrary_vendor's ExternalProject clones modelon-community/
+#     fmi-library (own CMake project, cmake_minimum_required 2.8.6). Its
+#     Config.cmake/mergestaticlibs.cmake reads the LOCATION target property on
+#     not-yet-built targets (pre-3.0 idiom) -> modern CMake enforces CMP0026
+#     as a hard error ("The LOCATION property may not be read from target...
+#     use $<TARGET_FILE>"), hit on every merge_static_libs() call (fmiimport,
+#     fmilib, etc). Not macOS-specific -- same across all 3 distros (identical
+#     CMakeLists.txt, same fmilibrary_version 2.2.3 pin, verified byte-equal
+#     humble/jazzy/kilted despite differing vendor submodule commits).
+#     PATCH_COMMAND runs perl on the freshly-cloned fmi-library source,
+#     swapping the LOCATION reads for `set(... "$<TARGET_FILE:...>")`. The
+#     replacement is built via chr(36) + string concat (/e) instead of a
+#     literal '$<' in the command text: ExternalProject stores *_COMMAND as a
+#     CMake list, and any literal '$<...>' genexp syntax embedded in that text
+#     -- even inside a [[ ]] bracket-argument, which only suppresses ${VAR}
+#     expansion, not genexp scanning -- gets eagerly evaluated by the OUTER
+#     (fmilibrary_vendor) project at generate time and collapses to empty,
+#     since ${lib}/${outlib} aren't real targets in that scope. Split across
+#     two PATCH_COMMAND/COMMAND steps (not one `;`-joined perl -e) because
+#     ExternalProject also re-splits command text on bare semicolons.
+#     VERIFIED end-to-end against the real files: fetched mergestaticlibs.cmake
+#     from the v2.2.3 tag, ran this exact injected CMakeLists.txt through a
+#     real (offline, local SOURCE_DIR) externalproject_add PATCH_COMMAND step,
+#     diffed the output byte-identical to a version that was then separately
+#     configure+build tested (AppleClang) via a probe project calling
+#     merge_static_libs() on two dummy static libs -- produced a correctly
+#     merged archive with both input symbols present. ---
+d="$(_pkg_dir fmilibrary_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-fmilib-cmp0026' "$d/CMakeLists.txt"; then
+  _FMI_SNIPPET="$(mktemp)"
+  cat > "$_FMI_SNIPPET" <<'PATCHEOF'
+  PATCH_COMMAND perl -0pi -e [[s/get_target_property\(libfile (\$\{lib\}) LOCATION\)/'set(libfile "'.chr(36).'<TARGET_FILE:'.$1.'>")'/ge]] <SOURCE_DIR>/Config.cmake/mergestaticlibs.cmake
+  COMMAND perl -0pi -e [[s/get_target_property\(outfile (\$\{outlib\}) LOCATION\)/'set(outfile "'.chr(36).'<TARGET_FILE:'.$1.'>")'/ge]] <SOURCE_DIR>/Config.cmake/mergestaticlibs.cmake # ci-fmilib-cmp0026
+PATCHEOF
+  sed -e "/^[[:space:]]*TIMEOUT 60[[:space:]]*\$/r $_FMI_SNIPPET" "$d/CMakeLists.txt" > "$d/CMakeLists.txt.__p" && mv "$d/CMakeLists.txt.__p" "$d/CMakeLists.txt"
+  rm -f "$_FMI_SNIPPET"
+  echo "  fmilibrary_vendor: PATCH_COMMAND fixes CMP0026 LOCATION reads in mergestaticlibs.cmake"
+fi
+
 echo "source patches applied."
