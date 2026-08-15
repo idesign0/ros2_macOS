@@ -46,3 +46,20 @@ adi_imu
 # porting Avahi discovery to Apple's Bonjour/dns_sd.h — a real API port, not
 # a mechanical fix. humble+jazzy only (same commit a91f86c); not in kilted's tree.
 ardrone_sdk
+
+# husarion_asset_server downloads a prebuilt asset_server binary from GitHub
+# releases; upstream (husarion/husarion_asset_server) only ever publishes
+# linux-amd64/linux-arm64 assets (confirmed via `gh api .../releases/latest`
+# for v0.4.0 — no darwin asset exists), and its CMakeLists uses `dpkg
+# --print-architecture` (absent on macOS) to pick the arch suffix, so it
+# fails even before the download. No macOS binary to fetch -> not a mechanical
+# fix. jazzy only; not in humble/kilted's trees.
+husarion_asset_server
+
+# kortex_api (Kinova's closed-source Kortex API SDK) hard-gates itself:
+# CMakeLists.txt:22 `if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
+# CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")` else FATAL_ERROR "Unsupported
+# System: currently support is for Linux x68_64" — a prebuilt vendor .so for
+# linux-x86_64 only, no arm64 Linux or macOS build exists upstream. humble +
+# jazzy (not in kilted's tree).
+kortex_api
