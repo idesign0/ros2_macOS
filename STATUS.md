@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-15 07:10 UTC** · refreshed every autofix cycle_
+_updated **2026-08-15 08:11 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **⬆️ pushing 3 [auto] commit(s) to GitHub — 2026-08-15 07:10 UTC**
+> **🔧 fixing 7 package(s): gz_ros2_control_demos ign_rviz_common lely_core_libraries leo_gz_plugins mujoco_3d_lidar rosgraph_monitor turtlebot4_gz_gui_plugins  — 2026-08-15 08:11 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -12,9 +12,9 @@ _updated **2026-08-15 07:10 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | queued | 0/20 |  |
-| jazzy | queued | 7/21 |  |
-| kilted | queued | 21/21 |  |
+| humble | queued | 1/20 |  |
+| jazzy | queued | 10/21 |  |
+| kilted | completed | 21/21 | success |
 
 ## Auto-fixed: **59** packages tracked
 
