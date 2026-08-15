@@ -115,12 +115,18 @@
   <h2>Live autofix status</h2>
   <div class="note" id="autofix-status">
   <!-- AUTOFIX-STATUS-START -->
-  <b>Last cycle: 2026-08-15 07:10 UTC</b><br>
-  ardrone_sdk - skip-listed: needs <code>avahi-client</code> (Linux D-Bus mDNS), which has no macOS Homebrew bottle at all (systemd-only formula); its discovery code would need a real Bonjour/<code>dns_sd.h</code> port, not a patch — humble+jazzy only, not in kilted's tree (committed, not pushed)<br>
+  <b>Last cycle: 2026-08-15 08:31 UTC</b><br>
+  lely_core_libraries - fixed macOS <code>clockid_t</code> typedef conflict (Apple SDK <code>enum clockid_t</code> vs lely's own shim) — new git-apply patch wired into the package's existing <code>UPDATE_COMMAND</code> chain in <code>apply_source_patches.sh</code>, compile-tested against both pinned lely-core commits (committed, not pushed, all 3 distros)<br>
   <br>
-  <b>compass_interfaces</b> triaged, not fixed — confirmed cascade of <code>cras_cpp_common</code> (already catalogued), no own error to fix<br>
+  mujoco_3d_lidar - cascade, not fixed — <code>find_package(mujoco_vendor)</code> fails because mujoco_vendor is already-catalogued unsupported on Darwin (upstream hard-rejects macOS)<br>
   <br>
-  <b>59 packages auto-fixed so far</b>
+  gz_ros2_control_demos / leo_gz_plugins / turtlebot4_gz_gui_plugins - needs human — all 3 hit <code>gz/msgs10</code> protobuf gencode/runtime version mismatch; root cause looks like a stale cached <code>gz_msgs_vendor</code> codegen artifact, not a bug in these packages (confirmed same brew protobuf version on both jobs via <code>gh api</code>) — cache invalidation is outside the 3 workspaces<br>
+  <br>
+  ign_rviz_common - needs human — depends on old-naming <code>ignition-gui6</code>; project only vendors the renamed <code>gz-*</code> stack, no legacy vendor exists anywhere in the tree — needs a real fork/port, not a patch<br>
+  <br>
+  rosgraph_monitor - needs human — <code>generate_parameter_library_cpp_BIN</code> empty; confirmed via <code>gh api</code> that the "ros-planning" domain shard (which builds the console-script it needs) was still queued while the shard that needed it ran and failed — a cross-domain build-order race in the layered-matrix scheduling, not a source bug<br>
+  <br>
+  <b>66 packages auto-fixed so far</b>
   <!-- AUTOFIX-STATUS-END -->
   </div>
 
