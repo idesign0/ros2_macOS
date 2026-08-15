@@ -4,7 +4,7 @@ _updated **2026-08-15 13:13 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 42 package(s): adi_3dtof_image_stitching aruco_ros at_sonde_ros_driver camera_aravis2 canopen_fake_slaves draco_point_cloud_transport ess_imu_driver2 event_image_reconstruction_fibar feetech_ros2_driver find_object_2d franka_gazebo_hardware husarion_ugv_diagnostics husarion_ugv_gazebo husarion_ugv_lights husarion_ugv_manager kobuki_core kobuki_velocity_smoother kuka_external_control_sdk_examples lidar_situational_graphs linear_feedback_controller low_pass_filter magnetic_model magnetometer_pipeline mapviz mqtt_client nmea_hardware_interface novatel_gps_driver open3d_conversions openeb_vendor puma_motor_driver rko_lio ros_babel_fish_tools schunk_svh_library spinnaker_camera_driver trackdlo_core turtlebot3_panorama turtlebot4_base ublox_dgnss_node ublox_gps vrpn_mocap wiimote yasmin_viewer  — 2026-08-15 13:13 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-15 13:13 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
