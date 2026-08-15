@@ -261,6 +261,59 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'Wno-macro-redefined' 
   echo "  lely_core_libraries: configure CFLAGS -Wno-macro-redefined"
 fi
 
+# --- Lane 6: lely_core_libraries's vendored libc/sys/types.h only treats
+#     _POSIX_C_SOURCE/__MINGW32__/__NEWLIB__ as "has a real <sys/types.h>"; on
+#     macOS none of those are defined, so it falls back to `typedef int
+#     clockid_t;`, which conflicts with Apple SDK <time.h>'s `enum clockid_t`
+#     (Xcode 26.6 / macOS 26) -> "typedef redefinition with different types".
+#     Drop a patch file + wire it into the ExternalProject's UPDATE_COMMAND,
+#     matching this package's existing git-apply patch mechanism. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0099-macos-clockid_t.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0099-macos-clockid_t.patch" <<'PATCHEOF'
+From 0000000000000000000000000000000000000099 Mon Sep 17 00:00:00 2001
+From: Build Fix <noreply@example.com>
+Date: Sat, 15 Aug 2026 00:00:00 +0000
+Subject: [PATCH] Fix macOS clockid_t redefinition
+
+LELY_HAVE_SYS_TYPES_H only recognizes _POSIX_C_SOURCE, __MINGW32__ and
+__NEWLIB__ as "the platform provides a real <sys/types.h>". On macOS
+none of those are defined in this build (no -D_POSIX_C_SOURCE), so
+lely falls back to its own `typedef int clockid_t;` shim. But Apple's
+SDK <time.h> (pulled in separately by lely/libc/time.h) already
+declares `clockid_t` as `enum clockid_t` (Xcode 26.6 / macOS 26 SDK),
+so the two declarations conflict:
+
+  error: typedef redefinition with different types
+  ('enum clockid_t' vs 'int')
+
+macOS has a real, POSIX-conformant <sys/types.h> (with clockid_t and
+ssize_t), so treat __APPLE__ the same as the existing __MINGW32__ /
+__NEWLIB__ platform cases and use the system header instead of the
+shim.
+---
+ include/lely/libc/sys/types.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/lely/libc/sys/types.h b/include/lely/libc/sys/types.h
+index 9c4dd70d..5802fb39 100644
+--- a/include/lely/libc/sys/types.h
++++ b/include/lely/libc/sys/types.h
+@@ -26,7 +26,7 @@
+ #include <lely/features.h>
+
+ #ifndef LELY_HAVE_SYS_TYPES_H
+-#if defined(_POSIX_C_SOURCE) || defined(__MINGW32__) || defined(__NEWLIB__)
++#if defined(_POSIX_C_SOURCE) || defined(__MINGW32__) || defined(__NEWLIB__) || defined(__APPLE__)
+ #define LELY_HAVE_SYS_TYPES_H 1
+ #endif
+ #endif
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0099-macos-clockid_t.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0099-macos-clockid_t.patch to UPDATE_COMMAND"
+fi
+
 # --- Lane 2: boost-python component version. mrt_cmake_modules FindBoostPython
 #     derives the component from find_package(Python3), which resolves the runner's
 #     newest Python (3.14) -> boost_python314, absent from the vendored boost-1.89
