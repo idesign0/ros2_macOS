@@ -51,6 +51,13 @@ set(BUILD_OCTOVIS_SUBPROJECT OFF CACHE BOOL "Disable building octovis" FORCE)
 set(ROS_WORKSPACE_INSTALL "${WORKSPACE_ROOT}/install")
 list(APPEND CMAKE_PREFIX_PATH "${ROS_WORKSPACE_INSTALL}")
 
+# Homebrew's tl-expected ships tl-expected-config.cmake (hyphen); several
+# ros2_control-family packages (om_gravity_compensation_controller,
+# om_spring_actuator_controller, ...) call find_package(tl_expected)
+# (underscore, matching their package.xml <depend>) -> name mismatch, never
+# found by CMake's default search. Bridge via cmake/Modules/Findtl_expected.cmake.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Modules")
+
 # --- Force System Python 3.11 ---
 set(PYTHON_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 interpreter" FORCE)
 set(Python3_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 executable" FORCE)
