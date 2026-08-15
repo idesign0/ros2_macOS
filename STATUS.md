@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-15 22:18 UTC** · refreshed every autofix cycle_
+_updated **2026-08-15 23:18 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-15 22:18 UTC**
+> **🔧 fixing 3 package(s): live555_vendor multisensor_calibration rmf_traffic_ros2  — 2026-08-15 23:18 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -13,7 +13,7 @@ _updated **2026-08-15 22:18 UTC** · refreshed every autofix cycle_
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
 | humble | in_progress | 0/0 |  |
-| jazzy | queued | 0/21 |  |
+| jazzy | queued | 4/21 |  |
 | kilted | queued | 10/21 |  |
 
 ## Auto-fixed: **86** packages tracked
