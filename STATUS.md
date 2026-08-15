@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-15 10:58 UTC** · refreshed every autofix cycle_
+_updated **2026-08-15 11:04 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 13 package(s): draco_point_cloud_transport event_image_reconstruction_fibar fusioncore_ublox gazebo_no_physics_plugin gazebo_video_monitor_plugins irobot_create_toolbox open3d_conversions openeb_vendor pal_gazebo_plugins rko_lio test_ros_gz_bridge turtlebot4_ignition_gui_plugins velodyne_gazebo_plugins  — 2026-08-15 10:58 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-15 11:04 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
