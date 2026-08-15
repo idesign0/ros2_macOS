@@ -115,18 +115,12 @@
   <h2>Live autofix status</h2>
   <div class="note" id="autofix-status">
   <!-- AUTOFIX-STATUS-START -->
-  <b>Last cycle: 2026-08-15 04:15 UTC</b><br>
-  audio_common_msgs - repointed <code>.gitmodules</code> from <code>branch=master</code> (ROS1 catkin) to <code>branch=ros2</code> (ament_cmake) — wrong-branch case (committed, not pushed)<br>
-  ecal - <code>find_package(CMakeFunctions)</code> → direct <code>include()</code> of the same macros, bypassing a CMake dependency provider colcon never activates (committed, not pushed)<br>
-  naoqi_libqi - dropped a stray <code>boost/asio/io_service.hpp</code> include already superseded by the package's own compat shim (committed, not pushed)<br>
-  rmf_traffic - fixed 3 mistyped <code>std::size_t</code> overrides (should be <code>ParticipantId</code>) that only break where <code>uint64_t != size_t</code> (macOS); humble+jazzy only, kilted already fine upstream (committed, not pushed)<br>
-  rmf_traffic_editor - bare <code>yaml-cpp</code> link target → <code>${YAML_CPP_LIBRARIES}</code>, matching a pattern already proven elsewhere in-tree (committed, not pushed)<br>
-  rmw_stats_shim - guarded a GNU-ld-only <code>-Wl,--no-undefined</code> flag with <code>NOT APPLE</code> (committed, not pushed)<br>
-  sick_safetyscanners_base - added a missing <code>posix_time_types.hpp</code> include (sibling headers in the same package already had it) (committed, not pushed)<br>
+  <b>Last cycle: 2026-08-15 07:10 UTC</b><br>
+  ardrone_sdk - skip-listed: needs <code>avahi-client</code> (Linux D-Bus mDNS), which has no macOS Homebrew bottle at all (systemd-only formula); its discovery code would need a real Bonjour/<code>dns_sd.h</code> port, not a patch — humble+jazzy only, not in kilted's tree (committed, not pushed)<br>
   <br>
-  <b>menge_vendor</b> and <b>zenoh_bridge_dds</b> investigated, left for human review (Homebrew formula build break; pinned Rust crate needs a version bump I can't verify without local cargo)<br>
+  <b>compass_interfaces</b> triaged, not fixed — confirmed cascade of <code>cras_cpp_common</code> (already catalogued), no own error to fix<br>
   <br>
-  <b>57 packages auto-fixed so far</b>
+  <b>59 packages auto-fixed so far</b>
   <!-- AUTOFIX-STATUS-END -->
   </div>
 
