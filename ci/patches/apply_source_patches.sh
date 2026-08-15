@@ -518,4 +518,58 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'add_link_options("-Wl,-
   echo "  rmw_stats_shim: guarded -Wl,--no-undefined with NOT APPLE"
 fi
 
+# --- Lane 6 (humble only, package absent in jazzy/kilted): as2_platform_crazyflie
+#     FetchContent-pulls crazyflie_cpp, which statically links libusb-1.0.
+#     libusb's macOS backend (darwin_usb.o) calls IOKit/CoreFoundation/Security
+#     APIs directly (CFRunLoop*, IOService*, SecTask*, ...) but neither
+#     crazyflie_cpp nor as2_platform_crazyflie's own CMakeLists link those
+#     system frameworks -> "Undefined symbols for architecture arm64" at the
+#     final link of both _node and _swarm_node executables. Standard macOS
+#     libusb consumers must add these 3 frameworks explicitly (libusb's own
+#     pkg-config .pc file lists them in Libs.private, which static linking
+#     doesn't auto-propagate). Compile-tested: N/A (no local libusb-based repro
+#     harness), but the fix is exactly the frameworks needed to resolve every
+#     undefined symbol seen in the CI log (CFBooleanGetTypeID, IOServiceMatching,
+#     SecTaskCreateFromSelf, etc — all covered by these 3 frameworks, a
+#     well-documented libusb-on-macOS requirement). ---
+d="$(_pkg_dir as2_platform_crazyflie)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'framework CoreFoundation' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/(if\(BUILD_TESTING\))/if(APPLE)\n  target_link_libraries(\${PROJECT_NAME}_node "-framework CoreFoundation" "-framework IOKit" "-framework Security")\n  target_link_libraries(\${PROJECT_NAME}_swarm_node "-framework CoreFoundation" "-framework IOKit" "-framework Security")\nendif()\n\n$1/' "$d/CMakeLists.txt"
+  echo "  as2_platform_crazyflie: link CoreFoundation/IOKit/Security frameworks (libusb macOS backend)"
+fi
+
+# --- Lane 1b (shared, same commit daa44c9 all 3): libmavconn's own FindASIO.cmake
+#     only searches PATHS /usr/include /usr/local/include for asio.hpp -> never
+#     checks the Apple Silicon homebrew prefix -> "Could NOT find ASIO (missing:
+#     ASIO_INCLUDE_DIRS)". brew asio isn't linked into /opt/homebrew/include on
+#     this runner (not keg-only, but not globally linked either), so add both the
+#     general homebrew include dir and the keg-specific opt/asio/include as
+#     additional PATHS. Compile-tested: verified asio.hpp resolves from
+#     /opt/homebrew/opt/asio/include locally (brew asio 1.36.0 installed). ---
+d="$(_pkg_dir libmavconn)"
+if [ -n "$d" ] && [ -f "$d/cmake/Modules/FindASIO.cmake" ] && ! grep -q '/opt/homebrew' "$d/cmake/Modules/FindASIO.cmake"; then
+  sed "${SEDI[@]}" 's#PATHS /usr/include /usr/local/include#PATHS /usr/include /usr/local/include /opt/homebrew/include /opt/homebrew/opt/asio/include#' "$d/cmake/Modules/FindASIO.cmake"
+  echo "  libmavconn: FindASIO.cmake PATHS += /opt/homebrew include dirs"
+fi
+
+# --- Lane 3 (humble + jazzy, same file/macro; only humble's yaml-cpp 0.7.0
+#     actually hits this branch since jazzy's yaml_cpp_vendor exports a native
+#     yaml-cpp::yaml-cpp target per the macro's own comment): ros2_medkit_cmake's
+#     medkit_find_yaml_cpp() falls back to find_library(yaml-cpp)/find_path(...)
+#     when no yaml-cpp::yaml-cpp target exists, but yaml_cpp_vendor's lib/include
+#     live under the nested install/opt/yaml_cpp_vendor/{lib,include} prefix,
+#     which isn't in CMAKE_PREFIX_PATH's default <prefix>/lib search -> both
+#     find_library/find_path miss it -> FATAL_ERROR "Could not find yaml-cpp
+#     library". cmake/toolchain.cmake already exports ${YAML_CPP_LIBRARIES} /
+#     ${YAML_CPP_INCLUDE_DIRS} as absolute-path CACHE vars for exactly this
+#     (same proven idiom as the rmf_traffic_editor fix) -> try them as a 3rd
+#     fallback tier before giving up. Compile-tested: N/A (pure CMake macro
+#     edit); verified structurally that YAML_CPP_LIBRARIES/YAML_CPP_INCLUDE_DIRS
+#     are set unconditionally, globally, before any package configures. ---
+d="$(_pkg_dir ros2_medkit_cmake)"
+if [ -n "$d" ] && [ -f "$d/cmake/ROS2MedkitCompat.cmake" ] && ! grep -q 'elseif(YAML_CPP_LIBRARIES AND YAML_CPP_INCLUDE_DIRS)' "$d/cmake/ROS2MedkitCompat.cmake"; then
+  perl -0pi -e 's/( *)else\(\)\n( *message\(FATAL_ERROR)/$1elseif(YAML_CPP_LIBRARIES AND YAML_CPP_INCLUDE_DIRS)\n$1  add_library(yaml-cpp::yaml-cpp IMPORTED INTERFACE)\n$1  set_target_properties(yaml-cpp::yaml-cpp PROPERTIES\n$1    INTERFACE_LINK_LIBRARIES "\${YAML_CPP_LIBRARIES}"\n$1    INTERFACE_INCLUDE_DIRECTORIES "\${YAML_CPP_INCLUDE_DIRS}"\n$1  )\n$1  message(STATUS "[MedkitCompat] yaml-cpp: created target from toolchain YAML_CPP_LIBRARIES")\n$1else()\n$2/' "$d/cmake/ROS2MedkitCompat.cmake"
+  echo "  ros2_medkit_cmake: medkit_find_yaml_cpp() falls back to toolchain YAML_CPP_LIBRARIES/YAML_CPP_INCLUDE_DIRS"
+fi
+
 echo "source patches applied."
