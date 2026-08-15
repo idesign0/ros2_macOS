@@ -699,6 +699,7 @@ ros_gz_image
 ros_gz_interfaces
 ros_gz_sim
 ros_gz_sim_demos
+ros_industrial_cmake_boilerplate
 ros_ign_bridge
 ros_ign_gazebo
 ros_ign_gazebo_demos

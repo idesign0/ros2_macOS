@@ -2694,3 +2694,7 @@
 	path = ros-planning/dependencies/lua
 	url = https://github.com/idesign0/id_lua.git
 	branch = 5.3
+[submodule "ament/ros_industrial_cmake_boilerplate"]
+	path = ament/ros_industrial_cmake_boilerplate
+	url = https://github.com/ros-industrial/ros_industrial_cmake_boilerplate.git
+	branch = master
