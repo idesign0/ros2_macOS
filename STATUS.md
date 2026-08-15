@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-15 13:13 UTC** · refreshed every autofix cycle_
+_updated **2026-08-15 14:14 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-15 13:13 UTC**
+> **🔧 fixing 25 package(s): beluga broll btcpp_ros2_samples camera_aravis2 cartographer_rviz etsi_its_rviz_plugins foros foxglove_bridge grid_map_pcl hri_rviz kinematics_interface_pinocchio linear_feedback_controller mapviz mqtt_client nmea_hardware_interface plansys2_tools polygon_rviz_plugins psdk_wrapper qb_softhand_industry_driver roadmap_explorer rqt_image_overlay rqt_mocap4r2_control rtabmap_conversions smacc2 warehouse_ros_mongo  — 2026-08-15 14:14 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -12,8 +12,8 @@ _updated **2026-08-15 13:13 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | queued | 14/20 |  |
-| jazzy | queued | 21/21 |  |
+| humble | in_progress | 19/20 |  |
+| jazzy | completed | 21/21 | success |
 | kilted | completed | 21/21 | success |
 
 ## Auto-fixed: **86** packages tracked
