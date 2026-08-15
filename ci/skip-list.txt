@@ -38,3 +38,11 @@ rplidar_driver
 synapticon_ros2_control
 libbno055_linux
 adi_imu
+
+# avahi-client (Linux D-Bus mDNS discovery) — no macOS Homebrew bottle for
+# avahi (Linux/systemd-only, confirmed via formulae.brew.sh: bottles only for
+# arm64_linux/x86_64_linux, hard-deps on systemd). ARDISCOVERY_AvahiDiscovery.c
+# calls the avahi-client dbus API directly; a macOS-native path would mean
+# porting Avahi discovery to Apple's Bonjour/dns_sd.h — a real API port, not
+# a mechanical fix. humble+jazzy only (same commit a91f86c); not in kilted's tree.
+ardrone_sdk
