@@ -1,0 +1,178 @@
+<title>ROS 2 macOS CI — Handoff</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --ground:#F5F7F9; --panel:#FFFFFF; --panel-2:#EEF1F4;
+    --ink:#182029; --muted:#5C6672; --faint:#8A939E;
+    --line:#DBE0E6; --line-strong:#C4CBD3;
+    --accent:#2F6E8F;               /* steel blue — the one bold hue */
+    --pass:#2C8A4A; --pass-bg:#E4F1E8;
+    --pend:#B4770A; --pend-bg:#F6ECD8;
+    --block:#B4462A; --block-bg:#F5E3DC;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#101419; --panel:#171C23; --panel-2:#1E242C;
+      --ink:#E7ECF2; --muted:#9AA4B0; --faint:#6B7480;
+      --line:#28303A; --line-strong:#38414D;
+      --accent:#68A9C9;
+      --pass:#63C083; --pass-bg:#18291E;
+      --pend:#D9A441; --pend-bg:#2C2413;
+      --block:#E0795C; --block-bg:#2C1B15;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#101419; --panel:#171C23; --panel-2:#1E242C;
+    --ink:#E7ECF2; --muted:#9AA4B0; --faint:#6B7480;
+    --line:#28303A; --line-strong:#38414D; --accent:#68A9C9;
+    --pass:#63C083; --pass-bg:#18291E; --pend:#D9A441; --pend-bg:#2C2413;
+    --block:#E0795C; --block-bg:#2C1B15;
+  }
+  :root[data-theme="light"]{
+    --ground:#F5F7F9; --panel:#FFFFFF; --panel-2:#EEF1F4;
+    --ink:#182029; --muted:#5C6672; --faint:#8A939E;
+    --line:#DBE0E6; --line-strong:#C4CBD3; --accent:#2F6E8F;
+    --pass:#2C8A4A; --pass-bg:#E4F1E8; --pend:#B4770A; --pend-bg:#F6ECD8;
+    --block:#B4462A; --block-bg:#F5E3DC;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+    line-height:1.5;-webkit-text-size-adjust:100%;}
+  .wrap{max-width:720px;margin:0 auto;padding:22px 18px 64px;}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);font-weight:600;}
+  h1{font-size:26px;line-height:1.15;margin:.35em 0 .15em;letter-spacing:-.01em;text-wrap:balance;}
+  .sub{color:var(--muted);font-size:14.5px;margin:0;}
+  .rule{height:1px;background:var(--line);border:0;margin:22px 0;}
+  h2{font-size:12px;font-family:var(--mono);letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;margin:28px 0 12px;display:flex;align-items:center;gap:10px;}
+  h2::after{content:"";flex:1;height:1px;background:var(--line);}
+
+  /* run status */
+  .runs{display:flex;flex-direction:column;gap:8px;}
+  .run{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:11px 13px;}
+  .run .name{font-family:var(--mono);font-weight:600;font-size:14px;}
+  .run .id{font-family:var(--mono);font-size:12px;color:var(--faint);margin-left:auto;}
+
+  .chip{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.03em;
+    padding:3px 8px;border-radius:999px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
+  .chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .c-pass{color:var(--pass);background:var(--pass-bg);}
+  .c-pend{color:var(--pend);background:var(--pend-bg);}
+  .c-block{color:var(--block);background:var(--block-bg);}
+
+  .note{background:var(--panel-2);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;
+    padding:12px 14px;font-size:14px;color:var(--ink);}
+  .note b{color:var(--accent);}
+
+  /* fix cards */
+  .list{display:flex;flex-direction:column;gap:8px;}
+  .item{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:12px 13px;border-left:3px solid var(--pass);}
+  .item.fork{border-left-color:var(--pend);}
+  .item .top{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;}
+  .item .pkg{font-family:var(--mono);font-weight:600;font-size:14px;}
+  .item .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--faint);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;}
+  .item .why{color:var(--muted);font-size:13.5px;margin:5px 0 0;}
+
+  ul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;}
+  ul.plain li{padding-left:20px;position:relative;font-size:14px;color:var(--ink);}
+  ul.plain li::before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;
+    border-radius:50%;background:var(--accent);}
+  ul.plain li .k{font-family:var(--mono);font-weight:600;}
+  ul.plain li .d{color:var(--muted);}
+
+  .steps{counter-reset:s;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
+  .steps li{counter-increment:s;position:relative;padding-left:34px;font-size:14.5px;}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:-1px;width:22px;height:22px;
+    border-radius:6px;background:var(--accent);color:#fff;font-family:var(--mono);font-size:12px;
+    font-weight:600;display:grid;place-items:center;}
+  @media (prefers-color-scheme:dark){.steps li::before{color:#0d1117;}}
+  :root[data-theme="dark"] .steps li::before{color:#0d1117;}
+
+  code{font-family:var(--mono);font-size:.86em;background:var(--panel-2);padding:1px 5px;border-radius:4px;}
+  .foot{margin-top:30px;color:var(--faint);font-size:12px;font-family:var(--mono);text-align:center;}
+  .count{font-variant-numeric:tabular-nums;}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">idesign0 / ros2_macOS · overnight handoff</div>
+  <h1>ROS 2 on macOS — where things stand</h1>
+  <p class="sub">2026-08-14, end of night session. Everything below is committed &amp; pushed to <code>humble</code>, <code>jazzy</code>, <code>kilted</code>. No PRs opened.</p>
+
+  <h2>Layered runs</h2>
+  <div class="runs">
+    <div class="run"><span class="name">humble</span><span class="chip c-pend">running</span><span class="id">31839306320</span></div>
+    <div class="run"><span class="name">jazzy</span><span class="chip c-pend">running</span><span class="id">31839309116</span></div>
+    <div class="run"><span class="name">kilted</span><span class="chip c-pend">running</span><span class="id">31839311271</span></div>
+  </div>
+  <p style="height:10px"></p>
+  <div class="note"><b>Fresh dispatch is live</b> — these runs <b>include all 9 of tonight's fixes</b> (the stale 14:53 runs were cancelled). ~14h wall + queue, so they land while you're out. Just watch them on GitHub → Actions; nothing to do unless one goes red.</div>
+  <h2>Live autofix status</h2>
+  <div class="note" id="autofix-status">
+  <!-- AUTOFIX-STATUS-START -->
+  <b>Last cycle: 2026-08-15 04:15 UTC</b><br>
+  audio_common_msgs - repointed <code>.gitmodules</code> from <code>branch=master</code> (ROS1 catkin) to <code>branch=ros2</code> (ament_cmake) — wrong-branch case (committed, not pushed)<br>
+  ecal - <code>find_package(CMakeFunctions)</code> → direct <code>include()</code> of the same macros, bypassing a CMake dependency provider colcon never activates (committed, not pushed)<br>
+  naoqi_libqi - dropped a stray <code>boost/asio/io_service.hpp</code> include already superseded by the package's own compat shim (committed, not pushed)<br>
+  rmf_traffic - fixed 3 mistyped <code>std::size_t</code> overrides (should be <code>ParticipantId</code>) that only break where <code>uint64_t != size_t</code> (macOS); humble+jazzy only, kilted already fine upstream (committed, not pushed)<br>
+  rmf_traffic_editor - bare <code>yaml-cpp</code> link target → <code>${YAML_CPP_LIBRARIES}</code>, matching a pattern already proven elsewhere in-tree (committed, not pushed)<br>
+  rmw_stats_shim - guarded a GNU-ld-only <code>-Wl,--no-undefined</code> flag with <code>NOT APPLE</code> (committed, not pushed)<br>
+  sick_safetyscanners_base - added a missing <code>posix_time_types.hpp</code> include (sibling headers in the same package already had it) (committed, not pushed)<br>
+  <br>
+  <b>menge_vendor</b> and <b>zenoh_bridge_dds</b> investigated, left for human review (Homebrew formula build break; pinned Rust crate needs a version bump I can't verify without local cargo)<br>
+  <br>
+  <b>57 packages auto-fixed so far</b>
+  <!-- AUTOFIX-STATUS-END -->
+  </div>
+
+  <h2>Shipped tonight <span class="count" style="color:var(--faint);font-weight:400;letter-spacing:0;text-transform:none">9</span></h2>
+  <div class="list">
+    <div class="item"><div class="top"><span class="pkg">rmf_websocket</span><span class="chip c-pass">compile-verified</span><span class="tag">patch</span></div><p class="why">brew websocketpp 0.8.2 → Boost 1.87 (9 removed APIs). Migrated in-place; compiles clean vs Boost 1.89 (server + client). Unblocks the whole rmf cascade.</p></div>
+    <div class="item"><div class="top"><span class="pkg">Lane-7 skip sweep</span><span class="chip c-pass">pushed</span><span class="tag">skip · 14 pkgs</span></div><p class="why">SocketCAN / V4L2 / serial-ioctl drivers with no macOS path — stop re-failing every run.</p></div>
+    <div class="item"><div class="top"><span class="pkg">autoware_ground_filter</span><span class="chip c-pass">pushed</span><span class="tag">toolchain</span></div><p class="why">Defined <code>M_PI_2f</code> / <code>M_PI_4f</code> (glibc float math macros absent on macOS).</p></div>
+    <div class="item"><div class="top"><span class="pkg">nebula_velodyne_hw_interfaces</span><span class="chip c-pass">pushed</span><span class="tag">patch</span></div><p class="why">Added <code>&lt;boost/format.hpp&gt;</code> (used <code>boost::format</code> without the include).</p></div>
+    <div class="item"><div class="top"><span class="pkg">event_camera_tools</span><span class="chip c-pass">pushed</span><span class="tag">patch</span></div><p class="why">Added <code>&lt;unistd.h&gt;</code> — <code>getopt</code>/<code>optarg</code>/<code>optind</code> undeclared.</p></div>
+    <div class="item"><div class="top"><span class="pkg">libcreate</span><span class="chip c-pass">pushed</span><span class="tag">patch</span></div><p class="why"><code>&lt;boost/asio/deadline_timer.hpp&gt;</code> — umbrella asio header stopped pulling it in on Boost 1.89. Unblocks the Create/Roomba stack.</p></div>
+    <div class="item"><div class="top"><span class="pkg">nebula_continental_hw_interfaces</span><span class="chip c-pass">pushed</span><span class="tag">skip</span></div><p class="why"><code>linux/can.h</code> (SocketCAN) — added to skip-list.</p></div>
+    <div class="item fork"><div class="top"><span class="pkg">ros2_ouster</span><span class="chip c-pass">pushed</span><span class="tag">patch · fork later</span></div><p class="why"><code>declare_parameter(name)</code> overload removed — added <code>rclcpp::ParameterType::PARAMETER_STRING</code>. Real API drift → fork for the PR.</p></div>
+    <div class="item fork"><div class="top"><span class="pkg">kuka_drivers_core</span><span class="chip c-pass">pushed</span><span class="tag">patch · fork later</span></div><p class="why"><code>#ifdef __linux__</code> around <code>cpu_set_t</code> affinity block. Cascade root for the kuka stack.</p></div>
+  </div>
+
+  <h2>Next, back at the Mac</h2>
+  <ol class="steps">
+    <li><b>Fresh run already dispatched</b> ✓ — validating tonight's 9 fixes now. Read the results when it lands.</li>
+    <li>Once green, <b>fork for the PRs</b>: <code>ros2_ouster_drivers</code>, <code>kuka_drivers</code> (+ the earlier naoqi / sick peels).</li>
+    <li><b>websocketpp → Homebrew formula PR</b> (upstream is dead; match Debian/Fedora's compat patch) — only after the run proves it green.</li>
+  </ol>
+
+  <h2>Deferred — needs your call</h2>
+  <ul class="plain">
+    <li><span class="k">config.sub darwin25</span> <span class="d">— autotools too old; clears <code>io_context</code> + <code>libphidget22</code>. Per-package PATCH_COMMAND.</span></li>
+    <li><span class="k">plansys2_executor</span> <span class="d">— needs ZeroMQ so BehaviorTree.CPP builds <code>PublisherZMQ</code> (brew <code>zeromq</code>+<code>cppzmq</code> + BT rebuild).</span></li>
+    <li><span class="k">gscam</span> <span class="d">— gstreamer (brew dep) or skip.</span></li>
+    <li><span class="k">andino_base</span> <span class="d">— crayzeewulf libserial (no brew formula, Linux termios) — vendor or skip.</span></li>
+    <li><span class="k">mrpt / mola chain</span> <span class="d">— libc++ incomplete-type; dedicated session.</span></li>
+  </ul>
+
+  <h2>Unattended autofixer — built, needs 2 steps to arm</h2>
+  <div class="note"><b>What it does:</b> a local hourly job (<code>~/ci-autofix</code>) drains completed CI shards, and headless Claude fixes new own-error roots — cross-checks the 3 local trees, compile-tests, <b>commits locally, never pushes</b>. Survives usage limits: a capped hour just retries next hour. Built &amp; bash-tested tonight; only the login-gated call is untested.</div>
+  <ol class="steps">
+    <li><b>Log the CLI in once</b> (only you can — it's a browser OAuth): run <code>claude</code> in Terminal, then <code>/login</code>.</li>
+    <li><b>Arm the hourly job:</b> <code>launchctl load ~/Library/LaunchAgents/com.idesign.ci-autofix.plist</code></li>
+    <li><b>Keep the Mac plugged in &amp; lid open</b> or it sleeps and the job won't fire. Watch it: <code>tail -f ~/ci-autofix/logs/launchd.out</code>. Review its work: <code>git -C ~/humble-ros2/src log --oneline | grep '[auto]'</code> — nothing is pushed.</li>
+  </ol>
+
+  <h2>Checking from your phone</h2>
+  <ul class="plain">
+    <li><span class="k">CI runs</span> <span class="d">— GitHub Actions on <code>idesign0/ros2_macOS</code>. Watch from the GitHub mobile app; no Mac needed.</span></li>
+    <li><span class="k">This page</span> <span class="d">— open on your phone signed in with the same account; it's your plan for the day.</span></li>
+    <li><span class="k">To keep fixing</span> <span class="d">— the work lives in the Mac's local workspaces, so the Mac has to stay awake &amp; reachable. Monitoring is phone-side; hands-on edits are Mac-side.</span></li>
+  </ul>
+
+  <div class="foot">full detail → ~/Documents/ci-failure-report.md · “AUTONOMOUS SESSION LOG”</div>
+</div>
