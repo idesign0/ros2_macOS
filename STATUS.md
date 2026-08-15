@@ -4,7 +4,7 @@ _updated **2026-08-15 14:14 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 25 package(s): beluga broll btcpp_ros2_samples camera_aravis2 cartographer_rviz etsi_its_rviz_plugins foros foxglove_bridge grid_map_pcl hri_rviz kinematics_interface_pinocchio linear_feedback_controller mapviz mqtt_client nmea_hardware_interface plansys2_tools polygon_rviz_plugins psdk_wrapper qb_softhand_industry_driver roadmap_explorer rqt_image_overlay rqt_mocap4r2_control rtabmap_conversions smacc2 warehouse_ros_mongo  — 2026-08-15 14:14 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-15 14:14 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
