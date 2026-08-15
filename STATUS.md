@@ -1,14 +1,20 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-15 06:05 UTC** · refreshed every autofix cycle_
+_updated **2026-08-15 07:02 UTC** · refreshed every autofix cycle_
+
+## 🔧 What the autofixer is doing
+
+> **🔍 cycle start — checking the three runners — 2026-08-15 07:02 UTC**
+
+> ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
 ## Distro runners
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
 | humble | queued | 0/20 |  |
-| jazzy | queued | 5/21 |  |
-| kilted | queued | 18/21 |  |
+| jazzy | queued | 7/21 |  |
+| kilted | in_progress | 20/21 |  |
 
 ## Auto-fixed: **57** packages tracked
 
