@@ -115,18 +115,24 @@
   <h2>Live autofix status</h2>
   <div class="note" id="autofix-status">
   <!-- AUTOFIX-STATUS-START -->
-  <b>Last cycle: 2026-08-15 08:31 UTC</b><br>
-  lely_core_libraries - fixed macOS <code>clockid_t</code> typedef conflict (Apple SDK <code>enum clockid_t</code> vs lely's own shim) — new git-apply patch wired into the package's existing <code>UPDATE_COMMAND</code> chain in <code>apply_source_patches.sh</code>, compile-tested against both pinned lely-core commits (committed, not pushed, all 3 distros)<br>
+  <b>Last cycle: 2026-08-15 09:35 UTC</b><br>
+  boost_plugin_loader (humble) - fixed, missing submodule — humble's tree never had <code>ros_industrial_cmake_boilerplate</code> at all (jazzy/kilted did, same pinned commit); added the submodule + a base-stage shard entry, compile-tested a full configure+build of both packages (committed, not pushed)<br>
   <br>
-  mujoco_3d_lidar - cascade, not fixed — <code>find_package(mujoco_vendor)</code> fails because mujoco_vendor is already-catalogued unsupported on Darwin (upstream hard-rejects macOS)<br>
+  as2_platform_crazyflie (humble) - fixed — FetchContent'd <code>crazyflie_cpp</code> statically links libusb; added the missing CoreFoundation/IOKit/Security framework links for its macOS backend (committed, not pushed)<br>
   <br>
-  gz_ros2_control_demos / leo_gz_plugins / turtlebot4_gz_gui_plugins - needs human — all 3 hit <code>gz/msgs10</code> protobuf gencode/runtime version mismatch; root cause looks like a stale cached <code>gz_msgs_vendor</code> codegen artifact, not a bug in these packages (confirmed same brew protobuf version on both jobs via <code>gh api</code>) — cache invalidation is outside the 3 workspaces<br>
+  libmavconn (all 3) - fixed — own <code>FindASIO.cmake</code> never searched the homebrew prefix for <code>asio.hpp</code>; added the missing PATHS (committed, not pushed, all 3 distros)<br>
   <br>
-  ign_rviz_common - needs human — depends on old-naming <code>ignition-gui6</code>; project only vendors the renamed <code>gz-*</code> stack, no legacy vendor exists anywhere in the tree — needs a real fork/port, not a patch<br>
+  ros2_medkit_serialization (humble+jazzy) - fixed — yaml-cpp fallback lookup missed the vendored yaml-cpp's nested install prefix; added a fallback tier using the toolchain's own yaml-cpp cache vars, compile-tested via a real cmake configure (committed, not pushed)<br>
   <br>
-  rosgraph_monitor - needs human — <code>generate_parameter_library_cpp_BIN</code> empty; confirmed via <code>gh api</code> that the "ros-planning" domain shard (which builds the console-script it needs) was still queued while the shard that needed it ran and failed — a cross-domain build-order race in the layered-matrix scheduling, not a source bug<br>
+  om_gravity_compensation_controller / om_spring_actuator_controller (jazzy) - fixed — <code>find_package(tl_expected)</code> (underscore) never matched homebrew's hyphenated tl-expected config; added a small CMake module bridging the name, compile-tested standalone and via the real toolchain file (committed, not pushed, all 3 distros)<br>
   <br>
-  <b>66 packages auto-fixed so far</b>
+  husarion_asset_server (jazzy) / kortex_api (humble+jazzy) - skip-listed — confirmed via GitHub release assets / vendor SDK source that neither has any macOS build path at all<br>
+  <br>
+  6 packages (as2_gazebo_assets, rmf_battery, rmf_traffic_examples, rmf_visualization_navgraphs, rmf_visualization_rviz2_plugins, rmf_robot_sim_gz_classic_plugins) - cascades of already-fixed-but-unpushed bugs or known cross-domain scheduling races, no new action needed<br>
+  <br>
+  6 packages (rmf_robot_sim_gz_plugins, rmf_traffic_editor_test_maps, moveit_hybrid_planning, data_tamer_cpp, robotiq_driver, webots_ros2_driver) - needs human — legacy-stack ports, a missing dependency with no safe upstream fork to guess, and one shard log that doesn't capture the real error<br>
+  <br>
+  <b>86 packages auto-fixed so far</b>
   <!-- AUTOFIX-STATUS-END -->
   </div>
 
