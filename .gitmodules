@@ -1313,7 +1313,7 @@
 [submodule "ros-drivers/audio_common"]
 	path = ros-drivers/audio_common
 	url = https://github.com/ros-drivers/audio_common.git
-	branch = master
+	branch = ros2
 [submodule "ros-drivers/automotive_autonomy_msgs"]
 	path = ros-drivers/automotive_autonomy_msgs
 	url = https://github.com/astuff/automotive_autonomy_msgs.git
