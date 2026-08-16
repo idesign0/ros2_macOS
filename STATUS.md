@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-16 05:24 UTC** · refreshed every autofix cycle_
+_updated **2026-08-16 06:24 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-16 05:23 UTC**
+> **🔧 fixing 38 package(s): at_sonde_ros_driver audio_capture audio_play beluga broll cartographer_rviz cx_utils dynamixel_hardware easynav_costmap_common easynav_simple_common ess_imu_driver2 feetech_ros2_driver grid_map_pcl husarion_ugv_diagnostics husarion_ugv_gazebo husarion_ugv_lights husarion_ugv_manager kobuki_core kobuki_velocity_smoother kuka_external_control_sdk_examples libcaer_driver nobleo_socketcan_bridge novatel_gps_driver openni2_camera ouster_ros plansys2_terminal plansys2_tools rslidar_sdk rtabmap_conversions sick_safetyscanners2 sick_scan_xd smacc2 spinnaker_camera_driver trackdlo_core turtlebot4_base ublox_dgnss_node ublox_gps vrpn_mocap  — 2026-08-16 06:24 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -13,8 +13,8 @@ _updated **2026-08-16 05:24 UTC** · refreshed every autofix cycle_
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
 | humble | queued | 6/20 |  |
-| jazzy | queued | 15/21 |  |
-| kilted | in_progress | 21/21 |  |
+| jazzy | queued | 18/21 |  |
+| kilted | completed | 21/21 | success |
 
 ## Auto-fixed: **86** packages tracked
 
