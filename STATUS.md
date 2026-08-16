@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-16 07:25 UTC** · refreshed every autofix cycle_
+_updated **2026-08-16 08:26 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-16 07:25 UTC**
+> **🔧 fixing 3 package(s): kortex_driver pick_ik wiimote  — 2026-08-16 08:26 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -12,8 +12,8 @@ _updated **2026-08-16 07:25 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | queued | 8/20 |  |
-| jazzy | in_progress | 20/21 |  |
+| humble | queued | 11/20 |  |
+| jazzy | completed | 21/21 | success |
 | kilted | completed | 21/21 | success |
 
 ## Auto-fixed: **86** packages tracked
