@@ -4,7 +4,7 @@ _updated **2026-08-16 23:47 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 9 package(s): ardrone_sumo autoware_downsample_filters autoware_gnss_poser autoware_map_projection_loader autoware_test_utils live555_vendor multisensor_calibration nebula_velodyne_common rmf_traffic_ros2  — 2026-08-16 23:47 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-16 23:47 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
