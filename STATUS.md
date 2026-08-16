@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-16 04:22 UTC** · refreshed every autofix cycle_
+_updated **2026-08-16 04:23 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 2 package(s): ardrone_sumo autoware_path_generator  — 2026-08-16 04:22 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-16 04:23 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
