@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-16 10:27 UTC** · refreshed every autofix cycle_
+_updated **2026-08-16 10:28 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 17 package(s): camera_aravis2 etsi_its_rviz_plugins foros foxglove_bridge hri_rviz kinematics_interface_pinocchio linear_feedback_controller mapviz mqtt_client nmea_hardware_interface polygon_rviz_plugins psdk_wrapper qb_softhand_industry_driver roadmap_explorer rqt_image_overlay rqt_mocap4r2_control wiimote  — 2026-08-16 10:27 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-16 10:27 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
