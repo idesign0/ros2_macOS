@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-16 02:21 UTC** · refreshed every autofix cycle_
+_updated **2026-08-16 03:22 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-16 02:21 UTC**
+> **🔧 fixing 1 package(s): kortex_driver  — 2026-08-16 03:22 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -13,8 +13,8 @@ _updated **2026-08-16 02:21 UTC** · refreshed every autofix cycle_
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
 | humble | queued | 0/20 |  |
-| jazzy | queued | 10/21 |  |
-| kilted | queued | 18/21 |  |
+| jazzy | queued | 13/21 |  |
+| kilted | queued | 20/21 |  |
 
 ## Auto-fixed: **86** packages tracked
 
