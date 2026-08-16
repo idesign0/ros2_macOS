@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-16 09:27 UTC** · refreshed every autofix cycle_
+_updated **2026-08-16 10:27 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-16 09:27 UTC**
+> **🔧 fixing 17 package(s): camera_aravis2 etsi_its_rviz_plugins foros foxglove_bridge hri_rviz kinematics_interface_pinocchio linear_feedback_controller mapviz mqtt_client nmea_hardware_interface polygon_rviz_plugins psdk_wrapper qb_softhand_industry_driver roadmap_explorer rqt_image_overlay rqt_mocap4r2_control wiimote  — 2026-08-16 10:27 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -12,7 +12,7 @@ _updated **2026-08-16 09:27 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | in_progress | 16/20 |  |
+| humble | completed | 20/20 | success |
 | jazzy | completed | 21/21 | success |
 | kilted | completed | 21/21 | success |
 
@@ -45,3 +45,5 @@ f7a6b8fb ci(DISTRO): skip-list += husarion_asset_server, kortex_api [auto] [skip
   6 packages (rmf_robot_sim_gz_plugins, rmf_traffic_editor_test_maps, moveit_hybrid_planning, data_tamer_cpp, robotiq_driver, webots_ros2_driver) - needs human — legacy-stack ports, a missing dependency with no safe upstream fork to guess, and one shard log that doesn't capture the real error
   86 packages auto-fixed so far
 ```
+
+**All three runners are DONE** — next: review the `[auto]` commits, push, and dispatch a fresh round.
