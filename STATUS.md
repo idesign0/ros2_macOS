@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-16 09:26 UTC** · refreshed every autofix cycle_
+_updated **2026-08-16 09:27 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 46 package(s): adi_3dtof_image_stitching aruco_ros at_sonde_ros_driver audio_capture audio_play beluga broll btcpp_ros2_samples cartographer_rviz draco_point_cloud_transport ess_imu_driver2 event_image_reconstruction_fibar feetech_ros2_driver find_object_2d franka_gazebo_hardware generate_parameter_library_example grid_map_pcl husarion_ugv_battery husarion_ugv_diagnostics husarion_ugv_gazebo husarion_ugv_lights husarion_ugv_manager kobuki_core kobuki_velocity_smoother kuka_external_control_sdk_examples leo_filters lidar_situational_graphs novatel_gps_driver open3d_conversions openeb_vendor plansys2_tools puma_motor_driver rko_lio rtabmap_conversions schunk_svh_library sick_safetyscanners2 smacc2 spinnaker_camera_driver trackdlo_core turtlebot3_panorama turtlebot4_base ublox_dgnss_node ublox_gps vrpn_mocap warehouse_ros_mongo yasmin_viewer  — 2026-08-16 09:26 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-16 09:27 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
