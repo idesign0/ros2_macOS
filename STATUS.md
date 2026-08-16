@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-16 05:23 UTC** · refreshed every autofix cycle_
+_updated **2026-08-16 05:24 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 5 package(s): draco_point_cloud_transport event_image_reconstruction_fibar open3d_conversions openeb_vendor rko_lio  — 2026-08-16 05:23 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-16 05:23 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -13,7 +13,7 @@ _updated **2026-08-16 05:23 UTC** · refreshed every autofix cycle_
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
 | humble | queued | 6/20 |  |
-| jazzy | queued | 14/21 |  |
+| jazzy | queued | 15/21 |  |
 | kilted | in_progress | 21/21 |  |
 
 ## Auto-fixed: **86** packages tracked
