@@ -4,7 +4,7 @@ _updated **2026-08-16 07:25 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 18 package(s): camera_aravis2 canopen_fake_slaves fusioncore_ublox gazebo_no_physics_plugin gazebo_video_monitor_plugins irobot_create_toolbox linear_feedback_controller low_pass_filter magnetic_model magnetometer_pipeline mapviz mqtt_client nmea_hardware_interface pal_gazebo_plugins ros_babel_fish_tools test_ros_gz_bridge turtlebot4_ignition_gui_plugins velodyne_gazebo_plugins  — 2026-08-16 07:25 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-16 07:25 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
