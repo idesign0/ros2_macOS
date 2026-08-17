@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-17 10:54 UTC** · refreshed every autofix cycle_
+_updated **2026-08-17 10:55 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 73 package(s): adi_3dtof_image_stitching aruco_ros at_sonde_ros_driver audio_capture audio_play beluga broll btcpp_ros2_samples camera_aravis2 canopen_fake_slaves cartographer_rviz draco_point_cloud_transport easynav_costmap_common easynav_simple_common ess_imu_driver2 etsi_its_rviz_plugins event_image_reconstruction_fibar feetech_ros2_driver find_object_2d foros foxglove_bridge franka_gazebo_hardware generate_parameter_library_example grid_map_pcl hri_rviz husarion_ugv_battery husarion_ugv_diagnostics husarion_ugv_gazebo husarion_ugv_lights husarion_ugv_manager kinematics_interface_pinocchio kobuki_core kobuki_velocity_smoother kortex_driver kuka_external_control_sdk_examples leo_filters lidar_situational_graphs linear_feedback_controller low_pass_filter magnetic_model magnetometer_pipeline mapviz mqtt_client nmea_hardware_interface novatel_gps_driver open3d_conversions openeb_vendor pick_ik plansys2_terminal plansys2_tools polygon_rviz_plugins psdk_wrapper puma_motor_driver qb_softhand_industry_driver rko_lio roadmap_explorer ros_babel_fish_tools rqt_image_overlay rqt_mocap4r2_control rtabmap_conversions schunk_svh_library sick_safetyscanners2 smacc2 spinnaker_camera_driver trackdlo_core turtlebot3_panorama turtlebot4_base ublox_dgnss_node ublox_gps vrpn_mocap warehouse_ros_mongo wiimote yasmin_viewer  — 2026-08-17 10:54 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-17 10:54 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
