@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-17 01:49 UTC** · refreshed every autofix cycle_
+_updated **2026-08-17 02:49 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-17 01:49 UTC**
+> **🔧 fixing 1 package(s): kortex_driver  — 2026-08-17 02:49 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -13,8 +13,8 @@ _updated **2026-08-17 01:49 UTC** · refreshed every autofix cycle_
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
 | humble | queued | 0/20 |  |
-| jazzy | queued | 8/21 |  |
-| kilted | queued | 18/21 |  |
+| jazzy | queued | 11/21 |  |
+| kilted | in_progress | 20/21 |  |
 
 ## Auto-fixed: **86** packages tracked
 
