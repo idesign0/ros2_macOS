@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-17 05:52 UTC** · refreshed every autofix cycle_
+_updated **2026-08-17 06:52 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-17 05:51 UTC**
+> **🔧 fixing 32 package(s): at_sonde_ros_driver audio_capture audio_play cx_utils draco_point_cloud_transport dynamixel_hardware ess_imu_driver2 event_image_reconstruction_fibar feetech_ros2_driver husarion_ugv_gazebo husarion_ugv_lights husarion_ugv_manager kobuki_core kobuki_velocity_smoother kuka_external_control_sdk_examples libcaer_driver nobleo_socketcan_bridge novatel_gps_driver open3d_conversions openeb_vendor openni2_camera ouster_ros rko_lio rslidar_sdk sick_safetyscanners2 sick_scan_xd spinnaker_camera_driver trackdlo_core turtlebot4_base ublox_dgnss_node ublox_gps vrpn_mocap  — 2026-08-17 06:52 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -12,8 +12,8 @@ _updated **2026-08-17 05:52 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | queued | 8/20 |  |
-| jazzy | queued | 13/21 |  |
+| humble | queued | 9/20 |  |
+| jazzy | queued | 15/21 |  |
 | kilted | completed | 21/21 | success |
 
 ## Auto-fixed: **86** packages tracked
