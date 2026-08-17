@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-17 03:50 UTC** · refreshed every autofix cycle_
+_updated **2026-08-17 04:51 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-17 03:50 UTC**
+> **🔧 fixing 9 package(s): ardrone_sumo fusioncore_ublox gazebo_no_physics_plugin gazebo_video_monitor_plugins irobot_create_toolbox pal_gazebo_plugins test_ros_gz_bridge turtlebot4_ignition_gui_plugins velodyne_gazebo_plugins  — 2026-08-17 04:51 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -12,9 +12,9 @@ _updated **2026-08-17 03:50 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | queued | 4/20 |  |
-| jazzy | queued | 12/21 |  |
-| kilted | in_progress | 21/21 |  |
+| humble | queued | 7/20 |  |
+| jazzy | queued | 13/21 |  |
+| kilted | completed | 21/21 | success |
 
 ## Auto-fixed: **86** packages tracked
 
