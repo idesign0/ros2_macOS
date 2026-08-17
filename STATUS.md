@@ -4,7 +4,7 @@ _updated **2026-08-17 04:51 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 9 package(s): ardrone_sumo fusioncore_ublox gazebo_no_physics_plugin gazebo_video_monitor_plugins irobot_create_toolbox pal_gazebo_plugins test_ros_gz_bridge turtlebot4_ignition_gui_plugins velodyne_gazebo_plugins  — 2026-08-17 04:51 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-17 04:51 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
