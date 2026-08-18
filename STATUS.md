@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-18 10:41 UTC** · refreshed every autofix cycle_
+_updated **2026-08-18 13:14 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-18 10:41 UTC**
+> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-18 13:14 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -12,9 +12,9 @@ _updated **2026-08-18 10:41 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | completed | 20/20 | success |
-| jazzy | completed | 21/21 | success |
-| kilted | completed | 21/21 | success |
+| humble | (query failed) | - | - |
+| jazzy | (query failed) | - | - |
+| kilted | (query failed) | - | - |
 
 ## Auto-fixed: **86** packages tracked
 
