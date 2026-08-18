@@ -2092,7 +2092,7 @@
 	branch = humble-devel
 [submodule "ros-planning/ros2_ouster_drivers"]
 	path = ros-planning/ros2_ouster_drivers
-	url = https://github.com/SteveMacenski/ros2_ouster_drivers.git
+	url = https://github.com/idesign0/id_ros2_ouster_drivers.git
 	branch = foxy-devel
 [submodule "ros-planning/ros2_planning_system"]
 	path = ros-planning/ros2_planning_system
