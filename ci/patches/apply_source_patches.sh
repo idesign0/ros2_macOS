@@ -70,6 +70,12 @@ d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name pro
 # io_context rename is already handled above by patch_io_service_typeonly libcreate;
 # create.cpp's "no viable overloaded '='" cascades from the incomplete SerialQuery.
 d="$(_pkg_dir libcreate)"; [ -n "$d" ] && for f in $(find "$d" -name serial_query.h 2>/dev/null); do _add_include "$f" '#include <boost/asio/deadline_timer.hpp>'; done
+# aruco_ros: aruco_ros_utils.cpp includes 'opencv4/opencv2/…' — wrong prefix; OpenCV_INCLUDE_DIRS
+# already ends in include/opencv4, so the include path is opencv2/… . Strip the opencv4/ prefix.
+d="$(_pkg_dir aruco_ros)"; [ -n "$d" ] && for f in $(grep -rl 'opencv4/opencv2/' "$d" 2>/dev/null); do sed "${SEDI[@]}" 's#opencv4/opencv2/#opencv2/#g' "$f"; done
+# schunk_svh_library: Serial.h includes Linux-only <termio.h>; macOS has only <termios.h>, and the
+# class uses the termios struct anyway. Swap the legacy header.
+d="$(_pkg_dir schunk_svh_library)"; [ -n "$d" ] && for f in $(grep -rl '<termio.h>' "$d" 2>/dev/null); do sed "${SEDI[@]}" 's#<termio\.h>#<termios.h>#g' "$f"; done
 # ros2_ouster: MOVED TO id_ros2_ouster_drivers fork (declare_parameter type) — removed from script.
 # kuka_drivers_core: control_node.cpp sets CPU affinity via Linux-only cpu_set_t /
 # pthread_setaffinity_np. Guard the block with #ifdef __linux__ (macOS has no cpu_set_t).

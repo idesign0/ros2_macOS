@@ -457,3 +457,10 @@ add_compile_definitions(M_PIf=3.14159265358979323846f
 # libc++ removed std::result_of etc. in C++20; re-enable for older third-party
 # code (e.g. libcaer_driver device.cpp) instead of patching each.
 add_compile_definitions(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
+# Linux termios high-baud constants absent on macOS (it caps standard names at B230400 and
+# uses IOSSIOSPEED for the rest). Define the numeric values so serial drivers compile
+# (ess_imu_driver2, rosbot_mavlink_bridge, …); they aren't run on macOS CI. macOS defines
+# none of these, so no redefinition clash.
+add_compile_definitions(B460800=460800 B500000=500000 B921600=921600
+                        B1000000=1000000 B1152000=1152000 B1500000=1500000
+                        B2000000=2000000 B2500000=2500000 B3000000=3000000)
