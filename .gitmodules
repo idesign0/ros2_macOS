@@ -1036,7 +1036,7 @@
 	branch = jazzy
 [submodule "autonomous_driving/nebula"]
 	path = autonomous_driving/nebula
-	url = https://github.com/tier4/nebula.git
+	url = https://github.com/idesign0/id_nebula.git
 	branch = main
 [submodule "ros-planning/control_box_rst"]
 	path = ros-planning/control_box_rst
