@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-18 20:36 UTC** · refreshed every autofix cycle_
+_updated **2026-08-18 20:49 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 2 package(s): autoware_lanelet2_extension multisensor_calibration  — 2026-08-18 20:36 UTC**
+> **⬆️ pushing 2 [auto] commit(s) to GitHub — 2026-08-18 20:49 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -16,7 +16,7 @@ _updated **2026-08-18 20:36 UTC** · refreshed every autofix cycle_
 | jazzy | completed | 1/1 | cancelled |
 | kilted | completed | 21/21 | cancelled |
 
-## Auto-fixed: **91** packages tracked
+## Auto-fixed: **93** packages tracked
 
 > Fixes are committed **locally on the Mac** with an `[auto]` tag and are **never pushed** —
 > review and push them at the Mac. This status page is the only thing pushed (to this branch).
@@ -34,16 +34,10 @@ f7a6b8fb ci(DISTRO): skip-list += husarion_asset_server, kortex_api [auto] [skip
 
 ### Latest cycle detail
 ```
-  Last cycle: 2026-08-15 09:35 UTC
-  boost_plugin_loader (humble) - fixed, missing submodule — humble's tree never had ros_industrial_cmake_boilerplate at all (jazzy/kilted did, same pinned commit); added the submodule + a base-stage shard entry, compile-tested a full configure+build of both packages (committed, not pushed)
-  as2_platform_crazyflie (humble) - fixed — FetchContent'd crazyflie_cpp statically links libusb; added the missing CoreFoundation/IOKit/Security framework links for its macOS backend (committed, not pushed)
-  libmavconn (all 3) - fixed — own FindASIO.cmake never searched the homebrew prefix for asio.hpp; added the missing PATHS (committed, not pushed, all 3 distros)
-  ros2_medkit_serialization (humble+jazzy) - fixed — yaml-cpp fallback lookup missed the vendored yaml-cpp's nested install prefix; added a fallback tier using the toolchain's own yaml-cpp cache vars, compile-tested via a real cmake configure (committed, not pushed)
-  om_gravity_compensation_controller / om_spring_actuator_controller (jazzy) - fixed — find_package(tl_expected) (underscore) never matched homebrew's hyphenated tl-expected config; added a small CMake module bridging the name, compile-tested standalone and via the real toolchain file (committed, not pushed, all 3 distros)
-  husarion_asset_server (jazzy) / kortex_api (humble+jazzy) - skip-listed — confirmed via GitHub release assets / vendor SDK source that neither has any macOS build path at all
-  6 packages (as2_gazebo_assets, rmf_battery, rmf_traffic_examples, rmf_visualization_navgraphs, rmf_visualization_rviz2_plugins, rmf_robot_sim_gz_classic_plugins) - cascades of already-fixed-but-unpushed bugs or known cross-domain scheduling races, no new action needed
-  6 packages (rmf_robot_sim_gz_plugins, rmf_traffic_editor_test_maps, moveit_hybrid_planning, data_tamer_cpp, robotiq_driver, webots_ros2_driver) - needs human — legacy-stack ports, a missing dependency with no safe upstream fork to guess, and one shard log that doesn't capture the real error
-  86 packages auto-fixed so far
+  Last cycle: 2026-08-18 20:52 UTC
+  autoware_lanelet2_extension (jazzy+kilted; humble already had it) - fixed — rosidl_runtime_cpp/traits.hpp's u16string-to-yaml helper uses a C++17-deprecated wstring_convert&lt;codecvt_utf8_utf16&gt;, which errors under this package's own CMAKE_COMPILE_WARNING_AS_ERROR setting; added the missing -Wno-error=deprecated-declarations toolchain flag (jazzy/kilted parity with humble), compile-tested with a real clang++ -Werror repro (committed, not pushed)
+  multisensor_calibration (jazzy+kilted) - fixed — macOS-only bug: bare find_package(tinyxml2 REQUIRED) tries Module mode first and, on macOS's case-insensitive filesystem, accidentally matches the tinyxml2 vendor's installed FindTinyXML2.cmake instead of falling through to the real Config file, so the wrong _FOUND variable gets set; forced Config mode explicitly, compile-tested via a real cmake configure reproducing both the bug and the fix (committed, not pushed, all 3 distros for shared-file parity)
+  93 packages auto-fixed so far
 ```
 
 **All three runners are DONE** — next: review the `[auto]` commits, push, and dispatch a fresh round.
