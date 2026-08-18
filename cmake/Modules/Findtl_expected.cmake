@@ -12,6 +12,16 @@ find_package(tl-expected CONFIG QUIET)
 if(tl-expected_FOUND)
   set(tl_expected_FOUND TRUE)
   set(tl_expected_LIBRARIES tl::expected)
+  # generate_parameter_library's generated cmake (and ament target-dependency
+  # machinery) link the NAMESPACED target `tl_expected::tl_expected`, but brew's
+  # tl-expected only exports `tl::expected`. Without this alias, every consumer
+  # of generate_parameter_library fails at generate_parameter_library.cmake:92
+  # ("target tl_expected::tl_expected not found") — ~13 ros2_control packages.
+  if(NOT TARGET tl_expected::tl_expected)
+    add_library(tl_expected::tl_expected INTERFACE IMPORTED)
+    set_target_properties(tl_expected::tl_expected PROPERTIES
+      INTERFACE_LINK_LIBRARIES tl::expected)
+  endif()
 endif()
 
 include(FindPackageHandleStandardArgs)
