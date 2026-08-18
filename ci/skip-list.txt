@@ -73,3 +73,8 @@ kortex_api
 gurumdds_cmake_module
 rmw_gurumdds_cpp
 demo_nodes_cpp_native_gurumdds
+
+# smacc2: hard find_package(LTTngUST) — LTTng userspace tracing is Linux-only
+# (no macOS port); the state-machine lib gates on it. Skip until/unless tracing
+# is made optional upstream.
+smacc2
