@@ -83,6 +83,15 @@ d="$(_pkg_dir libcreate)"; [ -n "$d" ] && for f in $(find "$d" -name serial.cpp 
 # sick_safetyscanners2: boost::asio::ip::address_v4::from_string removed in Boost 1.87 -> make_address_v4.
 # Compile-tested: make_address_v4() compiles, address_v4::from_string is gone, vs brew boost 1.89.
 d="$(_pkg_dir sick_safetyscanners2)"; [ -n "$d" ] && for f in $(grep -rl 'address_v4::from_string' "$d" 2>/dev/null); do sed "${SEDI[@]}" 's/address_v4::from_string/make_address_v4/g' "$f"; done
+# onnxruntime_vendor: hard-rejects Darwin with FATAL_ERROR, but Microsoft publishes an osx-arm64
+# prebuilt with the SAME .tgz layout the Linux path uses (verified onnxruntime-osx-arm64-<ver>.tgz
+# exists on the v<ver> release). The vendor's copy/install is platform-agnostic (file(COPY) +
+# install(DIRECTORY lib/)), so only the download asset name needs a Darwin case. Not unsupported.
+d="$(_pkg_dir onnxruntime_vendor)"
+if [ -n "$d" ] && grep -q 'macOS (Darwin) is not supported' "$d/CMakeLists.txt" 2>/dev/null; then
+  sed "${SEDI[@]}" 's|.*message(FATAL_ERROR "onnxruntime_vendor: macOS (Darwin) is not supported.*|  set(ORT_ASSET_NAME "onnxruntime-osx-arm64-${ORT_VERSION}.tgz")|' "$d/CMakeLists.txt"
+  echo "  onnxruntime_vendor: Darwin -> osx-arm64 prebuilt"
+fi
 # ros2_ouster: MOVED TO id_ros2_ouster_drivers fork (declare_parameter type) — removed from script.
 # kuka_drivers_core: control_node.cpp sets CPU affinity via Linux-only cpu_set_t /
 # pthread_setaffinity_np. Guard the block with #ifdef __linux__ (macOS has no cpu_set_t).
