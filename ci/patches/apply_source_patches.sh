@@ -92,6 +92,16 @@ if [ -n "$d" ] && grep -q 'macOS (Darwin) is not supported' "$d/CMakeLists.txt" 
   sed "${SEDI[@]}" 's|.*message(FATAL_ERROR "onnxruntime_vendor: macOS (Darwin) is not supported.*|  set(ORT_ASSET_NAME "onnxruntime-osx-arm64-${ORT_VERSION}.tgz")|' "$d/CMakeLists.txt"
   echo "  onnxruntime_vendor: Darwin -> osx-arm64 prebuilt"
 fi
+# ros2_medkit_cmake: medkit_find_yaml_cpp() does find_library(yaml-cpp) which fails on macOS (the
+# vendored yaml-cpp isn't on the default lib path) -> FATAL, blocking fmilibrary_vendor/clips_vendor
+# and other medkit consumers on humble. Add a fallback tier that uses the toolchain's vendored
+# YAML_CPP_LIBRARIES/YAML_CPP_INCLUDE_DIRS before the FATAL. Cmake-configure-tested: creates the
+# yaml-cpp::yaml-cpp target from those vars.
+d="$(_pkg_dir ros2_medkit_cmake)"
+if [ -n "$d" ] && [ -f "$d/cmake/ROS2MedkitCompat.cmake" ] && ! grep -q 'ci-medkit-yamlfallback' "$d/cmake/ROS2MedkitCompat.cmake"; then
+  perl -0pi -e 's/(\n[ \t]*)else\(\)\n([ \t]*message\(FATAL_ERROR "\[MedkitCompat\] Could not find yaml-cpp)/$1elseif(YAML_CPP_LIBRARIES AND YAML_CPP_INCLUDE_DIRS)  # ci-medkit-yamlfallback$1  add_library(yaml-cpp::yaml-cpp IMPORTED INTERFACE)$1  set_target_properties(yaml-cpp::yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES "\$\{YAML_CPP_LIBRARIES\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{YAML_CPP_INCLUDE_DIRS\}")$1else()\n$2/' "$d/cmake/ROS2MedkitCompat.cmake"
+  echo "  ros2_medkit_cmake: yaml-cpp vendored-path fallback"
+fi
 # ros2_ouster: MOVED TO id_ros2_ouster_drivers fork (declare_parameter type) — removed from script.
 # kuka_drivers_core: control_node.cpp sets CPU affinity via Linux-only cpu_set_t /
 # pthread_setaffinity_np. Guard the block with #ifdef __linux__ (macOS has no cpu_set_t).
