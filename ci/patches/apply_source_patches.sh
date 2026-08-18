@@ -59,32 +59,18 @@ d="$(_pkg_dir rcdiscover)"; [ -n "$d" ] && for f in $(grep -rl 'std::string' "$d
 d="$(_pkg_dir urg_node)"; [ -n "$d" ] && for f in $(find "$d" -name urg_c_wrapper.cpp 2>/dev/null); do _add_include "$f" '#include <unistd.h>'; done
 # swri_console_util: progress_bar.cpp calls select()/fd_set undeclared without <sys/select.h>
 d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name progress_bar.cpp 2>/dev/null); do _add_include "$f" '#include <sys/select.h>'; done
-# nebula_velodyne_hw_interfaces: velodyne_hw_interface.cpp uses boost::format without <boost/format.hpp>
-d="$(_pkg_dir nebula_velodyne_hw_interfaces)"; [ -n "$d" ] && for f in $(find "$d" -name velodyne_hw_interface.cpp 2>/dev/null); do _add_include "$f" '#include <boost/format.hpp>'; done
-# event_camera_tools: trigger_delay.cpp uses getopt/optarg/optind undeclared without <unistd.h>
-d="$(_pkg_dir event_camera_tools)"; [ -n "$d" ] && for f in $(find "$d" -name trigger_delay.cpp 2>/dev/null); do _add_include "$f" '#include <unistd.h>'; done
-# sick_safetyscanners_base: Types.h:76 uses boost::posix_time::time_duration but only
-# includes <boost/asio/ip/address_v4.hpp> — relied on a transitive include (asio's old
-# deadline_timer support pulled in date_time) that Boost 1.87+ no longer provides.
-# Exceptions.h/TCPClient.h in this same package already explicitly include
-# <boost/date_time/posix_time/posix_time_types.hpp> for the identical symbol — Types.h
-# just never got it. Compile-tested the narrow include alone (time_duration_t alias +
-# boost::posix_time::seconds()) against brew boost 1.89.
-d="$(_pkg_dir sick_safetyscanners_base)"; [ -n "$d" ] && for f in $(find "$d" -name Types.h 2>/dev/null); do _add_include "$f" '#include <boost/date_time/posix_time/posix_time_types.hpp>'; done
+# --- MOVED TO id_ FORKS (fix baked into forked source + submodule repointed; removed
+#     from this script so the next run validates the real source for upstream PRs):
+#       nebula_velodyne_hw_interfaces -> id_nebula (boost/format.hpp)
+#       event_camera_tools           -> id_event_camera_tools (unistd.h)
+#       sick_safetyscanners_base     -> id_sick_safetyscanners_base (posix_time_types.hpp)
 # libcreate: serial_query.h declares boost::asio::deadline_timer, but on Boost 1.89 the
 # umbrella <boost/asio.hpp> no longer pulls in deadline_timer.hpp -> add the explicit
 # include (posix_time bits are header-only, no date_time link needed). The io_service->
 # io_context rename is already handled above by patch_io_service_typeonly libcreate;
 # create.cpp's "no viable overloaded '='" cascades from the incomplete SerialQuery.
 d="$(_pkg_dir libcreate)"; [ -n "$d" ] && for f in $(find "$d" -name serial_query.h 2>/dev/null); do _add_include "$f" '#include <boost/asio/deadline_timer.hpp>'; done
-# ros2_ouster: declare_parameter(name) with no default/type was removed from rclcpp; the
-# no-default calls (lidar_ip, computer_ip) need an explicit type. Add rclcpp::ParameterType.
-# NOTE: PR-material (real rclcpp API-drift fix) — fork ros2_ouster_drivers when opening PRs.
-d="$(_pkg_dir ros2_ouster)"
-if [ -n "$d" ] && [ -f "$d/src/ouster_driver.cpp" ]; then
-  perl -0pi -e 's/declare_parameter\(("(?:lidar_ip|computer_ip)")\);/declare_parameter($1, rclcpp::ParameterType::PARAMETER_STRING);/g' "$d/src/ouster_driver.cpp"
-  echo "  ros2_ouster: declare_parameter(name) -> +rclcpp::ParameterType::PARAMETER_STRING"
-fi
+# ros2_ouster: MOVED TO id_ros2_ouster_drivers fork (declare_parameter type) — removed from script.
 # kuka_drivers_core: control_node.cpp sets CPU affinity via Linux-only cpu_set_t /
 # pthread_setaffinity_np. Guard the block with #ifdef __linux__ (macOS has no cpu_set_t).
 # PR-material (portability) — fork kuka_drivers when opening PRs. Cascade root for kuka stack.
