@@ -840,7 +840,7 @@
 	branch = master
 [submodule "autonomous_driving/nebula"]
 	path = autonomous_driving/nebula
-	url = https://github.com/tier4/nebula.git
+	url = https://github.com/idesign0/id_nebula.git
 	branch = main
 [submodule "autonomous_driving/osqp_vendor"]
 	path = autonomous_driving/osqp_vendor
