@@ -458,6 +458,12 @@ add_compile_definitions(M_PIf=3.14159265358979323846f
 # libc++ removed std::result_of etc. in C++20; re-enable for older third-party
 # code (e.g. libcaer_driver device.cpp) instead of patching each.
 add_compile_definitions(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
+# std::codecvt_utf8_utf16 (rosidl_runtime_cpp/traits.hpp:132) is _LIBCPP_DEPRECATED_IN_CXX17;
+# autoware & others compile with -Werror and re-add it AFTER the toolchain's
+# -Wno-error=deprecated-declarations (order loses), so the deprecation escalates to an error.
+# Disable libc++ deprecation warnings at the source so -Werror has nothing to escalate.
+# Compile-tested: reproduces the 6 deprecated-errors without it; clean with it, under -Werror.
+add_compile_definitions(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 # Linux termios high-baud constants absent on macOS (it caps standard names at B230400 and
 # uses IOSSIOSPEED for the rest). Define the numeric values so serial drivers compile
 # (ess_imu_driver2, rosbot_mavlink_bridge, …); they aren't run on macOS CI. macOS defines
