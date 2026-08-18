@@ -1540,7 +1540,7 @@
 	branch = master
 [submodule "ros-drivers/lidar/sick_safetyscanners_base"]
 	path = ros-drivers/lidar/sick_safetyscanners_base
-	url = https://github.com/SICKAG/sick_safetyscanners_base.git
+	url = https://github.com/idesign0/id_sick_safetyscanners_base.git
 	branch = ros2
 [submodule "ros-drivers/lidar/sick_safevisionary_base"]
 	path = ros-drivers/lidar/sick_safevisionary_base
