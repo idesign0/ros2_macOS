@@ -63,3 +63,13 @@ husarion_asset_server
 # linux-x86_64 only, no arm64 Linux or macOS build exists upstream. humble +
 # jazzy (not in kilted's tree).
 kortex_api
+
+# GurumDDS RMW backend — needs the closed-source GurumDDS SDK (gurumdds-3.2, via
+# GURUMDDS_HOME); no macOS/arm64 build exists. rmw_gurumdds_cpp is a
+# <member_of_group>rmw_implementation_packages</member_of_group>, so when it can't
+# build, rmw_implementation (a BASE package) fails and ~779 kilted packages abort
+# behind it. Skip the whole gurumdds cluster -> rmw_implementation builds with
+# zenoh/fastrtps. kilted-only (absent from humble/jazzy trees; no-op there).
+gurumdds_cmake_module
+rmw_gurumdds_cpp
+demo_nodes_cpp_native_gurumdds
