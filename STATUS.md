@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-18 20:49 UTC** · refreshed every autofix cycle_
+_updated **2026-08-18 21:49 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **⬆️ pushing 2 [auto] commit(s) to GitHub — 2026-08-18 20:49 UTC**
+> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-18 21:49 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -12,11 +12,11 @@ _updated **2026-08-18 20:49 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | completed | 1/1 | cancelled |
-| jazzy | completed | 1/1 | cancelled |
-| kilted | completed | 21/21 | cancelled |
+| humble | in_progress | 0/0 |  |
+| jazzy | in_progress | 0/0 |  |
+| kilted | queued | 0/0 |  |
 
-## Auto-fixed: **93** packages tracked
+## Auto-fixed: **88** packages tracked
 
 > Fixes are committed **locally on the Mac** with an `[auto]` tag and are **never pushed** —
 > review and push them at the Mac. This status page is the only thing pushed (to this branch).
@@ -39,5 +39,3 @@ f7a6b8fb ci(DISTRO): skip-list += husarion_asset_server, kortex_api [auto] [skip
   multisensor_calibration (jazzy+kilted) - fixed — macOS-only bug: bare find_package(tinyxml2 REQUIRED) tries Module mode first and, on macOS's case-insensitive filesystem, accidentally matches the tinyxml2 vendor's installed FindTinyXML2.cmake instead of falling through to the real Config file, so the wrong _FOUND variable gets set; forced Config mode explicitly, compile-tested via a real cmake configure reproducing both the bug and the fix (committed, not pushed, all 3 distros for shared-file parity)
   93 packages auto-fixed so far
 ```
-
-**All three runners are DONE** — next: review the `[auto]` commits, push, and dispatch a fresh round.
