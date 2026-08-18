@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-18 18:48 UTC** · refreshed every autofix cycle_
+_updated **2026-08-18 20:36 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-18 18:38 UTC**
+> **🔧 fixing 2 package(s): autoware_lanelet2_extension multisensor_calibration  — 2026-08-18 20:36 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -12,11 +12,11 @@ _updated **2026-08-18 18:48 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | in_progress | 0/0 |  |
-| jazzy | in_progress | 0/0 |  |
-| kilted | in_progress | 0/0 |  |
+| humble | completed | 1/1 | cancelled |
+| jazzy | completed | 1/1 | cancelled |
+| kilted | completed | 21/21 | cancelled |
 
-## Auto-fixed: **89** packages tracked
+## Auto-fixed: **91** packages tracked
 
 > Fixes are committed **locally on the Mac** with an `[auto]` tag and are **never pushed** —
 > review and push them at the Mac. This status page is the only thing pushed (to this branch).
@@ -45,3 +45,5 @@ f7a6b8fb ci(DISTRO): skip-list += husarion_asset_server, kortex_api [auto] [skip
   6 packages (rmf_robot_sim_gz_plugins, rmf_traffic_editor_test_maps, moveit_hybrid_planning, data_tamer_cpp, robotiq_driver, webots_ros2_driver) - needs human — legacy-stack ports, a missing dependency with no safe upstream fork to guess, and one shard log that doesn't capture the real error
   86 packages auto-fixed so far
 ```
+
+**All three runners are DONE** — next: review the `[auto]` commits, push, and dispatch a fresh round.
