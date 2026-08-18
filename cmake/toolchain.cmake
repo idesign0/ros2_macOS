@@ -193,6 +193,7 @@ add_compile_options(
         -Wno-error=format-security
         -Wno-error=overloaded-virtual
         -Wno-error=deprecated-builtins
+        -Wno-error=deprecated-declarations
         -Wno-error=deprecated-copy-with-dtor
         -Wno-error=deprecated-copy-with-user-provided-dtor
         -Wno-error=unused-lambda-capture
