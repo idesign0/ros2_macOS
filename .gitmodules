@@ -1172,7 +1172,7 @@
 	branch = release
 [submodule "ros-perception/vision/event_camera_tools"]
 	path = ros-perception/vision/event_camera_tools
-	url = https://github.com/ros-event-camera/event_camera_tools.git
+	url = https://github.com/idesign0/id_event_camera_tools.git
 	branch = release
 [submodule "ros-perception/vision/event_image_reconstruction_fibar"]
 	path = ros-perception/vision/event_image_reconstruction_fibar
