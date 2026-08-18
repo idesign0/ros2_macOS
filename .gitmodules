@@ -1436,7 +1436,7 @@
 	branch = main
 [submodule "gzsim/mujoco_vendor"]
 	path = gzsim/mujoco_vendor
-	url = https://github.com/pal-robotics/mujoco_vendor.git
+	url = https://github.com/idesign0/id_mujoco_vendor.git
 	branch = master
 [submodule "ament/multisensor_calibration"]
 	path = ament/multisensor_calibration
