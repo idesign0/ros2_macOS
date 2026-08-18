@@ -76,6 +76,13 @@ d="$(_pkg_dir aruco_ros)"; [ -n "$d" ] && for f in $(grep -rl 'opencv4/opencv2/'
 # schunk_svh_library: Serial.h includes Linux-only <termio.h>; macOS has only <termios.h>, and the
 # class uses the termios struct anyway. Swap the legacy header.
 d="$(_pkg_dir schunk_svh_library)"; [ -n "$d" ] && for f in $(grep -rl '<termio.h>' "$d" 2>/dev/null); do sed "${SEDI[@]}" 's#<termio\.h>#<termios.h>#g' "$f"; done
+# libcreate (peel #2): serial.cpp calls io_context::reset() — renamed to restart() in Boost 1.87.
+# (io_service->io_context handled by patch_io_service_typeonly; deadline_timer include above.)
+# Compile-tested: io_context::restart() compiles, io.reset() is gone, vs brew boost 1.89.
+d="$(_pkg_dir libcreate)"; [ -n "$d" ] && for f in $(find "$d" -name serial.cpp 2>/dev/null); do sed "${SEDI[@]}" 's/io\.reset()/io.restart()/g' "$f"; done
+# sick_safetyscanners2: boost::asio::ip::address_v4::from_string removed in Boost 1.87 -> make_address_v4.
+# Compile-tested: make_address_v4() compiles, address_v4::from_string is gone, vs brew boost 1.89.
+d="$(_pkg_dir sick_safetyscanners2)"; [ -n "$d" ] && for f in $(grep -rl 'address_v4::from_string' "$d" 2>/dev/null); do sed "${SEDI[@]}" 's/address_v4::from_string/make_address_v4/g' "$f"; done
 # ros2_ouster: MOVED TO id_ros2_ouster_drivers fork (declare_parameter type) — removed from script.
 # kuka_drivers_core: control_node.cpp sets CPU affinity via Linux-only cpu_set_t /
 # pthread_setaffinity_np. Guard the block with #ifdef __linux__ (macOS has no cpu_set_t).
@@ -562,6 +569,36 @@ d="$(_pkg_dir ros2_medkit_cmake)"
 if [ -n "$d" ] && [ -f "$d/cmake/ROS2MedkitCompat.cmake" ] && ! grep -q 'elseif(YAML_CPP_LIBRARIES AND YAML_CPP_INCLUDE_DIRS)' "$d/cmake/ROS2MedkitCompat.cmake"; then
   perl -0pi -e 's/( *)else\(\)\n( *message\(FATAL_ERROR)/$1elseif(YAML_CPP_LIBRARIES AND YAML_CPP_INCLUDE_DIRS)\n$1  add_library(yaml-cpp::yaml-cpp IMPORTED INTERFACE)\n$1  set_target_properties(yaml-cpp::yaml-cpp PROPERTIES\n$1    INTERFACE_LINK_LIBRARIES "\${YAML_CPP_LIBRARIES}"\n$1    INTERFACE_INCLUDE_DIRECTORIES "\${YAML_CPP_INCLUDE_DIRS}"\n$1  )\n$1  message(STATUS "[MedkitCompat] yaml-cpp: created target from toolchain YAML_CPP_LIBRARIES")\n$1else()\n$2/' "$d/cmake/ROS2MedkitCompat.cmake"
   echo "  ros2_medkit_cmake: medkit_find_yaml_cpp() falls back to toolchain YAML_CPP_LIBRARIES/YAML_CPP_INCLUDE_DIRS"
+fi
+
+# --- Lane 1b (jazzy+kilted only, same commit e2600e98; absent from humble):
+#     multisensor_calibration's own CMakeLists.txt:89 does bare
+#     `find_package(tinyxml2 REQUIRED)` (no CONFIG keyword) -> CMake tries
+#     Module mode first. ros2/tinyxml2_vendor installs a Find-module at
+#     install/share/tinyxml2_vendor/cmake/Modules/FindTinyXML2.cmake (proper
+#     ROS-style case) into the workspace's global CMAKE_MODULE_PATH. On
+#     macOS's case-insensitive filesystem, CMake's search for
+#     "Findtinyxml2.cmake" matches that file anyway (CMake itself emits an
+#     author warning: "does not match the case of the module file name on
+#     disk ... may fail on case-sensitive file systems") and includes it, but
+#     it sets `TinyXML2_FOUND` (its own case), never the lowercase
+#     `tinyxml2_FOUND` ament_target_dependencies() actually checks (it keys
+#     off the literal name passed to find_package) -> "the passed package
+#     name 'tinyxml2' was not found before". On Linux (case-sensitive), the
+#     Module-mode search for "Findtinyxml2.cmake" simply misses and CMake
+#     falls through to Config mode, finding brew/apt's real tinyxml2 config
+#     and setting tinyxml2_FOUND correctly -> macOS-only bug, reproduced and
+#     confirmed locally (a scratch CMake project with the same module path +
+#     brew tinyxml2 config: bare find_package(tinyxml2) leaves tinyxml2_FOUND
+#     empty; find_package(tinyxml2 CONFIG) sets it). Fix: force Config mode
+#     for this one find_package call so it skips the module-mode collision
+#     entirely, functionally identical to today's behavior on Linux.
+#     Compile-tested: yes, real `cmake` configure reproducing both the bug
+#     and the fix against brew's tinyxml2-config.cmake. ---
+d="$(_pkg_dir multisensor_calibration)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q '^find_package(tinyxml2 REQUIRED)$' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" 's/^find_package(tinyxml2 REQUIRED)$/find_package(tinyxml2 REQUIRED CONFIG)/' "$d/CMakeLists.txt"
+  echo "  multisensor_calibration: find_package(tinyxml2 REQUIRED CONFIG) — force Config mode, dodge case-insensitive Module-mode collision with tinyxml2_vendor's FindTinyXML2.cmake"
 fi
 
 echo "source patches applied."
