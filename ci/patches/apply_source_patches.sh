@@ -451,17 +451,124 @@ fi
 #     diffed the output byte-identical to a version that was then separately
 #     configure+build tested (AppleClang) via a probe project calling
 #     merge_static_libs() on two dummy static libs -- produced a correctly
-#     merged archive with both input symbols present. ---
+#     merged archive with both input symbols present.
+#     2026-08-19: getting past CMP0026 unmasked 3 MORE errors in the SAME
+#     configure/build (CMake reports several errors per pass, then bails --
+#     each earlier fix just uncovers the next one; peeled all the way to a
+#     real `make install` locally):
+#       1) Config.cmake/runtime_test.cmake:36 `get_property(... TARGET
+#          compress_test_fmu_zip PROPERTY LOCATION)` -- same CMP0026 class,
+#          only reached when FMILIB_BUILD_TESTS=ON (default). fmi-library's
+#          own doc target construction (UseDoxygen.cmake:140
+#          `get_target_property(DOC_TARGET doc TYPE)` on a not-yet-defined
+#          "doc" target -- modern CMake hard-errors instead of returning
+#          NOTFOUND) only reached when FMILIB_GENERATE_DOXYGEN_DOC=ON
+#          (default, and this runner has doxygen installed so it's not even
+#          skipped by a missing-Doxygen guard). We don't need fmi-library's
+#          own test suite or doc target for a vendored lib -- CMAKE_ARGS
+#          turns both off, skipping the broken codepaths entirely rather than
+#          patching them.
+#       2) Config.cmake/fmixml.cmake:185 `add_dependencies(expatex
+#          ${CMAKE_BINARY_DIR}/CMakeCache.txt ${FMILIBRARYHOME}/CMakeLists.txt)`
+#          passes FILE paths (not target names) to add_dependencies() --
+#          modern CMake errors "dependency target ... does not exist";
+#          harmless/redundant since the actual file dependency for the
+#          expatex re-configure step is already declared correctly via the
+#          `DEPENDS ${CMAKE_BINARY_DIR}/CMakeCache.txt` on the
+#          ExternalProject_Add_Step right above it. This error was invisible
+#          in the CI log because CMake bails out of the configure phase
+#          entirely on error (1) before ever reaching the generate phase
+#          where this one surfaces -- confirmed locally: fixing only (1)
+#          exposes this as the new next failure. A 3rd PATCH_COMMAND step
+#          perl-deletes the whole `add_dependencies(expatex ...)` line
+#          (matched by literal prefix, no ${VAR}/genexp text needed in the
+#          pattern so no CMake-vs-perl escaping is involved).
+#       3) ThirdParty/Minizip/minizip/miniunz.c:143 calls bare `mkdir(path)`
+#          with no `<sys/stat.h>` include -- ancient (~2013) vendored C code;
+#          Apple Clang (Xcode 26.6) treats implicit-function-declaration as a
+#          hard error by default in C mode (Clang 15+ behavior change), so
+#          this blocks the actual `make` even after configure succeeds.
+#          CMAKE_ARGS downgrades it back to a warning for this ExternalProject
+#          only (`-DCMAKE_C_FLAGS=-Wno-error=...`) -- scoped to the vendored
+#          build, doesn't touch our own toolchain flags.
+#     Also: the wrapper's own install()/ament_export_libraries() hardcode
+#     `libfmilib_shared.so`, but fmi-library's CMakeLists never overrides
+#     OUTPUT_NAME, so on macOS the real built artifact is
+#     `libfmilib_shared.dylib` -- install(FILES ...) would fail on a
+#     nonexistent path. Fixed below via ${CMAKE_SHARED_LIBRARY_SUFFIX}
+#     (portable, Linux .so unaffected).
+#     VERIFIED end-to-end (2026-08-19): built a scratch outer CMakeLists.txt
+#     driving externalproject_add() with SOURCE_DIR pointed at a real,
+#     offline v2.2.3 clone and this exact CMAKE_ARGS/PATCH_COMMAND chain --
+#     full `cmake --build` (including the nested expatex sub-build) completed
+#     clean, `make install` produced both
+#     .../install/lib/libfmilib.a and .../install/lib/libfmilib_shared.dylib. ---
 d="$(_pkg_dir fmilibrary_vendor)"
 if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-fmilib-cmp0026' "$d/CMakeLists.txt"; then
   _FMI_SNIPPET="$(mktemp)"
   cat > "$_FMI_SNIPPET" <<'PATCHEOF'
+  CMAKE_ARGS -DFMILIB_BUILD_TESTS=OFF -DFMILIB_GENERATE_DOXYGEN_DOC=OFF -DCMAKE_C_FLAGS=-Wno-error=implicit-function-declaration
   PATCH_COMMAND perl -0pi -e [[s/get_target_property\(libfile (\$\{lib\}) LOCATION\)/'set(libfile "'.chr(36).'<TARGET_FILE:'.$1.'>")'/ge]] <SOURCE_DIR>/Config.cmake/mergestaticlibs.cmake
-  COMMAND perl -0pi -e [[s/get_target_property\(outfile (\$\{outlib\}) LOCATION\)/'set(outfile "'.chr(36).'<TARGET_FILE:'.$1.'>")'/ge]] <SOURCE_DIR>/Config.cmake/mergestaticlibs.cmake # ci-fmilib-cmp0026
+  COMMAND perl -0pi -e [[s/get_target_property\(outfile (\$\{outlib\}) LOCATION\)/'set(outfile "'.chr(36).'<TARGET_FILE:'.$1.'>")'/ge]] <SOURCE_DIR>/Config.cmake/mergestaticlibs.cmake
+  COMMAND perl -0pi -e [[s/^[ \t]*add_dependencies\(expatex[^\n]*\)[ \t]*\n//m]] <SOURCE_DIR>/Config.cmake/fmixml.cmake # ci-fmilib-cmp0026
 PATCHEOF
   sed -e "/^[[:space:]]*TIMEOUT 60[[:space:]]*\$/r $_FMI_SNIPPET" "$d/CMakeLists.txt" > "$d/CMakeLists.txt.__p" && mv "$d/CMakeLists.txt.__p" "$d/CMakeLists.txt"
   rm -f "$_FMI_SNIPPET"
-  echo "  fmilibrary_vendor: PATCH_COMMAND fixes CMP0026 LOCATION reads in mergestaticlibs.cmake"
+  echo "  fmilibrary_vendor: PATCH_COMMAND fixes CMP0026 (mergestaticlibs), disables tests/doxygen, drops broken expatex add_dependencies, downgrades implicit-decl to warning"
+fi
+d="$(_pkg_dir fmilibrary_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'libfmilib_shared\.so' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e 's/libfmilib_shared\.so/libfmilib_shared${CMAKE_SHARED_LIBRARY_SUFFIX}/' \
+    "$d/CMakeLists.txt"
+  echo "  fmilibrary_vendor: install()/ament_export_libraries() use \${CMAKE_SHARED_LIBRARY_SUFFIX} instead of hardcoded .so (macOS builds libfmilib_shared.dylib)"
+fi
+
+# --- Lane 8: live555_vendor (jazzy only -- absent from humble/kilted; a
+#     brand-new, 2025, CMake-native live555 port, not an ExternalProject).
+#     `add_library(UsageEnvironment ...)` is followed by an unconditional
+#     `if(NOT WIN32) target_link_options(... "LINKER:--allow-shlib-undefined")`
+#     -- a GNU-ld-only flag; Apple's ld64 rejects it outright ("ld: unknown
+#     options: --allow-shlib-undefined"). The flag isn't decorative: it's
+#     covering a real circular symbol dependency -- HashTable::create() /
+#     HashTable::Iterator::create() are only implemented in
+#     BasicHashTable.cpp (the BasicUsageEnvironment target), which itself
+#     links UsageEnvironment (not the reverse), so UsageEnvironment.dylib
+#     genuinely has unresolved symbols until the final consumer links both
+#     libs together. Confirmed locally: just deleting the flag on APPLE (a
+#     tempting first guess) makes UsageEnvironment fail with a real
+#     "Undefined symbols ... HashTable::Iterator::create" link error --
+#     GNU ld's --allow-shlib-undefined and Apple ld64's
+#     `-undefined dynamic_lookup` are the platform-equivalent way to permit
+#     this, so we swap to the latter under APPLE rather than dropping it.
+#     groupsock and liveMedia hit the identical HashTable-symbol pattern
+#     (both link UsageEnvironment only, not BasicUsageEnvironment) even
+#     though upstream's Linux build never needed the flag there -- macOS's
+#     ld64 defaults to strict undefined-symbol checking for dylibs, Linux's
+#     default is permissive, so this is a real linker-default gap between
+#     platforms, not an upstream omission to fix narrowly. Also fixed one
+#     more, platform-independent upstream bug that only surfaces once the
+#     linker errors above are cleared: `target_link_libraries(liveMedia
+#     PRIVATE ... OpenSSL::SSL)` hides OpenSSL's include dir from liveMedia's
+#     consumers, but TLSState.hh -- a *public* liveMedia header, pulled in
+#     transitively by the demo executables via RTPInterface.hh -- needs
+#     <openssl/ssl.h> directly whenever OpenSSL is present; PRIVATE->PUBLIC.
+#     VERIFIED end-to-end: real offline `cmake --build` of the actual
+#     submodule source with default options (LIVE555_BUILD_EXECUTABLES ON,
+#     i.e. exactly what colcon builds since this package is CMAKE_PROJECT_IS_
+#     TOP_LEVEL) -- all 4 libraries AND all 3 demo executables link clean;
+#     `make install` produced libUsageEnvironment/libBasicUsageEnvironment/
+#     libgroupsock/libliveMedia .dylib + live555Config.cmake under DESTDIR. ---
+d="$(_pkg_dir live555_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-live555-apple-undefined' "$d/CMakeLists.txt"; then
+  perl -0777 -pi -e '
+    s/if\(NOT WIN32\)\n([ \t]*)target_link_options\(UsageEnvironment PRIVATE "LINKER:--allow-shlib-undefined"\)\nendif\(\)/if(APPLE) # ci-live555-apple-undefined\n$1target_link_options(UsageEnvironment PRIVATE "LINKER:-undefined,dynamic_lookup")\nelseif(NOT WIN32)\n$1target_link_options(UsageEnvironment PRIVATE "LINKER:--allow-shlib-undefined")\nendif()/;
+    s/(live555\/BasicUsageEnvironment\/BasicHashTable\.cpp\n\))\n/$1\nif(APPLE)\n    target_link_options(BasicUsageEnvironment PRIVATE "LINKER:-undefined,dynamic_lookup")\nendif()\n/;
+    s/(live555\/groupsock\/NetInterface\.cpp\n\))\n/$1\nif(APPLE)\n    target_link_options(groupsock PRIVATE "LINKER:-undefined,dynamic_lookup")\nendif()\n/;
+    s/(live555\/liveMedia\/WAVAudioFileSource\.cpp\n\))\n/$1\nif(APPLE)\n    target_link_options(liveMedia PRIVATE "LINKER:-undefined,dynamic_lookup")\nendif()\n/;
+    s/target_link_libraries\(liveMedia PRIVATE \$<TARGET_NAME_IF_EXISTS:OpenSSL::SSL>\)/target_link_libraries(liveMedia PUBLIC \$<TARGET_NAME_IF_EXISTS:OpenSSL::SSL>)/;
+  ' "$d/CMakeLists.txt"
+  echo "  live555_vendor: Apple ld64 -undefined,dynamic_lookup for UsageEnvironment/BasicUsageEnvironment/groupsock/liveMedia (was GNU-ld-only --allow-shlib-undefined) + liveMedia's OpenSSL link PRIVATE->PUBLIC"
 fi
 
 # --- Lane 6: ecal — CMakeLists.txt:299 `find_package(CMakeFunctions REQUIRED)`
@@ -565,6 +672,33 @@ for _rf in \
     echo "  rmf_traffic_ros2: bare yaml-cpp -> \${YAML_CPP_LIBRARIES} in ${_rf#$ROOT/}"
   fi
 done
+
+# --- Lane 6: nebula_velodyne_common (humble+jazzy, identical nebula commit
+#     ec2a724, absent kilted) -- same bare-`yaml-cpp` linker-name bug as
+#     rmf_traffic_editor/rmf_traffic_ros2 above, but on a single-line
+#     `target_link_libraries(nebula_velodyne_common PUBLIC yaml-cpp)` call
+#     rather than the multi-line indented form, so it needs its own literal
+#     match rather than reusing the indentation-anchored loop. "ld: library
+#     'yaml-cpp' not found" at the final link of libnebula_velodyne_common.dylib
+#     -- `yaml-cpp` resolves as a bare `-lyaml-cpp` linker flag, not a real
+#     CMake target, in this scope. Swapped for the toolchain's own
+#     ${YAML_CPP_LIBRARIES} absolute-path CACHE var (same proven idiom, used
+#     natively upstream by 8+ other in-tree packages per the toolchain
+#     comment). Left the separate `ament_export_dependencies(nebula_core_common
+#     yaml-cpp)` line alone -- that's a package-name export, not a linker
+#     flag, and unrelated to this bug. Not compile-tested end-to-end (same
+#     limitation as rmf_traffic_editor/rmf_traffic_ros2: needs a populated
+#     local yaml_cpp_vendor install/ tree to actually link-test, not available
+#     in this checkout); verified structurally against the real CMakeLists.txt
+#     in both humble and jazzy trees, idempotency-checked (2nd run: no match,
+#     no double-replace). ---
+d="$(_pkg_dir nebula_velodyne_common)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'target_link_libraries(nebula_velodyne_common PUBLIC yaml-cpp)' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e 's/target_link_libraries(nebula_velodyne_common PUBLIC yaml-cpp)/target_link_libraries(nebula_velodyne_common PUBLIC ${YAML_CPP_LIBRARIES})/' \
+    "$d/CMakeLists.txt"
+  echo "  nebula_velodyne_common: bare yaml-cpp -> \${YAML_CPP_LIBRARIES}"
+fi
 
 # --- Lane 7-guard: rmw_stats_shim's `if(CMAKE_COMPILER_IS_GNUCXX OR
 #     CMAKE_CXX_COMPILER_ID MATCHES "Clang")` unconditionally adds
