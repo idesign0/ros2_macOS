@@ -102,6 +102,15 @@ if [ -n "$d" ] && [ -f "$d/cmake/ROS2MedkitCompat.cmake" ] && ! grep -q 'ci-medk
   perl -0pi -e 's/(\n[ \t]*)else\(\)\n([ \t]*message\(FATAL_ERROR "\[MedkitCompat\] Could not find yaml-cpp)/$1elseif(YAML_CPP_LIBRARIES AND YAML_CPP_INCLUDE_DIRS)  # ci-medkit-yamlfallback$1  add_library(yaml-cpp::yaml-cpp IMPORTED INTERFACE)$1  set_target_properties(yaml-cpp::yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES "\$\{YAML_CPP_LIBRARIES\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{YAML_CPP_INCLUDE_DIRS\}")$1else()\n$2/' "$d/cmake/ROS2MedkitCompat.cmake"
   echo "  ros2_medkit_cmake: yaml-cpp vendored-path fallback"
 fi
+# off_highway_* sensor drivers: rclcpp_components_register_node(... EXECUTABLE <exe>) already
+# creates AND installs the standalone executable to lib/${PROJECT_NAME}; a redundant
+# install(TARGETS <exe> ...) installs it a SECOND time to the same place, so macOS
+# install_name_tool errors on the duplicate LC_RPATH (Linux/patchelf silently tolerates it).
+# Drop the redundant install(TARGETS receiver/sender ...) across the off_highway family
+# (mm7p10, general_purpose_radar, uss, radar; unblocks off_highway_can + adi_3dtof cascades).
+for f in $(find "$ROOT" -path '*off_highway_sensor_drivers/*' -name CMakeLists.txt -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  grep -q 'rclcpp_components_register_node' "$f" 2>/dev/null && perl -0pi -e 's/\ninstall\(TARGETS (?:receiver|sender)[^\)]*\)\n//g' "$f" && echo "  off_highway: dropped redundant install(TARGETS receiver/sender) in ${f#$ROOT/}"
+done
 # ros2_ouster: MOVED TO id_ros2_ouster_drivers fork (declare_parameter type) — removed from script.
 # kuka_drivers_core: control_node.cpp sets CPU affinity via Linux-only cpu_set_t /
 # pthread_setaffinity_np. Guard the block with #ifdef __linux__ (macOS has no cpu_set_t).
