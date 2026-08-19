@@ -1028,8 +1028,8 @@
 	branch = ros2
 [submodule "gzsim/fusioncore"]
 	path = gzsim/fusioncore
-	url = https://github.com/manankharwar/fusioncore.git
-	branch = main
+	url = https://github.com/idesign0/id_fusioncore.git
+	branch = id-macos-fix
 [submodule "ros-perception/vision/image_transport_plugins"]
 	path = ros-perception/vision/image_transport_plugins
 	url = https://github.com/ros-perception/image_transport_plugins.git
