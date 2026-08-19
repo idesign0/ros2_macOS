@@ -529,6 +529,34 @@ for _rf in \
   fi
 done
 
+# --- rmf_traffic_ros2 has the identical bare-`yaml-cpp` bug as
+#     rmf_traffic_editor above ("ld: library 'yaml-cpp' not found" at
+#     librmf_traffic_ros2.dylib link). Its CMakeLists.txt has 3 occurrences of
+#     the string "yaml-cpp": one in ament_export_dependencies() (a package
+#     name, correct as-is, indented 2 spaces) and two in real
+#     target_link_libraries() calls -- the main `rmf_traffic_ros2` target
+#     (4-space indent) and the BUILD_TESTING-gated `test_rmf_traffic_ros2`
+#     target (6-space indent). Only rewrite the 4/6-space-indented ones so the
+#     ament_export_dependencies() package-name entry is left untouched (that
+#     one must stay a plain package name for downstream find_package(), not an
+#     absolute path). Same construct present in all 3 distros (different
+#     per-distro rmf commits, same bug) -> shared fix, same proven idiom as
+#     rmf_traffic_editor. Not end-to-end compile-tested (no local install/opt
+#     /yaml_cpp_vendor build artifact in this checkout to link against, same
+#     limitation noted for rmf_traffic_editor); verified structurally instead:
+#     transform applied to a scratch copy of the real CMakeLists.txt leaves
+#     the find_package(yaml-cpp REQUIRED) call and the 2-space
+#     ament_export_dependencies() entry untouched and only rewrites the two
+#     target_link_libraries() occurrences; ${YAML_CPP_LIBRARIES} is set
+#     unconditionally in every distro's cmake/toolchain.cmake. ---
+for _rf in \
+  "$ROOT/fleet/rmf_ros2/rmf_traffic_ros2/CMakeLists.txt"; do
+  if [ -f "$_rf" ] && grep -qE '^(    |      )yaml-cpp$' "$_rf"; then
+    sed "${SEDI[@]}" -E 's/^(    |      )yaml-cpp$/\1${YAML_CPP_LIBRARIES}/' "$_rf"
+    echo "  rmf_traffic_ros2: bare yaml-cpp -> \${YAML_CPP_LIBRARIES} in ${_rf#$ROOT/}"
+  fi
+done
+
 # --- Lane 7-guard: rmw_stats_shim's `if(CMAKE_COMPILER_IS_GNUCXX OR
 #     CMAKE_CXX_COMPILER_ID MATCHES "Clang")` unconditionally adds
 #     `-Wl,--no-undefined` — a GNU-ld-only flag. MATCHES does a regex search,
