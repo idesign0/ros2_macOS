@@ -47,6 +47,15 @@ adi_imu
 # a mechanical fix. humble+jazzy only (same commit a91f86c); not in kilted's tree.
 ardrone_sdk
 
+# ardrone_sumo — sole consumer of ardrone_sdk in this tree; CMakeLists.txt
+# has a hard `find_package(ardrone_sdk REQUIRED)` + links
+# `ardrone_sdk::ardrone_sdk_lib`, no optional/guarded path. Since ardrone_sdk
+# above is permanently unsupportable (not a transient build failure), this is
+# not a self-clearing cascade — skip-listing directly so it doesn't resurface
+# every cycle as a "new" own-error root. Same commit a91f86c, humble+jazzy
+# only; not in kilted's tree.
+ardrone_sumo
+
 # husarion_asset_server downloads a prebuilt asset_server binary from GitHub
 # releases; upstream (husarion/husarion_asset_server) only ever publishes
 # linux-amd64/linux-arm64 assets (confirmed via `gh api .../releases/latest`
@@ -78,3 +87,11 @@ demo_nodes_cpp_native_gurumdds
 # (no macOS port); the state-machine lib gates on it. Skip until/unless tracing
 # is made optional upstream.
 smacc2
+
+# ── Lane 7 sweep (2026-08-19): verified Linux-only (inspected real sources).
+# swri_serial_util: src/serial_port.cpp #include <linux/serial.h> + serial_struct
+# ASYNC_LOW_LATENCY ioctl — no macOS equivalent.
+swri_serial_util
+# nobleo_socketcan_bridge: SocketCAN (linux/can.h) in src/socketcan_bridge.cpp —
+# no macOS SocketCAN.
+nobleo_socketcan_bridge
