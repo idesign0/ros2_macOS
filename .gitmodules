@@ -1860,7 +1860,7 @@
 	branch = master
 [submodule "ros-perception/vision/aruco_markers"]
 	path = ros-perception/vision/aruco_markers
-	url = https://github.com/namo-robotics/aruco_markers.git
+	url = https://github.com/idesign0/id_aruco_markers.git
 	branch = humble
 [submodule "ros-perception/vision/aruco_ros"]
 	path = ros-perception/vision/aruco_ros
