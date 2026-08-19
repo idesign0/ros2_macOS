@@ -1400,7 +1400,7 @@
 	branch = main
 [submodule "ros-planning/mrpt_ros"]
 	path = ros-planning/mrpt_ros
-	url = https://github.com/MRPT/mrpt_ros.git
+	url = https://github.com/idesign0/id_mrpt_ros.git
 	branch = main
 [submodule "ros-planning/mrpt3"]
 	path = ros-planning/mrpt3
