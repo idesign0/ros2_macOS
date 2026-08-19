@@ -281,11 +281,20 @@ done
 
 # --- Lane 6: lely_core_libraries (ros2_canopen) builds lely-core via autotools
 #     with -Werror; its libc/time.h shim redefines CLOCK_MONOTONIC (already defined
-#     on macOS) -> -Wmacro-redefined error. Pass CFLAGS to suppress that warning. ---
+#     on macOS) -> -Wmacro-redefined error. Pass CFLAGS to suppress that warning.
+#     ALSO (2026-08-19): lely/libc/threads.h picks its pthread fallback via
+#     `_POSIX_THREADS >= 200112L`, but on macOS _POSIX_THREADS is only defined after
+#     <unistd.h> (glibc exposes it globally), so the check fails -> no threads backend
+#     -> `unknown type name 'once_flag'/'cnd_t'/'mtx_t'`. Apple clang also claims C17
+#     without defining __STDC_NO_THREADS__, so LELY_HAVE_THREADS_H could wrongly try the
+#     absent system <threads.h>. Force both: THREADS_H off, PTHREAD_H on. Compile-tested
+#     on macOS 26.5.2 (arm64), Apple clang 21.0.0, clang -std=c11 vs lely-core fb735b79:
+#     fails without these (once_flag/cnd_t undefined), fully clean with them (+ the
+#     existing sys/types.h clockid_t __APPLE__ patch below). ---
 d="$(_pkg_dir lely_core_libraries)"
 if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'Wno-macro-redefined' "$d/CMakeLists.txt"; then
-  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined" --prefix#' "$d/CMakeLists.txt"
-  echo "  lely_core_libraries: configure CFLAGS -Wno-macro-redefined"
+  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1" --prefix#' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: configure CFLAGS -Wno-macro-redefined + force pthread threads (THREADS_H=0 PTHREAD_H=1)"
 fi
 
 # --- Lane 6: lely_core_libraries's vendored libc/sys/types.h only treats
