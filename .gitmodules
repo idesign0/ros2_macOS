@@ -828,7 +828,7 @@
 	branch = humble-devel
 [submodule "ros-perception/vision/aruco_markers"]
 	path = ros-perception/vision/aruco_markers
-	url = https://github.com/namo-robotics/aruco_markers.git
+	url = https://github.com/idesign0/id_aruco_markers.git
 	branch = jazzy
 [submodule "ros-drivers/mobile_base/aruco_opencv"]
 	path = ros-drivers/mobile_base/aruco_opencv
