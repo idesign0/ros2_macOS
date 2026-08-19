@@ -76,8 +76,9 @@ jobs:
           eigen@3 \
           eigen \
           GeographicLib \
-          vtk
-      
+          vtk \
+          opencv@4
+
         # Symlink eigen3 for standard discovery
         sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
 
