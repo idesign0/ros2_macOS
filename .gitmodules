@@ -1176,7 +1176,7 @@
 	branch = release
 [submodule "ros-perception/vision/event_image_reconstruction_fibar"]
 	path = ros-perception/vision/event_image_reconstruction_fibar
-	url = https://github.com/ros-event-camera/event_image_reconstruction_fibar.git
+	url = https://github.com/idesign0/id_event_image_reconstruction_fibar.git
 	branch = release
 [submodule "ros2/interfaces/ros2_eventdispatch"]
 	path = ros2/interfaces/ros2_eventdispatch
