@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-19 10:00 UTC** · refreshed every autofix cycle_
+_updated **2026-08-19 11:01 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-19 10:00 UTC**
+> **🔧 fixing 6 package(s): autoware_downsample_filters autoware_map_projection_loader autoware_test_utils fmilibrary_vendor live555_vendor nebula_velodyne_common  — 2026-08-19 11:01 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -13,7 +13,7 @@ _updated **2026-08-19 10:00 UTC** · refreshed every autofix cycle_
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
 | humble | queued | 0/20 |  |
-| jazzy | queued | 5/21 |  |
+| jazzy | queued | 6/21 |  |
 | kilted | queued | 0/21 |  |
 
 ## Auto-fixed: **89** packages tracked
