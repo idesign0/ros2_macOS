@@ -1029,7 +1029,7 @@
 [submodule "gzsim/fusioncore"]
 	path = gzsim/fusioncore
 	url = https://github.com/idesign0/id_fusioncore.git
-	branch = id-macos-fix
+	branch = main
 [submodule "ros-perception/vision/image_transport_plugins"]
 	path = ros-perception/vision/image_transport_plugins
 	url = https://github.com/ros-perception/image_transport_plugins.git
