@@ -997,7 +997,7 @@
 [submodule "gzsim/fusioncore"]
 	path = gzsim/fusioncore
 	url = https://github.com/idesign0/id_fusioncore.git
-	branch = id-macos-fix
+	branch = main
 [submodule "gzsim/gazebo_model_attachment_plugin"]
 	path = gzsim/gazebo_model_attachment_plugin
 	url = https://github.com/Boeing/gazebo_model_attachment_plugin.git
