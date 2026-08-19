@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-19 20:43 UTC** · refreshed every autofix cycle_
+_updated **2026-08-19 20:47 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 1 package(s): clips_vendor  — 2026-08-19 20:43 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-19 20:47 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
