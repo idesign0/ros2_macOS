@@ -372,7 +372,7 @@
 	branch = humble
 [submodule "ros2/pybind11_vendor"]
 	path = ros2/pybind11_vendor
-	url = https://github.com/ros2/pybind11_vendor.git
+	url = https://github.com/idesign0/id_pybind11_vendor.git
 	branch = humble
 [submodule "ros2/libyaml_vendor"]
 	path = ros2/libyaml_vendor
