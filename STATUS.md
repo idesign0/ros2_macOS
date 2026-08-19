@@ -4,7 +4,7 @@ _updated **2026-08-19 11:01 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 6 package(s): autoware_downsample_filters autoware_map_projection_loader autoware_test_utils fmilibrary_vendor live555_vendor nebula_velodyne_common  — 2026-08-19 11:01 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-19 11:01 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
