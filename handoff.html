@@ -115,12 +115,10 @@
   <h2>Live autofix status</h2>
   <div class="note" id="autofix-status">
   <!-- AUTOFIX-STATUS-START -->
-  <b>Last cycle: 2026-08-18 20:52 UTC</b><br>
-  autoware_lanelet2_extension (jazzy+kilted; humble already had it) - fixed — <code>rosidl_runtime_cpp/traits.hpp</code>'s u16string-to-yaml helper uses a C++17-deprecated <code>wstring_convert&lt;codecvt_utf8_utf16&gt;</code>, which errors under this package's own <code>CMAKE_COMPILE_WARNING_AS_ERROR</code> setting; added the missing <code>-Wno-error=deprecated-declarations</code> toolchain flag (jazzy/kilted parity with humble), compile-tested with a real <code>clang++ -Werror</code> repro (committed, not pushed)<br>
+  <b>Last cycle: 2026-08-19 06:58 UTC</b><br>
+  rmf_traffic_ros2 (jazzy; shared fix landed all 3 distros) - fixed — own real error was <code>ld: library 'yaml-cpp' not found</code> linking <code>librmf_traffic_ros2.dylib</code> (the task brief's quoted CMake/tinyxml error actually belonged to an interleaved <code>menge_vendor</code> log block, already-diagnosed needs-human, not re-touched); same bare-<code>yaml-cpp</code>-in-<code>target_link_libraries()</code> bug already fixed for <code>rmf_traffic_editor</code> — rewrote to <code>${YAML_CPP_LIBRARIES}</code>, left the unrelated <code>ament_export_dependencies()</code> package-name entry alone; verified structurally + idempotency-checked against real CMakeLists.txt from all 3 trees (committed, not pushed)<br>
   <br>
-  multisensor_calibration (jazzy+kilted) - fixed — macOS-only bug: bare <code>find_package(tinyxml2 REQUIRED)</code> tries Module mode first and, on macOS's case-insensitive filesystem, accidentally matches the tinyxml2 vendor's installed <code>FindTinyXML2.cmake</code> instead of falling through to the real Config file, so the wrong <code>_FOUND</code> variable gets set; forced Config mode explicitly, compile-tested via a real cmake configure reproducing both the bug and the fix (committed, not pushed, all 3 distros for shared-file parity)<br>
-  <br>
-  <b>93 packages auto-fixed so far</b>
+  <b>89 packages auto-fixed so far</b>
   <!-- AUTOFIX-STATUS-END -->
   </div>
 

@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-19 06:52 UTC** · refreshed every autofix cycle_
+_updated **2026-08-19 06:58 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 1 package(s): rmf_traffic_ros2  — 2026-08-19 06:52 UTC**
+> **⬆️ pushing 3 [auto] commit(s) to GitHub — 2026-08-19 06:58 UTC**
 
 > ✅ Self-check: shared patch files byte-identical across all 3 distros; nothing pushed to release branches.
 
@@ -16,13 +16,14 @@ _updated **2026-08-19 06:52 UTC** · refreshed every autofix cycle_
 | jazzy | queued | 1/21 |  |
 | kilted | queued | 0/21 |  |
 
-## Auto-fixed: **88** packages tracked
+## Auto-fixed: **89** packages tracked
 
 > Fixes are committed **locally on the Mac** with an `[auto]` tag and are **never pushed** —
 > review and push them at the Mac. This status page is the only thing pushed (to this branch).
 
 ### Recent `[auto]` commits (humble tree)
 ```
+47aab403 ci(humble): rmf_traffic_ros2 - bare yaml-cpp target_link_libraries link fix [auto] [skip ci]
 f7a6b8fb ci(DISTRO): skip-list += husarion_asset_server, kortex_api [auto] [skip ci]
 85c4cd2d ci(humble): boost_plugin_loader, as2_platform_crazyflie, libmavconn, ros2_medkit_serialization, om_gravity/spring_actuator_controller — 5 new-root fixes [auto] [skip ci]
 212f86b0 ci(humble): lely_core_libraries — fix macOS clockid_t typedef conflict [auto] [skip ci]
@@ -34,8 +35,7 @@ f7a6b8fb ci(DISTRO): skip-list += husarion_asset_server, kortex_api [auto] [skip
 
 ### Latest cycle detail
 ```
-  Last cycle: 2026-08-18 20:52 UTC
-  autoware_lanelet2_extension (jazzy+kilted; humble already had it) - fixed — rosidl_runtime_cpp/traits.hpp's u16string-to-yaml helper uses a C++17-deprecated wstring_convert&lt;codecvt_utf8_utf16&gt;, which errors under this package's own CMAKE_COMPILE_WARNING_AS_ERROR setting; added the missing -Wno-error=deprecated-declarations toolchain flag (jazzy/kilted parity with humble), compile-tested with a real clang++ -Werror repro (committed, not pushed)
-  multisensor_calibration (jazzy+kilted) - fixed — macOS-only bug: bare find_package(tinyxml2 REQUIRED) tries Module mode first and, on macOS's case-insensitive filesystem, accidentally matches the tinyxml2 vendor's installed FindTinyXML2.cmake instead of falling through to the real Config file, so the wrong _FOUND variable gets set; forced Config mode explicitly, compile-tested via a real cmake configure reproducing both the bug and the fix (committed, not pushed, all 3 distros for shared-file parity)
-  93 packages auto-fixed so far
+  Last cycle: 2026-08-19 06:58 UTC
+  rmf_traffic_ros2 (jazzy; shared fix landed all 3 distros) - fixed — own real error was ld: library 'yaml-cpp' not found linking librmf_traffic_ros2.dylib (the task brief's quoted CMake/tinyxml error actually belonged to an interleaved menge_vendor log block, already-diagnosed needs-human, not re-touched); same bare-yaml-cpp-in-target_link_libraries() bug already fixed for rmf_traffic_editor — rewrote to ${YAML_CPP_LIBRARIES}, left the unrelated ament_export_dependencies() package-name entry alone; verified structurally + idempotency-checked against real CMakeLists.txt from all 3 trees (committed, not pushed)
+  89 packages auto-fixed so far
 ```
