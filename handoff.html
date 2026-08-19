@@ -115,10 +115,12 @@
   <h2>Live autofix status</h2>
   <div class="note" id="autofix-status">
   <!-- AUTOFIX-STATUS-START -->
-  <b>Last cycle: 2026-08-19 06:58 UTC</b><br>
-  rmf_traffic_ros2 (jazzy; shared fix landed all 3 distros) - fixed — own real error was <code>ld: library 'yaml-cpp' not found</code> linking <code>librmf_traffic_ros2.dylib</code> (the task brief's quoted CMake/tinyxml error actually belonged to an interleaved <code>menge_vendor</code> log block, already-diagnosed needs-human, not re-touched); same bare-<code>yaml-cpp</code>-in-<code>target_link_libraries()</code> bug already fixed for <code>rmf_traffic_editor</code> — rewrote to <code>${YAML_CPP_LIBRARIES}</code>, left the unrelated <code>ament_export_dependencies()</code> package-name entry alone; verified structurally + idempotency-checked against real CMakeLists.txt from all 3 trees (committed, not pushed)<br>
+  <b>Last cycle: 2026-08-19 19:42 UTC</b><br>
+  fmilibrary_vendor (all 3 distros) - fixed — CMP0026 fallout in the same fmi-library ExternalProject (runtime_test.cmake + UseDoxygen.cmake, disabled via CMAKE_ARGS), a broken <code>add_dependencies(expatex ...)</code> call (perl-deleted), an Apple-Clang implicit-function-declaration hard error in vendored minizip (downgraded to warning), and <code>libfmilib_shared.so</code> → <code>${CMAKE_SHARED_LIBRARY_SUFFIX}</code> (macOS builds .dylib); compile-tested end-to-end against a real offline v2.2.3 clone (<code>cmake --build</code> + <code>make install</code> clean) (committed, not pushed)<br>
+  live555_vendor (jazzy only) - fixed — GNU-ld-only <code>--allow-shlib-undefined</code> swapped for Apple ld64's <code>-undefined dynamic_lookup</code> on 3 libraries (a genuine circular HashTable symbol dependency, not decorative), plus a real OpenSSL include-scope bug (PRIVATE→PUBLIC on liveMedia); compile-tested end-to-end with default build options, all libs + demo executables link clean, <code>make install</code> verified (committed, not pushed)<br>
+  nebula_velodyne_common (humble+jazzy) - fixed — same bare-<code>yaml-cpp</code> linker-name bug as rmf_traffic_editor/rmf_traffic_ros2, rewrote to <code>${YAML_CPP_LIBRARIES}</code>; verified structurally + idempotency-checked (committed, not pushed)<br>
   <br>
-  <b>89 packages auto-fixed so far</b>
+  <b>92 packages auto-fixed so far</b>
   <!-- AUTOFIX-STATUS-END -->
   </div>
 
