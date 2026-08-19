@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-19 14:02 UTC** · refreshed every autofix cycle_
+_updated **2026-08-19 15:02 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-19 14:02 UTC**
+> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-19 15:02 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
@@ -12,9 +12,9 @@ _updated **2026-08-19 14:02 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | in_progress | 0/0 |  |
-| jazzy | in_progress | 0/0 |  |
-| kilted | in_progress | 0/0 |  |
+| humble | (query failed) | - | - |
+| jazzy | (query failed) | - | - |
+| kilted | (query failed) | - | - |
 
 ## Auto-fixed: **89** packages tracked
 
@@ -39,3 +39,5 @@ f7a6b8fb ci(DISTRO): skip-list += husarion_asset_server, kortex_api [auto] [skip
   rmf_traffic_ros2 (jazzy; shared fix landed all 3 distros) - fixed — own real error was ld: library 'yaml-cpp' not found linking librmf_traffic_ros2.dylib (the task brief's quoted CMake/tinyxml error actually belonged to an interleaved menge_vendor log block, already-diagnosed needs-human, not re-touched); same bare-yaml-cpp-in-target_link_libraries() bug already fixed for rmf_traffic_editor — rewrote to ${YAML_CPP_LIBRARIES}, left the unrelated ament_export_dependencies() package-name entry alone; verified structurally + idempotency-checked against real CMakeLists.txt from all 3 trees (committed, not pushed)
   89 packages auto-fixed so far
 ```
+
+**All three runners are DONE** — next: review the `[auto]` commits, push, and dispatch a fresh round.
