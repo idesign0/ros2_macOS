@@ -13,7 +13,7 @@ env:
   HOMEBREW_NO_AUTO_UPDATE: "1"
   GZ_VERSION: harmonic
   GZ_DIR: gz-harmonic
-  BREW_BASE: "graphviz eigen@3 GeographicLib vtk opencv@4 zbar png++ sophus serial vrpn draco aravis zeromq cppzmq glfw3"
+  BREW_BASE: "graphviz eigen@3 GeographicLib vtk opencv@4 zbar png++ sophus serial vrpn draco aravis zeromq cppzmq glfw3 libusb"
 
 jobs:
   plan:
