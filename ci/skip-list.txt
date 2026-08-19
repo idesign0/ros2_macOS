@@ -97,3 +97,13 @@ swri_serial_util
 # + libs/libSerial.a — Linux ELF static archives (lipo rejects them, no arm64/macOS
 # build published upstream). Cannot link on macOS-arm64.
 qb_softhand_industry_driver
+
+# rosidl_generator_rs (ros2-rust): the Rust message generator needs a Rust/cargo
+# toolchain that is not installed on the macOS CI, so it never builds and produces
+# no package.sh. But it declares <member_of_group>rosidl_generator_packages</member_of_group>,
+# so colcon treats it as a required generator for EVERY message package -> in the
+# domain shards, autoware_*_msgs / rmf_*_msgs fail instantly at the pre-build
+# dependency check ("Failed to find ... Check that the following packages have been
+# built") -> cascades to ~46 autoware/nebula + the rmf msgs stacks. Nothing here
+# consumes Rust bindings, so drop it from the group. (Same pattern as the gurumdds skip.)
+rosidl_generator_rs
