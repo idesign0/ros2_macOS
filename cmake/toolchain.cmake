@@ -465,3 +465,9 @@ add_compile_definitions(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 add_compile_definitions(B460800=460800 B500000=500000 B921600=921600
                         B1000000=1000000 B1152000=1152000 B1500000=1500000
                         B2000000=2000000 B2500000=2500000 B3000000=3000000)
+
+# Force-include a macOS-compat shim (glibc endian.h funcs htole*/le*toh/be*, SOCK_CLOEXEC) so
+# ports needing them don't each require an #ifdef. APPLE-only; no-op on Linux. Compile-tested.
+if(APPLE)
+  add_compile_options(-include "${CMAKE_CURRENT_LIST_DIR}/macos_compat.h")
+endif()
