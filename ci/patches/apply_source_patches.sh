@@ -829,3 +829,14 @@ if [ -n "$d" ] && [ -f "$f" ] && grep -qF '${DRACO_LIBRARIES}' "$f"; then
 fi
 
 echo "source patches applied."
+# --- cartographer: declares <depend>libceres-dev</depend> (Linux rosdep key), NOT the
+#     vendored `ceres-solver` colcon package, so colcon does not order it after
+#     ceres-solver. Both are 00_base_core and build in parallel -> cartographer's
+#     find_package(Ceres REQUIRED) at CMakeLists:39 configures (~7.75s) before ceres
+#     finishes (~15min) -> "Could not find Ceres". Inject a colcon build_depend so
+#     ceres-solver builds first. (macOS-CI-only; on Linux ceres is the system pkg.) ---
+d="$(_pkg_dir cartographer)"
+if [ -n "$d" ] && [ -f "$d/package.xml" ] && ! grep -q '<build_depend>ceres-solver' "$d/package.xml"; then
+  perl -0pi -e 's{(\n\s*<depend>libceres-dev</depend>)}{$1\n  <build_depend>ceres-solver</build_depend>}' "$d/package.xml"
+  echo "  cartographer: +build_depend ceres-solver (colcon ordering vs find_package(Ceres) race)"
+fi
