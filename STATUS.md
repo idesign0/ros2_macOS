@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-20 19:07 UTC** · refreshed every autofix cycle_
+_updated **2026-08-20 20:08 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-20 19:07 UTC**
+> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-20 20:08 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
@@ -13,7 +13,7 @@ _updated **2026-08-20 19:07 UTC** · refreshed every autofix cycle_
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
 | humble | queued | 0/0 |  |
-| jazzy | in_progress | 0/0 |  |
+| jazzy | queued | 0/21 |  |
 | kilted | in_progress | 0/0 |  |
 
 ## Auto-fixed: **92** packages tracked
