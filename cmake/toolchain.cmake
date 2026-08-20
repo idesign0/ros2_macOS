@@ -358,6 +358,15 @@ add_compile_definitions(M_PIf=3.14159265358979323846f
 # libc++ removed std::result_of etc. in C++20; re-enable for older third-party
 # code (e.g. libcaer_driver device.cpp) instead of patching each.
 add_compile_definitions(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
+# libc++ (Apple Clang) never ships the C++17 Parallel Algorithms / <execution> extension
+# (std::execution::seq/par, std::is_execution_policy_v, the policy-taking overloads of
+# std::transform/reduce/...) under the default config -- it's gated behind -fexperimental-
+# library. beluga's normalize.hpp uses std::execution::seq with std::transform. Compile-
+# tested (Apple clang 21.0.0): "no member 'seq'/no type 'sequenced_policy' in namespace
+# 'std::execution'" without the flag; clean compile+link+run with it.
+if(APPLE)
+  add_compile_options(-fexperimental-library)
+endif()
 # std::codecvt_utf8_utf16 (rosidl_runtime_cpp/traits.hpp:132) is _LIBCPP_DEPRECATED_IN_CXX17;
 # autoware & others compile with -Werror and re-add it AFTER the toolchain's
 # -Wno-error=deprecated-declarations (order loses), so the deprecation escalates to an error.
