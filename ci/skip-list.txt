@@ -184,3 +184,10 @@ sm_simple_action_client
 sm_test_moveit_ur5_sim
 sm_three_some
 sr_all_events_go
+
+# kobuki_core (+ kobuki_velocity_smoother cascade): find_package(ecl_build REQUIRED)
+# — the Yujin ECL suite (ecl_build/ecl_tools/ecl_lite/ecl_core/...) is NOT vendored in
+# this tree and has no macOS rosdep, so kobuki_core cannot configure. Skip until the ECL
+# stack is added; kobuki_velocity_smoother depends on kobuki_core so it cascades — skip both.
+kobuki_core
+kobuki_velocity_smoother
