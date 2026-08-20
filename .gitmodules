@@ -2108,7 +2108,7 @@
 	branch = humble-devel
 [submodule "ros-planning/smacc2"]
 	path = ros-planning/smacc2
-	url = https://github.com/robosoft-ai/SMACC2.git
+	url = https://github.com/idesign0/id_smacc2.git
 	branch = humble
 [submodule "ros-planning/smach"]
 	path = ros-planning/smach

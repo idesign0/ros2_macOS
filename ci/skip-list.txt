@@ -83,11 +83,6 @@ gurumdds_cmake_module
 rmw_gurumdds_cpp
 demo_nodes_cpp_native_gurumdds
 
-# smacc2: hard find_package(LTTngUST) — LTTng userspace tracing is Linux-only
-# (no macOS port); the state-machine lib gates on it. Skip until/unless tracing
-# is made optional upstream.
-smacc2
-
 # ── Lane 7 sweep (2026-08-19): verified Linux-only / no macOS build (compiled
 # the real sources / inspected the real artifacts before skipping).
 # swri_serial_util: src/serial_port.cpp #include <linux/serial.h> + serial_struct
@@ -107,85 +102,6 @@ qb_softhand_industry_driver
 # built") -> cascades to ~46 autoware/nebula + the rmf msgs stacks. Nothing here
 # consumes Rust bindings, so drop it from the group. (Same pattern as the gurumdds skip.)
 rosidl_generator_rs
-
-# smacc2 example/consumer packages (ros-planning/smacc2's own client/event-generator/
-# state-reactor/performance-tools libraries): each has a plain find_package(smacc2 REQUIRED)
-# at CMakeLists.txt:15 that fails instantly ("did not find one") because smacc2 itself is
-# skip-listed above (LTTng, Linux-only) and never builds. Permanent cascade of an
-# already-known unbuildable dep, not an own bug in any of these — will fail identically
-# every run until smacc2 gains a macOS port, so skip-listed alongside it instead of
-# re-surfacing as a "new" root each cycle. Present identically in all 3 distros
-# (ros-planning/smacc2, same submodule commit).
-cl_ros2_timer
-eg_conditional_generator
-eg_random_generator
-http_client
-ros_timer_client
-sm_coretest_transition_speed_1
-sr_conditional
-sr_event_countdown
-
-cl_foundation_pose
-cl_gcalcli
-cl_generic_sensor
-cl_http
-cl_isaac_apriltag
-cl_keyboard
-cl_lifecycle_node
-cl_mission_tracker
-cl_modbus_tcp_relay
-cl_moveit2z
-cl_nav2z
-cl_px4_mr
-keyboard_client
-lifecyclenode_client
-move_group_interface_client
-moveit2z_client
-multirole_sensor_client
-nav2z_client
-ros_publisher_client
-sm_advanced_recovery_1
-sm_atomic
-sm_atomic_24hr
-sm_atomic_hierarchy
-sm_atomic_http
-sm_atomic_mode_states
-sm_atomic_performance_trace_1
-sm_atomic_services
-sm_atomic_subscribers_performance_test
-sm_autoware_avp
-sm_aws_warehouse_navigation
-sm_branching
-sm_cl_gcalcli_test_1
-sm_cl_keyboard_unit_test_1
-sm_cl_px4_mr_test_1
-sm_cl_px4_mr_test_2
-sm_cl_ros2_timer_unit_test_1
-sm_dance_bot
-sm_dance_bot_strikes_back
-sm_dance_bot_warehouse
-sm_dance_bot_warehouse_2
-sm_dance_bot_warehouse_3
-sm_data_sharing_1
-sm_data_sharing_2
-sm_husky_barrel_search_1
-sm_modbus_tcp_relay_test_1
-sm_mode_state_behavior_1
-sm_multi_stage_1
-sm_multi_ur5_sim
-sm_multithread_test_1
-sm_nav2_gazebo_test_1
-sm_pack_ml
-sm_panda_cl_moveit2z_cb_inventory
-sm_panda_cl_moveit2z_cb_inventory_isaacsim
-sm_panda_moveit2z_cb_inventory
-sm_pubsub_1
-sm_respira_1
-sm_retry_logic_1
-sm_simple_action_client
-sm_test_moveit_ur5_sim
-sm_three_some
-sr_all_events_go
 
 # kobuki_core (+ kobuki_velocity_smoother cascade): find_package(ecl_build REQUIRED)
 # — the Yujin ECL suite (ecl_build/ecl_tools/ecl_lite/ecl_core/...) is NOT vendored in
