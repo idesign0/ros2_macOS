@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-20 06:42 UTC** · refreshed every autofix cycle_
+_updated **2026-08-20 07:04 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 10 package(s): beluga cl_ros2_timer cloudini_lib eg_conditional_generator eg_random_generator http_client ros_timer_client sm_coretest_transition_speed_1 sr_conditional sr_event_countdown  — 2026-08-20 06:42 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-20 07:04 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
