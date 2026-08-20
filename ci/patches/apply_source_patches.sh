@@ -840,3 +840,20 @@ if [ -n "$d" ] && [ -f "$d/package.xml" ] && ! grep -q '<build_depend>ceres-solv
   perl -0pi -e 's{(\n\s*<depend>libceres-dev</depend>)}{$1\n  <build_depend>ceres-solver</build_depend>}' "$d/package.xml"
   echo "  cartographer: +build_depend ceres-solver (colcon ordering vs find_package(Ceres) race)"
 fi
+# --- beluga: uses std::execution PSTL policies + std::is_execution_policy_v across 5 headers
+#     (normalize/reweight/overlay/propagate/amcl_core). macOS libc++ ships no PSTL policies and
+#     std::is_execution_policy_v is _LIBCPP_NO_SPECIALIZATIONS (always false, unspecializable), so
+#     no external shim can satisfy the static_asserts. Drop in a compat header (policy types/objects
+#     + serial transform/for_each overloads + beluga::is_execution_policy_v) and redirect
+#     std::is_execution_policy_v -> beluga::is_execution_policy_v. Serial == correct (seq).
+#     Compile+link-tested vs macOS libc++ (Apple clang 21). ---
+d="$(_pkg_dir beluga)"
+if [ -n "$d" ] && [ -d "$d/include/beluga" ] && [ ! -f "$d/include/beluga/detail/execution_policy_compat.hpp" ]; then
+  mkdir -p "$d/include/beluga/detail"
+  cp "$ROOT/ci/patches/beluga_execution_policy_compat.hpp" "$d/include/beluga/detail/execution_policy_compat.hpp"
+  for f in $(grep -rl '#include <execution>' "$d/include/beluga" 2>/dev/null); do
+    perl -0pi -e 's{#include <execution>}{#include <execution>\n#include <beluga/detail/execution_policy_compat.hpp>}' "$f"
+    perl -0pi -e 's/std::is_execution_policy_v/beluga::is_execution_policy_v/g' "$f"
+  done
+  echo "  beluga: PSTL execution-policy compat shim + std::is_execution_policy_v redirect"
+fi
