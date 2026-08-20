@@ -81,6 +81,7 @@ jobs:
           brew unlink qt || true
           brew unlink asio || true
           brew unlink orocos-kdl || true
+          brew unlink protobuf || true   # gz stack builds+links pinned protobuf v32.0 (gz-macOS); brew 35.1 removed PROTOBUF_CONSTEXPR -> ros_gz_sim .pb.h mismatch
           brew unlink ceres-solver || true
           brew unlink osqp || true
           echo "unlink done"
@@ -155,6 +156,7 @@ jobs:
           brew unlink qt || true
           brew unlink asio || true
           brew unlink orocos-kdl || true
+          brew unlink protobuf || true   # gz stack builds+links pinned protobuf v32.0 (gz-macOS); brew 35.1 removed PROTOBUF_CONSTEXPR -> ros_gz_sim .pb.h mismatch
           brew unlink ceres-solver || true
           brew unlink osqp || true
           echo "unlink done"
