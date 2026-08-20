@@ -2228,7 +2228,7 @@
 	branch = main
 [submodule "ros-planning/smacc2"]
 	path = ros-planning/smacc2
-	url = https://github.com/robosoft-ai/SMACC2.git
+	url = https://github.com/idesign0/id_smacc2.git
 	branch = jazzy
 [submodule "moveit/snowbot_operating_system"]
 	path = moveit/snowbot_operating_system
