@@ -191,3 +191,44 @@ sr_all_events_go
 # stack is added; kobuki_velocity_smoother depends on kobuki_core so it cascades — skip both.
 kobuki_core
 kobuki_velocity_smoother
+# ── Lane 7 sweep (2026-08-20): two more confirmed no-macOS-build roots.
+
+# mimick_vendor (ros2/Mimick @ 4dbd495): builds the Mimick C mocking library. On the
+# Xcode 26.6 runner its preprocessor machinery leaves an unbalanced function-like macro
+# invocation open, which then swallows the SDK's integer typedefs -> "unexpected token
+# in argument list" across sys/_types/_int8_t.h.._uint64_t.h and stdint.h. It is a
+# <test_depend> ONLY (rclcpp / rclcpp_lifecycle / rclcpp_action / rcl / rcutils /
+# rcl_yaml_param_parser / rosidl_typesupport_c use it solely for tests) and the toolchain
+# forces BUILD_TESTING OFF workspace-wide, so nothing builds against it and it cascades to
+# nothing — an isolated red. (Builds clean locally on Apple clang 21 with the full CI flag
+# set incl. -fexperimental-library + the macos_compat force-include, so the trigger is
+# runner-specific and not reproducible here for a targeted patch.) Skip until a reproducer
+# exists; zero build impact given tests are off.
+mimick_vendor
+
+# libphidget22 + the phidgets_* USB hardware-driver cluster. libphidget22's upstream
+# source is the Linux tarball (libphidget22-*.tar.gz): it ships ONLY a Linux USB backend
+# (src/plat/linux/usblinux.c) and its configure OS-detection has no darwin arm — there is
+# no macOS/IOKit USB implementation in the source, so it cannot build from source on macOS
+# (Phidgets provides macOS support only as a prebuilt Phidget22.framework DMG, a different
+# major version than this tree targets — a vendor-framework port, not a mechanical fix, for
+# a driver that can't be exercised on macOS CI anyway). phidgets_api hard-requires
+# libphidget22 and every phidgets_* device driver requires phidgets_api, so the whole
+# cluster cascades — same Lane 7 policy as usb_cam / rplidar_driver / rc_genicam_api.
+# phidgets_msgs is a pure message package with no HW dep -> deliberately NOT skipped.
+libphidget22
+phidgets_api
+phidgets_drivers
+phidgets_accelerometer
+phidgets_analog_inputs
+phidgets_analog_outputs
+phidgets_digital_inputs
+phidgets_digital_outputs
+phidgets_gyroscope
+phidgets_high_speed_encoder
+phidgets_ik
+phidgets_magnetometer
+phidgets_motors
+phidgets_spatial
+phidgets_stepper
+phidgets_temperature
