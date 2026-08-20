@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-20 07:04 UTC** · refreshed every autofix cycle_
+_updated **2026-08-20 09:01 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-20 07:04 UTC**
+> **🚀 all runners done — dispatching a fresh validation round — 2026-08-20 09:01 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
@@ -12,9 +12,9 @@ _updated **2026-08-20 07:04 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | completed | 20/20 | success |
-| jazzy | completed | 21/21 | success |
-| kilted | completed | 21/21 | success |
+| humble | in_progress | 0/0 |  |
+| jazzy | in_progress | 0/0 |  |
+| kilted | in_progress | 0/0 |  |
 
 ## Auto-fixed: **92** packages tracked
 
@@ -41,5 +41,3 @@ f7a6b8fb ci(DISTRO): skip-list += husarion_asset_server, kortex_api [auto] [skip
   nebula_velodyne_common (humble+jazzy) - fixed — same bare-yaml-cpp linker-name bug as rmf_traffic_editor/rmf_traffic_ros2, rewrote to ${YAML_CPP_LIBRARIES}; verified structurally + idempotency-checked (committed, not pushed)
   92 packages auto-fixed so far
 ```
-
-**All three runners are DONE** — next: review the `[auto]` commits, push, and dispatch a fresh round.
