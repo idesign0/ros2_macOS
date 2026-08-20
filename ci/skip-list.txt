@@ -105,3 +105,20 @@ nobleo_socketcan_bridge
 # built") -> cascades to ~46 autoware/nebula + the rmf msgs stacks. Nothing here
 # consumes Rust bindings, so drop it from the group. (Same pattern as the gurumdds skip.)
 rosidl_generator_rs
+
+# smacc2 example/consumer packages (ros-planning/smacc2's own client/event-generator/
+# state-reactor/performance-tools libraries): each has a plain find_package(smacc2 REQUIRED)
+# at CMakeLists.txt:15 that fails instantly ("did not find one") because smacc2 itself is
+# skip-listed above (LTTng, Linux-only) and never builds. Permanent cascade of an
+# already-known unbuildable dep, not an own bug in any of these — will fail identically
+# every run until smacc2 gains a macOS port, so skip-listed alongside it instead of
+# re-surfacing as a "new" root each cycle. Present identically in all 3 distros
+# (ros-planning/smacc2, same submodule commit).
+cl_ros2_timer
+eg_conditional_generator
+eg_random_generator
+http_client
+ros_timer_client
+sm_coretest_transition_speed_1
+sr_conditional
+sr_event_countdown

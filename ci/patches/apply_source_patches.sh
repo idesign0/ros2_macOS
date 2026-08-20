@@ -800,4 +800,32 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q '^find_package(tinyxml2 
   echo "  multisensor_calibration: find_package(tinyxml2 REQUIRED CONFIG) — force Config mode, dodge case-insensitive Module-mode collision with tinyxml2_vendor's FindTinyXML2.cmake"
 fi
 
+# --- cloudini_lib: benchmarks/CMakeLists.txt's pcd_benchmark target does
+#     `find_package(Draco QUIET)` then, when found, compiles pcd_benchmark.cpp
+#     with -DDRACO_FOUND (activating real draco::EncoderBuffer/PointCloudBuilder/
+#     ExpertEncoder calls) but links it via the bare variable ${DRACO_LIBRARIES}.
+#     Homebrew's draco ships Config-mode only (draco-config.cmake ->
+#     draco-targets.cmake), which defines the IMPORTED targets draco::draco /
+#     draco::draco_static (carrying their own INTERFACE_INCLUDE_DIRECTORIES) and
+#     never sets the old Module-mode DRACO_LIBRARIES/DRACO_INCLUDE_DIRS variables
+#     at all -> the link line silently drops all draco symbols while the object
+#     file still references them -> "Undefined symbols for architecture arm64"
+#     (draco::EncoderBuffer::Clear() etc.) at the final link, after a clean
+#     compile (headers already resolve via the global /opt/homebrew/include path
+#     this toolchain adds for CLI11, so the missing DRACO_INCLUDE_DIRS never
+#     surfaced as its own error). Fix: link the real imported target instead of
+#     the always-empty variable, gated on Draco_FOUND via a generator expression
+#     so an environment without draco still configures/links exactly as before
+#     (empty $<BOOL:...> substitutes to nothing). Compile-tested: a real `cmake`
+#     configure+build against the installed brew draco-config.cmake — old form
+#     (${DRACO_LIBRARIES}) mirrors the CI failure once draco headers are on the
+#     include path (undefined draco symbols at link); new form (draco::draco
+#     target) links clean.
+d="$(_pkg_dir cloudini_lib)"
+f="$d/benchmarks/CMakeLists.txt"
+if [ -n "$d" ] && [ -f "$f" ] && grep -qF '${DRACO_LIBRARIES}' "$f"; then
+  sed "${SEDI[@]}" 's#\${DRACO_LIBRARIES}#$<$<BOOL:${Draco_FOUND}>:draco::draco>#' "$f"
+  echo "  cloudini_lib: pcd_benchmark links draco::draco (imported target) instead of the never-set \${DRACO_LIBRARIES} — fixes undefined draco symbols at link"
+fi
+
 echo "source patches applied."
