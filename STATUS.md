@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-19 21:48 UTC** · refreshed every autofix cycle_
+_updated **2026-08-20 04:01 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-19 21:48 UTC**
+> **🔧 fixing 18 package(s): beluga cl_gcalcli cl_http cl_mission_tracker cl_ros2_timer eg_conditional_generator eg_random_generator husarion_ugv_gazebo kobuki_core kuka_external_control_sdk_examples ros_publisher_client ros_timer_client schunk_svh_library sm_coretest_transition_speed_1 sr_conditional sr_event_countdown turtlebot4_ignition_gui_plugins ur_client_library  — 2026-08-20 04:01 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
@@ -12,9 +12,9 @@ _updated **2026-08-19 21:48 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | queued | 2/20 |  |
-| jazzy | queued | 11/21 |  |
-| kilted | queued | 8/21 |  |
+| humble | queued | 14/20 |  |
+| jazzy | queued | 21/21 |  |
+| kilted | in_progress | 20/21 |  |
 
 ## Auto-fixed: **92** packages tracked
 
