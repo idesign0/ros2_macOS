@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-20 04:01 UTC** · refreshed every autofix cycle_
+_updated **2026-08-20 04:17 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 18 package(s): beluga cl_gcalcli cl_http cl_mission_tracker cl_ros2_timer eg_conditional_generator eg_random_generator husarion_ugv_gazebo kobuki_core kuka_external_control_sdk_examples ros_publisher_client ros_timer_client schunk_svh_library sm_coretest_transition_speed_1 sr_conditional sr_event_countdown turtlebot4_ignition_gui_plugins ur_client_library  — 2026-08-20 04:01 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-20 04:17 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
