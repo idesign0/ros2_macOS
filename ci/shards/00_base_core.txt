@@ -84,6 +84,7 @@ camera_calibration_parsers
 camera_info_manager
 can_msgs
 cascade_lifecycle_msgs
+ceres-solver
 chained_filter_controller
 chomp_motion_planner
 class_loader

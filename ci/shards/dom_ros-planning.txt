@@ -13,7 +13,6 @@ cartographer
 cartographer_ros
 cartographer_ros_msgs
 cartographer_rviz
-ceres-solver
 cmake_generate_parameter_module_example
 control_box_rst
 costmap_queue

@@ -139,6 +139,8 @@ jobs:
           brew-base-formulae: ${{ env.BREW_BASE }}
       - uses: actions/download-artifact@v4
         with: { name: install-base, path: install }
+      - name: Restore executable bits (GitHub artifacts drop +x)
+        run: chmod -R +x install/bin 2>/dev/null || true
       - name: Apply skip-list (COLCON_IGNORE)
         run: |
           grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
@@ -215,6 +217,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with: { name: install-base, path: install }
+      - name: Restore executable bits (GitHub artifacts drop +x)
+        run: chmod -R +x install/bin 2>/dev/null || true
       - uses: actions/download-artifact@v4
         with: { pattern: install-dom-*, path: deltas }
       - name: Merge shard deltas
