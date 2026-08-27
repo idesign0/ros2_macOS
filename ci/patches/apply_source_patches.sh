@@ -1134,6 +1134,17 @@ for _f in $(find "$ROOT" -path '*sick_scan_xd/CMakeLists.txt' -not -path '*/buil
   fi
 done
 
+# --- ess_imu_driver2: links Linux-only libs `crypt` (libcrypt) and `rt` (librt)
+#     in target_link_libraries(ess_imu_driver2_node ...). macOS has crypt() and the
+#     realtime clock funcs in libSystem (no separate libcrypt/librt) -> "ld: library
+#     'crypt' not found". Strip both standalone link lines (macOS-only CI patch). ---
+for _f in $(find "$ROOT" -path '*ess_imu_driver2/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -qE '^[[:space:]]*crypt[[:space:]]*$' "$_f"; then
+    perl -ni -e 'print unless /^\s*(crypt|rt)\s*$/' "$_f"
+    echo "  ess_imu_driver2: strip Linux-only crypt/rt link libs in ${_f#$ROOT/}"
+  fi
+done
+
 # --- ouster_ros: ouster_client bundles spdlog+fmt under ouster-sdk/thirdparty, but the
 #     toolchain's global `-isystem /opt/homebrew/include` (brew spdlog, EXTERNAL fmt) is
 #     searched BEFORE ouster's bundled `-isystem .../thirdparty`. brew spdlog has no
