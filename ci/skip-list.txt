@@ -135,3 +135,11 @@ phidgets_motors
 phidgets_spatial
 phidgets_stepper
 phidgets_temperature
+# ── Base reds triaged (2026-08-27):
+# rqt_image_view: find_package(qt_gui_cpp REQUIRED) — qt_gui_cpp is Qt-binding-skipped
+# above, so this is a permanent cascade, not an own error. Skip alongside it.
+rqt_image_view
+# dataspeed_can_usb: find_package(lusb REQUIRED) + links lusb::lusb — 'lusb' is not a
+# package in this tree and not a macOS-resolvable dep; it is a HW USB-CAN driver that
+# can't run on macOS anyway (same class as the SocketCAN drivers above).
+dataspeed_can_usb
