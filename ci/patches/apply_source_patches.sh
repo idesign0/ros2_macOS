@@ -1196,3 +1196,30 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'target_link_libraries($
     "$d/CMakeLists.txt"
   echo "  autoware_map_projection_loader: bare yaml-cpp -> \${YAML_CPP_LIBRARIES}"
 fi
+
+# --- autoware_test_utils (humble+jazzy, identical commit 9472b3df, absent
+#     kilted) -- same bare-`yaml-cpp` linker-name bug as
+#     autoware_map_projection_loader/rmf_traffic_editor/rmf_traffic_ros2/
+#     nebula_velodyne_common above, but 2 separate occurrences in one file:
+#     `target_link_libraries(autoware_test_utils\n  yaml-cpp\n)` (multi-line)
+#     and `target_link_libraries(topic_snapshot_saver autoware_test_utils
+#     yaml-cpp)` (single-line). Despite `find_package(yaml-cpp REQUIRED)`
+#     succeeding (yaml_cpp_vendor exports a native, but NAMESPACED,
+#     `yaml-cpp::yaml-cpp` target on jazzy/kilted's yaml-cpp 0.8.0 -- no bare
+#     `yaml-cpp` alias), the bare name in target_link_libraries() doesn't
+#     match any known target -> raw `-lyaml-cpp` linker flag -> "ld: library
+#     'yaml-cpp' not found". Swapped both for ${YAML_CPP_LIBRARIES}. Not
+#     compile-tested end-to-end (same stated limitation as the other 3
+#     yaml-cpp fixes -- no populated local yaml_cpp_vendor install/ tree, and
+#     brew's yaml-cpp is not a substitute per PLAYBOOK.md); verified
+#     structurally against the real CMakeLists.txt (both occurrences replaced,
+#     diff clean) and idempotency-checked (2nd run: no match, no
+#     double-replace). ---
+d="$(_pkg_dir autoware_test_utils)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^  yaml-cpp$' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e 's/^  yaml-cpp$/  ${YAML_CPP_LIBRARIES}/' \
+    -e 's/target_link_libraries(topic_snapshot_saver autoware_test_utils yaml-cpp)/target_link_libraries(topic_snapshot_saver autoware_test_utils ${YAML_CPP_LIBRARIES})/' \
+    "$d/CMakeLists.txt"
+  echo "  autoware_test_utils: bare yaml-cpp (x2) -> \${YAML_CPP_LIBRARIES}"
+fi
