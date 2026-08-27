@@ -1171,3 +1171,28 @@ for f in $(find . -path '*ouster-sdk/ouster_client/CMakeLists.txt' 2>/dev/null);
   perl -0pi -e 's{(target_include_directories\(ouster_client SYSTEM)}{target_include_directories(ouster_client BEFORE PRIVATE \$<BUILD_INTERFACE:\${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty>)\n$1}' "$f"
   echo "  ouster_client: bundled thirdparty as non-SYSTEM -I (brew-fmt vs bundled-fmt clash) ($f)"
 done
+
+# --- autoware_map_projection_loader (humble+jazzy, identical commit
+#     9472b3df, absent kilted -- package doesn't exist in kilted's tree) --
+#     same bare-`yaml-cpp` linker-name bug as rmf_traffic_editor/
+#     rmf_traffic_ros2/nebula_velodyne_common above: CMakeLists.txt:21 is
+#     `target_link_libraries(${PROJECT_NAME} yaml-cpp)` -- not a real CMake
+#     target in this scope, so it becomes a raw `-lyaml-cpp` linker flag ->
+#     "ld: library 'yaml-cpp' not found" linking libautoware_map_projection_
+#     loader.dylib. Swapped for the toolchain's own ${YAML_CPP_LIBRARIES}
+#     absolute-path CACHE var (same proven idiom as the 3 prior fixes, and
+#     already used natively upstream by 8+ other in-tree packages per the
+#     toolchain's own comment). Not compile-tested end-to-end (same stated
+#     limitation as rmf_traffic_editor/rmf_traffic_ros2/nebula_velodyne_common:
+#     needs a populated local yaml_cpp_vendor install/ tree to actually
+#     link-test, not available in this checkout, and brew's yaml-cpp is not a
+#     substitute per PLAYBOOK.md's "never use brew yaml" rule); verified
+#     structurally against the real CMakeLists.txt in both trees and
+#     idempotency-checked (2nd run: no match, no double-replace). ---
+d="$(_pkg_dir autoware_map_projection_loader)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'target_link_libraries(${PROJECT_NAME} yaml-cpp)' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e 's/target_link_libraries(${PROJECT_NAME} yaml-cpp)/target_link_libraries(${PROJECT_NAME} ${YAML_CPP_LIBRARIES})/' \
+    "$d/CMakeLists.txt"
+  echo "  autoware_map_projection_loader: bare yaml-cpp -> \${YAML_CPP_LIBRARIES}"
+fi
