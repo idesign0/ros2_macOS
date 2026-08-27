@@ -350,6 +350,171 @@ PATCHEOF
   echo "  lely_core_libraries: added 0099-macos-clockid_t.patch to UPDATE_COMMAND"
 fi
 
+# --- Lane 6: lely_core_libraries's src/*/Makefile.am append -Wl,--as-needed to
+#     EVERY library's LDFLAGS unconditionally. That flag is GNU-ld-only; Apple's
+#     ld64 rejects it outright ("ld: unknown options: --as-needed" -> clang: linker
+#     command failed). On Darwin configure.ac's host case matches neither *linux*
+#     nor *-*-mingw*, so PLATFORM_LINUX=no. Wrap the flag in the existing
+#     `if PLATFORM_LINUX ... endif` automake conditional (same mechanism as the
+#     adjacent PLATFORM_WIN32 block), then autoreconf -i (run by CONFIGURE_COMMAND)
+#     emits it as @PLATFORM_LINUX_TRUE@ so macOS omits it. Verified vs pinned tag
+#     fb735b79: patch applies clean (0 rejects), autoreconf -i -> Makefile.in has
+#     `@PLATFORM_LINUX_TRUE@am__append = -Wl,--as-needed`. --as-needed only prunes
+#     unused DT_NEEDED entries; dropping it does not change macOS runtime. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0100-macos-no-as-needed.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0100-macos-no-as-needed.patch" <<'PATCHEOF'
+From 0000000000000000000000000000000000000100 Mon Sep 17 00:00:00 2001
+From: Build Fix <noreply@example.com>
+Date: Wed, 27 Aug 2026 00:00:00 +0000
+Subject: [PATCH] Guard -Wl,--as-needed behind PLATFORM_LINUX (macOS ld64)
+
+Each src/*/Makefile.am appends `-Wl,--as-needed` to its library
+LDFLAGS unconditionally. `--as-needed` is a GNU ld feature; Apple's
+ld64 (the macOS system linker) rejects it outright:
+
+  ld: unknown options: --as-needed
+  clang: error: linker command failed with exit code 1
+
+On Darwin, configure.ac's host case matches neither *linux* nor
+*-*-mingw*, so PLATFORM_LINUX/PLATFORM_POSIX/PLATFORM_WIN32 are all
+"no". Wrap the flag in the existing `if PLATFORM_LINUX ... endif`
+automake conditional so it is emitted only where the GNU linker is in
+use; on macOS the libraries link without it (identical runtime
+behaviour -- --as-needed only prunes unused DT_NEEDED entries).
+---
+diff --git a/src/can/Makefile.am b/src/can/Makefile.am
+index 5ccbb48..2dfce64 100644
+--- a/src/can/Makefile.am
++++ b/src/can/Makefile.am
+@@ -28,7 +28,9 @@ liblely_can_la_LDFLAGS = -no-undefined -version-number 1:9:2
+ if PLATFORM_WIN32
+ liblely_can_la_LDFLAGS += -Wl,--output-def,liblely-can-1.def
+ endif
++if PLATFORM_LINUX
+ liblely_can_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_can_la_LIBADD =
+ liblely_can_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_can_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/co/Makefile.am b/src/co/Makefile.am
+index 65b1a77..f606834 100644
+--- a/src/co/Makefile.am
++++ b/src/co/Makefile.am
+@@ -72,7 +72,9 @@ liblely_co_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSION
+ if PLATFORM_WIN32
+ liblely_co_la_LDFLAGS += -Wl,--output-def,liblely-co-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_co_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_co_la_LIBADD =
+ liblely_co_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_co_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/coapp/Makefile.am b/src/coapp/Makefile.am
+index 311535a..d867153 100644
+--- a/src/coapp/Makefile.am
++++ b/src/coapp/Makefile.am
+@@ -32,7 +32,9 @@ liblely_coapp_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERS
+ if PLATFORM_WIN32
+ liblely_coapp_la_LDFLAGS += -Wl,--output-def,liblely-coapp-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_coapp_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_coapp_la_LIBADD =
+ liblely_coapp_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_coapp_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/ev/Makefile.am b/src/ev/Makefile.am
+index 8844de6..f81fa25 100644
+--- a/src/ev/Makefile.am
++++ b/src/ev/Makefile.am
+@@ -31,7 +31,9 @@ liblely_ev_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSION
+ if PLATFORM_WIN32
+ liblely_ev_la_LDFLAGS += -Wl,--output-def,liblely-ev-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_ev_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_ev_la_LIBADD =
+ liblely_ev_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_ev_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/io/Makefile.am b/src/io/Makefile.am
+index 871bef8..550bb5d 100644
+--- a/src/io/Makefile.am
++++ b/src/io/Makefile.am
+@@ -35,7 +35,9 @@ liblely_io_la_LDFLAGS = -no-undefined -version-number 1:9:2
+ if PLATFORM_WIN32
+ liblely_io_la_LDFLAGS += -Wl,--output-def,liblely-io-1.def
+ endif
++if PLATFORM_LINUX
+ liblely_io_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_io_la_LIBADD =
+ liblely_io_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_io_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/io2/Makefile.am b/src/io2/Makefile.am
+index 2daf658..eba79dc 100644
+--- a/src/io2/Makefile.am
++++ b/src/io2/Makefile.am
+@@ -86,7 +86,9 @@ liblely_io2_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSIO
+ if PLATFORM_WIN32
+ liblely_io2_la_LDFLAGS += -Wl,--output-def,liblely-io2-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_io2_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_io2_la_LIBADD =
+ liblely_io2_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_io2_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/libc/Makefile.am b/src/libc/Makefile.am
+index dd1afe7..d484602 100644
+--- a/src/libc/Makefile.am
++++ b/src/libc/Makefile.am
+@@ -43,7 +43,9 @@ liblely_libc_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSI
+ if PLATFORM_WIN32
+ liblely_libc_la_LDFLAGS += -Wl,--output-def,liblely-libc-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_libc_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_libc_la_LIBADD = $(RT_LIBS)
+ if CODE_COVERAGE_ENABLED
+ liblely_libc_la_LIBADD += $(CODE_COVERAGE_LIBS)
+diff --git a/src/tap/Makefile.am b/src/tap/Makefile.am
+index 6c06b88..a2c3e24 100644
+--- a/src/tap/Makefile.am
++++ b/src/tap/Makefile.am
+@@ -15,7 +15,9 @@ liblely_tap_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSIO
+ if PLATFORM_WIN32
+ liblely_tap_la_LDFLAGS += -Wl,--output-def,liblely-tap-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_tap_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_tap_la_LIBADD =
+ liblely_tap_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ if CODE_COVERAGE_ENABLED
+diff --git a/src/util/Makefile.am b/src/util/Makefile.am
+index 3a77f65..780f4a6 100644
+--- a/src/util/Makefile.am
++++ b/src/util/Makefile.am
+@@ -67,7 +67,9 @@ liblely_util_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSI
+ if PLATFORM_WIN32
+ liblely_util_la_LDFLAGS += -Wl,--output-def,liblely-util-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_util_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_util_la_LIBADD =
+ liblely_util_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ if !ECSS_COMPLIANCE
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0100-macos-no-as-needed.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0100-macos-no-as-needed.patch to UPDATE_COMMAND"
+fi
+
 # --- Lane 2: boost-python component version. mrt_cmake_modules FindBoostPython
 #     derives the component from find_package(Python3), which resolves the runner's
 #     newest Python (3.14) -> boost_python314, absent from the vendored boost-1.89
