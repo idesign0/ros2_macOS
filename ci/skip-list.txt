@@ -147,3 +147,9 @@ dataspeed_can_usb
 # foxglove_compressed_video_transport: find_package(ffmpeg_encoder_decoder) — that package
 # is not in the tree and has no macOS dep. (foxglove_bridge itself is fixed separately.)
 foxglove_compressed_video_transport
+
+# agnocast_cie_thread_configurator: Linux-only (linux/sched.h, sys/epoll.h, sys/eventfd.h, agnocast shared-mem IPC) — no macOS port.
+agnocast_cie_thread_configurator
+
+# cie_thread_configurator: Linux-only (error.h, CPU_SET/sched_setaffinity CPU-affinity) — no macOS port.
+cie_thread_configurator
