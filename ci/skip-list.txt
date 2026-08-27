@@ -164,3 +164,12 @@ cie_thread_configurator
 
 # andino_base: LibSerial/SerialPort (Linux serial lib, not vendored on macOS) — no macOS port.
 andino_base
+
+# as2_platform_dji_osdk: DJI OnboardSDK (dji_onboardsdk FetchContent) — Linux-only USB bulk / hardware-sync (addUSBBulkChannel, HWSyncDataFlag). No macOS port.
+as2_platform_dji_osdk
+
+# nerian_stereo: bundled 3rdparty nerian-vision-software includes <bits/c++config.h> (libstdc++/GCC-internal) — assumes GCC libstdc++, no libc++ port.
+nerian_stereo
+
+# adi_iio: requires libiio (iio.h) — Analog Devices IIO lib not in the macOS brew set.
+adi_iio
