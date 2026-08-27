@@ -151,3 +151,9 @@ dataspeed_can_usb
 foxglove_compressed_video_transport
 # easynav_common: find_package(yaets) — 'yaets' (event-task lib) is not vendored in this tree.
 easynav_common
+
+# sdformat_urdf (humble only): find_package(sdformat_vendor REQUIRED) fails —
+# humble does NOT vendor sdformat_vendor (jazzy/kilted carry it as gazebo-release/
+# sdformat_vendor and build sdformat_urdf fine). Real fix = vendor sdformat_vendor
+# into humble (heavy, gz-dependent); skip until then so it stops cascading.
+sdformat_urdf
