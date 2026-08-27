@@ -155,3 +155,12 @@ foxglove_compressed_video_transport
 # sdformat_vendor and build sdformat_urdf fine). Real fix = vendor sdformat_vendor
 # into humble (heavy, gz-dependent); skip until then so it stops cascading.
 sdformat_urdf
+
+# agnocast_cie_thread_configurator: Linux-only (linux/sched.h, sys/epoll.h, sys/eventfd.h, agnocast shared-mem IPC) — no macOS port.
+agnocast_cie_thread_configurator
+
+# cie_thread_configurator: Linux-only (error.h, CPU_SET/sched_setaffinity CPU-affinity) — no macOS port.
+cie_thread_configurator
+
+# andino_base: LibSerial/SerialPort (Linux serial lib, not vendored on macOS) — no macOS port.
+andino_base

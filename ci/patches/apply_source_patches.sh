@@ -1110,6 +1110,18 @@ for _f in $(find "$ROOT" -path '*point_cloud_msg_wrapper/point_cloud_msg_wrapper
   fi
 done
 
+# --- turtlebot3_panorama: panorama.hpp gates cv_bridge include on ROS2_HUMBLE /
+#     ROS2_LATEST macros; on humble that macro is not defined in this build, so it
+#     falls to the .hpp branch, but humble's cv_bridge ships only cv_bridge.h ->
+#     "'cv_bridge/cv_bridge.hpp' file not found". Replace the macro gate with
+#     __has_include so it picks .hpp where present (jazzy+) and .h otherwise. ---
+for _f in $(find "$ROOT" -path '*turtlebot3_panorama/include/turtlebot3_panorama/panorama.hpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q 'ROS2_HUMBLE' "$_f"; then
+    perl -0pi -e 's{#ifdef ROS2_HUMBLE\n\s*#include <cv_bridge/cv_bridge\.h>\n#elif defined\(ROS2_LATEST\)\n\s*#include <cv_bridge/cv_bridge\.hpp>\n#endif}{#if __has_include(<cv_bridge/cv_bridge.hpp>)\n  #include <cv_bridge/cv_bridge.hpp>\n#else\n  #include <cv_bridge/cv_bridge.h>\n#endif}' "$_f"
+    echo "  turtlebot3_panorama: cv_bridge include -> __has_include in ${_f#$ROOT/}"
+  fi
+done
+
 # --- ouster_ros: ouster_client bundles spdlog+fmt under ouster-sdk/thirdparty, but the
 #     toolchain's global `-isystem /opt/homebrew/include` (brew spdlog, EXTERNAL fmt) is
 #     searched BEFORE ouster's bundled `-isystem .../thirdparty`. brew spdlog has no
