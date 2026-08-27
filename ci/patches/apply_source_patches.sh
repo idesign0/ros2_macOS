@@ -1145,6 +1145,18 @@ for _f in $(find "$ROOT" -path '*ess_imu_driver2/CMakeLists.txt' -not -path '*/b
   fi
 done
 
+# --- roadmap_explorer: Logger.hpp calls system_clock::to_time_t(high_resolution_clock
+#     ::now()). libstdc++ makes high_resolution_clock an alias of system_clock (works);
+#     libc++ (Apple clang) makes it steady_clock -> "no viable conversion from
+#     time_point<steady_clock,...> to time_point<system_clock,...>". Use system_clock::
+#     now() directly (these are wall-clock log timestamps). ---
+for _f in $(find "$ROOT" -path '*roadmap_explorer*/util/Logger.hpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q 'high_resolution_clock::now()' "$_f"; then
+    sed "${SEDI[@]}" 's/high_resolution_clock::now()/system_clock::now()/g' "$_f"
+    echo "  roadmap_explorer: high_resolution_clock -> system_clock in ${_f#$ROOT/}"
+  fi
+done
+
 # --- ouster_ros: ouster_client bundles spdlog+fmt under ouster-sdk/thirdparty, but the
 #     toolchain's global `-isystem /opt/homebrew/include` (brew spdlog, EXTERNAL fmt) is
 #     searched BEFORE ouster's bundled `-isystem .../thirdparty`. brew spdlog has no
