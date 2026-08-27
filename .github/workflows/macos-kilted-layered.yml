@@ -9,6 +9,12 @@ permissions:
 
 env:
   CI_BUILD: "TRUE"
+  # ExternalProject vendors (e.g. clips_vendor) run `git apply` inside their build dir.
+  # When build/ is under the workspace git checkout, git apply finds the PARENT repo and
+  # silently SKIPS the vendor patch -> the source ends up without its generated
+  # CMakeLists.txt ("does not appear to contain CMakeLists.txt"). Stop git traversing
+  # above build/ so vendor git-applies behave as if outside a repo.
+  GIT_CEILING_DIRECTORIES: ${{ github.workspace }}/build
   HOMEBREW_NO_INSTALL_FROM_API: "1"
   HOMEBREW_NO_AUTO_UPDATE: "1"
   GZ_VERSION: ionic
