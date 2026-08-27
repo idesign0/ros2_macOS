@@ -1223,3 +1223,52 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^  yaml-cpp$' "$d/CMak
     "$d/CMakeLists.txt"
   echo "  autoware_test_utils: bare yaml-cpp (x2) -> \${YAML_CPP_LIBRARIES}"
 fi
+
+# --- sync_tooling_msgs (humble+jazzy, identical commit e631c5f0, absent
+#     kilted) -- CMakeLists.txt does `find_package(Protobuf 3.12 REQUIRED)`
+#     (CMake's bundled Module-mode FindProtobuf.cmake) and links the legacy
+#     ${Protobuf_LIBRARIES} var (a bare path to libprotobuf.dylib). Two
+#     stacked bugs, only the first visible in CI (compile fails before the
+#     link step is ever reached):
+#       1. target_include_directories() never adds ${Protobuf_INCLUDE_DIRS}
+#          (same class as the kuka_external_control_sdk fix above) -> the
+#          generated .pb.h's #include "google/protobuf/runtime_version.h"
+#          falls through to the toolchain's global include path, which is
+#          empty after `brew unlink protobuf` -> "file not found".
+#       2. Even once headers resolve, linking the bare libprotobuf.dylib via
+#          ${Protobuf_LIBRARIES} (Module-mode's legacy variable) omits
+#          protobuf's Abseil dependencies (modern protobuf/Abseil split the
+#          runtime; the real link requirements only live on the CONFIG
+#          package's protobuf::libprotobuf IMPORTED target's
+#          INTERFACE_LINK_LIBRARIES, ~35 absl:: components) -> "ld: symbol(s)
+#          not found for architecture arm64" (undefined absl::log_internal::*
+#          etc, referenced by the generated .pb.cc files) — only surfaces
+#          after fixing bug 1, so CI never got far enough to show it.
+#     Real fix: switch to CONFIG mode (`find_package(Protobuf REQUIRED
+#     CONFIG)`, dropping the "3.12" version pin -- protobuf's CONFIG version
+#     file enforces same-major-version compat and rejects "3.12" against the
+#     installed 32.x/6.32.x series, so a versioned CONFIG request errors
+#     outright; 3.12 was a vestigial floor far below anything actually
+#     installed) and link protobuf::libprotobuf directly, which carries both
+#     its own include dirs AND the full Abseil link set as usage
+#     requirements -- no manual ${Protobuf_INCLUDE_DIRS}/absl:: list needed.
+#     protobuf::protoc's IMPORTED_LOCATION isn't set by this brew formula
+#     (only the *_RELEASE config-suffixed property is), so derive
+#     Protobuf_PROTOC_EXECUTABLE from that with a plain-property fallback for
+#     robustness across protobuf formula revisions.
+#     Compile+link-tested end-to-end: real protoc codegen + cmake build of
+#     all 27 real .proto files from this submodule (not a toy proto),
+#     against real brew protobuf 32.0/Abseil, using this exact transform --
+#     rc=0, produced libsync_tooling_msgs.dylib linking cleanly against
+#     libprotobuf + ~15 libabsl_*.dylib (verified via otool -L). The naive
+#     "just add Protobuf_INCLUDE_DIRS" fix (bug 1 alone, matching the
+#     kuka_external_control_sdk precedent) was tried FIRST and confirmed via
+#     this same local probe to compile but then fail at link with the
+#     Abseil symbols -- not committed, since PLAYBOOK.md says don't commit a
+#     transform known to be incomplete. ---
+d="$(_pkg_dir sync_tooling_msgs)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'find_package(Protobuf 3.12 REQUIRED)' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/find_package\(Protobuf 3\.12 REQUIRED\)/find_package(Protobuf REQUIRED CONFIG)\nget_target_property(Protobuf_PROTOC_EXECUTABLE protobuf::protoc IMPORTED_LOCATION_RELEASE)\nif(NOT Protobuf_PROTOC_EXECUTABLE)\n  get_target_property(Protobuf_PROTOC_EXECUTABLE protobuf::protoc IMPORTED_LOCATION)\nendif()/' "$d/CMakeLists.txt"
+  sed "${SEDI[@]}" 's/target_link_libraries(sync_tooling_msgs PUBLIC \${Protobuf_LIBRARIES})/target_link_libraries(sync_tooling_msgs PUBLIC protobuf::libprotobuf)/' "$d/CMakeLists.txt"
+  echo "  sync_tooling_msgs: Protobuf Module->CONFIG mode + protobuf::libprotobuf (Abseil link deps)"
+fi
