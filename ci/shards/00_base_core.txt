@@ -110,6 +110,9 @@ domain_coordinator
 dynamixel_hardware_interface
 dynamixel_interfaces
 dynamixel_sdk
+# yaets: vendored (ros-commondep/yaets, upstream fmrico/yaets) — provides yaets::yaets for
+# easynav_common's tracing session; colcon topo-orders it before easynav_common.
+yaets
 easynav_common
 easynav_controller
 easynav_core
