@@ -857,3 +857,24 @@ if [ -n "$d" ] && [ -d "$d/include/beluga" ] && [ ! -f "$d/include/beluga/detail
   done
   echo "  beluga: PSTL execution-policy compat shim + std::is_execution_policy_v redirect"
 fi
+
+# --- kuka_external_control_sdk: iiqka/CMakeLists.txt hardcodes the grpc codegen plugin as
+#     "protoc-gen-grpc=/usr/bin/grpc_cpp_plugin" (the Debian path) -> "program not found" on
+#     macOS, where it is Homebrew's /opt/homebrew/bin/grpc_cpp_plugin. Repoint it. ---
+d="$(_pkg_dir kuka_external_control_sdk)"
+if [ -n "$d" ]; then
+  for f in $(grep -rl '/usr/bin/grpc_cpp_plugin' "$d" 2>/dev/null); do
+    sed "${SEDI[@]}" 's#/usr/bin/grpc_cpp_plugin#/opt/homebrew/bin/grpc_cpp_plugin#g' "$f"
+    echo "  kuka_external_control_sdk: grpc_cpp_plugin /usr/bin -> /opt/homebrew/bin ($f)"
+  done
+fi
+
+# --- foxglove_bridge: its CMakeLists only has download arms for Linux aarch64/x86_64 and
+#     message(FATAL_ERROR) on every other platform. Foxglove DOES publish a macOS build
+#     (foxglove-v<ver>-cpp-aarch64-apple-darwin.zip). Add a Darwin/arm64 elseif before the
+#     else() so the prebuilt SDK is fetched on macOS. (SHA256 verified for v0.27.0.) PR-able. ---
+d="$(_pkg_dir foxglove_bridge)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'aarch64-apple-darwin' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{(set\(FOXGLOVE_SDK_SHA "4790dad[0-9a-f]+"\)\s*\n)(\s*else\(\))}{$1elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")\n  set(FOXGLOVE_SDK_PLATFORM "aarch64-apple-darwin")\n  set(FOXGLOVE_SDK_SHA "70c6e59cf757ac0480912c13cb2c630a3839de34eba428ef717411dae6b1688e")\n$2}' "$d/CMakeLists.txt"
+  echo "  foxglove_bridge: +Darwin/arm64 SDK download arm"
+fi
