@@ -786,6 +786,32 @@ for _rf in \
   fi
 done
 
+# --- Lane 4 (real bug): rmf_utils/Modular.hpp uses std::to_string (in the modular-
+#     distance overflow message) but includes only <stdexcept>/<limits>/<type_traits>.
+#     libstdc++ pulls std::to_string transitively through those; libc++ (Apple clang)
+#     does NOT -> "no member named 'to_string' in namespace 'std'" when rmf_traffic
+#     (and every rmf_utils consumer) compiles against the installed header. Add the
+#     missing <string>. Compile-tested Apple clang 21 / libc++ -std=c++17: reproduces
+#     the error without it, clean with it. ---
+for _mh in $(find "$ROOT" -path '*rmf_utils/include/rmf_utils/Modular.hpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if ! grep -qE '#include[[:space:]]*<string>' "$_mh"; then
+    perl -0pi -e 's{(#include <type_traits>)}{$1\n#include <string>  // std::to_string (libc++ does not pull it transitively)}' "$_mh"
+    echo "  rmf_utils/Modular.hpp: +#include <string> (std::to_string on libc++) in ${_mh#$ROOT/}"
+  fi
+done
+
+# --- Lane 4 (real bug): cartographer_ros_msgs/CMakeLists.txt falls back to
+#     set(CMAKE_CXX_STANDARD 14) when the toolchain has not already pinned it. But
+#     toolchain.cmake force-includes cartographer_absl_compat.h into every ^cartographer
+#     project, and that shim #include <absl/base/thread_annotations.h> -> Abseil's
+#     policy_checks.h hard-errors "C++ versions less than C++17 are not supported" under
+#     C++14. Bump the fallback to 17 (harmless for a msgs package). ---
+d="$(_pkg_dir cartographer_ros_msgs)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE 'set\(CMAKE_CXX_STANDARD 14\)' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" 's/set(CMAKE_CXX_STANDARD 14)/set(CMAKE_CXX_STANDARD 17)/' "$d/CMakeLists.txt"
+  echo "  cartographer_ros_msgs: CMAKE_CXX_STANDARD 14 -> 17 (absl shim needs C++17)"
+fi
+
 # --- Lane 3: rmf_traffic_editor's gui_lib target_link_libraries() lists the
 #     bare word `yaml-cpp` (not an imported target in this scope, not
 #     ${YAML_CPP_LIBRARIES}) -> CMake emits a raw `-lyaml-cpp` link flag ->
