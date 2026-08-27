@@ -115,12 +115,13 @@
   <h2>Live autofix status</h2>
   <div class="note" id="autofix-status">
   <!-- AUTOFIX-STATUS-START -->
-  <b>Last cycle: 2026-08-19 19:42 UTC</b><br>
-  fmilibrary_vendor (all 3 distros) - fixed — CMP0026 fallout in the same fmi-library ExternalProject (runtime_test.cmake + UseDoxygen.cmake, disabled via CMAKE_ARGS), a broken <code>add_dependencies(expatex ...)</code> call (perl-deleted), an Apple-Clang implicit-function-declaration hard error in vendored minizip (downgraded to warning), and <code>libfmilib_shared.so</code> → <code>${CMAKE_SHARED_LIBRARY_SUFFIX}</code> (macOS builds .dylib); compile-tested end-to-end against a real offline v2.2.3 clone (<code>cmake --build</code> + <code>make install</code> clean) (committed, not pushed)<br>
-  live555_vendor (jazzy only) - fixed — GNU-ld-only <code>--allow-shlib-undefined</code> swapped for Apple ld64's <code>-undefined dynamic_lookup</code> on 3 libraries (a genuine circular HashTable symbol dependency, not decorative), plus a real OpenSSL include-scope bug (PRIVATE→PUBLIC on liveMedia); compile-tested end-to-end with default build options, all libs + demo executables link clean, <code>make install</code> verified (committed, not pushed)<br>
-  nebula_velodyne_common (humble+jazzy) - fixed — same bare-<code>yaml-cpp</code> linker-name bug as rmf_traffic_editor/rmf_traffic_ros2, rewrote to <code>${YAML_CPP_LIBRARIES}</code>; verified structurally + idempotency-checked (committed, not pushed)<br>
+  <b>Last cycle: 2026-08-27 22:15 UTC</b><br>
+  autoware_downsample_filters (humble+jazzy, absent kilted) - fixed — <code>#include &lt;tl_expected/expected.hpp&gt;</code> not found on jazzy/kilted (brew tl-expected installs at <code>tl/expected.hpp</code>); same latent bug affects 6+ other packages project-wide, fixed once via a redirect-shim include dir on the shared <code>Findtl_expected.cmake</code> bridge target; compile-tested (real configure+build+run, <code>tl::expected&lt;int,int&gt;</code> round-trip) (committed, not pushed)<br>
+  autoware_map_projection_loader (humble+jazzy, absent kilted) - fixed — 4th instance of the bare-<code>yaml-cpp</code> linker-name bug, rewrote to <code>${YAML_CPP_LIBRARIES}</code>; verified structurally + idempotency-checked (committed, not pushed)<br>
+  autoware_test_utils (humble+jazzy, absent kilted) - fixed — same bare-<code>yaml-cpp</code> bug, 2 occurrences in one file; verified structurally + idempotency-checked (committed, not pushed)<br>
+  sync_tooling_msgs (humble+jazzy, absent kilted) - fixed — <code>google/protobuf/runtime_version.h</code> not found; the obvious fix compiled but then failed at link with ~35 undefined Abseil symbols (caught by locally building all 27 real .proto files, not just trusting the CI error) — real fix switches to <code>find_package(Protobuf REQUIRED CONFIG)</code> + links <code>protobuf::libprotobuf</code> directly; compile <b>and link</b>-tested end-to-end against real brew protobuf/Abseil, verified via <code>otool -L</code> (committed, not pushed)<br>
   <br>
-  <b>92 packages auto-fixed so far</b>
+  <b>96 packages auto-fixed so far</b>
   <!-- AUTOFIX-STATUS-END -->
   </div>
 
