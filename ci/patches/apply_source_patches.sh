@@ -1060,6 +1060,23 @@ if [ -n "$d" ]; then
   done
 fi
 
+# --- kuka_external_control_sdk: iiqka's protobuf target puts only the generated-code
+#     binary dir on its include path, never ${Protobuf_INCLUDE_DIRS}. The generated
+#     .pb.h does #include "google/protobuf/runtime_version.h", so it then depends on the
+#     toolchain's global -I/opt/homebrew/include -> EMPTY after the gz step's
+#     `brew unlink protobuf` -> "runtime_version.h file not found". kuka's FindProtobuf
+#     resolves protoc AND headers to the SAME protobuf (32.0, via ros2/workspace prefix,
+#     which HAS runtime_version.h) — it just never adds that include dir to the target.
+#     Add ${Protobuf_INCLUDE_DIRS} so the resolved protobuf's headers are on the path,
+#     matching the protoc that generated the code. Validated: kuka's FindProtobuf module
+#     resolves Protobuf_INCLUDE_DIRS to a dir containing runtime_version.h. ---
+for _kc in $(find "$ROOT" -path '*kuka_external_control_sdk/iiqka/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if ! grep -q 'Protobuf_INCLUDE_DIRS' "$_kc"; then
+    perl -0pi -e 's{(target_include_directories\(kuka-iiqka-client-library-protobuf PUBLIC\n\s*"\$<BUILD_INTERFACE:\$\{CMAKE_CURRENT_BINARY_DIR\}>"\n)}{$1  \$\{Protobuf_INCLUDE_DIRS\}\n}' "$_kc"
+    echo "  kuka_external_control_sdk: +\${Protobuf_INCLUDE_DIRS} to iiqka protobuf target (runtime_version.h after brew unlink)"
+  fi
+done
+
 # --- foxglove_bridge: its CMakeLists only has download arms for Linux aarch64/x86_64 and
 #     message(FATAL_ERROR) on every other platform. Foxglove DOES publish a macOS build
 #     (foxglove-v<ver>-cpp-aarch64-apple-darwin.zip). Add a Darwin/arm64 elseif before the
