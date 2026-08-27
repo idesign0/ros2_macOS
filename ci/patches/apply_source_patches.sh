@@ -1099,6 +1099,17 @@ for _mdc in $(find "$ROOT" -path '*foxglove_bridge/src/message_definition_cache.
   fi
 done
 
+# --- point_cloud_msg_wrapper: header uses <experimental/optional> and
+#     std::experimental::optional, both removed from libc++ (Apple clang) ->
+#     "'experimental/optional' file not found". Map to the C++17 <optional> /
+#     std::optional. Compile-tested (Apple clang, libc++, -std=c++17). ---
+for _f in $(find "$ROOT" -path '*point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q 'experimental/optional' "$_f"; then
+    sed "${SEDI[@]}" -e 's#<experimental/optional>#<optional>#g' -e 's/std::experimental::optional/std::optional/g' "$_f"
+    echo "  point_cloud_msg_wrapper: <experimental/optional> -> <optional> in ${_f#$ROOT/}"
+  fi
+done
+
 # --- ouster_ros: ouster_client bundles spdlog+fmt under ouster-sdk/thirdparty, but the
 #     toolchain's global `-isystem /opt/homebrew/include` (brew spdlog, EXTERNAL fmt) is
 #     searched BEFORE ouster's bundled `-isystem .../thirdparty`. brew spdlog has no
