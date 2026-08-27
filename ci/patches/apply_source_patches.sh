@@ -1122,6 +1122,18 @@ for _f in $(find "$ROOT" -path '*turtlebot3_panorama/include/turtlebot3_panorama
   fi
 done
 
+# --- sick_scan_xd: CMakeLists adds `-fno-var-tracking-assignments` (a GCC-only
+#     codegen debug flag) to CMAKE_CXX_FLAGS under `if(NOT WIN32)`, which includes
+#     macOS. Apple clang HARD-errors on it: "unknown argument:
+#     '-fno-var-tracking-assignments'". Strip it (leave -Wno-format-overflow, which
+#     the toolchain's -Wno-unknown-warning-option already tolerates). ---
+for _f in $(find "$ROOT" -path '*sick_scan_xd/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q 'fno-var-tracking-assignments' "$_f"; then
+    sed "${SEDI[@]}" 's/ -fno-var-tracking-assignments//g' "$_f"
+    echo "  sick_scan_xd: strip GCC-only -fno-var-tracking-assignments in ${_f#$ROOT/}"
+  fi
+done
+
 # --- ouster_ros: ouster_client bundles spdlog+fmt under ouster-sdk/thirdparty, but the
 #     toolchain's global `-isystem /opt/homebrew/include` (brew spdlog, EXTERNAL fmt) is
 #     searched BEFORE ouster's bundled `-isystem .../thirdparty`. brew spdlog has no
