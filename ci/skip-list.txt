@@ -147,5 +147,3 @@ dataspeed_can_usb
 # foxglove_compressed_video_transport: find_package(ffmpeg_encoder_decoder) — that package
 # is not in the tree and has no macOS dep. (foxglove_bridge itself is fixed separately.)
 foxglove_compressed_video_transport
-# easynav_common: find_package(yaets) — 'yaets' (event-task lib) is not vendored in this tree.
-easynav_common
