@@ -24,6 +24,14 @@ if(tl-expected_FOUND)
   endif()
   # ...and route the variable through that same target (single source of truth).
   set(tl_expected_LIBRARIES tl_expected::tl_expected)
+  # Several ROS sources `#include <tl_expected/expected.hpp>` (underscore
+  # dir, matching the PickNickRobotics/cpp_polyfills vendored package layout
+  # some distros use instead of this brew bridge) but brew's tl-expected
+  # installs the header at `tl/expected.hpp` -> add a tiny redirect shim on
+  # the target's include path so both spellings resolve. Harmless no-op for
+  # any consumer that only uses `tl/expected.hpp` directly.
+  set_property(TARGET tl_expected::tl_expected APPEND PROPERTY
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}/tl_expected_shim")
 endif()
 
 include(FindPackageHandleStandardArgs)
