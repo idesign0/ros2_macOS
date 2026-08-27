@@ -878,3 +878,18 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'aarch64-apple-darwin'
   perl -0pi -e 's{(set\(FOXGLOVE_SDK_SHA "4790dad[0-9a-f]+"\)\s*\n)(\s*else\(\))}{$1elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")\n  set(FOXGLOVE_SDK_PLATFORM "aarch64-apple-darwin")\n  set(FOXGLOVE_SDK_SHA "70c6e59cf757ac0480912c13cb2c630a3839de34eba428ef717411dae6b1688e")\n$2}' "$d/CMakeLists.txt"
   echo "  foxglove_bridge: +Darwin/arm64 SDK download arm"
 fi
+
+# --- ouster_ros: ouster_client bundles spdlog+fmt under ouster-sdk/thirdparty, but the
+#     toolchain's global `-isystem /opt/homebrew/include` (brew spdlog, EXTERNAL fmt) is
+#     searched BEFORE ouster's bundled `-isystem .../thirdparty`. brew spdlog has no
+#     fmt/bundled/, so <spdlog/spdlog.h> resolves to brew (fmt 11) while
+#     <spdlog/fmt/bundled/args.h> falls through to ouster's bundled fmt -> two fmt versions
+#     in one TU ("redefinition of 'monostate'", "template parameter redefines default arg").
+#     Add the bundled thirdparty as a plain -I (non-SYSTEM, prepended): -I always beats
+#     -isystem, so ALL <spdlog/*> resolve to the bundled copy -> one fmt. Compile-tested
+#     (Apple clang 21): reproduces 20 errors without, 0 with. ---
+for f in $(find . -path '*ouster-sdk/ouster_client/CMakeLists.txt' 2>/dev/null); do
+  grep -q 'BEFORE PRIVATE.*thirdparty>' "$f" && continue
+  perl -0pi -e 's{(target_include_directories\(ouster_client SYSTEM)}{target_include_directories(ouster_client BEFORE PRIVATE \$<BUILD_INTERFACE:\${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty>)\n$1}' "$f"
+  echo "  ouster_client: bundled thirdparty as non-SYSTEM -I (brew-fmt vs bundled-fmt clash) ($f)"
+done

@@ -143,3 +143,9 @@ rqt_image_view
 # package in this tree and not a macOS-resolvable dep; it is a HW USB-CAN driver that
 # can't run on macOS anyway (same class as the SocketCAN drivers above).
 dataspeed_can_usb
+# ── More base reds (2026-08-27): missing external deps not in this tree.
+# foxglove_compressed_video_transport: find_package(ffmpeg_encoder_decoder) — that package
+# is not in the tree and has no macOS dep. (foxglove_bridge itself is fixed separately.)
+foxglove_compressed_video_transport
+# easynav_common: find_package(yaets) — 'yaets' (event-task lib) is not vendored in this tree.
+easynav_common
