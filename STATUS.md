@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-28 07:18 UTC** · refreshed every autofix cycle_
+_updated **2026-08-28 08:45 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 61 package(s): at_sonde_ros_driver auto_apms_behavior_tree_core backward_local_planner bcr_arm_gazebo beluga broll camera_aravis2 cartographer cx_cdb_loader_plugin cx_clips_env_manager cx_config_plugin cx_protobuf_plugin cx_ros_msgs_plugin dynamixel_hardware easynav_costmap_common easynav_simple_common ess_imu_driver2 feetech_ros2_driver ffw_joint_trajectory_command_broadcaster find_object_2d forward_global_planner forward_local_planner grid_map_pcl husarion_ugv_diagnostics husarion_ugv_hardware_interfaces husarion_ugv_lights husarion_ugv_manager kortex_driver kuka_external_control_sdk_examples leo_filters linear_feedback_controller magnetic_model magnetometer_pipeline mapviz mqtt_client nav2_constrained_smoother nmea_hardware_interface novatel_gps_driver open3d_conversions openeb_vendor openni2_camera plansys2_bringup plansys2_tools pure_spinning_local_planner rc_dynamics_api robot_calibration ros_babel_fish_tools rslidar_sdk rtabmap_conversions sick_scan_xd slam_toolbox spinnaker_camera_driver trackdlo_core turtlebot4_base ublox_dgnss_node ublox_gps undo_path_global_planner ur_client_library vrpn_mocap wiimote yasmin_viewer  — 2026-08-28 07:18 UTC**
+> **🔧 Diagnosing 58 new own-error roots — 6 parallel research agents dispatched, synthesis pending**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
@@ -12,9 +12,9 @@ _updated **2026-08-28 07:18 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | queued | 13/20 |  |
-| jazzy | queued | 16/21 |  |
-| kilted | queued | 21/21 |  |
+| humble | queued | 16/20 |  |
+| jazzy | in_progress | 18/21 |  |
+| kilted | in_progress | 21/21 |  |
 
 ## Auto-fixed: **96** packages tracked
 
