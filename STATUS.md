@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-27 22:07 UTC** · refreshed every autofix cycle_
+_updated **2026-08-28 03:27 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **💤 idle — all completed shards drained, waiting for more to finish — 2026-08-27 22:07 UTC**
+> **🔧 fixing 30 package(s): as2_behaviors_swarm_flocking as2_behaviors_trajectory_generation as2_motion_controller broll cx_cdb_loader_plugin cx_clips_env_manager cx_config_plugin cx_protobuf_plugin cx_ros_msgs_plugin dynamixel_hardware feetech_ros2_driver fuse_core gazebo_no_physics_plugin gazebo_video_monitor_plugins irobot_create_gz_plugins irobot_create_toolbox leo_filters novatel_gps_driver open3d_conversions openni2_camera pal_gazebo_plugins rc_dynamics_api sick_scan_xd spinnaker_camera_driver turtlebot4_ignition_gui_plugins ublox_dgnss_node ublox_gps ur_client_library velodyne_gazebo_plugins vrpn_mocap  — 2026-08-28 03:27 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
@@ -12,9 +12,9 @@ _updated **2026-08-27 22:07 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | queued | 2/20 |  |
-| jazzy | queued | 4/21 |  |
-| kilted | queued | 11/21 |  |
+| humble | queued | 7/20 |  |
+| jazzy | queued | 11/21 |  |
+| kilted | queued | 16/21 |  |
 
 ## Auto-fixed: **96** packages tracked
 
