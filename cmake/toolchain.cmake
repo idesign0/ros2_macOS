@@ -78,7 +78,7 @@ set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpy
 set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
 
 # Check the package/project name
-if("${CMAKE_PROJECT_NAME}" STREQUAL "kinematics_interface_pinocchio")
+if("${CMAKE_PROJECT_NAME}" MATCHES "^(kinematics_interface_pinocchio|linear_feedback_controller)$")
     message(STATUS "Stitching Boost and Boost-Python for ${CMAKE_PROJECT_NAME}")
     set(Boost_INCLUDE_DIR "/opt/homebrew/opt/boost/include" CACHE PATH "" FORCE)
     # Explicitly map the Python 3.14 library path you just found
