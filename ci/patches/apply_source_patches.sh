@@ -1157,6 +1157,18 @@ for _f in $(find "$ROOT" -path '*roadmap_explorer*/util/Logger.hpp' -not -path '
   fi
 done
 
+# --- GNU-ld link flags Apple ld64 rejects ("ld: unknown options: ..."): strip on macOS.
+#     rosgraph_monitor add_link_options(-Wl,--no-undefined) under an "OR Clang" guard that
+#     AppleClang matches -> applied; ublox_dgnss_node LINKER:--allow-multiple-definition
+#     unguarded. (broll's --no-undefined is already NOT-APPLE-guarded -> no-op.) These are
+#     macOS-CI-only strips; the flags stay on Linux/upstream. ---
+for _f in $(find "$ROOT" \( -path '*rosgraph_monitor/CMakeLists.txt' -o -path '*ublox_dgnss_node/CMakeLists.txt' -o -path '*rosbag2_broll/broll/CMakeLists.txt' \) -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -qE '"-Wl,--no-undefined"|LINKER:--allow-multiple-definition' "$_f"; then
+    perl -ni -e 'print unless /"-Wl,--no-undefined"|LINKER:--allow-multiple-definition/' "$_f"
+    echo "  strip GNU-ld flag (no-undefined/allow-multiple-definition) in ${_f#$ROOT/}"
+  fi
+done
+
 # --- ouster_ros: ouster_client bundles spdlog+fmt under ouster-sdk/thirdparty, but the
 #     toolchain's global `-isystem /opt/homebrew/include` (brew spdlog, EXTERNAL fmt) is
 #     searched BEFORE ouster's bundled `-isystem .../thirdparty`. brew spdlog has no
@@ -1272,3 +1284,181 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'find_package(Protobuf 3
   sed "${SEDI[@]}" 's/target_link_libraries(sync_tooling_msgs PUBLIC \${Protobuf_LIBRARIES})/target_link_libraries(sync_tooling_msgs PUBLIC protobuf::libprotobuf)/' "$d/CMakeLists.txt"
   echo "  sync_tooling_msgs: Protobuf Module->CONFIG mode + protobuf::libprotobuf (Abseil link deps)"
 fi
+
+
+# --- broll (ros-tooling/rosbag2_broll, same commit all 3 present): decode_node_component
+#     hardcodes `target_link_options(... "-Wl,--no-undefined")` (GNU-ld-only flag) ->
+#     "ld: unknown options: --no-undefined". Apple's ld64 already defaults to erroring on
+#     undefined symbols for a shared lib with no `-undefined dynamic_lookup` override, so
+#     dropping the flag on macOS is a no-op behavior change (same reasoning as the
+#     rmw_stats_shim --no-undefined fix). ---
+d="$(_pkg_dir broll)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^target_link_options\(decode_node_component PRIVATE "-Wl,--no-undefined"\)$' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/target_link_options\(decode_node_component PRIVATE "-Wl,--no-undefined"\)/if(NOT APPLE)\n  target_link_options(decode_node_component PRIVATE "-Wl,--no-undefined")\nendif()/' "$d/CMakeLists.txt"
+  echo "  broll: guard GNU-ld-only -Wl,--no-undefined with if(NOT APPLE)"
+fi
+
+# --- ffw_joint_trajectory_command_broadcaster (jazzy only): -Wsign-conversion promoted to
+#     -Werror. int32_t delay_ns implicitly narrows to the uint32_t nanoseconds param of
+#     rclcpp::Duration(int32_t, uint32_t). Explicit cast, no behavior change. ---
+d="$(_pkg_dir ffw_joint_trajectory_command_broadcaster)"
+if [ -n "$d" ] && [ -f "$d/src/joint_trajectory_command_broadcaster.cpp" ] && grep -q 'rclcpp::Duration(0, delay_ns)' "$d/src/joint_trajectory_command_broadcaster.cpp"; then
+  sed "${SEDI[@]}" 's/rclcpp::Duration(0, delay_ns)/rclcpp::Duration(0, static_cast<uint32_t>(delay_ns))/' "$d/src/joint_trajectory_command_broadcaster.cpp"
+  echo "  ffw_joint_trajectory_command_broadcaster: explicit cast delay_ns -> uint32_t"
+fi
+
+# --- husarion_ugv_lights (humble+jazzy, different per-distro commits but identical
+#     CMakeLists construct): bare `yaml-cpp` as a target_link_libraries() name on the two
+#     real (non-test) targets -> "ld: library 'yaml-cpp' not found". Same class of bug as
+#     rmf_traffic_editor/nebula_velodyne_common/autoware_test_utils; swap for
+#     ${YAML_CPP_LIBRARIES}. ---
+d="$(_pkg_dir husarion_ugv_lights)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^target_link_libraries\(animation_plugins png yaml-cpp\)$' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e 's/^target_link_libraries(animation_plugins png yaml-cpp)$/target_link_libraries(animation_plugins png ${YAML_CPP_LIBRARIES})/' \
+    -e 's/^target_link_libraries(lights_controller_node_component yaml-cpp$/target_link_libraries(lights_controller_node_component ${YAML_CPP_LIBRARIES}/' \
+    "$d/CMakeLists.txt"
+  echo "  husarion_ugv_lights: bare yaml-cpp (x2, non-test targets) -> \${YAML_CPP_LIBRARIES}"
+fi
+
+# --- ros_babel_fish_tools: same bare-yaml-cpp-as-linker-name bug, single INTERFACE
+#     target. ---
+d="$(_pkg_dir ros_babel_fish_tools)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^  yaml-cpp$' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" 's/^  yaml-cpp$/  ${YAML_CPP_LIBRARIES}/' "$d/CMakeLists.txt"
+  echo "  ros_babel_fish_tools: bare yaml-cpp -> \${YAML_CPP_LIBRARIES}"
+fi
+
+# --- ur_client_library (all 3, identical commit, vendored 3rdparty/httplib/httplib.h):
+#     `#elif defined SOCK_CLOEXEC` assumes SOCK_CLOEXEC-defined implies accept4() exists.
+#     True on Linux; macOS/Darwin *does* define the SOCK_CLOEXEC constant (for use with
+#     socket()) but has no accept4() syscall at all -> "use of undeclared identifier
+#     'accept4'". Narrow the branch to Linux specifically; macOS falls through to the
+#     plain accept() branch (functionally equivalent minus the atomic CLOEXEC race, which
+#     httplib's own #else path already accepts as fine on platforms without accept4). ---
+d="$(_pkg_dir ur_client_library)"
+f="$d/3rdparty/urcl_3rdparty/httplib/httplib.h"
+if [ -n "$d" ] && [ -f "$f" ] && grep -q '#elif defined SOCK_CLOEXEC$' "$f"; then
+  perl -0pi -e 's/#elif defined SOCK_CLOEXEC\n(\s*socket_t sock = accept4\(svr_sock_, nullptr, nullptr, SOCK_CLOEXEC\);\n)/#elif defined(SOCK_CLOEXEC) \&\& defined(__linux__)\n$1/' "$f"
+  echo "  ur_client_library: vendored httplib.h accept4 branch -> Linux-only (macOS has no accept4)"
+fi
+
+# --- ublox_gps (all 3, identical commit): own cmake/Findasio.cmake does a bare
+#     find_path(asio.hpp) with NO PATHS at all -> never finds brew's keg-only-adjacent
+#     asio (installed at /opt/homebrew/opt/asio/include, not always symlinked into
+#     /opt/homebrew/include). Same class of fix as the libmavconn FindASIO.cmake patch
+#     above (Lane 1b), different file. ---
+d="$(_pkg_dir ublox_gps)"
+f="$d/cmake/Findasio.cmake"
+if [ -n "$d" ] && [ -f "$f" ] && grep -q 'find_path(ASIO_INCLUDE_DIR NAMES asio.hpp)' "$f"; then
+  sed "${SEDI[@]}" 's#find_path(ASIO_INCLUDE_DIR NAMES asio.hpp)#find_path(ASIO_INCLUDE_DIR NAMES asio.hpp PATHS /opt/homebrew/include /opt/homebrew/opt/asio/include)#' "$f"
+  echo "  ublox_gps: Findasio.cmake += /opt/homebrew include dirs"
+fi
+
+# --- cx_config_plugin (ros-drivers/clips_executive, jazzy+kilted, dir named
+#     config_plugin): `if(NOT CMAKE_CXX_STANDARD) set(CMAKE_CXX_STANDARD 20) endif()`
+#     never fires because the repo-wide cmake/toolchain.cmake already sets
+#     CMAKE_CXX_STANDARD=17 (applied via CMAKE_TOOLCHAIN_FILE before project()) -> the
+#     package silently builds at C++17 -> std::string::starts_with/ends_with (C++20)
+#     don't exist -> "no member named 'starts_with'". Force 20 unconditionally for this
+#     package (matches its own stated intent), overriding the toolchain default just for
+#     this target's directory scope. ---
+d="$(_pkg_dir config_plugin)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qF 'if(NOT CMAKE_CXX_STANDARD)' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/if\(NOT CMAKE_CXX_STANDARD\)\n  set\(CMAKE_CXX_STANDARD 20\)\nendif\(\)/set(CMAKE_CXX_STANDARD 20)/' "$d/CMakeLists.txt"
+  echo "  cx_config_plugin: force CMAKE_CXX_STANDARD 20 (toolchain's global 17 was defeating the guard)"
+fi
+
+# --- SMACC2 nav2z_client custom_planners family (backward_local_planner,
+#     forward_local_planner, undo_path_global_planner): CMakeLists' `dependencies` list
+#     (read by ament_target_dependencies()) already includes `visualization_msgs`, but
+#     there is no `find_package(visualization_msgs)` call above it -> "ament_target_
+#     dependencies() the passed package name 'visualization_msgs' was not found before".
+#     Works on Linux only by accident (some other found package transitively drags the
+#     include path in); exposed on this macOS toolchain. Add the missing find_package
+#     call next to the package's other find_package() lines. ---
+for _pkg in backward_local_planner forward_local_planner undo_path_global_planner; do
+  d="$(_pkg_dir "$_pkg")"
+  if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q '^  visualization_msgs$' "$d/CMakeLists.txt" && ! grep -q 'find_package(visualization_msgs)' "$d/CMakeLists.txt"; then
+    perl -pi -e 's/^find_package\(ament_cmake REQUIRED\)$/find_package(ament_cmake REQUIRED)\nfind_package(visualization_msgs)/' "$d/CMakeLists.txt"
+    echo "  $_pkg: add missing find_package(visualization_msgs)"
+  fi
+done
+
+# --- pure_spinning_local_planner: same nav2z_client family, but visualization_msgs is
+#     used directly in the header (#include <visualization_msgs/msg/marker_array.hpp>)
+#     without being declared anywhere (not in `dependencies`, not in package.xml) ->
+#     "file not found" at compile time (fails earlier than the ament_target_dependencies
+#     check the sibling planners hit). Add find_package + dependencies-list entry +
+#     package.xml depend. ---
+d="$(_pkg_dir pure_spinning_local_planner)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'visualization_msgs' "$d/CMakeLists.txt"; then
+  perl -pi -e 's/^find_package\(ament_cmake REQUIRED\)$/find_package(ament_cmake REQUIRED)\nfind_package(visualization_msgs)/' "$d/CMakeLists.txt"
+  perl -0pi -e 's/(set\(dependencies\n  nav2_core\n)/$1  visualization_msgs\n/' "$d/CMakeLists.txt"
+  echo "  pure_spinning_local_planner: add find_package(visualization_msgs) + dependencies-list entry"
+fi
+if [ -n "$d" ] && [ -f "$d/package.xml" ] && ! grep -q '<depend>visualization_msgs</depend>' "$d/package.xml"; then
+  perl -0pi -e 's{(<depend>geometry_msgs</depend>)}{$1\n  <depend>visualization_msgs</depend>}' "$d/package.xml"
+  echo "  pure_spinning_local_planner: add package.xml <depend>visualization_msgs</depend>"
+fi
+
+# --- forward_global_planner + undo_path_global_planner (SMACC2 nav2z_client): real,
+#     platform-independent upstream API drift (would fail identically on Linux with the
+#     same nav2_core version) -- nav2_core::GlobalPlanner::createPlan() gained a 3rd
+#     parameter, `std::function<bool()> cancel_checker`, but these two plugins still
+#     override the old 2-param signature -> "allocating an object of abstract class type"
+#     (pure virtual createPlan never actually overridden). Add the 3rd parameter to both
+#     the header declaration and the .cpp definition; body ignores it (neither planner
+#     currently supports mid-plan cancellation, matching their pre-existing behavior). ---
+for _pkg in forward_global_planner undo_path_global_planner; do
+  d="$(_pkg_dir "$_pkg")"
+  [ -z "$d" ] && continue
+  hf="$(find "$d/include" -iname "${_pkg}.hpp" 2>/dev/null | head -1)"
+  cf="$(find "$d/src" -iname "${_pkg}.cpp" 2>/dev/null | head -1)"
+  if [ -n "$hf" ] && grep -qF 'const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal);' "$hf"; then
+    sed "${SEDI[@]}" 's/const geometry_msgs::msg::PoseStamped \& start, const geometry_msgs::msg::PoseStamped \& goal);/const geometry_msgs::msg::PoseStamped \& start, const geometry_msgs::msg::PoseStamped \& goal,\n    std::function<bool()> cancel_checker) override;/' "$hf"
+    echo "  $_pkg: createPlan header += cancel_checker param (nav2_core::GlobalPlanner API drift)"
+  fi
+  if [ -n "$cf" ] && grep -qF 'const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal)' "$cf"; then
+    sed "${SEDI[@]}" 's/const geometry_msgs::msg::PoseStamped \& start, const geometry_msgs::msg::PoseStamped \& goal)$/const geometry_msgs::msg::PoseStamped \& start, const geometry_msgs::msg::PoseStamped \& goal,\n  std::function<bool()> \/*cancel_checker*\/)/' "$cf"
+    echo "  $_pkg: createPlan definition += cancel_checker param"
+  fi
+done
+
+# --- plansys2_bringup (SMACC2-adjacent, all 3 different per-distro commits, same
+#     construct): plansys2_node.cpp calls the raw Linux syscall wrapper
+#     sched_setscheduler(0, SCHED_FIFO, &sch) with no include and no macOS path ->
+#     "use of undeclared identifier 'sched_setscheduler'". macOS has no equivalent
+#     process-wide syscall; the closest portable analog is pthread_setschedparam() on the
+#     calling thread. Guard: real Linux behavior unchanged, macOS gets the pthread
+#     equivalent. ---
+d="$(_pkg_dir plansys2_bringup)"
+f="$d/src/plansys2_bringup/plansys2_node.cpp"
+if [ -n "$d" ] && [ -f "$f" ] && grep -q 'sched_setscheduler(0, SCHED_FIFO, &sch) == -1' "$f"; then
+  perl -0pi -e 's/if \(sched_setscheduler\(0, SCHED_FIFO, &sch\) == -1\) \{/#ifdef __linux__\n        bool sched_failed = (sched_setscheduler(0, SCHED_FIFO, &sch) == -1);\n#else\n        bool sched_failed = (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch) != 0);\n#endif\n        if (sched_failed) {/' "$f"
+  echo "  plansys2_bringup: sched_setscheduler -> pthread_setschedparam on non-Linux"
+fi
+
+# --- find_object_2d (humble only -- pinned at the older 0.7.0-foxy commit; jazzy/kilted
+#     pin a newer commit where this was already dropped upstream): `cmake_policy(SET
+#     CMP0043/CMP0042 OLD)` -- modern CMake (post ~3.20) removed the ability to set these
+#     to OLD at all, now a hard error instead of a silent no-op. Both are legacy
+#     COMPILE_DEFINITIONS-per-config/RPATH shims no longer needed. ---
+d="$(_pkg_dir find_object_2d)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'cmake_policy(SET CMP0043 OLD)' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/if \(POLICY CMP0043\)\n\s*cmake_policy\(SET CMP0043 OLD\)\nendif \(POLICY CMP0043\)\n//; s/if \(POLICY CMP0042\)\n\s*cmake_policy\(SET CMP0042 OLD\)\nendif \(POLICY CMP0042\)\n//' "$d/CMakeLists.txt"
+  echo "  find_object_2d: drop no-longer-settable cmake_policy(SET CMP0043/CMP0042 OLD)"
+fi
+
+# --- rc_dynamics_api (all 3, identical commit): net_utils.cc + data_receiver.h use
+#     TEMP_FAILURE_RETRY(), a glibc-only <unistd.h> extension macro with no macOS/libc++
+#     equivalent -> "use of undeclared identifier". The wrapped calls (inet_pton, etc.)
+#     don't need EINTR-retry semantics here; add a local fallback macro that just
+#     evaluates the expression once, matching the class of shim commonly used for
+#     portable code (BSD/macOS libc simply never defines this macro). ---
+for _f in $(find "$ROOT" -path '*rc_dynamics_api/rc_dynamics_api/net_utils.cc' -o -path '*rc_dynamics_api/rc_dynamics_api/data_receiver.h' 2>/dev/null); do
+  if grep -q 'TEMP_FAILURE_RETRY' "$_f" && ! grep -q '#ifndef TEMP_FAILURE_RETRY' "$_f"; then
+    perl -0pi -e 's/(#include <unistd\.h>\n)/$1\n#ifndef TEMP_FAILURE_RETRY\n#define TEMP_FAILURE_RETRY(expression) (expression)\n#endif\n/' "$_f"
+    echo "  rc_dynamics_api: add TEMP_FAILURE_RETRY fallback macro in ${_f#$ROOT/}"
+  fi
+done
