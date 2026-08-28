@@ -4,6 +4,7 @@ action_msgs
 actionlib_msgs
 actuator_msgs
 admittance_controller
+battery_state_broadcaster
 ament_black
 ament_clang_format
 ament_clang_tidy
