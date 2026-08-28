@@ -295,6 +295,5 @@ xacro
 xtensor
 xtl
 yaml_cpp_vendor
-yasmin_msgs
 zenoh_cpp_vendor
 zstd_vendor

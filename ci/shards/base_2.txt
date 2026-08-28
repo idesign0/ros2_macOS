@@ -696,3 +696,4 @@ wireless_msgs
 wrapyfi_ros2_interfaces
 zed_description
 zed_msgs
+yasmin_msgs
