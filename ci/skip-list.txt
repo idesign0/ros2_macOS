@@ -173,3 +173,55 @@ nerian_stereo
 
 # adi_iio: requires libiio (iio.h) — Analog Devices IIO lib not in the macOS brew set.
 adi_iio
+
+# --- autofix cycle 2026-08-28 ---
+# wiimote: wiimote-extras.cmake hard-requires libbluetooth (BlueZ, Linux-only) and
+# libcwiid (Wiimote-over-Bluetooth, built on BlueZ) via its own FATAL_ERROR gate —
+# no macOS IOBluetooth/CoreBluetooth backend implemented upstream. Genuinely Linux-only.
+wiimote
+
+# kortex_driver / kortex_bringup: cascade of the already-skipped kortex_api (Kinova's
+# closed-source SDK, prebuilt linux-x86_64-only .so, no arm64/macOS binary — see the
+# kortex_api entry above). Both hard find_package(kortex_api REQUIRED); skip alongside
+# it so they stop cascading instead of re-surfacing as "new" roots every cycle.
+kortex_driver
+kortex_bringup
+
+# turtlebot4_base: find_library(gpiod_library NAMES libgpiod.so) — libgpiod is a Linux
+# GPIO character-device userspace library (also hardcodes the .so extension, would fail
+# on macOS even if libgpiod existed). No macOS GPIO chardev equivalent.
+turtlebot4_base
+
+# spinnaker_camera_driver: cmake/DownloadSpinnaker.cmake requires `lsb_release` (Debian/
+# Ubuntu-only) to pick which vendor Spinnaker SDK archive to download; moot regardless
+# since FLIR's proprietary Spinnaker SDK has no macOS/arm64 binary published upstream.
+spinnaker_camera_driver
+
+# openni2_camera: pkg_check_modules(PC_OPENNI2 REQUIRED openni2) — OpenNI2 was EOL'd by
+# upstream (Apple acquired PrimeSense/discontinued the SDK) and was never packaged for
+# macOS ARM; no Homebrew formula, no pkg-config file, no vendored source in this tree.
+openni2_camera
+
+# open3d_conversions: needs Open3D (large 3D lib, not in the macOS brew set)
+open3d_conversions
+
+# rc_genicam_driver: needs RC_GENICAM_API (Roboception GenICam SDK, proprietary, no macOS)
+rc_genicam_driver
+
+# rc_reason_clients: Roboception rc_visard SDK client (proprietary, no macOS)
+rc_reason_clients
+
+# ign_rviz_common: needs classic ignition-math6; tree vendors gz-* only (classic ignition unsupported on macOS)
+ign_rviz_common
+
+# heaphook: Linux LD_PRELOAD heap hook (tlsf); macOS has no LD_PRELOAD equivalent
+heaphook
+
+# metavision_driver: Prophesee Metavision SDK (openeb) — Linux-only event-camera SDK
+metavision_driver
+
+# depthai: Luxonis depthai-core via vcpkg — Linux/USB SDK, no macOS build
+depthai
+
+# avt_vimba_camera: Allied Vision Vimba SDK — ships x86-64 Linux .so only (unknown file type on arm64)
+avt_vimba_camera
