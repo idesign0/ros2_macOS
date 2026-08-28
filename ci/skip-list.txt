@@ -225,3 +225,6 @@ depthai
 
 # avt_vimba_camera: Allied Vision Vimba SDK — ships x86-64 Linux .so only (unknown file type on arm64)
 avt_vimba_camera
+
+# robotiq_driver: find_package(serial REQUIRED) wants wjwwood/serial (ships serialConfig.cmake); not in the tree, and brew "serial" is an unrelated CLI tool with no CMake config. No macOS build.
+robotiq_driver
