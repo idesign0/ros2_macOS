@@ -228,3 +228,24 @@ avt_vimba_camera
 
 # robotiq_driver: find_package(serial REQUIRED) wants wjwwood/serial (ships serialConfig.cmake); not in the tree, and brew "serial" is an unrelated CLI tool with no CMake config. No macOS build.
 robotiq_driver
+
+# acado_vendor: ACADO uses CMake policy CMP0042 (removed in CMake 4.x); dead solver, no macOS build
+acado_vendor
+
+# tvm_vendor: requires Vulkan (USE_VULKAN=ON); macOS has no standard Vulkan
+tvm_vendor
+
+# nao_meshes: mesh installer hard-rejects host arch arm64 (x86-only installer)
+nao_meshes
+
+# pepper_meshes: mesh installer hard-rejects host arch arm64 (x86-only installer)
+pepper_meshes
+
+# novatel_gps_driver: requires swri_serial_util (Linux serial, skipped) — cascade
+novatel_gps_driver
+
+# novatel_oem7_driver: Novatel OEM7 driver — swri/serial Linux deps, no macOS build
+novatel_oem7_driver
+
+# ur_client_library: bundled 3rdparty httplib uses accept4() (Linux-only syscall)
+ur_client_library
