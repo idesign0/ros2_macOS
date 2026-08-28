@@ -214,8 +214,16 @@ set(Qt5_DIR "/opt/homebrew/opt/qt@5/lib/cmake/Qt5" CACHE PATH "Qt5 CMake path")
 set(QT5_PREFIX "/opt/homebrew/opt/qt@5" CACHE PATH "Qt5 prefix path")
 set(Qt6_DIR "/opt/homebrew/opt/qt/lib/cmake/Qt6" CACHE PATH "Qt6 CMake path")
 set(QT6_PREFIX "/opt/homebrew/opt/qt" CACHE PATH "Qt6 prefix path")
-set(CMAKE_PREFIX_PATH "${QT6_PREFIX}/lib/cmake;${QT5_PREFIX}/lib/cmake;${CMAKE_PREFIX_PATH}" CACHE PATH "Qt CMake paths" FORCE)
-set(ENV{PATH} "${QT6_PREFIX}/bin:${QT5_PREFIX}/bin:$ENV{PATH}")
+# Qt5/Qt6 mixing fix: the ROS base (rviz_common, qt_gui_cpp) is built with Qt5, but
+# rviz-plugin packages do find_package(QT NAMES Qt6 Qt5) which picks Qt6 whenever Qt6 is
+# on CMAKE_PREFIX_PATH -> they link Qt6::Widgets while rviz_common is Qt5 -> "INTERFACE_
+# QT_MAJOR_VERSION does not agree" (octomap_rviz_plugins, rviz_2d_overlay_plugins, mapviz,
+# autoware_*_rviz_plugin, ...). Keep ONLY Qt5 on CMAKE_PREFIX_PATH so the versionless
+# find resolves to Qt5 (matching the base). Qt6 stays reachable for anything that does an
+# explicit find_package(Qt6) via the Qt6_DIR cache var set above. Verified: with Qt5-only
+# path + Qt6_DIR set, find_package(QT NAMES Qt6 Qt5) -> Qt5, and find_package(Qt6) -> FOUND.
+set(CMAKE_PREFIX_PATH "${QT5_PREFIX}/lib/cmake;${CMAKE_PREFIX_PATH}" CACHE PATH "Qt CMake paths" FORCE)
+set(ENV{PATH} "${QT5_PREFIX}/bin:${QT6_PREFIX}/bin:$ENV{PATH}")  # Qt5 tools (moc/uic) first to match
 set(CMAKE_FIND_FRAMEWORK LAST)
 
 # --- OpenGL/GLEW/GLUT for Qt/Ogre ---
