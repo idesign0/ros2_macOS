@@ -1169,6 +1169,53 @@ for _f in $(find "$ROOT" \( -path '*rosgraph_monitor/CMakeLists.txt' -o -path '*
   fi
 done
 
+# --- yaml_cpp_vendor: the vendored yaml-cpp-config sets
+#     YAML_CPP_LIBRARIES="@EXPORT_TARGETS@" -> the BARE name "yaml-cpp", so every
+#     consumer using ${YAML_CPP_LIBRARIES} emits a fragile -lyaml-cpp AND clobbers the
+#     toolchain's absolute-path override. Patch yaml-cpp's config template to set
+#     YAML_CPP_LIBRARIES to the imported target yaml-cpp::yaml-cpp (carries the absolute
+#     .dylib path; both versions define it via install(EXPORT NAMESPACE yaml-cpp::)).
+#     jazzy/kilted: ament_vendor 0.8.0 globs patches/*.patch (git apply -p1). humble:
+#     ExternalProject 0.7.0 -> add a PATCH_COMMAND. Tested: git apply -p1 clean on both. ---
+d="$(_pkg_dir yaml_cpp_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ]; then
+  if grep -q 'VCS_VERSION 0.8.0' "$d/CMakeLists.txt" && [ ! -f "$d/patches/0002-yaml-cpp-libraries-target.patch" ]; then
+    mkdir -p "$d/patches"
+    cat > "$d/patches/0002-yaml-cpp-libraries-target.patch" <<'PATCHEOF'
+diff --git a/yaml-cpp-config.cmake.in b/yaml-cpp-config.cmake.in
+index 799b9b4..610298f 100644
+--- a/yaml-cpp-config.cmake.in
++++ b/yaml-cpp-config.cmake.in
+@@ -17,6 +17,6 @@ set(YAML_CPP_SHARED_LIBS_BUILT "@PACKAGE_YAML_BUILD_SHARED_LIBS@")
+ include(@PACKAGE_CONFIG_EXPORT_DIR@/yaml-cpp-targets.cmake)
+ 
+ # These are IMPORTED targets created by yaml-cpp-targets.cmake
+-set(YAML_CPP_LIBRARIES "@EXPORT_TARGETS@")
++set(YAML_CPP_LIBRARIES yaml-cpp::yaml-cpp)
+ 
+ check_required_components(@EXPORT_TARGETS@)
+PATCHEOF
+    echo "  yaml_cpp_vendor (0.8.0): +patches/0002 (YAML_CPP_LIBRARIES -> yaml-cpp::yaml-cpp target)"
+  fi
+  if grep -q 'ExternalProject_Add(yaml_cpp-0.7.0' "$d/CMakeLists.txt" && ! grep -q 'yaml-cpp-libraries-target' "$d/CMakeLists.txt"; then
+    mkdir -p "$d/patches"
+    cat > "$d/patches/0001-yaml-cpp-libraries-target.patch" <<'PATCHEOF'
+diff --git a/yaml-cpp-config.cmake.in b/yaml-cpp-config.cmake.in
+index 7b41e3f..a9f513e 100644
+--- a/yaml-cpp-config.cmake.in
++++ b/yaml-cpp-config.cmake.in
+@@ -11,4 +11,4 @@ set(YAML_CPP_INCLUDE_DIR "@CONFIG_INCLUDE_DIRS@")
+ include("${YAML_CPP_CMAKE_DIR}/yaml-cpp-targets.cmake")
+ 
+ # These are IMPORTED targets created by yaml-cpp-targets.cmake
+-set(YAML_CPP_LIBRARIES "@EXPORT_TARGETS@")
++set(YAML_CPP_LIBRARIES yaml-cpp::yaml-cpp)
+PATCHEOF
+    perl -0pi -e 's{(\n[ \t]*URL_MD5 [0-9a-f]+\n)}{$1    PATCH_COMMAND git apply --whitespace=nowarn -p1 \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0001-yaml-cpp-libraries-target.patch\n}' "$d/CMakeLists.txt"
+    echo "  yaml_cpp_vendor (0.7.0): +patches/0001 + PATCH_COMMAND (YAML_CPP_LIBRARIES -> yaml-cpp::yaml-cpp target)"
+  fi
+fi
+
 # --- ouster_ros: ouster_client bundles spdlog+fmt under ouster-sdk/thirdparty, but the
 #     toolchain's global `-isystem /opt/homebrew/include` (brew spdlog, EXTERNAL fmt) is
 #     searched BEFORE ouster's bundled `-isystem .../thirdparty`. brew spdlog has no
