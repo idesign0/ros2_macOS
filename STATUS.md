@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-28 09:56 UTC** · refreshed every autofix cycle_
+_updated **2026-08-28 10:56 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-28 09:56 UTC**
+> **🔧 fixing 6 package(s): camera_aravis2 foros mapviz mqtt_client psdk_wrapper wiimote  — 2026-08-28 10:56 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
@@ -12,8 +12,8 @@ _updated **2026-08-28 09:56 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | in_progress | 19/20 |  |
-| jazzy | in_progress | 21/21 |  |
+| humble | completed | 20/20 | success |
+| jazzy | completed | 21/21 | failure |
 | kilted | completed | 21/21 | success |
 
 ## Auto-fixed: **96** packages tracked
@@ -42,3 +42,5 @@ f7a6b8fb ci(DISTRO): skip-list += husarion_asset_server, kortex_api [auto] [skip
   sync_tooling_msgs (humble+jazzy, absent kilted) - fixed — google/protobuf/runtime_version.h not found; the obvious fix compiled but then failed at link with ~35 undefined Abseil symbols (caught by locally building all 27 real .proto files, not just trusting the CI error) — real fix switches to find_package(Protobuf REQUIRED CONFIG) + links protobuf::libprotobuf directly; compile and link-tested end-to-end against real brew protobuf/Abseil, verified via otool -L (committed, not pushed)
   96 packages auto-fixed so far
 ```
+
+**All three runners are DONE** — next: review the `[auto]` commits, push, and dispatch a fresh round.
