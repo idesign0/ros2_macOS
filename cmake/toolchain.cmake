@@ -346,6 +346,14 @@ endif()
 set(Eigen3_DIR "/opt/homebrew/opt/eigen@3/share/eigen3/cmake" CACHE PATH "" FORCE)
 list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen@3")
 
+# --- ICU4C (Homebrew, keg-only) ---
+# cx_ros_msgs_plugin (ros-drivers/clips_executive) calls
+# find_package(ICU REQUIRED COMPONENTS uc i18n). icu4c is keg-only (not
+# symlinked into /opt/homebrew/{include,lib}) so CMake's bundled FindICU sees
+# the pkg-config version but can't locate the actual headers/libs without an
+# explicit prefix hint.
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/icu4c")
+
 # --- Google glog (Homebrew) ---
 set(GLOG_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "glog include path" FORCE)
 set(GLOG_LIBRARY "/opt/homebrew/lib/libglog.dylib" CACHE FILEPATH "glog library" FORCE)
@@ -429,6 +437,19 @@ endif()
 list(APPEND CMAKE_PREFIX_PATH  "/opt/homebrew")
 list(APPEND CMAKE_LIBRARY_PATH "/opt/homebrew/lib")
 list(APPEND CMAKE_INCLUDE_PATH "/opt/homebrew/include")
+
+# --- asio: brew asio (1.36) is too new for several consumers and is deliberately
+#     `brew unlink`ed (do NOT re-link). Fast-DDS vendors asio 1.34.2 under
+#     thirdparty/asio (checked out via --recursive submodules). Point CMAKE_INCLUDE_PATH
+#     at it so find_path(asio.hpp) in asio_cmake_module's FindASIO (io_context) and the
+#     per-package Findasio (ublox_gps, ecal, ...) resolve the vendored copy. Header-only,
+#     so include-path is all that's needed; scoped to find_path (not a global -I) so it
+#     doesn't shadow Fast-DDS's own relative use. ---
+WORKSPACE_PATH(_FASTDDS_ASIO_INC "eProsima/Fast-DDS/thirdparty/asio/asio/include")
+if(EXISTS "${_FASTDDS_ASIO_INC}/asio.hpp")
+  list(APPEND CMAKE_INCLUDE_PATH "${_FASTDDS_ASIO_INC}")
+  message(STATUS "Toolchain: using Fast-DDS vendored asio 1.34.2 at ${_FASTDDS_ASIO_INC}")
+endif()
 link_directories(/opt/homebrew/lib)
 include_directories(SYSTEM /opt/homebrew/include)
 foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
