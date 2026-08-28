@@ -229,3 +229,12 @@ novatel_oem7_driver
 
 # ur_client_library: bundled 3rdparty httplib uses accept4() (Linux-only syscall)
 ur_client_library
+
+# magnetic_model: requires cras_cpp_common (ctu-vras common lib) which is not in the tree — cascade, cannot build
+magnetic_model
+
+# magnetometer_pipeline: requires cras_cpp_common (ctu-vras common lib) which is not in the tree — cascade, cannot build
+magnetometer_pipeline
+
+# compass_interfaces: requires cras_cpp_common (ctu-vras common lib) which is not in the tree — cascade, cannot build
+compass_interfaces
