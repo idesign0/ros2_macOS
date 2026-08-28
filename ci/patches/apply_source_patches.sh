@@ -1175,28 +1175,11 @@ done
 #     toolchain's absolute-path override. Patch yaml-cpp's config template to set
 #     YAML_CPP_LIBRARIES to the imported target yaml-cpp::yaml-cpp (carries the absolute
 #     .dylib path; both versions define it via install(EXPORT NAMESPACE yaml-cpp::)).
-#     jazzy/kilted: ament_vendor 0.8.0 globs patches/*.patch (git apply -p1). humble:
-#     ExternalProject 0.7.0 -> add a PATCH_COMMAND. Tested: git apply -p1 clean on both. ---
+#     humble (0.7.0 ExternalProject, unforked upstream): add a PATCH_COMMAND here.
+#     jazzy/kilted (0.8.0) carry the same change as patches/0002 IN the id_yaml_cpp_vendor
+#     fork (ament_vendor globs patches/). Tested: git apply -p1 clean on both tags. ---
 d="$(_pkg_dir yaml_cpp_vendor)"
 if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ]; then
-  if grep -q 'VCS_VERSION 0.8.0' "$d/CMakeLists.txt" && [ ! -f "$d/patches/0002-yaml-cpp-libraries-target.patch" ]; then
-    mkdir -p "$d/patches"
-    cat > "$d/patches/0002-yaml-cpp-libraries-target.patch" <<'PATCHEOF'
-diff --git a/yaml-cpp-config.cmake.in b/yaml-cpp-config.cmake.in
-index 799b9b4..610298f 100644
---- a/yaml-cpp-config.cmake.in
-+++ b/yaml-cpp-config.cmake.in
-@@ -17,6 +17,6 @@ set(YAML_CPP_SHARED_LIBS_BUILT "@PACKAGE_YAML_BUILD_SHARED_LIBS@")
- include(@PACKAGE_CONFIG_EXPORT_DIR@/yaml-cpp-targets.cmake)
- 
- # These are IMPORTED targets created by yaml-cpp-targets.cmake
--set(YAML_CPP_LIBRARIES "@EXPORT_TARGETS@")
-+set(YAML_CPP_LIBRARIES yaml-cpp::yaml-cpp)
- 
- check_required_components(@EXPORT_TARGETS@)
-PATCHEOF
-    echo "  yaml_cpp_vendor (0.8.0): +patches/0002 (YAML_CPP_LIBRARIES -> yaml-cpp::yaml-cpp target)"
-  fi
   if grep -q 'ExternalProject_Add(yaml_cpp-0.7.0' "$d/CMakeLists.txt" && ! grep -q 'yaml-cpp-libraries-target' "$d/CMakeLists.txt"; then
     mkdir -p "$d/patches"
     cat > "$d/patches/0001-yaml-cpp-libraries-target.patch" <<'PATCHEOF'
