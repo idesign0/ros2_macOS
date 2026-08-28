@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-28 08:45 UTC** · refreshed every autofix cycle_
+_updated **2026-08-28 09:46 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 Diagnosing 58 new own-error roots — 6 parallel research agents dispatched, synthesis pending**
+> **🔧 fixing 56 package(s): adi_3dtof_image_stitching at_sonde_ros_driver auto_apms_behavior_tree_core beluga broll camera_aravis2 canopen_fake_slaves cartographer_rviz clearpath_bms_broadcaster easynav_costmap_common easynav_simple_common ess_imu_driver2 etsi_its_rviz_plugins feetech_ros2_driver foxglove_bridge franka_gazebo_hardware grid_map_pcl hri_rviz husarion_ugv_diagnostics husarion_ugv_gazebo husarion_ugv_hardware_interfaces husarion_ugv_lights husarion_ugv_manager kinematics_interface_pinocchio kuka_external_control_sdk_examples leo_filters lidar_situational_graphs linear_feedback_controller low_pass_filter magnetic_model magnetometer_pipeline mapviz mqtt_client nmea_hardware_interface novatel_gps_driver plansys2_executor plansys2_terminal plansys2_tools polygon_rviz_plugins puma_motor_driver roadmap_explorer ros_babel_fish_tools rqt_image_overlay rqt_mocap4r2_control rqt_play_motion_builder rtabmap_conversions schunk_svh_library spinnaker_camera_driver trackdlo_core turtlebot3_panorama turtlebot4_base ublox_dgnss_node ublox_gps ur_client_library vrpn_mocap warehouse_ros_mongo  — 2026-08-28 09:46 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
@@ -12,9 +12,9 @@ _updated **2026-08-28 08:45 UTC** · refreshed every autofix cycle_
 
 | distro | status | shards done | conclusion |
 |---|---|--:|---|
-| humble | queued | 16/20 |  |
-| jazzy | in_progress | 18/21 |  |
-| kilted | in_progress | 21/21 |  |
+| humble | in_progress | 18/20 |  |
+| jazzy | in_progress | 20/21 |  |
+| kilted | completed | 21/21 | success |
 
 ## Auto-fixed: **96** packages tracked
 
