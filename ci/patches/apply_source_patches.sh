@@ -1169,6 +1169,18 @@ for _f in $(find "$ROOT" \( -path '*rosgraph_monitor/CMakeLists.txt' -o -path '*
   fi
 done
 
+# --- camera_aravis2: its bundled CMakeModules/FindARAVIS.cmake searches only Linux
+#     include paths (/usr/local/include/aravis-X, /usr/include/aravis-X) for arv.h, so
+#     the header isn't found on macOS (brew puts it under /opt/homebrew/include/aravis-X)
+#     -> "Could NOT find ARAVIS (missing ARAVIS_INCLUDE_DIRS)". Add the brew paths.
+#     Compile-tested locally (aravis 0.8.36): find_package(ARAVIS) FOUND=TRUE. ---
+for _f in $(find "$ROOT" -path '*camera_aravis2/CMakeModules/FindARAVIS.cmake' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if ! grep -q 'homebrew/include/aravis' "$_f"; then
+    perl -0pi -e 's{(  /usr/include/aravis-\$\{ARAVIS_VERSION\}\n)}{$1  /opt/homebrew/include/aravis-\$\{ARAVIS_VERSION\}\n  /opt/homebrew/opt/aravis/include/aravis-\$\{ARAVIS_VERSION\}\n}' "$_f"
+    echo "  camera_aravis2 FindARAVIS: +brew include paths in ${_f#$ROOT/}"
+  fi
+done
+
 # --- yaml_cpp_vendor: the vendored yaml-cpp-config sets
 #     YAML_CPP_LIBRARIES="@EXPORT_TARGETS@" -> the BARE name "yaml-cpp", so every
 #     consumer using ${YAML_CPP_LIBRARIES} emits a fragile -lyaml-cpp AND clobbers the
