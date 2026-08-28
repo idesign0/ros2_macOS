@@ -1504,3 +1504,22 @@ for _f in $(find "$ROOT" -path '*rc_dynamics_api/rc_dynamics_api/net_utils.cc' -
     echo "  rc_dynamics_api: add TEMP_FAILURE_RETRY fallback macro in ${_f#$ROOT/}"
   fi
 done
+
+# --- battery_state_broadcaster duplicate-name collision (jazzy/kilted): the
+#     third-party ros_battery_monitoring stack (ipa320) ships a package literally
+#     named "battery_state_broadcaster" (v1.2.0) that collides with the official
+#     ros2_controllers "battery_state_broadcaster" (v4.x/5.x). Two packages sharing
+#     one name is invalid in a colcon workspace -> discovery ambiguity, and the
+#     ros2_controllers metapackage exec_depend can't resolve deterministically
+#     ("package.sh not found"). The name-based skip-list (colcon list -> first path)
+#     can't disambiguate two same-named dirs, so drop the third-party duplicate by
+#     PATH. Its sibling battery_state_rviz_overlay is independent (deps: fmt,
+#     sensor_msgs, rclcpp, rviz_2d_overlay_msgs) and keeps building. humble ships
+#     neither package -> no-op there. ---
+for _f in $(find "$ROOT" -path '*ros_battery_monitoring/battery_state_broadcaster/package.xml' 2>/dev/null); do
+  _d="$(dirname "$_f")"
+  if [ ! -f "$_d/COLCON_IGNORE" ]; then
+    touch "$_d/COLCON_IGNORE"
+    echo "  battery_state_broadcaster: COLCON_IGNORE third-party ros_battery_monitoring duplicate (${_d#$ROOT/})"
+  fi
+done
