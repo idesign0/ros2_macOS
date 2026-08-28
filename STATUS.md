@@ -1,10 +1,10 @@
 # ROS 2 macOS CI — autofix status
 
-_updated **2026-08-28 10:56 UTC** · refreshed every autofix cycle_
+_updated **2026-08-28 10:57 UTC** · refreshed every autofix cycle_
 
 ## 🔧 What the autofixer is doing
 
-> **🔧 fixing 6 package(s): camera_aravis2 foros mapviz mqtt_client psdk_wrapper wiimote  — 2026-08-28 10:56 UTC**
+> **⏳ paused (usage limit or auth) — will resume next hour — 2026-08-28 10:57 UTC**
 
 > ⚠️ **Self-check: parity drift detected** in `ci/skip-list.txt` — should be byte-identical across the 3 distros. Needs a look.
 
