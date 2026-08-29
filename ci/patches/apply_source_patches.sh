@@ -1595,3 +1595,18 @@ for _f in $(find "$ROOT" -path '*transport_drivers/io_context/src/io_context.cpp
     echo "  io_context.cpp: asio::io_service -> io_context / executor_work_guard / asio::post in ${_f#$ROOT/}"
   fi
 done
+
+# --- rviz_2d_overlay_plugins (teamspatzenhirn, all 3): its CMakeLists does
+#     find_package(Qt6 QUIET COMPONENTS Widgets) and, when Qt6 is found, links
+#     Qt6::Widgets. On macOS the base ROS (rviz_common) is Qt5 but the toolchain
+#     makes Qt6 findable (Qt6_DIR, for gz), so QT_MAJOR_VERSION is determined as 5
+#     by rviz_common while this package links Qt6::Widgets ->
+#     "INTERFACE_QT_MAJOR_VERSION property of Qt6::Widgets does not agree ... 5".
+#     Root of the overlay-plugin cascade (etsi_its_rviz_plugins, polygon_rviz_plugins,
+#     rqt_image_overlay, autoware_*_rviz_plugin, hri_rviz). Force Qt5 to match the base. ---
+for _f in $(find "$ROOT" -path '*rviz_2d_overlay_plugins/rviz_2d_overlay_plugins/CMakeLists.txt' 2>/dev/null); do
+  if grep -q 'find_package(Qt6 QUIET COMPONENTS Widgets)' "$_f"; then
+    perl -0777 -pi -e 's{find_package\(Qt6 QUIET COMPONENTS Widgets\).*?set\(qt_widgets_target Qt6::Widgets\)\n\s*endif\(\)}{# ci: base ROS (rviz_common) is Qt5; the toolchain makes Qt6 findable (for gz),\n# so picking Qt6::Widgets clashes with the Qt5 rviz. Force Qt5 to match the base.\nfind_package(Qt5 REQUIRED COMPONENTS Widgets)\nset(qt_widgets_target Qt5::Widgets)}s' "$_f"
+    echo "  rviz_2d_overlay_plugins: force Qt5::Widgets (Qt5 base vs findable Qt6) in ${_f#$ROOT/}"
+  fi
+done
