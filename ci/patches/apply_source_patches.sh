@@ -1523,3 +1523,19 @@ for _f in $(find "$ROOT" -path '*ros_battery_monitoring/battery_state_broadcaste
     echo "  battery_state_broadcaster: COLCON_IGNORE third-party ros_battery_monitoring duplicate (${_d#$ROOT/})"
   fi
 done
+
+# --- easynav_common Singleton.hpp (EasyNavigation/easynav submodule, all 3):
+#     removeInstance() resets the once_flag with `init_flag_ = std::once_flag();`,
+#     but std::once_flag deletes copy/move assignment. On libc++ (macOS) this is a
+#     hard error ("overload resolution selected deleted operator '='") the moment a
+#     consumer instantiates it (easynav_sensors), and it CASCADES to the whole
+#     easynav stack (~21 pkgs across all 3 distros). Reset the flag with the portable
+#     destroy + placement-new idiom, which is semantically equivalent and compiles on
+#     both libc++ and libstdc++. ---
+for _f in $(find "$ROOT" -path '*easynav_common/include/easynav_common/Singleton.hpp' 2>/dev/null); do
+  if grep -q 'init_flag_ = std::once_flag()' "$_f"; then
+    grep -q '#include <new>' "$_f" || perl -0pi -e 's{(#include <mutex>\n)}{$1#include <new>\n}' "$_f"
+    perl -0pi -e 's{[ \t]*init_flag_ = std::once_flag\(\);}{    init_flag_.~once_flag();\n    ::new (\&init_flag_) std::once_flag();}' "$_f"
+    echo "  easynav_common Singleton.hpp: reset once_flag via placement-new (libc++ deleted-assign) in ${_f#$ROOT/}"
+  fi
+done
