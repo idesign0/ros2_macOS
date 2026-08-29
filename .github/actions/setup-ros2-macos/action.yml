@@ -99,6 +99,19 @@ runs:
         ./brew-packages/install_brew_packages.sh
         brew update
 
+    - name: Re-apply source patches for brew-installed headers (post-brew)
+      shell: bash
+      run: |
+        # apply_source_patches also patches brew-installed headers in place (e.g.
+        # websocketpp 0.8.2 for Boost 1.87+ removed asio APIs -> rmf_websocket).
+        # Those headers are installed by the brew steps ABOVE, i.e. after the first
+        # apply pass ran, so its /opt/homebrew/... targets did not exist yet and were
+        # skipped. Re-run now that they exist. apply_source_patches is idempotent
+        # (every block is guarded), so the source-tree patches are no-ops here.
+        if [ -f ci/patches/apply_source_patches.sh ]; then
+          ./ci/patches/apply_source_patches.sh .
+        fi
+
     - name: Python 3.11
       shell: bash
       run: |
