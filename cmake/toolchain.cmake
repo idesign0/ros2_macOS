@@ -214,6 +214,18 @@ set(Qt5_DIR "/opt/homebrew/opt/qt@5/lib/cmake/Qt5" CACHE PATH "Qt5 CMake path")
 set(QT5_PREFIX "/opt/homebrew/opt/qt@5" CACHE PATH "Qt5 prefix path")
 set(Qt6_DIR "/opt/homebrew/opt/qt/lib/cmake/Qt6" CACHE PATH "Qt6 CMake path")
 set(QT6_PREFIX "/opt/homebrew/opt/qt" CACHE PATH "Qt6 prefix path")
+
+# navmap_rviz_plugin / rtabmap_rviz_plugins force Qt5 themselves, but a transitive
+# dependency Config does find_dependency(Qt6) -> loads Qt6Gui/Qt6OpenGL -> poisons
+# QT_MAJOR_VERSION=6, so their own Qt5::Core then mismatches. Disable Qt6 discovery
+# for just these two so their whole configure resolves to Qt5. Scoped per-project, so
+# the genuine Qt6 consumers (rviz_satellite, rviz_visual_tools, gz_gui_vendor) are
+# unaffected. CMAKE_DISABLE_FIND_PACKAGE_Qt6 overrides the Qt6_DIR cache var above.
+if("${CMAKE_PROJECT_NAME}" MATCHES "^(navmap_rviz_plugin|rtabmap_rviz_plugins)$")
+  set(CMAKE_DISABLE_FIND_PACKAGE_Qt6 ON CACHE BOOL "" FORCE)
+endif()
+
+
 # Qt5/Qt6 mixing fix: the ROS base (rviz_common, qt_gui_cpp) is built with Qt5, but
 # rviz-plugin packages do find_package(QT NAMES Qt6 Qt5) which picks Qt6 whenever Qt6 is
 # on CMAKE_PREFIX_PATH -> they link Qt6::Widgets while rviz_common is Qt5 -> "INTERFACE_
