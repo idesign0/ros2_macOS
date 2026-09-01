@@ -1683,3 +1683,31 @@ for _f in $(find "$ROOT" -path '*rmf_websocket/src/*' \( -name '*.cpp' -o -name 
     echo "  rmf_websocket: asio::io_service->io_context + dispatch/post in ${_f#$ROOT/}"
   fi
 done
+
+# --- rc_dynamics_api (ros-perception/vision, all 3): data_receiver.h does
+#     _recv_func_map[ MsgType::descriptor()->name() ] = ... but modern protobuf's
+#     Descriptor::name() returns absl::string_view (not const std::string&), so
+#     std::map<std::string,...>::operator[] has no viable overload:
+#       error: no viable overloaded operator[] for type 'map_type'
+#     Wrap the key in std::string(...) at the 3 call sites (Frame/Imu/Dynamics). ---
+for _f in $(find "$ROOT" -path '*rc_dynamics_api/rc_dynamics_api/data_receiver.h' 2>/dev/null); do
+  if grep -qE '_recv_func_map\[.*::descriptor\(\)->name\(\)\]' "$_f"; then
+    perl -pi -e 's{_recv_func_map\[(.*?::descriptor\(\)->name\(\))\]}{_recv_func_map[std::string($1)]}g;' "$_f"
+    echo "  rc_dynamics_api: wrap protobuf descriptor()->name() (string_view) in std::string in ${_f#$ROOT/}"
+  fi
+done
+
+# --- libmavconn (aerial/mavros submodule, all 3): io_context_runner.hpp uses
+#     std::jthread, which on macOS/libc++ is availability-gated to a recent
+#     deployment target -> "no type named 'jthread' in namespace 'std'". The thread
+#     lambda never reads the stop_token (the run loop is stopped via io_work_.reset()),
+#     and join_owned() already does joinable()/get_id()/detach()/join(), so a plain
+#     std::thread is behaviourally equivalent. Swap jthread->thread and drop the
+#     now-meaningless io_thread_.request_stop() (std::thread has no such member;
+#     io_work_.reset() on the next line is what actually stops the loop). ---
+for _f in $(find "$ROOT" -path '*libmavconn/include/mavconn/io_context_runner.hpp' 2>/dev/null); do
+  if grep -q 'std::jthread' "$_f"; then
+    perl -0pi -e 's{\bstd::jthread\b}{std::thread}g; s{[ \t]*io_thread_\.request_stop\(\);\n}{}g;' "$_f"
+    echo "  libmavconn: std::jthread -> std::thread (macOS availability) in ${_f#$ROOT/}"
+  fi
+done
