@@ -1665,3 +1665,21 @@ for _f in $(find "$ROOT" -path '*easynav_system/src/system_main.cpp' 2>/dev/null
     echo "  easynav_system: guard Linux-only sched_setscheduler for macOS in ${_f#$ROOT/}"
   fi
 done
+
+# --- rmf_websocket (fleet/rmf_ros2 submodule, all 3): its OWN sources use
+#     boost::asio::io_service, io_context::dispatch and io_context::post, all removed
+#     in Boost 1.87+. The brew websocketpp header is patched separately; once that is
+#     in place the compile advances into rmf_websocket's own code and fails:
+#       ClientWebSocketEndpoint.hpp:104: no type named 'io_service' in 'boost::asio'
+#       ClientWebSocketEndpoint.cpp:44:  no member named 'post' in 'boost::asio::io_context'
+#     Port: asio::io_service -> asio::io_context (covers both boost::asio:: and bare
+#     asio::); _io_service.dispatch(f) -> boost::asio::dispatch(_io_service, f);
+#     c->get_io_service().post(f) -> boost::asio::post(c->get_io_service(), f).
+#     boost::asio::dispatch/post arrive via the websocketpp boost-asio include chain.
+#     Unblocks rmf_fleet_adapter, rmf_task_ros2, rmf_dev. Verified against boost-1.89. ---
+for _f in $(find "$ROOT" -path '*rmf_websocket/src/*' \( -name '*.cpp' -o -name '*.hpp' \) 2>/dev/null); do
+  if grep -qE 'asio::io_service|_io_service\.dispatch\(|get_io_service\(\)\.post\(' "$_f"; then
+    perl -pi -e 's{\basio::io_service\b}{asio::io_context}g; s{_io_service\.dispatch\(}{boost::asio::dispatch(_io_service, }g; s{([\w>.-]+?get_io_service\(\))\.post\(}{boost::asio::post($1, }g;' "$_f"
+    echo "  rmf_websocket: asio::io_service->io_context + dispatch/post in ${_f#$ROOT/}"
+  fi
+done
