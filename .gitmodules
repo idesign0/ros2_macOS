@@ -2138,3 +2138,6 @@
 	path = ros-planning/dependencies/lua
 	url = https://github.com/idesign0/id_lua.git
 	branch = 5.3
+[submodule "ros-visualization/color_util"]
+	path = ros-visualization/color_util
+	url = https://github.com/MetroRobots/color_util.git

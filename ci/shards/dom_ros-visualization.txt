@@ -1,3 +1,4 @@
+color_util
 battery_state_rviz_overlay
 cloudini_lib
 cloudini_ros

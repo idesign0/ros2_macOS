@@ -232,3 +232,7 @@ magnetometer_pipeline
 
 # compass_interfaces: requires cras_cpp_common (ctu-vras common lib) which is not in the tree — cascade, cannot build
 compass_interfaces
+
+# rqt_image_overlay: depends on rqt_gui_cpp, which is already skip-listed
+# (needs Qt/python rqt bits not built in the brew base) -> cannot resolve its dep.
+rqt_image_overlay
