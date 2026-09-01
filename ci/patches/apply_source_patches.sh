@@ -1610,3 +1610,34 @@ for _f in $(find "$ROOT" -path '*rviz_2d_overlay_plugins/rviz_2d_overlay_plugins
     echo "  rviz_2d_overlay_plugins: force Qt5::Widgets (Qt5 base vs findable Qt6) in ${_f#$ROOT/}"
   fi
 done
+
+# --- jsoncpp (brew) ships jsoncppConfig.cmake but NO jsoncppConfigVersion.cmake, so
+#     any version-checked find_package(JsonCpp <ver>) reads the version as "unknown"
+#     and REJECTS it. VTK 9.6 does find_package(JsonCpp 0.7.0) -> fails -> the
+#     JsonCpp::JsonCpp target is never created -> VTK::jsoncpp references a missing
+#     target and VTK config breaks. Downstream: PCL's find_external_library(VTK)
+#     then reports "visualization is required but vtk was not found", so every
+#     PCL-visualization / VTK consumer fails (grid_map_pcl, rtabmap_rviz_plugins,
+#     navmap_rviz_plugin, pcl_conversions consumers, ...). Synthesize the missing
+#     ConfigVersion file (version-only; any >= request passes). Runs post-brew via the
+#     re-apply step. Verified: with it present, find_package(JsonCpp 0.7.0) FOUND and
+#     find_package(VTK) succeeds. ---
+for _d in /opt/homebrew/lib/cmake/jsoncpp /opt/homebrew/opt/jsoncpp/lib/cmake/jsoncpp; do
+  [ -f "$_d/jsoncppConfig.cmake" ] || continue
+  [ -f "$_d/jsoncppConfigVersion.cmake" ] && continue
+  _jv="$(grep -hoE 'Version: *[0-9.]+' /opt/homebrew/opt/jsoncpp/lib/pkgconfig/jsoncpp.pc 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  [ -z "$_jv" ] && _jv="$(brew list --versions jsoncpp 2>/dev/null | awk '{print $2}')"
+  [ -z "$_jv" ] && _jv="1.9.0"
+  {
+    printf 'set(PACKAGE_VERSION "%s")\n' "$_jv"
+    printf 'if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)\n'
+    printf '  set(PACKAGE_VERSION_COMPATIBLE FALSE)\n'
+    printf 'else()\n'
+    printf '  set(PACKAGE_VERSION_COMPATIBLE TRUE)\n'
+    printf '  if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)\n'
+    printf '    set(PACKAGE_VERSION_EXACT TRUE)\n'
+    printf '  endif()\n'
+    printf 'endif()\n'
+  } > "$_d/jsoncppConfigVersion.cmake"
+  echo "  jsoncpp: created missing jsoncppConfigVersion.cmake (v$_jv) in $_d (VTK/PCL fix)"
+done
