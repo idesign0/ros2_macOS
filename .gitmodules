@@ -2698,3 +2698,6 @@
 	path = ament/ros_industrial_cmake_boilerplate
 	url = https://github.com/ros-industrial/ros_industrial_cmake_boilerplate.git
 	branch = master
+[submodule "ros-visualization/color_util"]
+	path = ros-visualization/color_util
+	url = https://github.com/MetroRobots/color_util.git

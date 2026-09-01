@@ -1,3 +1,4 @@
+color_util
 cloudini_lib
 cloudini_ros
 etsi_its_cam_coding

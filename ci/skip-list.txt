@@ -249,3 +249,7 @@ novatel_oem7_driver
 
 # ur_client_library: bundled 3rdparty httplib uses accept4() (Linux-only syscall)
 ur_client_library
+
+# rqt_image_overlay: depends on rqt_gui_cpp, which is already skip-listed
+# (needs Qt/python rqt bits not built in the brew base) -> cannot resolve its dep.
+rqt_image_overlay
