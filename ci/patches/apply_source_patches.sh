@@ -1711,3 +1711,22 @@ for _f in $(find "$ROOT" -path '*libmavconn/include/mavconn/io_context_runner.hp
     echo "  libmavconn: std::jthread -> std::thread (macOS availability) in ${_f#$ROOT/}"
   fi
 done
+
+# --- autoware yaml-cpp::yaml-cpp target scoping (autoware_core, humble esp.): several
+#     autoware packages link ${YAML_CPP_LIBRARIES} (= yaml-cpp::yaml-cpp, set by the
+#     yaml_cpp_vendor fork). But yaml-cpp::yaml-cpp is a DIRECTORY-scoped IMPORTED
+#     target: autoware_package() finds yaml-cpp inside a function (target not visible
+#     in the calling directory), and a subsequent find_package(yaml-cpp) short-circuits
+#     on the cached yaml-cpp_FOUND without recreating it -> at link time:
+#       CMake Error: Target links to yaml-cpp::yaml-cpp but the target was not found.
+#     This gates autoware_map_projection_loader / autoware_test_utils ->
+#     autoware_lanelet2_utils (7 cascade victims) -> the wider autoware planning cascade.
+#     Force a fresh find (target missing => unset FOUND + find again) so the target is
+#     (re)created in the package's own directory scope. Verified: find_package(yaml-cpp)
+#     creates yaml-cpp::yaml-cpp. Idempotent via ci-yaml-cpp-target marker. ---
+for _f in $(find "$ROOT" -path '*autoware*/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q 'autoware_package()' "$_f" && grep -q 'YAML_CPP_LIBRARIES' "$_f" && ! grep -q 'ci-yaml-cpp-target' "$_f"; then
+    perl -0pi -e 's{(autoware_package\(\)\n)}{$1\n# ci-yaml-cpp-target: yaml-cpp::yaml-cpp is a directory-scoped IMPORTED target;\n# autoware_package() finds it in a function scope and a later find_package\n# short-circuits on cached FOUND. Force a fresh find so it exists in this scope.\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  unset(yaml-cpp_FOUND CACHE)\n  unset(yaml-cpp_FOUND)\n  find_package(yaml-cpp REQUIRED)\nendif()\n}' "$_f"
+    echo "  autoware: ensure yaml-cpp::yaml-cpp target in ${_f#$ROOT/}"
+  fi
+done
