@@ -253,3 +253,20 @@ ur_client_library
 # rqt_image_overlay: depends on rqt_gui_cpp, which is already skip-listed
 # (needs Qt/python rqt bits not built in the brew base) -> cannot resolve its dep.
 rqt_image_overlay
+
+# --- Classic Gazebo (gazebo11) cluster: EOL (Jan 2025), no macOS support, and
+#     the tree vendors gz-* (Ignition/gz), NOT classic gazebo. These all pull in
+#     gazebo_dev/gazebo_ros which can never resolve on macOS. humble-only (jazzy/
+#     kilted already dropped classic-gazebo). ---
+bcr_arm_gazebo
+dolly_gazebo
+franka_gazebo_hardware
+gazebo_no_physics_plugin
+gazebo_ros
+gazebo_ros2_control_demos
+gazebo_set_joint_positions_plugin
+gazebo_video_monitor_plugins
+husarion_ugv_gazebo
+pal_gazebo_plugins
+rmf_robot_sim_gz_classic_plugins
+velodyne_gazebo_plugins
