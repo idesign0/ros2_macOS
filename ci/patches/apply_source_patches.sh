@@ -1641,3 +1641,27 @@ for _d in /opt/homebrew/lib/cmake/jsoncpp /opt/homebrew/opt/jsoncpp/lib/cmake/js
   } > "$_d/jsoncppConfigVersion.cmake"
   echo "  jsoncpp: created missing jsoncppConfigVersion.cmake (v$_jv) in $_d (VTK/PCL fix)"
 done
+
+# --- udp_driver (ros-drivers/transport_drivers, all 3): udp_socket.cpp uses
+#     asio::ip::address::from_string, removed in modern asio (Fast-DDS 1.34.2) ->
+#     "no member named 'from_string' in 'asio::ip::address'". Port to the free
+#     function asio::ip::make_address (available since asio 1.66). Surfaced once
+#     io_context built (udp_driver depends on it). ---
+for _f in $(find "$ROOT" -path '*transport_drivers/udp_driver/src/udp_socket.cpp' 2>/dev/null); do
+  if grep -q 'address::from_string' "$_f"; then
+    perl -pi -e 's{\baddress::from_string\(}{asio::ip::make_address(}g;' "$_f"
+    echo "  udp_driver: address::from_string -> asio::ip::make_address in ${_f#$ROOT/}"
+  fi
+done
+
+# --- easynav_system (EasyNavigation/easynav submodule, jazzy+kilted): system_main.cpp
+#     calls sched_setscheduler(0, SCHED_FIFO, ...), a Linux-only <sched.h> process
+#     scheduling API absent on macOS -> "use of undeclared identifier
+#     'sched_setscheduler'". Guard the RT-scheduling block to __linux__; on macOS log
+#     that RT scheduling is unavailable and run with normal priority (best-effort). ---
+for _f in $(find "$ROOT" -path '*easynav_system/src/system_main.cpp' 2>/dev/null); do
+  if grep -q 'sched_setscheduler' "$_f" && ! grep -q '#if defined(__linux__)' "$_f"; then
+    perl -0pi -e 's{([ \t]*)(sched_param sch; sch\.sched_priority = 80;.*?\n[ \t]*\})}{$1#if defined(__linux__)\n$1$2\n$1#else\n$1  RCLCPP_WARN(system_node->get_logger(), "Real-Time scheduling not supported on this platform. Running with normal priority.");\n$1#endif}s' "$_f"
+    echo "  easynav_system: guard Linux-only sched_setscheduler for macOS in ${_f#$ROOT/}"
+  fi
+done
