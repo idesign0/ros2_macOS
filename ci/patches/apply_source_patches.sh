@@ -1895,16 +1895,18 @@ if [ -f "$_f" ] && grep -qF 'ament_export_dependencies(etsi_its_msgs geometry_ms
   echo "  etsi_its_msgs_utils: +GeographicLib to ament_export_dependencies (export target scope) in ${_f#$ROOT/}"
 fi
 
-# --- velodyne_pointcloud (humble esp.): links yaml-cpp::yaml-cpp, chosen via
-#     if(TARGET yaml-cpp::yaml-cpp). find_package(yaml-cpp) leaves that as a directory-
-#     scoped IMPORTED target -- defined at configure (the if() is TRUE) but NOT at generate
-#     on macOS -> "Target velodyne_rawdata links to yaml-cpp::yaml-cpp but the target was
-#     not found" (CMakeLists.txt:49). Fabricate a GLOBAL UNKNOWN IMPORTED target from the
-#     vendored yaml-cpp .dylib and prefer it; fall back to the upstream logic if the lib
-#     isn't located. (swri_transform_util hits the identical pattern -- same fix applies
-#     there next.) Idempotent (guard on the upstream if/else block). ---
-_f="$(_pkg_dir velodyne_pointcloud)/CMakeLists.txt"
-if [ -f "$_f" ] && grep -qF 'if(TARGET yaml-cpp::yaml-cpp)' "$_f" && ! grep -q 'velodyne_ci_yamlcpp' "$_f"; then
-  perl -0pi -e 's~if\(TARGET yaml-cpp::yaml-cpp\)\n  set\(YAML_CPP_TARGET "yaml-cpp::yaml-cpp"\)\nelse\(\)\n  set\(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\}\)\nendif\(\)~# ci: find_package(yaml-cpp) can leave yaml-cpp::yaml-cpp as a directory-scoped\n# IMPORTED target (TRUE here, absent at generate on macOS). Fabricate a GLOBAL one.\nif(NOT TARGET velodyne_ci_yamlcpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp\n    HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\}\n    PATH_SUFFIXES lib)\n  if(_ci_ycpp_lib)\n    add_library(velodyne_ci_yamlcpp UNKNOWN IMPORTED GLOBAL)\n    set_target_properties(velodyne_ci_yamlcpp PROPERTIES\n      IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}"\n      INTERFACE_INCLUDE_DIRECTORIES "\$\{YAML_CPP_INCLUDE_DIR\}")\n  endif()\nendif()\nif(TARGET velodyne_ci_yamlcpp)\n  set(YAML_CPP_TARGET velodyne_ci_yamlcpp)\nelseif(TARGET yaml-cpp::yaml-cpp)\n  set(YAML_CPP_TARGET "yaml-cpp::yaml-cpp")\nelse()\n  set(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\})\nendif()~' "$_f"
-  echo "  velodyne_pointcloud: fabricate GLOBAL yaml-cpp target (dir-scoped target not found at generate) in ${_f#$ROOT/}"
-fi
+# --- velodyne_pointcloud + swri_transform_util (humble esp.): both select yaml-cpp via
+#     the same upstream block `if(TARGET yaml-cpp::yaml-cpp) set(YAML_CPP_TARGET ...) else()
+#     set(YAML_CPP_TARGET ${YAML_CPP_LIBRARIES}) endif()`. find_package(yaml-cpp) leaves
+#     yaml-cpp::yaml-cpp as a directory-scoped IMPORTED target -- defined at configure (the
+#     if() is TRUE) but NOT at generate on macOS -> "links to yaml-cpp::yaml-cpp but the
+#     target was not found" (velodyne CMakeLists:49 / swri :93). Fabricate a GLOBAL UNKNOWN
+#     IMPORTED target from the vendored yaml-cpp .dylib and prefer it; fall back to the
+#     upstream logic if the lib isn't located. Idempotent (ci_fab_yamlcpp marker). ---
+for _p in velodyne_pointcloud swri_transform_util; do
+  _f="$(_pkg_dir "$_p")/CMakeLists.txt"
+  if [ -f "$_f" ] && grep -qF 'if(TARGET yaml-cpp::yaml-cpp)' "$_f" && ! grep -q 'ci_fab_yamlcpp' "$_f"; then
+    perl -0pi -e 's~if\(TARGET yaml-cpp::yaml-cpp\)\n  set\(YAML_CPP_TARGET "yaml-cpp::yaml-cpp"\)\nelse\(\)\n  set\(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\}\)\nendif\(\)~# ci: find_package(yaml-cpp) can leave yaml-cpp::yaml-cpp as a directory-scoped\n# IMPORTED target (TRUE here, absent at generate on macOS). Fabricate a GLOBAL one.\nif(NOT TARGET ci_fab_yamlcpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp\n    HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\}\n    PATH_SUFFIXES lib)\n  if(_ci_ycpp_lib)\n    add_library(ci_fab_yamlcpp UNKNOWN IMPORTED GLOBAL)\n    set_target_properties(ci_fab_yamlcpp PROPERTIES\n      IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}"\n      INTERFACE_INCLUDE_DIRECTORIES "\$\{YAML_CPP_INCLUDE_DIR\}")\n  endif()\nendif()\nif(TARGET ci_fab_yamlcpp)\n  set(YAML_CPP_TARGET ci_fab_yamlcpp)\nelseif(TARGET yaml-cpp::yaml-cpp)\n  set(YAML_CPP_TARGET "yaml-cpp::yaml-cpp")\nelse()\n  set(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\})\nendif()~' "$_f"
+    echo "  $_p: fabricate GLOBAL yaml-cpp target (dir-scoped target not found at generate) in ${_f#$ROOT/}"
+  fi
+done
