@@ -86,6 +86,7 @@ camera_calibration_parsers
 camera_info_manager
 camera_info_manager_py
 can_msgs
+cartographer
 cartographer_ros
 cascade_lifecycle_msgs
 chomp_motion_planner
