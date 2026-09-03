@@ -300,3 +300,14 @@ robotiq_hardware_tests
 # mqtt_client: find_library(PahoMqttC) — Eclipse Paho MQTT C/C++ has no current Homebrew
 # formula (paho-mqtt-c was deleted) and no vendored source; no macOS build path.
 mqtt_client
+# === humble high-impact triage (2026-09-03) ===
+# inuros2 (Inuitive depth-camera driver): includes /opt/Inuitive/InuDev/include and links
+# the InuDev SDK -- Inuitive's proprietary InuDev SDK, no macOS/arm64 build. (The
+# builtin_interfaces export error surfaces first at config, but the package is
+# fundamentally unbuildable on macOS without the SDK.)
+inuros2
+# marvelmind_ros2: <depend>marvelmind_ros2_msgs</depend> + find_package(marvelmind_ros2_msgs
+# REQUIRED), but marvelmind_ros2_msgs is NOT vendored in this tree (upstream ships it as a
+# separate package). Cannot configure until the msgs package is added. Un-skip by vendoring
+# marvelmind_ros2_msgs.
+marvelmind_ros2
