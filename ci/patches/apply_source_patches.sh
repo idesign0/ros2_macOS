@@ -1787,3 +1787,53 @@ for _f in $(find "$ROOT" -path '*ros2_canopen/lely_core_libraries/CMakeLists.txt
     echo "  lely_core_libraries: +-fcommon to ExternalProject CFLAGS (getopt tentative-def dup symbols under -fno-common) in ${_f#$ROOT/}"
   fi
 done
+
+# --- nav2_waypoint_follower (humble esp.): photo_at_waypoint.hpp #includes the
+#     non-standard Debian-ism "opencv4/opencv2/core.hpp"/"opencv4/opencv2/opencv.hpp".
+#     On Linux /usr/include (which contains opencv4/) is a default search dir so it
+#     resolves; on macOS brew OpenCV_INCLUDE_DIRS points AT .../include/opencv4 (added by
+#     ament_target_dependencies(OpenCV)), so the canonical "opencv2/core.hpp" resolves but
+#     the "opencv4/"-prefixed form does NOT -> "fatal error: file not found". This is the
+#     ROOT that fails base-2 and (via navigation2's <exec_depend>) silently drops the whole
+#     navigation2 + nav2_bringup metapackage -> a large humble robot/nav-demo cascade.
+#     Rewrite to the portable opencv2/ form. Idempotent (opencv4/ prefix gone after). ---
+for _f in $(find "$ROOT" -path '*nav2_waypoint_follower/*/photo_at_waypoint.hpp' -not -path '*/build/*' 2>/dev/null); do
+  if grep -q 'opencv4/opencv2/' "$_f"; then
+    perl -pi -e 's{opencv4/opencv2/}{opencv2/}g;' "$_f"
+    echo "  nav2_waypoint_follower: opencv4/opencv2 -> opencv2 include (macOS opencv layout) in ${_f#$ROOT/}"
+  fi
+done
+
+# --- mujoco_ros2_control_plugins (humble): CMake hard-requires the EGL component
+#     (find_package(OpenGL REQUIRED COMPONENTS EGL)) and camera_plugin.{hpp,cpp} use the
+#     EGL API for HEADLESS offscreen rendering. macOS has no EGL (uses CGL/NSOpenGL) ->
+#     "Could NOT find OpenGL (missing: EGL)" at configure. But EGL is only the FALLBACK:
+#     the primary path is GLFW (init tries glfw first, EGL only if glfwInit fails). So on
+#     Apple: (1) find OpenGL without EGL and link the GL framework instead of OpenGL::EGL;
+#     (2) #if !defined(__APPLE__)-guard the EGL includes, the EGL-typed members, and the
+#     two EGL methods (macOS stubs: init returns false, cleanup no-op); (3) on GLFW failure
+#     don't set use_egl_ (leave false). use_egl_ stays a plain bool so the if(use_egl_)
+#     branches compile unchanged. Unblocks mujoco_ros2_control -> _demos + tiago/pal mujoco.
+#     Idempotent (guards on the pre-edit strings). ---
+_md="$(_pkg_dir mujoco_ros2_control_plugins)"
+if [ -n "$_md" ] && [ -f "$_md/CMakeLists.txt" ] && grep -q 'find_package(OpenGL REQUIRED COMPONENTS EGL)' "$_md/CMakeLists.txt"; then
+  # (1) CMake: Apple-conditional OpenGL find + link var
+  perl -0pi -e 's{find_package\(OpenGL REQUIRED COMPONENTS EGL\)}{if(APPLE)\n  find_package(OpenGL REQUIRED)\n  set(MJ_GL_LIBS OpenGL::GL)\nelse()\n  find_package(OpenGL REQUIRED COMPONENTS EGL)\n  set(MJ_GL_LIBS OpenGL::EGL OpenGL::OpenGL)\nendif()}' "$_md/CMakeLists.txt"
+  perl -0pi -e 's{\n  glfw\n  OpenGL::EGL\n  OpenGL::OpenGL\n}{\n  glfw\n  \$\{MJ_GL_LIBS\}\n}' "$_md/CMakeLists.txt"
+  echo "  mujoco_ros2_control_plugins: CMake OpenGL EGL -> Apple-conditional (${_md#$ROOT/}/CMakeLists.txt)"
+fi
+_mh="$_md/src/camera_plugin.hpp"
+if [ -f "$_mh" ] && grep -q '#include <EGL/egl.h>' "$_mh"; then
+  perl -0pi -e 's{#include <EGL/egl.h>\n#include <EGL/eglext.h>}{#if !defined(__APPLE__)\n#include <EGL/egl.h>\n#include <EGL/eglext.h>\n#endif}' "$_mh"
+  perl -0pi -e 's{  EGLDisplay egl_display_\{ EGL_NO_DISPLAY \};\n  EGLContext egl_context_\{ EGL_NO_CONTEXT \};\n  EGLSurface egl_surface_\{ EGL_NO_SURFACE \};}{#if !defined(__APPLE__)\n  EGLDisplay egl_display_{ EGL_NO_DISPLAY };\n  EGLContext egl_context_{ EGL_NO_CONTEXT };\n  EGLSurface egl_surface_{ EGL_NO_SURFACE };\n#endif}' "$_mh"
+  echo "  mujoco_ros2_control_plugins: guard EGL includes+members (__APPLE__) in ${_mh#$ROOT/}"
+fi
+_mc="$_md/src/camera_plugin.cpp"
+if [ -f "$_mc" ] && grep -q 'bool CameraPlugin::init_egl_context()' "$_mc"; then
+  # guard the two consecutive EGL methods with an Apple stub
+  perl -0pi -e 's~bool CameraPlugin::init_egl_context\(\)\n\{~#if defined(__APPLE__)\nbool CameraPlugin::init_egl_context() { return false; }\nvoid CameraPlugin::cleanup_egl_context() {}\n#else\nbool CameraPlugin::init_egl_context()\n{~' "$_mc"
+  perl -0pi -e 's{\n\nvoid CameraPlugin::update_loop\(\)}{\n\n#endif\n\nvoid CameraPlugin::update_loop()}' "$_mc"
+  # on GLFW failure, no EGL fallback on macOS
+  perl -0pi -e 's{    RCLCPP_WARN\(node_->get_logger\(\), "Failed to initialize GLFW. Attempting EGL for headless rendering."\);\n    use_egl_ = true;}{#if !defined(__APPLE__)\n    RCLCPP_WARN(node_->get_logger(), "Failed to initialize GLFW. Attempting EGL for headless rendering.");\n    use_egl_ = true;\n#else\n    RCLCPP_WARN(node_->get_logger(), "Failed to initialize GLFW; EGL headless fallback is unavailable on macOS. Camera rendering disabled.");\n    use_egl_ = false;\n#endif}' "$_mc"
+  echo "  mujoco_ros2_control_plugins: guard EGL methods+fallback (__APPLE__) in ${_mc#$ROOT/}"
+fi
