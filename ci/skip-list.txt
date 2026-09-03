@@ -280,3 +280,23 @@ gazebo_plugins
 gazebo_ros2_control
 gazebo_planar_move_plugin
 boeing_gazebo_model_attachment_plugin
+# === §1 common-33 skips (2026-09-03): each depends on an already-skip-listed or
+#     macOS-unsupportable library, so it is a permanent cascade, not an own error. ===
+# ur_robot_driver: find_package(ur_client_library REQUIRED) — ur_client_library is
+# skip-listed (bundled httplib uses accept4, Linux-only).
+ur_robot_driver
+# depthai_bridge: find_package(depthai) — Luxonis depthai-core SDK (skip-listed: Linux/USB vcpkg).
+depthai_bridge
+# spinnaker_synchronized_camera_driver: FLIR Spinnaker SDK, proprietary, no macOS/arm64
+# (spinnaker_camera_driver already skip-listed for the same reason).
+spinnaker_synchronized_camera_driver
+# plansys2_tools: find_package(qt_gui_cpp REQUIRED) — qt_gui_cpp is Qt-binding-skipped.
+plansys2_tools
+# mapviz: find_package(qt_gui_cpp REQUIRED) — same Qt-binding skip.
+mapviz
+# robotiq_hardware_tests: find_package(serial REQUIRED) — wjwwood/serial not in tree
+# (robotiq_driver already skip-listed for the same missing dep).
+robotiq_hardware_tests
+# mqtt_client: find_library(PahoMqttC) — Eclipse Paho MQTT C/C++ has no current Homebrew
+# formula (paho-mqtt-c was deleted) and no vendored source; no macOS build path.
+mqtt_client
