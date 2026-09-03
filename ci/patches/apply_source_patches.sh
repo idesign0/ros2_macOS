@@ -1712,6 +1712,22 @@ for _f in $(find "$ROOT" -path '*libmavconn/include/mavconn/io_context_runner.hp
   fi
 done
 
+# --- libmavconn interface.cpp (all 3): default_signing_timestamp() builds the mavlink
+#     signing epoch with the C++20 chrono calendar
+#       std::chrono::sys_days{std::chrono::year(2015)/std::chrono::January/1}
+#     but libc++ on this macOS lacks sys_days / year / month -> "no member named
+#     'sys_days' in namespace 'std::chrono'" (interface.cpp:221; surfaced only after the
+#     jthread fix let the TU compile that far). The epoch is 2015-01-01T00:00:00Z and
+#     system_clock measures Unix Time (guaranteed C++20; libc++ always has), so it is a
+#     fixed 1420070400 s offset from the system_clock epoch -- behaviourally identical.
+#     Replace the calendar construction with that constant. Idempotent (guard on sys_days). ---
+for _f in $(find "$ROOT" -path '*libmavconn/src/interface.cpp' 2>/dev/null); do
+  if grep -q 'std::chrono::sys_days' "$_f"; then
+    perl -0pi -e 's{constexpr auto mavlink_signing_epoch = std::chrono::sys_days \{std::chrono::year\(2015\) /\s*std::chrono::January / 1\};}{// ci: libc++ lacks the C++20 chrono calendar (sys_days/year/month). The mavlink\n  // signing epoch 2015-01-01T00:00:00Z is a fixed 1420070400 s offset from the\n  // system_clock (Unix) epoch -- behaviourally identical to sys_days\{2015/Jan/1\}.\n  const auto mavlink_signing_epoch =\n    std::chrono::system_clock::time_point\{std::chrono::seconds\{1420070400\}\};}' "$_f"
+    echo "  libmavconn: sys_days calendar -> fixed Unix-offset epoch (libc++ no C++20 chrono calendar) in ${_f#$ROOT/}"
+  fi
+done
+
 # --- autoware yaml-cpp::yaml-cpp target scoping (autoware_core, humble esp.): several
 #     autoware packages link ${YAML_CPP_LIBRARIES} (= yaml-cpp::yaml-cpp, set by the
 #     yaml_cpp_vendor fork). But yaml-cpp::yaml-cpp is a DIRECTORY-scoped IMPORTED
@@ -1721,12 +1737,53 @@ done
 #       CMake Error: Target links to yaml-cpp::yaml-cpp but the target was not found.
 #     This gates autoware_map_projection_loader / autoware_test_utils ->
 #     autoware_lanelet2_utils (7 cascade victims) -> the wider autoware planning cascade.
-#     Force a fresh find (target missing => unset FOUND + find again) so the target is
-#     (re)created in the package's own directory scope. Verified: find_package(yaml-cpp)
-#     creates yaml-cpp::yaml-cpp. Idempotent via ci-yaml-cpp-target marker. ---
+#     A plain re-find (unset FOUND + find_package again) was tried first and STILL failed
+#     in CI ("Target links to yaml-cpp::yaml-cpp but the target was not found" at
+#     autoware_map_projection_loader/CMakeLists.txt:30, run d05419b3): in this env
+#     find_package(yaml-cpp) does not (re)create the namespaced IMPORTED target at the
+#     caller's scope. So don't depend on find_package's export-scope behavior at all --
+#     FABRICATE the target directly from the vendored yaml_cpp_vendor install (same
+#     technique already used for ROS2MedkitCompat above), discovering the real .dylib +
+#     headers via find_library/find_path anchored on yaml-cpp_DIR / YAML_CPP_INCLUDE_DIR.
+#     Idempotent via ci-yaml-cpp-target marker. ---
 for _f in $(find "$ROOT" -path '*autoware*/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
   if grep -q 'autoware_package()' "$_f" && grep -q 'YAML_CPP_LIBRARIES' "$_f" && ! grep -q 'ci-yaml-cpp-target' "$_f"; then
-    perl -0pi -e 's{(autoware_package\(\)\n)}{$1\n# ci-yaml-cpp-target: yaml-cpp::yaml-cpp is a directory-scoped IMPORTED target;\n# autoware_package() finds it in a function scope and a later find_package\n# short-circuits on cached FOUND. Force a fresh find so it exists in this scope.\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  unset(yaml-cpp_FOUND CACHE)\n  unset(yaml-cpp_FOUND)\n  find_package(yaml-cpp REQUIRED)\nendif()\n}' "$_f"
-    echo "  autoware: ensure yaml-cpp::yaml-cpp target in ${_f#$ROOT/}"
+    perl -0pi -e 's{(autoware_package\(\)\n)}{$1\n# ci-yaml-cpp-target: yaml-cpp::yaml-cpp is a directory-scoped IMPORTED target that\n# find_package(yaml-cpp) does not recreate at this scope; fabricate it from the\n# vendored yaml_cpp_vendor install so target_link_libraries(... yaml-cpp::yaml-cpp) links.\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  unset(yaml-cpp_FOUND CACHE)\n  unset(yaml-cpp_FOUND)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  get_filename_component(_ci_ycpp_root "\${yaml-cpp_DIR}" DIRECTORY)\n  get_filename_component(_ci_ycpp_root "\${_ci_ycpp_root}" DIRECTORY)\n  get_filename_component(_ci_ycpp_root "\${_ci_ycpp_root}" DIRECTORY)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp\n    HINTS "\${_ci_ycpp_root}/lib" "\${YAML_CPP_INCLUDE_DIR}/../lib" \${CMAKE_PREFIX_PATH}\n    PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h\n    HINTS "\${YAML_CPP_INCLUDE_DIR}" "\${_ci_ycpp_root}/include" \${CMAKE_PREFIX_PATH}\n    PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES\n      IMPORTED_LOCATION "\${_ci_ycpp_lib}"\n      INTERFACE_INCLUDE_DIRECTORIES "\${_ci_ycpp_inc}")\n    message(STATUS "[ci-yaml-cpp-target] fabricated yaml-cpp::yaml-cpp from \${_ci_ycpp_lib}")\n  else()\n    find_package(yaml-cpp REQUIRED)\n  endif()\nendif()\n}' "$_f"
+    echo "  autoware: fabricate yaml-cpp::yaml-cpp target in ${_f#$ROOT/}"
+  fi
+done
+
+# --- bare-`yaml-cpp` linker-name bug (kilted+jazzy: easynav_*_maps_manager
+#     bonxai/costmap/navmap/octomap/routes, and clips_executive cx_config_plugin) --
+#     same class as autoware_test_utils/rmf_traffic_editor: target_link_libraries(... has a
+#     lone `  yaml-cpp` line -> emits raw -lyaml-cpp -> "ld: library 'yaml-cpp' not found"
+#     (yaml_cpp_vendor/yaml-cpp 0.8.0 export only the NAMESPACED yaml-cpp::yaml-cpp target,
+#     no bare alias, and brew yaml-cpp is unlinked). All of these find yaml at TOP-LEVEL
+#     scope (find_package(yaml_cpp_vendor|yaml-cpp) directly in CMakeLists, not inside a
+#     function), so ${YAML_CPP_LIBRARIES} (= yaml-cpp::yaml-cpp, set by the vendor config)
+#     resolves to a target visible here -- no fabrication needed. Swap the bare name for
+#     ${YAML_CPP_LIBRARIES}. Idempotent (bare `^  yaml-cpp$` gone after). ---
+for _f in $(find "$ROOT" \( -path '*easynav*maps_manager/CMakeLists.txt' -o -path '*clips_executive/cx_plugins/config_plugin/CMakeLists.txt' \) -not -path '*/build/*' -not -path '*/install/*' -not -path '*/tests/*' 2>/dev/null); do
+  if grep -qE '^[ \t]*yaml-cpp[ \t]*$' "$_f"; then
+    perl -pi -e 's{^[ \t]*yaml-cpp[ \t]*$}{  \$\{YAML_CPP_LIBRARIES\}}g;' "$_f"
+    echo "  easynav maps_manager: bare yaml-cpp -> \${YAML_CPP_LIBRARIES} in ${_f#$ROOT/}"
+  fi
+done
+
+# --- lely_core_libraries (ros2_canopen, kilted+jazzy): the ExternalProject builds
+#     upstream lely-core (C) whose libc compat layer declares the getopt globals
+#     (optind/optopt/opterr/optarg) as TENTATIVE definitions in a shared header included
+#     by both getopt.c and sleep.c. clang defaults to -fno-common (since clang 11), which
+#     promotes each tentative definition to a strong symbol -> "ld: 4 duplicate symbols"
+#     (_optind/_optopt/_opterr/_optarg, in liblely_libc_la-getopt.o AND -sleep.o). The
+#     canonical fix is -fcommon, restoring the pre-clang-11 merging the code was written
+#     against (behaviourally a no-op: the tentative defs collapse to one). Append it to the
+#     ExternalProject configure CFLAGS. Clears lely_core_libraries -> the canopen_* cluster
+#     (fake_slaves/inventus_driver/ros2_control/ros2_controllers). Idempotent (guard on
+#     -fcommon already present). ---
+for _f in $(find "$ROOT" -path '*ros2_canopen/lely_core_libraries/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q '"CFLAGS=-O2 -Wno-macro-redefined"' "$_f" && ! grep -q 'CFLAGS=.*-fcommon' "$_f"; then
+    perl -pi -e 's{"CFLAGS=-O2 -Wno-macro-redefined"}{"CFLAGS=-O2 -Wno-macro-redefined -fcommon"}g;' "$_f"
+    echo "  lely_core_libraries: +-fcommon to ExternalProject CFLAGS (getopt tentative-def dup symbols under -fno-common) in ${_f#$ROOT/}"
   fi
 done
