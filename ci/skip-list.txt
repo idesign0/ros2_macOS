@@ -270,3 +270,13 @@ husarion_ugv_gazebo
 pal_gazebo_plugins
 rmf_robot_sim_gz_classic_plugins
 velodyne_gazebo_plugins
+# --- 2026-09-03: 4 more classic-gazebo roots, each VERIFIED against the CI log to
+#     hit the classic signature find_package(gazebo)/gazebo_dev-extras.cmake:3 or
+#     find_package(gazebo_ros) — NOT gz-sim. (gz-named siblings irobot_create_gz_plugins
+#     [gz_gui_vendor] and turtlebot4_ignition_gui_plugins [ignition-gui6] are gz/Fortress,
+#     deliberately NOT here. tiago_gazebo/pmb2_gazebo/omni_base_gazebo were confirmed to be
+#     cascades of mujoco_ros2_control/nav2, not of these roots, so they are NOT skipped here.)
+gazebo_plugins
+gazebo_ros2_control
+gazebo_planar_move_plugin
+boeing_gazebo_model_attachment_plugin
