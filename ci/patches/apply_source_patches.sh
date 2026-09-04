@@ -2049,3 +2049,25 @@ for _f in $(find "$ROOT" -path '*rmf_fleet_adapter/src/rmf_fleet_adapter/LegacyT
     echo "  rmf_fleet_adapter: guard malloc.h/malloc_trim (glibc-only) in ${_f#$ROOT/}"
   fi
 done
+
+# --- backward_global_planner (all 3): ament_target_dependencies(... visualization_msgs) but
+#     the CMakeLists never find_package(visualization_msgs) -> "the passed package name
+#     'visualization_msgs' was not found before". Add the missing find_package. Idempotent. ---
+for _f in $(find "$ROOT" -path '*backward_global_planner/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qF 'find_package(nav_2d_utils)' "$_f" && ! grep -qF 'find_package(visualization_msgs)' "$_f"; then
+    perl -0pi -e 's{find_package\(nav_2d_utils\)\n}{find_package(nav_2d_utils)\nfind_package(visualization_msgs)\n}' "$_f"
+    echo "  backward_global_planner: +find_package(visualization_msgs) in ${_f#$ROOT/}"
+  fi
+done
+
+# --- multisensor_calibration (all 3): lists bare `tinyxml2` in its ament dependency set, but
+#     tinyxml2 is a plain-CMake package (target tinyxml2::tinyxml2, already in
+#     target_link_libraries), NOT an ament package -> ament_target_dependencies() "the passed
+#     package name 'tinyxml2' was not found before". Drop the bare tinyxml2 from the ament list
+#     (it stays linked via tinyxml2::tinyxml2). Idempotent. ---
+for _f in $(find "$ROOT" -path '*multisensor_calibration/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qE '^  tinyxml2$' "$_f"; then
+    perl -0pi -e 's{^  tinyxml2\n}{}m;' "$_f"
+    echo "  multisensor_calibration: drop bare tinyxml2 from ament deps (linked via tinyxml2::tinyxml2) in ${_f#$ROOT/}"
+  fi
+done
