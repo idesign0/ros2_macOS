@@ -165,6 +165,18 @@ if [ -n "$zbd" ] && [ -f "$zbd/Cargo.lock" ] && grep -q '^version = "0.3.28"' "$
     echo "  zenoh_bridge_dds: 'cargo update time' failed — Cargo.lock left unchanged"
   fi
 fi
+# fuse_publishers: pose_2d_publisher.cpp builds tf2_ros::TransformListener from the fuse_core
+# NodeInterfaces object. The installed tf2_ros TransformListener template ctor does
+# node->get_node_*_interface() (expects a Node POINTER), so a NodeInterfaces value fails:
+# "member reference type ...NodeInterfaces<...> is not a pointer" (fuse's own TODO notes it waits
+# on a tf2_ros change). Call the explicit-interfaces ctor instead (BufferCore& + the 4 interface
+# SharedPtrs, which fuse_core::NodeInterfaces exposes as getters). API-verified against the
+# in-tree tf2_ros transform_listener.hpp explicit-interfaces ctor. (kilted+jazzy.)
+f="$(find "$ROOT" -path '*fuse_publishers/src/pose_2d_publisher.cpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-fuse-tf-interfaces' "$f"; then
+  perl -0pi -e 's~(\n[ \t]*tf_listener_ = std::make_unique<tf2_ros::TransformListener>\()\n[ \t]*\*tf_buffer_,\n[ \t]*interfaces_\n([ \t]*\);)~${1}  // ci-fuse-tf-interfaces: installed tf2_ros TransformListener template ctor does node->\n        // get_node_*_interface() (expects a Node pointer); pass the interfaces explicitly instead.\n        *tf_buffer_,\n        interfaces_.get_node_base_interface(),\n        interfaces_.get_node_logging_interface(),\n        interfaces_.get_node_parameters_interface(),\n        interfaces_.get_node_topics_interface()\n${2}~' "$f"
+  echo "  fuse_publishers: TransformListener -> explicit node interfaces"
+fi
 # off_highway_* sensor drivers: rclcpp_components_register_node(... EXECUTABLE <exe>) already
 # creates AND installs the standalone executable to lib/${PROJECT_NAME}; a redundant
 # install(TARGETS <exe> ...) installs it a SECOND time to the same place, so macOS
