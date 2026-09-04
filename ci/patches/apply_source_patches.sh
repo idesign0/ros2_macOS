@@ -102,6 +102,17 @@ if [ -n "$d" ] && [ -f "$d/cmake/ROS2MedkitCompat.cmake" ] && ! grep -q 'ci-medk
   perl -0pi -e 's/(\n[ \t]*)else\(\)\n([ \t]*message\(FATAL_ERROR "\[MedkitCompat\] Could not find yaml-cpp)/$1elseif(YAML_CPP_LIBRARIES AND YAML_CPP_INCLUDE_DIRS)  # ci-medkit-yamlfallback$1  add_library(yaml-cpp::yaml-cpp IMPORTED INTERFACE)$1  set_target_properties(yaml-cpp::yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES "\$\{YAML_CPP_LIBRARIES\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{YAML_CPP_INCLUDE_DIRS\}")$1else()\n$2/' "$d/cmake/ROS2MedkitCompat.cmake"
   echo "  ros2_medkit_cmake: yaml-cpp vendored-path fallback"
 fi
+# dynamixel_hardware: target_link_libraries() references the namespaced target
+# dynamixel_workbench_toolbox::dynamixel_workbench_toolbox, but dynamixel_workbench_toolbox
+# only ament_export_libraries() a BARE lib name (no install(EXPORT)/namespaced target) -> CMake
+# aborts "Target links to dynamixel_workbench_toolbox::... which is not a target". Synthesize the
+# imported target from the ament-exported vars (INCLUDE_DIRS/LIBRARIES). Cmake-configure-tested:
+# the INTERFACE IMPORTED target links cleanly. (kilted+jazzy; absent on humble.)
+f="$(find "$ROOT" -path '*/dynamixel_hardware/dynamixel_hardware/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-dxl-toolbox-target' "$f"; then
+  perl -0pi -e 's{(\nfind_package\(dynamixel_workbench_toolbox REQUIRED\))}{$1\nif(NOT TARGET dynamixel_workbench_toolbox::dynamixel_workbench_toolbox)  # ci-dxl-toolbox-target\n  add_library(dynamixel_workbench_toolbox::dynamixel_workbench_toolbox INTERFACE IMPORTED)\n  set_target_properties(dynamixel_workbench_toolbox::dynamixel_workbench_toolbox PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "\$\{dynamixel_workbench_toolbox_INCLUDE_DIRS\}" INTERFACE_LINK_LIBRARIES "\$\{dynamixel_workbench_toolbox_LIBRARIES\}")\nendif()}' "$f"
+  echo "  dynamixel_hardware: synthesized dynamixel_workbench_toolbox:: imported target"
+fi
 # off_highway_* sensor drivers: rclcpp_components_register_node(... EXECUTABLE <exe>) already
 # creates AND installs the standalone executable to lib/${PROJECT_NAME}; a redundant
 # install(TARGETS <exe> ...) installs it a SECOND time to the same place, so macOS
