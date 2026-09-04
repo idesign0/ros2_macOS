@@ -2026,3 +2026,26 @@ for _f in $(find "$ROOT" -path '*grid_map_pcl/include/grid_map_pcl/helpers.hpp' 
     echo "  grid_map_pcl: high_resolution_clock -> system_clock (libc++ clock mismatch) in ${_f#$ROOT/}"
   fi
 done
+
+# === category-I own-error roots (2026-09-04) ===
+
+# --- plansys2_bringup (all 3): plansys2_node.cpp calls sched_setscheduler(0, SCHED_FIFO, ...)
+#     for real-time scheduling -> "use of undeclared identifier 'sched_setscheduler'" (Linux
+#     syscall, absent on macOS; pthread scheduling is the macOS equivalent). Guard the RT
+#     setup with __linux__; on macOS the thread still spins, just without SCHED_FIFO. ---
+for _f in $(find "$ROOT" -path '*plansys2_bringup/src/plansys2_node.cpp' 2>/dev/null); do
+  if grep -qF 'if (sched_setscheduler(0, SCHED_FIFO, &sch) == -1) {' "$_f"; then
+    perl -0pi -e 's{(        if \(sched_setscheduler\(0, SCHED_FIFO, &sch\) == -1\) \{.*?\n        \}\n)}{#if defined(__linux__)\n$1#else\n        (void)sch;  // ci: sched_setscheduler is Linux-only; macOS has no SCHED_FIFO syscall\n#endif\n}s' "$_f"
+    echo "  plansys2_bringup: guard sched_setscheduler (__linux__) in ${_f#$ROOT/}"
+  fi
+done
+
+# --- rmf_fleet_adapter (all 3): LegacyTask.cpp #include <malloc.h> and calls malloc_trim(0)
+#     (glibc-only: releases free heap to the OS) -> "malloc.h file not found" on macOS. Both
+#     are a memory-release optimization; guard with __linux__ (no-op elsewhere). ---
+for _f in $(find "$ROOT" -path '*rmf_fleet_adapter/src/rmf_fleet_adapter/LegacyTask.cpp' 2>/dev/null); do
+  if grep -qxF '#include <malloc.h>' "$_f"; then
+    perl -0pi -e 's{#include <malloc\.h>}{#if defined(__linux__)\n#include <malloc.h>\n#endif}; s{^    malloc_trim\(0\);}{#if defined(__linux__)\n    malloc_trim(0);\n#endif}m;' "$_f"
+    echo "  rmf_fleet_adapter: guard malloc.h/malloc_trim (glibc-only) in ${_f#$ROOT/}"
+  fi
+done
