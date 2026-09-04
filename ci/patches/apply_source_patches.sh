@@ -1861,6 +1861,25 @@ if [ -f "$_f" ] && grep -qE '^\s*usb-1\.0\s*$' "$_f"; then
   perl -0pi -e 's{target_link_options\(ublox_dgnss_components PRIVATE\n  "LINKER:--allow-multiple-definition"\n\)}{if(NOT APPLE)\n  target_link_options(ublox_dgnss_components PRIVATE\n    "LINKER:--allow-multiple-definition"\n  )\nendif()}' "$_f"
   echo "  ublox_dgnss_node: bare usb-1.0 -> \${libusb_LINK_LIBRARIES} + guard GNU-ld flag in ${_f#$ROOT/}"
 fi
+# --- ublox_dgnss_node headers (all 3): once the GNU-ld '--allow-multiple-definition' flag is
+#     guarded off on macOS (ld64 has no equivalent), the REAL ODR bug surfaces -> the ubx/
+#     headers define namespace-scope symbols WITHOUT inline, so every .cpp that includes them
+#     emits its own copy -> "duplicate symbol ubx::cfg::ubxKeyCfgItemMap / operator< /
+#     ubx::get_polled_frame" across parameters.cpp / ubx_config_loader.cpp / ublox_dgnss_node.cpp.
+#     Fix the root: mark the header definitions `inline` (correct on every platform, makes the
+#     --allow-multiple-definition workaround unnecessary). Idempotent. ---
+for _hf in $(find "$ROOT" -path '*ublox_dgnss_node/include/*/ubx/ubx_cfg_item_map.hpp' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qE '^ubx_cfg_item_map_t ubxKeyCfgItemMap = \{' "$_hf"; then
+    perl -pi -e 's~^ubx_cfg_item_map_t ubxKeyCfgItemMap = \{~inline ubx_cfg_item_map_t ubxKeyCfgItemMap = {~; s~^bool operator<\(const ubx_key_id_t~inline bool operator<(const ubx_key_id_t~;' "$_hf"
+    echo "  ublox_dgnss_node: +inline ubxKeyCfgItemMap/operator< (header ODR dup) in ${_hf#$ROOT/}"
+  fi
+done
+for _hf in $(find "$ROOT" -path '*ublox_dgnss_node/include/*/ubx/ubx.hpp' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qE '^std::shared_ptr<FramePolled> get_polled_frame\(' "$_hf"; then
+    perl -pi -e 's{^std::shared_ptr<FramePolled> get_polled_frame\(}{inline std::shared_ptr<FramePolled> get_polled_frame(};' "$_hf"
+    echo "  ublox_dgnss_node: +inline get_polled_frame (header ODR dup) in ${_hf#$ROOT/}"
+  fi
+done
 
 # --- grid_map_pcl (all 3): add_compile_options("${OpenMP_CXX_FLAGS}") passes the whole
 #     string as ONE argv token; on Apple clang OpenMP_CXX_FLAGS is "-Xclang -fopenmp" (two
