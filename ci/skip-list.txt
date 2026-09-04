@@ -290,3 +290,12 @@ nmea_hardware_interface
 menge_vendor
 # rmf_building_sim_gz_plugins: build-depends on menge_vendor (skipped above).
 rmf_building_sim_gz_plugins
+# === category I triage (2026-09-04) ===
+# canboat_vendor: ExternalProject builds upstream canboat, whose install step copies
+# rel/socketcan-serial -- a SocketCAN tool. SocketCAN is Linux-only (no CAN sockets on
+# macOS), so that binary is never built and cmake_install.cmake:41 fails "file INSTALL
+# cannot find .../rel/socketcan-serial". No macOS path.
+canboat_vendor
+# ecal: core/CMakeLists.txt find_package(ecaludp REQUIRED) -- ecaludp is not vendored in
+# this tree (separate eclipse-ecal/ecaludp repo). Skip until it is added.
+ecal
