@@ -293,8 +293,8 @@ done
 #     existing sys/types.h clockid_t __APPLE__ patch below). ---
 d="$(_pkg_dir lely_core_libraries)"
 if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'Wno-macro-redefined' "$d/CMakeLists.txt"; then
-  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1" --prefix#' "$d/CMakeLists.txt"
-  echo "  lely_core_libraries: configure CFLAGS -Wno-macro-redefined + force pthread threads (THREADS_H=0 PTHREAD_H=1)"
+  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -fcommon -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1" --prefix#' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: configure CFLAGS -Wno-macro-redefined + -fcommon (getopt tentative-def dup symbols) + force pthread threads (THREADS_H=0 PTHREAD_H=1)"
 fi
 
 # --- Lane 6: lely_core_libraries's vendored libc/sys/types.h only treats
@@ -1770,23 +1770,11 @@ for _f in $(find "$ROOT" \( -path '*easynav*maps_manager/CMakeLists.txt' -o -pat
   fi
 done
 
-# --- lely_core_libraries (ros2_canopen, kilted+jazzy): the ExternalProject builds
-#     upstream lely-core (C) whose libc compat layer declares the getopt globals
-#     (optind/optopt/opterr/optarg) as TENTATIVE definitions in a shared header included
-#     by both getopt.c and sleep.c. clang defaults to -fno-common (since clang 11), which
-#     promotes each tentative definition to a strong symbol -> "ld: 4 duplicate symbols"
-#     (_optind/_optopt/_opterr/_optarg, in liblely_libc_la-getopt.o AND -sleep.o). The
-#     canonical fix is -fcommon, restoring the pre-clang-11 merging the code was written
-#     against (behaviourally a no-op: the tentative defs collapse to one). Append it to the
-#     ExternalProject configure CFLAGS. Clears lely_core_libraries -> the canopen_* cluster
-#     (fake_slaves/inventus_driver/ros2_control/ros2_controllers). Idempotent (guard on
-#     -fcommon already present). ---
-for _f in $(find "$ROOT" -path '*ros2_canopen/lely_core_libraries/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
-  if grep -q '"CFLAGS=-O2 -Wno-macro-redefined"' "$_f" && ! grep -q 'CFLAGS=.*-fcommon' "$_f"; then
-    perl -pi -e 's{"CFLAGS=-O2 -Wno-macro-redefined"}{"CFLAGS=-O2 -Wno-macro-redefined -fcommon"}g;' "$_f"
-    echo "  lely_core_libraries: +-fcommon to ExternalProject CFLAGS (getopt tentative-def dup symbols under -fno-common) in ${_f#$ROOT/}"
-  fi
-done
+# NB: the lely_core_libraries getopt tentative-def dup-symbol fix (-fcommon) is folded into
+# the lely configure-CFLAGS transform above (the one that sets -Wno-macro-redefined +
+# THREADS_H/PTHREAD_H). A separate transform here was DEAD -- by the time it ran, that earlier
+# transform had already extended the CFLAGS string so its `"CFLAGS=-O2 -Wno-macro-redefined"`
+# guard (with closing quote) no longer matched, so -fcommon was silently never appended.
 
 # --- nav2_waypoint_follower (humble esp.): photo_at_waypoint.hpp #includes the
 #     non-standard Debian-ism "opencv4/opencv2/core.hpp"/"opencv4/opencv2/opencv.hpp".
