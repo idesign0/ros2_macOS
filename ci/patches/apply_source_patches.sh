@@ -150,6 +150,21 @@ if [ -n "$rcd" ]; then
     echo "  rc_dynamics_api: +<string> in ${f#$ROOT/}"
   done
 fi
+# zenoh_bridge_dds: the pinned Cargo.lock uses time v0.3.28, which fails to compile on
+# rustc >= 1.80 (E0282 "type annotations needed for Box<_>" in time's format_description
+# parse/mod.rs). The runner's cargo does not honor the crate's rust-toolchain.toml (1.72.0),
+# so it builds with a newer rustc. Bump the locked time crate to >=0.3.36 (the inference fix
+# landed in 0.3.35); it is API-compatible and cargo pulls compatible time-macros/deranged.
+# Best-effort: needs cargo on PATH (present on the runner during the Rust build). Guarded so a
+# failure cannot abort setup, and only runs when the vulnerable version is actually locked.
+zbd="$(find "$ROOT" -type d -path '*/middleware/zenoh_bridge_dds' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$zbd" ] && [ -f "$zbd/Cargo.lock" ] && grep -q '^version = "0.3.28"' "$zbd/Cargo.lock" && command -v cargo >/dev/null 2>&1; then
+  if ( cd "$zbd" && cargo update -p time@0.3.28 --precise 0.3.36 ) >/dev/null 2>&1; then
+    echo "  zenoh_bridge_dds: bumped locked time 0.3.28 -> 0.3.36 (rustc>=1.80 compat)"
+  else
+    echo "  zenoh_bridge_dds: 'cargo update time' failed — Cargo.lock left unchanged"
+  fi
+fi
 # off_highway_* sensor drivers: rclcpp_components_register_node(... EXECUTABLE <exe>) already
 # creates AND installs the standalone executable to lib/${PROJECT_NAME}; a redundant
 # install(TARGETS <exe> ...) installs it a SECOND time to the same place, so macOS
