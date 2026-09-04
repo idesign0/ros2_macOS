@@ -113,6 +113,23 @@ if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-dxl-toolbox-target' "$f"; then
   perl -0pi -e 's{(\nfind_package\(dynamixel_workbench_toolbox REQUIRED\))}{$1\nif(NOT TARGET dynamixel_workbench_toolbox::dynamixel_workbench_toolbox)  # ci-dxl-toolbox-target\n  add_library(dynamixel_workbench_toolbox::dynamixel_workbench_toolbox INTERFACE IMPORTED)\n  set_target_properties(dynamixel_workbench_toolbox::dynamixel_workbench_toolbox PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "\$\{dynamixel_workbench_toolbox_INCLUDE_DIRS\}" INTERFACE_LINK_LIBRARIES "\$\{dynamixel_workbench_toolbox_LIBRARIES\}")\nendif()}' "$f"
   echo "  dynamixel_hardware: synthesized dynamixel_workbench_toolbox:: imported target"
 fi
+# realtime_tools-extras.cmake is included by EVERY realtime_tools consumer (via the
+# hardware_interface/controller_interface configs). Under CMP0167 it forces
+# find_package(Boost REQUIRED CONFIG), which needs BoostConfig.cmake on the prefix — not
+# reliably present for some macOS consumers (e.g. linear_feedback_controller) -> hard
+# "Could not find a package configuration file provided by Boost". Make it try CONFIG then
+# fall back to FindBoost MODULE mode (satisfied by the toolchain's Boost_INCLUDE_DIR / vendored
+# boost). Same block lives in realtime_tools' own CMakeLists. realtime_tools is in 00_base_core,
+# so the patched source is baked into the install artifact every consumer downloads.
+# Cmake-tested: MODULE fallback resolves Boost (Boost_FOUND=TRUE).
+d="$(find "$ROOT" -type d -path '*/realtime_tools/realtime_tools' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$d" ]; then
+  for f in "$d/cmake/realtime_tools-extras.cmake" "$d/CMakeLists.txt"; do
+    [ -f "$f" ] && ! grep -q 'ci-rt-boost-fallback' "$f" && \
+      perl -0pi -e 's~(\n[ \t]*cmake_policy\(SET CMP0167 NEW\)\n)[ \t]*find_package\(Boost REQUIRED CONFIG\)~${1}  find_package(Boost QUIET CONFIG)  # ci-rt-boost-fallback\n  if(NOT Boost_FOUND)\n    # BoostConfig.cmake is not on the prefix for some macOS consumers (e.g.\n    # linear_feedback_controller); fall back to FindBoost MODULE mode, which the\n    # toolchain Boost_INCLUDE_DIR / vendored boost satisfies.\n    cmake_policy(SET CMP0167 OLD)\n    find_package(Boost REQUIRED)\n  endif()~' "$f" && \
+      echo "  realtime_tools: Boost CONFIG->MODULE fallback in ${f#$ROOT/}"
+  done
+fi
 # off_highway_* sensor drivers: rclcpp_components_register_node(... EXECUTABLE <exe>) already
 # creates AND installs the standalone executable to lib/${PROJECT_NAME}; a redundant
 # install(TARGETS <exe> ...) installs it a SECOND time to the same place, so macOS
