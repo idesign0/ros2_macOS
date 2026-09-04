@@ -1984,3 +1984,15 @@ for _f in $(find "$ROOT" -path '*cx_plugins/ros_msgs_plugin/CMakeLists.txt' -not
     echo "  cx_ros_msgs_plugin: force CMAKE_CXX_STANDARD 20 (C++20 .contains) in ${_f#$ROOT/}"
   fi
 done
+
+# --- cx_msgs ListClipsEnvs.srv (all 3): the ListClipsEnvs service Response declares
+#     `string[] plugins` (copy-paste from ListClipsPlugins.srv), but cx_clips_env_manager's
+#     list_envs callback writes `response->envs` -> "no member named 'envs' in
+#     ListClipsEnvs_Response_". The service lists CLIPS ENVIRONMENTS, so the field should be
+#     `envs`. Rename plugins->envs in this srv only (NOT ListClipsPlugins.srv). Idempotent. ---
+for _f in $(find "$ROOT" -ipath '*cx_msgs/srv/ListClipsEnvs.srv' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qxF 'string[] plugins' "$_f"; then
+    perl -pi -e 's{^string\[\] plugins$}{string[] envs};' "$_f"
+    echo "  cx_msgs ListClipsEnvs.srv: Response field plugins -> envs in ${_f#$ROOT/}"
+  fi
+done
