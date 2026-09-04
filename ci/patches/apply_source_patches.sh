@@ -1841,13 +1841,16 @@ fi
 # === §1 common-33 batch (A/B/C): source fixes ===
 
 # --- camera_aravis2 (all 3): set(LIBRARIES ...) links ${YAML_CPP_LIBRARY_DIRS} (a
-#     DIRECTORY) instead of ${YAML_CPP_LIBRARIES}, so yaml-cpp is never linked ->
-#     "Undefined symbols: vtable for YAML::Exception/InvalidNode/...". Swap the dirs var
-#     for the libraries var. Idempotent. ---
+#     DIRECTORY), so yaml-cpp is never linked -> "Undefined symbols: vtable for
+#     YAML::Exception/InvalidNode/...". ${YAML_CPP_LIBRARIES} is NOT a usable substitute
+#     here -- the vendor sets it to the directory-scoped yaml-cpp::yaml-cpp target that
+#     isn't defined at generate on macOS (same as velodyne/swri). Discover the yaml-cpp
+#     .dylib via find_library and link it by ABSOLUTE PATH. Idempotent (ci-aravis-yamlpath). ---
 _f="$(_pkg_dir camera_aravis2)/CMakeLists.txt"
-if [ -f "$_f" ] && grep -qE '^\s*\$\{YAML_CPP_LIBRARY_DIRS\}\s*$' "$_f" && grep -q 'set(LIBRARIES' "$_f"; then
-  perl -0pi -e 's{image_transport::image_transport\n  \$\{YAML_CPP_LIBRARY_DIRS\}\n\)}{image_transport::image_transport\n  \$\{YAML_CPP_LIBRARIES\}\n)}' "$_f"
-  echo "  camera_aravis2: link \${YAML_CPP_LIBRARIES} not \${YAML_CPP_LIBRARY_DIRS} in ${_f#$ROOT/}"
+if [ -f "$_f" ] && grep -qE '^\s*\$\{YAML_CPP_LIBRARY_DIRS\}\s*$' "$_f" && ! grep -q 'ci-aravis-yamlpath' "$_f"; then
+  perl -0pi -e 's{set\(LIBRARIES\n}{# ci-aravis-yamlpath: link the yaml-cpp .dylib by absolute path (YAML_CPP_LIBRARY_DIRS is\n# a dir; YAML_CPP_LIBRARIES is the dir-scoped yaml-cpp::yaml-cpp target, absent at generate).\nfind_library(_ci_ycpp_lib NAMES yaml-cpp\n  HINTS \$\{YAML_CPP_INCLUDE_DIRS\} \$\{YAML_CPP_INCLUDE_DIR\} \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib ../lib)\nif(NOT _ci_ycpp_lib)\n  set(_ci_ycpp_lib \$\{YAML_CPP_LIBRARIES\})\nendif()\nset(LIBRARIES\n}' "$_f"
+  perl -0pi -e 's{image_transport::image_transport\n  \$\{YAML_CPP_LIBRARY_DIRS\}\n\)}{image_transport::image_transport\n  \$\{_ci_ycpp_lib\}\n)}' "$_f"
+  echo "  camera_aravis2: link yaml-cpp .dylib by absolute path (was YAML_CPP_LIBRARY_DIRS) in ${_f#$ROOT/}"
 fi
 
 # --- ublox_dgnss_node (all 3): target_link_libraries links bare 'usb-1.0' -> raw
