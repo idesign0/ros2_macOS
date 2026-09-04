@@ -256,3 +256,15 @@ robotiq_hardware_tests
 # mqtt_client: find_library(PahoMqttC) — Eclipse Paho MQTT C/C++ has no current Homebrew
 # formula (paho-mqtt-c was deleted) and no vendored source; no macOS build path.
 mqtt_client
+# === cascade siblings surfaced after §1 skips (2026-09-04, kilted run 33794872964) ===
+# Each depends on an already-skip-listed package, so it is a permanent cascade exposed once
+# its sibling stopped failing at config. Skip alongside the parent.
+# depthai_examples, depthai_ros_driver: depend on depthai_bridge (Luxonis depthai SDK, skipped).
+depthai_examples
+depthai_ros_driver
+# mapviz_plugins, multires_image, tile_map: depend on mapviz + qt_gui_cpp (both skipped).
+mapviz_plugins
+multires_image
+tile_map
+# ur_calibration: depends on ur_client_library (bundled httplib accept4, Linux-only, skipped).
+ur_calibration
