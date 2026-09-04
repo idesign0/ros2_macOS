@@ -231,6 +231,17 @@ for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' 
   perl -pi -e 's/\b_Float64\b/double/g' "$f"
   echo "  vimbax_camera: _Float64 -> double in ${f#$ROOT/}"
 done
+# cloudini_ros: rclcpp_components_register_node(... EXECUTABLE cloudini_topic_converter) already
+# creates AND installs that executable to lib/cloudini_ros; a redundant install(TARGETS
+# cloudini_topic_converter RUNTIME DESTINATION lib/cloudini_ros) installs it a 2nd time, so macOS
+# install_name_tool errors on the duplicate LC_RPATH (@loader_path/..). Drop the redundant install.
+# (Same class as the off_highway install(TARGETS receiver/sender) dedup.) Unblocks the
+# etsi_its_rviz_plugins / roadmap_explorer cascade victims of cloudini_topic_converter.
+f="$(find "$ROOT" -path '*cloudini_ros/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-cloudini-dup-install' "$f"; then
+  perl -0pi -e 's~\ninstall\(TARGETS cloudini_topic_converter\n  RUNTIME DESTINATION lib/cloudini_ros\n\)\n~\n# ci-cloudini-dup-install: redundant install removed (rclcpp_components_register_node EXECUTABLE\n# already installs cloudini_topic_converter; the second install duplicates LC_RPATH on macOS)\n~' "$f"
+  echo "  cloudini_ros: dropped redundant install(TARGETS cloudini_topic_converter)"
+fi
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
