@@ -371,3 +371,10 @@ kuka_external_control_sdk_examples
 # puma_motor_driver: find_package(clearpath_socketcan_interface) -- SocketCAN is Linux-only
 # (no CAN sockets on macOS). No macOS path.
 puma_motor_driver
+# husarion_ugv_hardware_interfaces: SuperBuild ExternalProject builds ep_libgpiod (Linux GPIO
+# character-device library, no macOS) + ep_liblely; libgpiod has no macOS port. Robot HW interface,
+# Linux-only.
+husarion_ugv_hardware_interfaces
+# lidar_situational_graphs: find_package(ndt_omp) -- ndt_omp is not a standalone vendored package
+# in this tree (it only exists embedded inside autoware_ndt_scan_matcher). Skip until vendored.
+lidar_situational_graphs
