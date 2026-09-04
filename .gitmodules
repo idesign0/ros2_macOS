@@ -908,7 +908,7 @@
 	branch = ros2
 [submodule "ros-planning/beluga"]
 	path = ros-planning/beluga
-	url = https://github.com/Ekumen-OS/beluga.git
+	url = https://github.com/idesign0/id_beluga.git
 	branch = main
 [submodule "ros-drivers/bno055"]
 	path = ros-drivers/bno055
