@@ -328,4 +328,45 @@ puma_motor_driver
 husarion_ugv_hardware_interfaces
 # lidar_situational_graphs: find_package(ndt_omp) -- ndt_omp is not a standalone vendored package
 # in this tree (it only exists embedded inside autoware_ndt_scan_matcher). Skip until vendored.
-lidar_situational_graphs
+lidar_situational_graphs# === MRPT consolidation (2026-09-04): keep mrpt_ros v2.x (mrpt_lib*), drop mrpt3 v3.x ===
+# mrpt3 (ros-planning/mrpt3, v3.1.3 modules) and mrpt_ros (v2.15.21, mrpt_lib*) both install
+# mrpt/*.h -> incompatible header clobber (exceptions.cpp return-type conflict) that breaks the
+# mrpt_ros v2.x build. mrpt3 has ZERO external consumers; the entire mola / mrpt_navigation /
+# mvsim / mp2p_icp / mrpt_sensors / mrpt_path_planning ecosystem (~65 pkgs) depends on mrpt_ros v2.x.
+# Decision (user 2026-09-04): keep the v2.x ecosystem, skip the orphan mrpt3 v3.x modules.
+mrpt_apps_cli
+mrpt_apps_gui
+mrpt_bayes
+mrpt_common
+mrpt_comms
+mrpt_config
+mrpt_containers
+mrpt_core
+mrpt_data
+mrpt_examples_cpp
+mrpt_expr
+mrpt_graphs
+mrpt_graphslam
+mrpt_gui
+mrpt_hwdrivers
+mrpt_img
+mrpt_imgui
+mrpt_io
+mrpt_kinematics
+mrpt_libapps_cli
+mrpt_libapps_gui
+mrpt_maps
+mrpt_math
+mrpt_nav
+mrpt_obs
+mrpt_opengl
+mrpt_poses
+mrpt_random
+mrpt_rtti
+mrpt_serialization
+mrpt_slam
+mrpt_system
+mrpt_tfest
+mrpt_topography
+mrpt_typemeta
+mrpt_viz
