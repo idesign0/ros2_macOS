@@ -204,6 +204,21 @@ set(CLI11_INCLUDE_DIRS "/opt/homebrew/include" CACHE PATH "CLI11 include path" F
 include_directories(SYSTEM ${CLI11_INCLUDE_DIRS})
 set(CSPARSE_INCLUDE_DIR "/opt/homebrew/include/suitesparse")
 set(CSPARSE_LIBRARY "/opt/homebrew/lib/libsuitesparse.dylib")
+
+# SuiteSparse: Ceres (built in base) requires SuiteSparse >= 7.14.0, but the linked
+# /opt/homebrew/opt/suite-sparse can point at an older keg (7.12.x) at consumer time ->
+# "Failed to find ... SuiteSparse: unsuitable version 7.12.3, required >= 7.14.0"
+# (robot_calibration, rmf_traffic_editor). Prepend the NEWEST installed suite-sparse keg to
+# CMAKE_PREFIX_PATH so find_package(SuiteSparse) resolves the >=7.14 one consistently in
+# every job (also keeps base and domain shards on one version).
+file(GLOB _ss_kegs "/opt/homebrew/Cellar/suite-sparse/*")
+if(_ss_kegs)
+  list(SORT _ss_kegs COMPARE NATURAL)
+  list(LENGTH _ss_kegs _ss_n)
+  math(EXPR _ss_last "${_ss_n}-1")
+  list(GET _ss_kegs ${_ss_last} _ss_newest)
+  set(CMAKE_PREFIX_PATH "${_ss_newest};${CMAKE_PREFIX_PATH}")
+endif()
 set(GDAL_CONFIG_BIN "/opt/homebrew/bin/gdal-config" CACHE FILEPATH "Path to Homebrew gdal-config utility." FORCE)
 set(ENV{GDAL_CONFIG} ${GDAL_CONFIG_BIN})
 set(CMAKE_PREFIX_PATH 
