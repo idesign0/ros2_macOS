@@ -281,6 +281,17 @@ if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-crane-aruco' "$f"; then
   perl -0pi -e 's~cv::aruco::detectMarkers\(cv_img->image, MARKER_DICT, corners, ids\);~cv::aruco::ArucoDetector _ci_aruco_detector(MARKER_DICT);  // ci-crane-aruco\n      _ci_aruco_detector.detectMarkers(cv_img->image, corners, ids);~' "$f"
   echo "  crane_plus_examples: legacy aruco::detectMarkers -> ArucoDetector"
 fi
+# behaviortree_cpp_v3: builds PublisherZMQ (src/loggers/bt_zmq_publisher.cpp) only if(ZMQ_FOUND),
+# but line ~58 calls find_package(ZeroMQ) while the bundled module is cmake/FindZMQ.cmake (package
+# name ZMQ, sets ZMQ_FOUND) -> ZeroMQ never resolves -> ZMQ_FOUND stays false -> PublisherZMQ is
+# skipped -> plansys2_executor (and other BT users) fail to link BT::PublisherZMQ. Call
+# find_package(ZMQ) so FindZMQ.cmake runs; it locates brew zeromq via the default prefixes
+# (verified: ZMQ_FOUND=TRUE, /opt/homebrew/lib/libzmq.dylib). BT v3 is in base -> lands in the install.
+f="$(find "$ROOT" -path '*behaviortree_cpp_v3*/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | grep -vE '/(examples|sample|test)/' | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && grep -q 'find_package(ZeroMQ)' "$f" && ! grep -q 'ci-bt-zmq' "$f"; then
+  perl -0pi -e 's~find_package\(ZeroMQ\)~find_package(ZMQ)  # ci-bt-zmq: the provided module is cmake/FindZMQ.cmake (sets ZMQ_FOUND), not FindZeroMQ~' "$f"
+  echo "  behaviortree_cpp_v3: find_package(ZeroMQ) -> find_package(ZMQ) (enables PublisherZMQ)"
+fi
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
