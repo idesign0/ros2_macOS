@@ -292,6 +292,15 @@ if [ -n "$f" ] && [ -f "$f" ] && grep -q 'find_package(ZeroMQ)' "$f" && ! grep -
   perl -0pi -e 's~find_package\(ZeroMQ\)~find_package(ZMQ)  # ci-bt-zmq: the provided module is cmake/FindZMQ.cmake (sets ZMQ_FOUND), not FindZeroMQ~' "$f"
   echo "  behaviortree_cpp_v3: find_package(ZeroMQ) -> find_package(ZMQ) (enables PublisherZMQ)"
 fi
+# husarion_ugv_manager: command_handler.hpp uses POSIX close/pipe/fork/dup2/execl/read +
+# STDOUT_FILENO/STDERR_FILENO but only includes <fcntl.h>/<sys/wait.h>; macOS doesn't pull
+# <unistd.h> transitively through those (Linux does) -> "use of undeclared identifier". These are
+# all POSIX and available on macOS via <unistd.h>. Add the include. (Not Linux-only.)
+f="$(find "$ROOT" -path '*husarion_ugv_manager*/plugins/command_handler.hpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-husarion-unistd' "$f"; then
+  perl -0pi -e 's~(#include <sys/wait.h>\n)~${1}#include <unistd.h>  // ci-husarion-unistd: close/pipe/fork/dup2/execl/STDOUT_FILENO (POSIX; macOS does not pull it via fcntl/wait)\n~' "$f"
+  echo "  husarion_ugv_manager: +#include <unistd.h> in command_handler.hpp"
+fi
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
