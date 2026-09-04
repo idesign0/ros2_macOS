@@ -1959,3 +1959,16 @@ if [ -f "$_f" ] && grep -qxF 'add_subdirectory(pybind11)' "$_f"; then
   perl -0pi -e 's{^add_subdirectory\(pybind11\)$}{# ci: py_binding_tools already find_package(pybind11); the bundled pybind11 would\n# re-create pybind11::pybind11_headers/headers/module -> "cannot create ALIAS ... already\n# exists". Use the already-found system pybind11 when present (first clash is\n# pybind11::pybind11_headers).\nif(NOT TARGET pybind11::pybind11_headers AND NOT TARGET pybind11::headers)\n  add_subdirectory(pybind11)\nendif()}m' "$_f"
   echo "  moveit_task_constructor_core: guard bundled pybind11 add_subdirectory (system pybind11 via py_binding_tools) in ${_f#$ROOT/}"
 fi
+
+# --- etsi_its_rviz_plugins (all 3): MAPEMDisplay declares the Q_SLOT changedMAPEMViz() in
+#     mapem_display.hpp but it is never defined (only the changedSPATEM* siblings are) and
+#     never connected/referenced -> a dead slot. Qt MOC still emits a reference to it in the
+#     generated qt_static_metacall -> "Undefined symbols: etsi_its_msgs::displays::
+#     MAPEMDisplay::changedMAPEMViz()". Add an empty definition so it links (no behaviour
+#     change -- the slot was already non-functional). Idempotent. ---
+for _c in $(find "$ROOT" -path '*etsi_its_rviz_plugins*/MAPEM/mapem_display.cpp' -not -path '*/build/*' 2>/dev/null); do
+  if grep -q 'void MAPEMDisplay::changedSPATEMViz()' "$_c" && ! grep -q 'MAPEMDisplay::changedMAPEMViz' "$_c"; then
+    perl -0pi -e 's~void MAPEMDisplay::changedSPATEMViz\(\) \{~void MAPEMDisplay::changedMAPEMViz() {}  // ci: dead slot declared in header, never defined/connected; stub to satisfy MOC metacall\n\nvoid MAPEMDisplay::changedSPATEMViz() {~m' "$_c"
+    echo "  etsi_its_rviz_plugins: +stub MAPEMDisplay::changedMAPEMViz() (undefined MOC slot) in ${_c#$ROOT/}"
+  fi
+done
