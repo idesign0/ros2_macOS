@@ -1900,14 +1900,17 @@ fi
 #     set(YAML_CPP_TARGET ${YAML_CPP_LIBRARIES}) endif()`. find_package(yaml-cpp) leaves
 #     yaml-cpp::yaml-cpp as a directory-scoped IMPORTED target -- defined at configure (the
 #     if() is TRUE) but NOT at generate on macOS -> "links to yaml-cpp::yaml-cpp but the
-#     target was not found" (velodyne CMakeLists:49 / swri :93). Fabricate a GLOBAL UNKNOWN
-#     IMPORTED target from the vendored yaml-cpp .dylib and prefer it; fall back to the
-#     upstream logic if the lib isn't located. Idempotent (ci_fab_yamlcpp marker). ---
+#     target was not found" (velodyne CMakeLists:49 / swri :93). Link the vendored yaml-cpp
+#     .dylib by ABSOLUTE PATH (discovered via find_library) + add its include dir globally.
+#     NB: do NOT fabricate a named IMPORTED target here -- swri_transform_util is a LIBRARY
+#     consumed downstream (swri_route_util), and a fabricated target name leaks into its
+#     exported PUBLIC link interface -> "ld: library 'ci_fab_yamlcpp' not found" in consumers.
+#     An absolute path exports cleanly. Idempotent (ci-yamlcpp-pathlink marker). ---
 for _p in velodyne_pointcloud swri_transform_util; do
   _f="$(_pkg_dir "$_p")/CMakeLists.txt"
-  if [ -f "$_f" ] && grep -qF 'if(TARGET yaml-cpp::yaml-cpp)' "$_f" && ! grep -q 'ci_fab_yamlcpp' "$_f"; then
-    perl -0pi -e 's~if\(TARGET yaml-cpp::yaml-cpp\)\n  set\(YAML_CPP_TARGET "yaml-cpp::yaml-cpp"\)\nelse\(\)\n  set\(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\}\)\nendif\(\)~# ci: find_package(yaml-cpp) can leave yaml-cpp::yaml-cpp as a directory-scoped\n# IMPORTED target (TRUE here, absent at generate on macOS). Fabricate a GLOBAL one.\nif(NOT TARGET ci_fab_yamlcpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp\n    HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\}\n    PATH_SUFFIXES lib)\n  if(_ci_ycpp_lib)\n    add_library(ci_fab_yamlcpp UNKNOWN IMPORTED GLOBAL)\n    set_target_properties(ci_fab_yamlcpp PROPERTIES\n      IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}"\n      INTERFACE_INCLUDE_DIRECTORIES "\$\{YAML_CPP_INCLUDE_DIR\}")\n  endif()\nendif()\nif(TARGET ci_fab_yamlcpp)\n  set(YAML_CPP_TARGET ci_fab_yamlcpp)\nelseif(TARGET yaml-cpp::yaml-cpp)\n  set(YAML_CPP_TARGET "yaml-cpp::yaml-cpp")\nelse()\n  set(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\})\nendif()~' "$_f"
-    echo "  $_p: fabricate GLOBAL yaml-cpp target (dir-scoped target not found at generate) in ${_f#$ROOT/}"
+  if [ -f "$_f" ] && grep -qF 'if(TARGET yaml-cpp::yaml-cpp)' "$_f" && ! grep -q 'ci-yamlcpp-pathlink' "$_f"; then
+    perl -0pi -e 's~if\(TARGET yaml-cpp::yaml-cpp\)\n  set\(YAML_CPP_TARGET "yaml-cpp::yaml-cpp"\)\nelse\(\)\n  set\(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\}\)\nendif\(\)~# ci-yamlcpp-pathlink: find_package(yaml-cpp) can leave yaml-cpp::yaml-cpp as a\n# directory-scoped IMPORTED target (TRUE here, absent at generate on macOS). Link the\n# vendored yaml-cpp .dylib by ABSOLUTE PATH so it also exports cleanly to consumers.\nfind_library(_ci_ycpp_lib NAMES yaml-cpp\n  HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\}\n  PATH_SUFFIXES lib)\nif(_ci_ycpp_lib)\n  set(YAML_CPP_TARGET "\$\{_ci_ycpp_lib\}")\n  include_directories("\$\{YAML_CPP_INCLUDE_DIR\}")\nelseif(TARGET yaml-cpp::yaml-cpp)\n  set(YAML_CPP_TARGET "yaml-cpp::yaml-cpp")\nelse()\n  set(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\})\nendif()~' "$_f"
+    echo "  $_p: link yaml-cpp .dylib by absolute path (export-safe) in ${_f#$ROOT/}"
   fi
 done
 
