@@ -130,6 +130,26 @@ if [ -n "$d" ]; then
       echo "  realtime_tools: Boost CONFIG->MODULE fallback in ${f#$ROOT/}"
   done
 fi
+# rc_dynamics_api: several TUs use std::string / std::stringstream but only include <stdexcept>
+# (or nothing, relying on transitive includes). On libc++ (macOS) std::basic_string<char> is not
+# pulled in that way -> "implicit instantiation of undefined template 'std::basic_string<char>'"
+# (socket_exception.h first, then data_receiver.h, msg_utils.h). Add an explicit <string> include
+# to every rc_dynamics_api TU that needs one, after its first #include (or the include-guard #define).
+rcd="$(find "$ROOT" -type d -path '*rc_dynamics_api/rc_dynamics_api' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$rcd" ]; then
+  # only rc_dynamics_api's OWN sources — NOT the bundled opt/{protobuf,cpr,googletest} third-party.
+  for f in $(grep -rlE 'std::(string|stringstream|to_string|ostringstream|istringstream)' "$rcd" --include='*.h' --include='*.hpp' --include='*.cc' --include='*.cpp' 2>/dev/null | grep -v '/opt/'); do
+    grep -qE '#include <string>' "$f" && continue
+    if grep -qE '#include [<"]' "$f"; then
+      perl -0pi -e 's~(#include [<"][^>"\n]+[>"]\n)~${1}#include <string>  // ci-rcdyn-string\n~' "$f"
+    elif grep -qE '^#define ' "$f"; then
+      perl -0pi -e 's~(^#define [^\n]+\n)~${1}#include <string>  // ci-rcdyn-string\n~m' "$f"
+    else
+      perl -0pi -e 's~\A~#include <string>  // ci-rcdyn-string\n~' "$f"
+    fi
+    echo "  rc_dynamics_api: +<string> in ${f#$ROOT/}"
+  done
+fi
 # off_highway_* sensor drivers: rclcpp_components_register_node(... EXECUTABLE <exe>) already
 # creates AND installs the standalone executable to lib/${PROJECT_NAME}; a redundant
 # install(TARGETS <exe> ...) installs it a SECOND time to the same place, so macOS
