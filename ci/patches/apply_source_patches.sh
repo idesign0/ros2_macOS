@@ -1972,3 +1972,15 @@ for _c in $(find "$ROOT" -path '*etsi_its_rviz_plugins*/MAPEM/mapem_display.cpp'
     echo "  etsi_its_rviz_plugins: +stub MAPEMDisplay::changedMAPEMViz() (undefined MOC slot) in ${_c#$ROOT/}"
   fi
 done
+
+# --- cx_ros_msgs_plugin (all 3): uses std::unordered_map::contains (C++20) in 28 places, and
+#     its CMakeLists only sets CMAKE_CXX_STANDARD 20 `if(NOT CMAKE_CXX_STANDARD)`. But the
+#     toolchain/ament already sets it to 17, so the guard never fires -> compiled at C++17 ->
+#     "no member named 'contains' in std::unordered_map". Force C++20 unconditionally for this
+#     package. Idempotent. ---
+for _f in $(find "$ROOT" -path '*cx_plugins/ros_msgs_plugin/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qF 'if(NOT CMAKE_CXX_STANDARD)' "$_f"; then
+    perl -0pi -e 's{if\(NOT CMAKE_CXX_STANDARD\)\n  set\(CMAKE_CXX_STANDARD 20\)\nendif\(\)}{set(CMAKE_CXX_STANDARD 20)  # ci: force C++20 (code uses std::unordered_map::contains); global default is 17}' "$_f"
+    echo "  cx_ros_msgs_plugin: force CMAKE_CXX_STANDARD 20 (C++20 .contains) in ${_f#$ROOT/}"
+  fi
+done
