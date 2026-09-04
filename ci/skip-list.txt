@@ -323,3 +323,10 @@ multires_image
 tile_map
 # ur_calibration: depends on ur_client_library (bundled httplib accept4, Linux-only, skipped).
 ur_calibration
+# === D-H triage (2026-09-04) ===
+# feetech_ros2_driver: pkg_check_modules(libserial) -- libserial has no current Homebrew
+# formula (deleted) and no vendored source; HW serial driver, no macOS path.
+feetech_ros2_driver
+# cx_protobuf_plugin: find_package(ProtobufComm) -- Fawkes' ProtobufComm library, not in
+# this tree and no macOS build.
+cx_protobuf_plugin
