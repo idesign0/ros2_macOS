@@ -2071,3 +2071,26 @@ for _f in $(find "$ROOT" -path '*multisensor_calibration/CMakeLists.txt' -not -p
     echo "  multisensor_calibration: drop bare tinyxml2 from ament deps (linked via tinyxml2::tinyxml2) in ${_f#$ROOT/}"
   fi
 done
+
+# --- rmf_visualization_schedule (all 3): target_link_libraries links bare `OpenSSL`, which
+#     does not pull libcrypto -> "Undefined symbols: _HMAC / _PEM_read_bio_PUBKEY /
+#     _i2d_ECDSA_SIG" (websocketpp TLS). Link the real imported targets OpenSSL::SSL +
+#     OpenSSL::Crypto instead (only in target_link_libraries; ament_export_dependencies
+#     OpenSSL stays). Idempotent. ---
+for _f in $(find "$ROOT" -path '*rmf_visualization_schedule/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qE '^    websocketpp\n?' "$_f" && grep -qzE 'websocketpp\n    OpenSSL\n    Threads' "$_f"; then
+    perl -0pi -e 's{    websocketpp\n    OpenSSL\n    Threads}{    websocketpp\n    OpenSSL::SSL\n    OpenSSL::Crypto\n    Threads}' "$_f"
+    echo "  rmf_visualization_schedule: bare OpenSSL -> OpenSSL::SSL+Crypto in ${_f#$ROOT/}"
+  fi
+done
+
+# --- play_motion_builder (all 3): target_link_libraries(motion_model_lib yaml-cpp) links the
+#     bare name -> raw -lyaml-cpp -> "ld: library 'yaml-cpp' not found" (brew yaml-cpp unlinked;
+#     vendor exports only yaml-cpp::yaml-cpp). Discover the vendored .dylib via find_library and
+#     link by absolute path. Idempotent (ci-pmb-yamlpath marker). ---
+for _f in $(find "$ROOT" -path '*play_motion_builder/play_motion_builder/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qF 'target_link_libraries(motion_model_lib yaml-cpp)' "$_f"; then
+    perl -0pi -e 's{target_link_libraries\(motion_model_lib yaml-cpp\)}{# ci-pmb-yamlpath: link vendored yaml-cpp .dylib by absolute path (bare -lyaml-cpp not found)\nfind_library(_ci_ycpp_lib NAMES yaml-cpp HINTS \$\{YAML_CPP_INCLUDE_DIRS\} \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\nif(NOT _ci_ycpp_lib)\n  set(_ci_ycpp_lib yaml-cpp)\nendif()\ntarget_link_libraries(motion_model_lib \$\{_ci_ycpp_lib\})}' "$_f"
+    echo "  play_motion_builder: bare yaml-cpp -> abs-path .dylib in ${_f#$ROOT/}"
+  fi
+done
