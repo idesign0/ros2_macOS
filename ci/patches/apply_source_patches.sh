@@ -1642,6 +1642,23 @@ for _d in /opt/homebrew/lib/cmake/jsoncpp /opt/homebrew/opt/jsoncpp/lib/cmake/js
   echo "  jsoncpp: created missing jsoncppConfigVersion.cmake (v$_jv) in $_d (VTK/PCL fix)"
 done
 
+# --- VTK 9.6 (brew) Boost EXACT pin (post-brew): VTK-vtk-module-find-packages.cmake does
+#     find_package(Boost 1.90.0 EXACT), but this workspace routes Boost to the vendored
+#     boost-1.89 -> "Could not find the VTK package due to a missing dependency: Boost"
+#     -> VTK not found -> PCL's find_package(VTK COMPONENTS ...) fails (QUIET) -> PCL
+#     visualization consumers die with "visualization is required but vtk was not found"
+#     (navmap_rviz_plugin, rtabmap_rviz_plugins). VTK's Boost dependency is only its
+#     BoostGraphAlgorithms module; PCL-visualization/rviz consumers use VTK rendering, not
+#     that module, so relax the EXACT 1.90.0 pin to accept the vendored 1.89. Runs post-brew
+#     (idempotent: the 1.90.0/EXACT lines are gone after). ---
+for _vf in /opt/homebrew/lib/cmake/vtk-9.6/VTK-vtk-module-find-packages.cmake; do
+  [ -f "$_vf" ] || continue
+  if grep -qE '^    1\.90\.0$' "$_vf"; then
+    perl -0pi -e 's{find_package\(Boost\n    1\.90\.0\n    EXACT\n}{find_package(Boost\n    \n    \n}g;' "$_vf"
+    echo "  VTK: relax find_package(Boost 1.90.0 EXACT) -> any (vendored boost-1.89) in $_vf"
+  fi
+done
+
 # --- udp_driver (ros-drivers/transport_drivers, all 3): udp_socket.cpp uses
 #     asio::ip::address::from_string, removed in modern asio (Fast-DDS 1.34.2) ->
 #     "no member named 'from_string' in 'asio::ip::address'". Port to the free
