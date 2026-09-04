@@ -1726,6 +1726,15 @@ for _f in $(find "$ROOT" -path '*libmavconn/src/interface.cpp' 2>/dev/null); do
     perl -0pi -e 's{constexpr auto mavlink_signing_epoch = std::chrono::sys_days \{std::chrono::year\(2015\) /\s*std::chrono::January / 1\};}{// ci: libc++ lacks the C++20 chrono calendar (sys_days/year/month). The mavlink\n  // signing epoch 2015-01-01T00:00:00Z is a fixed 1420070400 s offset from the\n  // system_clock (Unix) epoch -- behaviourally identical to sys_days\{2015/Jan/1\}.\n  const auto mavlink_signing_epoch =\n    std::chrono::system_clock::time_point\{std::chrono::seconds\{1420070400\}\};}' "$_f"
     echo "  libmavconn: sys_days calendar -> fixed Unix-offset epoch (libc++ no C++20 chrono calendar) in ${_f#$ROOT/}"
   fi
+  # apply_signing_config() sets m_{tx,rx}_signing.last_status = mavlink::MAVLINK_SIGNING_STATUS_NONE,
+  # but the vendored mavlink v2.0 mavlink_signing_t has NO last_status field and there is no
+  # MAVLINK_SIGNING_STATUS_NONE enum (both are newer-mavlink additions; this libmavconn is ahead
+  # of the vendored mavlink) -> "no member named 'last_status'". The field is write-only here
+  # (never read anywhere in libmavconn), so drop the two assignments. Idempotent.
+  if grep -q 'last_status = mavlink::MAVLINK_SIGNING_STATUS_NONE' "$_f"; then
+    perl -0pi -e 's{^[ \t]*m_[tr]x_signing\.last_status = mavlink::MAVLINK_SIGNING_STATUS_NONE;\n}{}mg;' "$_f"
+    echo "  libmavconn: drop m_*_signing.last_status assignments (field absent in vendored mavlink v2.0) in ${_f#$ROOT/}"
+  fi
 done
 
 # --- autoware yaml-cpp::yaml-cpp target scoping (autoware_core, humble esp.): several
