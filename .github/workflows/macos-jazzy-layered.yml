@@ -33,7 +33,7 @@ jobs:
         run: |
           echo "domains=$(jq -R -s -c 'split("\n") | map(select(length>0))' ci/shards/_domains.txt)" >> "$GITHUB_OUTPUT"
 
-  base:
+  base-1:
     needs: plan
     runs-on: macos-26
     timeout-minutes: 360
@@ -95,39 +95,112 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-jazzy-base-${{ github.run_id }}
-          restore-keys: ccache-jazzy-base-
-      - name: Build base (core+vendors)
+          key: ccache-jazzy-base1-${{ github.run_id }}
+          restore-keys: ccache-jazzy-base1-
+      - name: Build base-1 (foundation)
         continue-on-error: true
         run: |
           set +e
-          SEL=$(cat ci/shards/00_base_core.txt ci/shards/01_base_vendors.txt | grep -vE '^\s*#|^\s*$' | tr '\n' ' ')
+          SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/base_1.txt | tr '\n' ' ')
           colcon build --packages-select $SEL \
             --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_base.log
-          echo "== summary =="; grep -E 'Summary:|packages failed' build_base.log || true
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_base1.log
+          echo "== summary =="; grep -E 'Summary:|packages failed' build_base1.log || true
+      - name: Upload install-base1
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-base1
+          path: install
+          retention-days: 2
+      - name: Summary base1
+        if: always()
+        run: |
+          mkdir -p summaries
+          { echo "## base1"; grep -E 'Failed +<<<' build_base1.log 2>/dev/null | sort -u || true; } > summaries/_base1.txt
+      - name: Upload summary base1
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-_base1
+          path: summaries
+          retention-days: 5
+
+  base-2:
+    needs: base-1
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false, fetch-depth: 0 }
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+      - uses: actions/download-artifact@v4
+        with: { name: install-base1, path: install }
+      - name: Restore executable bits (GitHub artifacts drop +x)
+        run: chmod -R +x install/bin 2>/dev/null || true
+      - name: Apply skip-list (COLCON_IGNORE)
+        run: |
+          grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
+            path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
+            [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
+          done
+      - name: Unlink conflicting Homebrew packages
+        run: |
+          set +e
+          brew unlink boost || true
+          brew unlink boost-python3 || true
+          brew unlink xtensor || true
+          brew unlink xdm || true
+          brew unlink xtl || true
+          brew unlink qt || true
+          brew unlink asio || true
+          brew unlink orocos-kdl || true
+          brew unlink protobuf || true   # gz stack builds+links pinned protobuf v32.0 (gz-macOS); brew 35.1 removed PROTOBUF_CONSTEXPR -> ros_gz_sim .pb.h mismatch
+          brew unlink ceres-solver || true
+          brew unlink osqp || true
+          echo "unlink done"
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-jazzy-base2-${{ github.run_id }}
+          restore-keys: ccache-jazzy-base2-
+      - name: Build base-2 (rest)
+        continue-on-error: true
+        run: |
+          set +e
+          source install/setup.sh
+          SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/base_2.txt | tr '\n' ' ')
+          colcon build --packages-select $SEL \
+            --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+            --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_base2.log
+          echo "== summary =="; grep -E 'Summary:|packages failed' build_base2.log || true
       - name: Upload install-base
         uses: actions/upload-artifact@v4
         with:
           name: install-base
           path: install
           retention-days: 2
-      - name: Summary base
+      - name: Summary base2
         if: always()
         run: |
           mkdir -p summaries
-          { echo "## base"; grep -E 'Failed +<<<' build_base.log 2>/dev/null | sort -u || true; } > summaries/_base.txt
-      - name: Upload summary base
+          { echo "## base2"; grep -E 'Failed +<<<' build_base2.log 2>/dev/null | sort -u || true; } > summaries/_base2.txt
+      - name: Upload summary base2
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: summary-_base
+          name: summary-_base2
           path: summaries
           retention-days: 5
 
   domains:
-    needs: [plan, base]
+    needs: [plan, base-2]
     runs-on: macos-26
     timeout-minutes: 360
     strategy:
@@ -239,7 +312,7 @@ jobs:
           retention-days: 5
 
   report:
-    needs: [base, domains]
+    needs: [base-1, base-2, domains]
     if: always()
     runs-on: ubuntu-latest
     steps:
