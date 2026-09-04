@@ -242,6 +242,16 @@ if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-cloudini-dup-install' "$f"; then
   perl -0pi -e 's~\ninstall\(TARGETS cloudini_topic_converter\n  RUNTIME DESTINATION lib/cloudini_ros\n\)\n~\n# ci-cloudini-dup-install: redundant install removed (rclcpp_components_register_node EXECUTABLE\n# already installs cloudini_topic_converter; the second install duplicates LC_RPATH on macOS)\n~' "$f"
   echo "  cloudini_ros: dropped redundant install(TARGETS cloudini_topic_converter)"
 fi
+# camera_aravis2: gates WITH_MATCHED_EVENTS (rclcpp::MatchedInfo, camera_driver.h/.cpp) on whether
+# rclcpp_DIR path contains /humble/ or /iron/. With a merged/custom install prefix that string is
+# never present, so it's wrongly defined on humble (rclcpp 16, no MatchedInfo) -> "no type named
+# 'MatchedInfo' in namespace 'rclcpp'". Replace the path check with an rclcpp_VERSION gate
+# (MatchedInfo exists 22.0+; humble=16/iron=21 absent, jazzy=28/kilted=29 present).
+f="$(find "$ROOT" -path '*camera_aravis2/camera_aravis2/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-aravis-matched-version' "$f"; then
+  perl -0pi -e 's~if\(NOT \$\{rclcpp_DIR\} MATCHES "\.\*/humble/\.\*" AND NOT \$\{rclcpp_DIR\} MATCHES "\.\*/iron/\.\*"\)~# ci-aravis-matched-version: rclcpp_DIR path check is unreliable with a merged/custom install\n# prefix -> WITH_MATCHED_EVENTS wrongly defined on humble. Gate on rclcpp_VERSION instead\n# (rclcpp::MatchedInfo exists 22.0+; humble=16/iron=21 absent, jazzy=28/kilted=29 present).\nif(rclcpp_VERSION VERSION_GREATER_EQUAL "22.0.0")~' "$f"
+  echo "  camera_aravis2: WITH_MATCHED_EVENTS gated on rclcpp_VERSION>=22"
+fi
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
