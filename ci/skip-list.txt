@@ -284,3 +284,9 @@ cx_protobuf_plugin
 # nmea_hardware_interface: find_package(quaternion_operation REQUIRED) -- quaternion_operation
 # is NOT vendored in this tree (Tier IV package). Skip until it is added.
 nmea_hardware_interface
+# menge_vendor: needs tinyxml (v1) via pkg-config; tinyxml is NOT a homebrew-core
+# formula (only osrf/simulation/tinyxml1, an untrusted tap). Do NOT add to BREW_BASE
+# -- an invalid formula name hard-fails the whole base brew install. Skip instead.
+menge_vendor
+# rmf_building_sim_gz_plugins: build-depends on menge_vendor (skipped above).
+rmf_building_sim_gz_plugins
