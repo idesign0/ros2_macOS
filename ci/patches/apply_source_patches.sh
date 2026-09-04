@@ -1934,11 +1934,12 @@ fi
 #     the SYSTEM pybind11 IMPORTED targets (pybind11::headers/module) already exist. The
 #     bundled add_subdirectory then re-creates them -> "add_library cannot create ALIAS
 #     target pybind11::headers because another target with the same name already exists"
-#     (python/pybind11/CMakeLists.txt:236). The bindings only need pybind11_add_module +
-#     pybind11::module, both provided by the system pybind11, so skip the bundle when a
-#     system pybind11 is already present. Idempotent. ---
+#     (python/pybind11/CMakeLists.txt:236 -> the FIRST clash is pybind11::pybind11_headers,
+#     not pybind11::headers). The bindings only need pybind11_add_module + pybind11::module,
+#     both provided by the system pybind11, so skip the bundle when EITHER namespaced pybind11
+#     target already exists. Idempotent. ---
 _f="$(_pkg_dir moveit_task_constructor_core)/python/CMakeLists.txt"
 if [ -f "$_f" ] && grep -qxF 'add_subdirectory(pybind11)' "$_f"; then
-  perl -0pi -e 's{^add_subdirectory\(pybind11\)$}{# ci: py_binding_tools already find_package(pybind11); the bundled pybind11 would\n# re-create pybind11::headers/module -> "cannot create ALIAS ... already exists".\n# Use the already-found system pybind11 when present.\nif(NOT TARGET pybind11::headers)\n  add_subdirectory(pybind11)\nendif()}m' "$_f"
+  perl -0pi -e 's{^add_subdirectory\(pybind11\)$}{# ci: py_binding_tools already find_package(pybind11); the bundled pybind11 would\n# re-create pybind11::pybind11_headers/headers/module -> "cannot create ALIAS ... already\n# exists". Use the already-found system pybind11 when present (first clash is\n# pybind11::pybind11_headers).\nif(NOT TARGET pybind11::pybind11_headers AND NOT TARGET pybind11::headers)\n  add_subdirectory(pybind11)\nendif()}m' "$_f"
   echo "  moveit_task_constructor_core: guard bundled pybind11 add_subdirectory (system pybind11 via py_binding_tools) in ${_f#$ROOT/}"
 fi
