@@ -270,6 +270,17 @@ if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-medkit-vecbool' "$f"; then
   perl -pi -e 's~array_node\.push_back\(v->operator\[\]\(ii\)\);~array_node.push_back(static_cast<bool>(v->operator[](ii)));  // ci-medkit-vecbool: libc++ bit-reference has no YAML::convert~' "$f"
   echo "  ros2_medkit_serialization: vector<bool> element -> static_cast<bool> before yaml push_back"
 fi
+# crane_plus_examples: aruco_detection.cpp calls the legacy free cv::aruco::detectMarkers(image,
+# MARKER_DICT, corners, ids), but OpenCV 4.7+ getPredefinedDictionary returns Dictionary (value)
+# while the deprecated free detectMarkers takes const Ptr<Dictionary>& -> "no viable conversion
+# from const Dictionary to const Ptr<Dictionary>". Switch to the modern cv::aruco::ArucoDetector
+# API. estimatePoseSingleMarkers is unchanged (still available). Compile-tested vs OpenCV 4.13.
+f="$(find "$ROOT" -path '*crane_plus_examples/src/aruco_detection.cpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-crane-aruco' "$f"; then
+  perl -0pi -e 's~(#include "opencv2/aruco.hpp"\n)~${1}#include "opencv2/objdetect/aruco_detector.hpp"  // ci-crane-aruco: modern ArucoDetector API (OpenCV 4.7+)\n~' "$f"
+  perl -0pi -e 's~cv::aruco::detectMarkers\(cv_img->image, MARKER_DICT, corners, ids\);~cv::aruco::ArucoDetector _ci_aruco_detector(MARKER_DICT);  // ci-crane-aruco\n      _ci_aruco_detector.detectMarkers(cv_img->image, corners, ids);~' "$f"
+  echo "  crane_plus_examples: legacy aruco::detectMarkers -> ArucoDetector"
+fi
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
