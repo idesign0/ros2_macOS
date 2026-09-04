@@ -19,7 +19,7 @@ env:
   HOMEBREW_NO_AUTO_UPDATE: "1"
   GZ_VERSION: ionic
   GZ_DIR: gz-ionic
-  BREW_BASE: "graphviz eigen@3 eigen GeographicLib vtk opencv@4 zbar png++ sophus serial vrpn draco aravis zeromq cppzmq glfw3 libusb rtabmap libpqxx tinyxml"
+  BREW_BASE: "graphviz eigen@3 eigen GeographicLib vtk opencv@4 zbar png++ sophus serial vrpn draco aravis zeromq cppzmq glfw3 libusb rtabmap libpqxx"
 
 jobs:
   plan:
