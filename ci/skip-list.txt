@@ -368,3 +368,6 @@ psdk_wrapper
 # kuka_external_control_sdk_examples: find_package(kuka-external-control-sdk) not found -- the SDK
 # lib does not produce a usable macOS config here; examples package, low value. Skip.
 kuka_external_control_sdk_examples
+# puma_motor_driver: find_package(clearpath_socketcan_interface) -- SocketCAN is Linux-only
+# (no CAN sockets on macOS). No macOS path.
+puma_motor_driver

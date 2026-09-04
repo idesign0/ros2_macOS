@@ -261,6 +261,15 @@ if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-leo-yamlpath' "$f"; then
   perl -0pi -e 's~(find_package\(yaml-cpp REQUIRED\)\n)~${1}if(NOT TARGET yaml-cpp::yaml-cpp)  # ci-leo-yamlpath\n  find_library(_ci_leo_ycpp NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  if(_ci_leo_ycpp)\n    set(YAML_CPP_LIBRARIES "\$\{_ci_leo_ycpp\}")\n  endif()\nendif()\n~' "$f"
   echo "  leo_filters: YAML_CPP_LIBRARIES -> yaml-cpp .dylib abs path"
 fi
+# ros2_medkit_serialization: dynamic_array_to_yaml_impl_bool() does array_node.push_back(v[ii])
+# where v is std::vector<bool>, so v[ii] is a vector<bool>::const_reference -- on libc++ that is
+# std::__bit_const_reference, for which yaml-cpp has no YAML::convert<> -> "implicit instantiation
+# of undefined template". Cast the element to bool before push_back.
+f="$(find "$ROOT" -path '*ros2_medkit_serialization*/message_reading_cpp.cpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-medkit-vecbool' "$f"; then
+  perl -pi -e 's~array_node\.push_back\(v->operator\[\]\(ii\)\);~array_node.push_back(static_cast<bool>(v->operator[](ii)));  // ci-medkit-vecbool: libc++ bit-reference has no YAML::convert~' "$f"
+  echo "  ros2_medkit_serialization: vector<bool> element -> static_cast<bool> before yaml push_back"
+fi
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
