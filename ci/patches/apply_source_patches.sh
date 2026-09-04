@@ -177,6 +177,21 @@ if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-fuse-tf-interfaces' "$f"; then
   perl -0pi -e 's~(\n[ \t]*tf_listener_ = std::make_unique<tf2_ros::TransformListener>\()\n[ \t]*\*tf_buffer_,\n[ \t]*interfaces_\n([ \t]*\);)~${1}  // ci-fuse-tf-interfaces: installed tf2_ros TransformListener template ctor does node->\n        // get_node_*_interface() (expects a Node pointer); pass the interfaces explicitly instead.\n        *tf_buffer_,\n        interfaces_.get_node_base_interface(),\n        interfaces_.get_node_logging_interface(),\n        interfaces_.get_node_parameters_interface(),\n        interfaces_.get_node_topics_interface()\n${2}~' "$f"
   echo "  fuse_publishers: TransformListener -> explicit node interfaces"
 fi
+# auto_apms_behavior_tree_core: tree_document.hpp defines the SubTree insertNode() overloads
+# out-of-line BEFORE model::SubTree is complete (it is only forward-declared there; defined in
+# node_model_type.hpp). insertSubTreeNode() returns model::SubTree BY VALUE and the call is
+# NON-dependent, so clang checks completeness at parse (not instantiation) -> "calling
+# insertSubTreeNode with incomplete return type 'model::SubTree'". The author's trailing
+# #include of node_model_type.hpp is skipped under #pragma once when node_model_type.hpp is the
+# first header in the TU (node_model_type.cpp). Move the two defs to the end of node_model_type.hpp
+# (after model::SubTree is complete), inside namespace core. Verified with an isolated repro:
+# def-before-complete reproduces the exact error; def-after-complete compiles clean. (kilted+jazzy.)
+aad="$(find "$ROOT" -type d -path '*auto_apms_behavior_tree_core/include/auto_apms_behavior_tree_core' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$aad" ] && [ -f "$aad/tree/tree_document.hpp" ] && [ -f "$aad/node/node_model_type.hpp" ] && ! grep -q 'ci-autoapms-subtree-defs' "$aad/tree/tree_document.hpp"; then
+  perl -0pi -e 's~\ntemplate <class T>\ninline typename std::enable_if_t<std::is_same_v<model::SubTree, T>, model::SubTree>\nTreeDocument::NodeElement::insertNode\(const std::string & tree_name, const NodeElement \* before_this\)\n\{\n  return insertSubTreeNode\(tree_name, before_this\);\n\}\n\ntemplate <class T>\ninline typename std::enable_if_t<std::is_same_v<model::SubTree, T>, model::SubTree>\nTreeDocument::NodeElement::insertNode\(const TreeElement & tree, const NodeElement \* before_this\)\n\{\n  return insertSubTreeNode\(tree, before_this\);\n\}\n~\n// ci-autoapms-subtree-defs: the two SubTree insertNode() defs were moved to the end of\n// node_model_type.hpp (after model::SubTree is complete).\n~' "$aad/tree/tree_document.hpp"
+  perl -0pi -e 's~(\n\}  // namespace model\n)(\}  // namespace auto_apms_behavior_tree)~${1}\nnamespace core  // ci-autoapms-subtree-defs: SubTree insertNode() defs moved here from tree_document.hpp\n\{                 // (insertSubTreeNode returns model::SubTree by value; clang needs it complete at parse)\ntemplate <class T>\ninline typename std::enable_if_t<std::is_same_v<model::SubTree, T>, model::SubTree>\nTreeDocument::NodeElement::insertNode(const std::string \& tree_name, const NodeElement * before_this)\n\{\n  return insertSubTreeNode(tree_name, before_this);\n\}\n\ntemplate <class T>\ninline typename std::enable_if_t<std::is_same_v<model::SubTree, T>, model::SubTree>\nTreeDocument::NodeElement::insertNode(const TreeElement \& tree, const NodeElement * before_this)\n\{\n  return insertSubTreeNode(tree, before_this);\n\}\n\}  // namespace core\n${2}~' "$aad/node/node_model_type.hpp"
+  echo "  auto_apms_behavior_tree_core: moved SubTree insertNode defs after complete type"
+fi
 # off_highway_* sensor drivers: rclcpp_components_register_node(... EXECUTABLE <exe>) already
 # creates AND installs the standalone executable to lib/${PROJECT_NAME}; a redundant
 # install(TARGETS <exe> ...) installs it a SECOND time to the same place, so macOS
