@@ -210,6 +210,27 @@ if [ -n "$d" ] && [ -f "$d/src/control_node.cpp" ] && ! grep -q 'CPU affinity no
   perl -0777 -pi -e 's/([ \t]*)(cpu_set_t cpuset;.*?RCLCPP_INFO\(controller_manager->get_logger\(\), "CPU affinity set to core %d", cpu\);\n[ \t]*\})/$1#ifdef __linux__\n$1$2\n$1#else\n$1(void)cpu;\n$1RCLCPP_WARN(controller_manager->get_logger(), "CPU affinity not supported on this platform (non-Linux)");\n$1#endif/s' "$d/src/control_node.cpp"
   echo "  kuka_drivers_core: #ifdef __linux__ guard around cpu_set_t affinity block"
 fi
+# kuka_drivers_core: control_node.cpp ALSO calls sched_setscheduler(0, SCHED_FIFO, &param)
+# (a separate block from the cpu affinity one) -> "use of undeclared identifier 'sched_setscheduler'"
+# on macOS. Guard with __linux__; fall back to pthread_setschedparam (same struct sched_param).
+if [ -n "$d" ] && [ -f "$d/src/control_node.cpp" ] && ! grep -q 'kuka_sched_failed' "$d/src/control_node.cpp" && grep -q 'sched_setscheduler(0, SCHED_FIFO, &param) == -1' "$d/src/control_node.cpp"; then
+  perl -0pi -e 's/if \(sched_setscheduler\(0, SCHED_FIFO, &param\) == -1\)/#ifdef __linux__\n      bool kuka_sched_failed = (sched_setscheduler(0, SCHED_FIFO, &param) == -1);\n#else\n      bool kuka_sched_failed = (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) != 0);\n#endif\n      if (kuka_sched_failed)/' "$d/src/control_node.cpp"
+  echo "  kuka_drivers_core: __linux__ guard around sched_setscheduler"
+fi
+# off_highway_premium_radar[_sample]: helper.hpp / pdu_definitions.cpp #include <endian.h>
+# (Linux-only) and use be16/32/64toh + htobe16/32. macOS has no <endian.h>; provide the same
+# functions via <libkern/OSByteOrder.h>. Verified: shim compiles + byte-roundtrips on Apple clang.
+for f in $(grep -rlE '#include <endian\.h>' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep off_highway); do
+  grep -q 'ci-offhw-endian' "$f" && continue
+  perl -0pi -e 's~#include <endian\.h>~#if defined(__APPLE__)  // ci-offhw-endian\n#include <libkern/OSByteOrder.h>\n#define htobe16(x) OSSwapHostToBigInt16(x)\n#define htobe32(x) OSSwapHostToBigInt32(x)\n#define htobe64(x) OSSwapHostToBigInt64(x)\n#define htole16(x) OSSwapHostToLittleInt16(x)\n#define htole32(x) OSSwapHostToLittleInt32(x)\n#define htole64(x) OSSwapHostToLittleInt64(x)\n#define be16toh(x) OSSwapBigToHostInt16(x)\n#define be32toh(x) OSSwapBigToHostInt32(x)\n#define be64toh(x) OSSwapBigToHostInt64(x)\n#define le16toh(x) OSSwapLittleToHostInt16(x)\n#define le32toh(x) OSSwapLittleToHostInt32(x)\n#define le64toh(x) OSSwapLittleToHostInt64(x)\n#else\n#include <endian.h>\n#endif~' "$f"
+  echo "  off_highway: macOS endian shim in ${f#$ROOT/}"
+done
+# vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
+# min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
+for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
+  perl -pi -e 's/\b_Float64\b/double/g' "$f"
+  echo "  vimbax_camera: _Float64 -> double in ${f#$ROOT/}"
+done
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
