@@ -300,3 +300,10 @@ schunk_svh_library
 # qb_device_driver: bundled qbdevice-api serial impl_unix.cpp uses Linux 'struct serial_struct'
 # / TIOCGSERIAL (linux/serial.h) -- no macOS equivalent. HW serial driver.
 qb_device_driver
+# orbbec_camera: bundled OrbbecSDK is a closed prebuilt with only Linux/Windows binaries
+# (SDK/lib/arm64 = Linux aarch64 .so, no macOS .dylib); its CMake arch check also mis-flags
+# macOS arm64 as arm32 ("uname -m"=arm64 matches "arm"). No macOS build path.
+orbbec_camera
+# warehouse_ros_mongo: cmake/FindMONGODB.cmake -> "MONGODB not found" (needs the legacy mongo
+# client libs, not available/vendored on macOS).
+warehouse_ros_mongo
