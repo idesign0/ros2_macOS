@@ -330,3 +330,6 @@ feetech_ros2_driver
 # cx_protobuf_plugin: find_package(ProtobufComm) -- Fawkes' ProtobufComm library, not in
 # this tree and no macOS build.
 cx_protobuf_plugin
+# nmea_hardware_interface: find_package(quaternion_operation REQUIRED) -- quaternion_operation
+# is NOT vendored in this tree (Tier IV package). Skip until it is added.
+nmea_hardware_interface
