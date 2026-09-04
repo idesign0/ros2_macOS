@@ -348,3 +348,10 @@ canboat_vendor
 # ecal: core/CMakeLists.txt find_package(ecaludp REQUIRED) -- ecaludp is not vendored in
 # this tree (separate eclipse-ecal/ecaludp repo). Skip until it is added.
 ecal
+# === humble-D triage (2026-09-04) ===
+# schunk_svh_library: src/serial/Serial.cpp uses Linux termios/serial APIs (ioctl, CBAUD,
+# FIONREAD, ...) with no macOS path -- HW serial driver, same class as feetech_ros2_driver.
+schunk_svh_library
+# qb_device_driver: bundled qbdevice-api serial impl_unix.cpp uses Linux 'struct serial_struct'
+# / TIOCGSERIAL (linux/serial.h) -- no macOS equivalent. HW serial driver.
+qb_device_driver
