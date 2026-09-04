@@ -307,3 +307,9 @@ orbbec_camera
 # warehouse_ros_mongo: cmake/FindMONGODB.cmake -> "MONGODB not found" (needs the legacy mongo
 # client libs, not available/vendored on macOS).
 warehouse_ros_mongo
+# psdk_wrapper: CMakeLists.txt:80 message(FATAL) "Please confirm your platform" -- DJI Payload-SDK
+# only supports Linux (x86_64/aarch64)/embedded; no macOS platform. Closed prebuilt SDK.
+psdk_wrapper
+# kuka_external_control_sdk_examples: find_package(kuka-external-control-sdk) not found -- the SDK
+# lib does not produce a usable macOS config here; examples package, low value. Skip.
+kuka_external_control_sdk_examples

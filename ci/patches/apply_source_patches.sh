@@ -252,6 +252,15 @@ if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-aravis-matched-version' "$f"; the
   perl -0pi -e 's~if\(NOT \$\{rclcpp_DIR\} MATCHES "\.\*/humble/\.\*" AND NOT \$\{rclcpp_DIR\} MATCHES "\.\*/iron/\.\*"\)~# ci-aravis-matched-version: rclcpp_DIR path check is unreliable with a merged/custom install\n# prefix -> WITH_MATCHED_EVENTS wrongly defined on humble. Gate on rclcpp_VERSION instead\n# (rclcpp::MatchedInfo exists 22.0+; humble=16/iron=21 absent, jazzy=28/kilted=29 present).\nif(rclcpp_VERSION VERSION_GREATER_EQUAL "22.0.0")~' "$f"
   echo "  camera_aravis2: WITH_MATCHED_EVENTS gated on rclcpp_VERSION>=22"
 fi
+# leo_filters: links ${YAML_CPP_LIBRARIES}, which yaml_cpp_vendor sets to the IMPORTED target
+# yaml-cpp::yaml-cpp -- true at configure (if(TARGET)) but undefined at generate on macOS ->
+# "Target leo_filters links to yaml-cpp::yaml-cpp which is not a target". Point YAML_CPP_LIBRARIES
+# at the .dylib by absolute path when the target is missing (same class as other yaml-cpp fixes).
+f="$(find "$ROOT" -path '*leo_filters/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-leo-yamlpath' "$f"; then
+  perl -0pi -e 's~(find_package\(yaml-cpp REQUIRED\)\n)~${1}if(NOT TARGET yaml-cpp::yaml-cpp)  # ci-leo-yamlpath\n  find_library(_ci_leo_ycpp NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  if(_ci_leo_ycpp)\n    set(YAML_CPP_LIBRARIES "\$\{_ci_leo_ycpp\}")\n  endif()\nendif()\n~' "$f"
+  echo "  leo_filters: YAML_CPP_LIBRARIES -> yaml-cpp .dylib abs path"
+fi
 
 # --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
 #     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
