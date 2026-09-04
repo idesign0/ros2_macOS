@@ -2013,3 +2013,16 @@ for _f in $(find "$ROOT" -ipath '*cx_msgs/srv/ListClipsEnvs.srv' -not -path '*/b
     echo "  cx_msgs ListClipsEnvs.srv: Response field plugins -> envs in ${_f#$ROOT/}"
   fi
 done
+
+# --- grid_map_pcl (all 3): helpers.hpp printTimeElapsedToRosInfoStream() takes a
+#     system_clock::time_point `start` but computes `stop` with high_resolution_clock::now().
+#     On libc++ high_resolution_clock aliases steady_clock (not system_clock as on libstdc++),
+#     so `stop - start` mixes clock types -> "invalid operands to binary expression
+#     (time_point<steady_clock> and time_point<system_clock>)". Use system_clock::now() for
+#     stop so both match. Idempotent. ---
+for _f in $(find "$ROOT" -path '*grid_map_pcl/include/grid_map_pcl/helpers.hpp' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qF 'const auto stop = std::chrono::high_resolution_clock::now();' "$_f"; then
+    perl -pi -e 's{const auto stop = std::chrono::high_resolution_clock::now\(\);}{const auto stop = std::chrono::system_clock::now();};' "$_f"
+    echo "  grid_map_pcl: high_resolution_clock -> system_clock (libc++ clock mismatch) in ${_f#$ROOT/}"
+  fi
+done
