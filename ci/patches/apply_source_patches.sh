@@ -1162,6 +1162,15 @@ if [ -n "$d" ] && [ -f "$d/cmake/Modules/FindASIO.cmake" ] && ! grep -q '/opt/ho
   sed "${SEDI[@]}" 's#PATHS /usr/include /usr/local/include#PATHS /usr/include /usr/local/include /opt/homebrew/include /opt/homebrew/opt/asio/include#' "$d/cmake/Modules/FindASIO.cmake"
   echo "  libmavconn: FindASIO.cmake PATHS += /opt/homebrew include dirs"
 fi
+# libmavconn finds ASIO + include_directories(${ASIO_INCLUDE_DIRS}) for its own build, but only
+# ament_export_dependencies(console_bridge) -- it does NOT export ASIO. Consumers (mavros) that
+# include mavconn/interface.hpp (which #include <asio.hpp>) then fail "asio.hpp file not found".
+# Export ASIO so find_package(libmavconn) pulls its include dir into libmavconn_INCLUDE_DIRS.
+d="$(_pkg_dir libmavconn)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-libmavconn-asio-export' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{ament_export_dependencies\(console_bridge\)}{ament_export_dependencies(console_bridge)\nament_export_dependencies(ASIO)  # ci-libmavconn-asio-export: consumers include <asio.hpp> via interface.hpp}' "$d/CMakeLists.txt"
+  echo "  libmavconn: +ament_export_dependencies(ASIO)"
+fi
 
 # --- Lane 3 (humble + jazzy, same file/macro; only humble's yaml-cpp 0.7.0
 #     actually hits this branch since jazzy's yaml_cpp_vendor exports a native
@@ -2202,8 +2211,8 @@ fi
 #     not pybind11::headers). The bindings only need pybind11_add_module + pybind11::module,
 #     both provided by the system pybind11, so skip the bundle when EITHER namespaced pybind11
 #     target already exists. Idempotent. ---
-_f="$(_pkg_dir moveit_task_constructor_core)/python/CMakeLists.txt"
-if [ -f "$_f" ] && grep -qxF 'add_subdirectory(pybind11)' "$_f"; then
+_f="$(find "$ROOT" -path '*moveit_task_constructor/core/python/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$_f" ] && [ -f "$_f" ] && grep -qxF 'add_subdirectory(pybind11)' "$_f"; then
   perl -0pi -e 's{^add_subdirectory\(pybind11\)$}{# ci: py_binding_tools already find_package(pybind11); the bundled pybind11 would\n# re-create pybind11::pybind11_headers/headers/module -> "cannot create ALIAS ... already\n# exists". Use the already-found system pybind11 when present (first clash is\n# pybind11::pybind11_headers).\nif(NOT TARGET pybind11::pybind11_headers AND NOT TARGET pybind11::headers)\n  add_subdirectory(pybind11)\nendif()}m' "$_f"
   echo "  moveit_task_constructor_core: guard bundled pybind11 add_subdirectory (system pybind11 via py_binding_tools) in ${_f#$ROOT/}"
 fi
