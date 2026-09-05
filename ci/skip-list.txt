@@ -368,3 +368,9 @@ mrpt_viz
 # -- epoll is Linux-only (macOS uses kqueue); the SDK's UDP layer has no macOS path. (base pkg;
 # its examples were already skipped.)
 kuka_external_control_sdk
+# rc_dynamics_api: bundled opt/protobuf is old (no google/protobuf/runtime_version.h) but the
+# generated frame.pb.h is produced by a newer protoc that emits `#include <.../runtime_version.h>`
+# -> "file not found". Fixing needs consolidating on ONE protobuf (bundled protoc+headers or system
+# throughout) with matching ABI. Chain of deep vendor issues (abseil soname -> <string> -> protobuf);
+# niche Roboception leaf package. Skip.
+rc_dynamics_api
