@@ -114,6 +114,10 @@ endif()
 
 
 # --- RPATH settings for macOS ---
+# ci-pkgconfig-keg: keg-only formulae (libpqxx/libpq) do not put their .pc on the default pkg-config
+# path, so pkg_check_modules(libpqxx) (cx_cdb_*_plugin) fails. Add the keg pkgconfig dirs.
+set(ENV{PKG_CONFIG_PATH} "/opt/homebrew/lib/pkgconfig:/opt/homebrew/opt/libpqxx/lib/pkgconfig:/opt/homebrew/opt/libpq/lib/pkgconfig:")
+
 set(CMAKE_SKIP_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 if(IS_CI)
