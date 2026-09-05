@@ -83,7 +83,12 @@ set(Boost_PYTHON_LIBRARY "${BOOST_LIBRARYDIR}/libboost_python311.dylib" CACHE FI
 set(Boost_PYTHON_INCLUDE_DIR "${BOOST_INCLUDEDIR}" CACHE PATH "Boost Python include dir")
 set(CMAKE_PREFIX_PATH "${BOOST_ROOT}/lib/cmake/Boost-1.89.0;${CMAKE_PREFIX_PATH}" CACHE PATH "Boost CMake path")
 
+
 # RPATH settings for macOS
+# ci-pkgconfig-keg: keg-only formulae (libpqxx/libpq) do not put their .pc on the default pkg-config
+# path, so pkg_check_modules(libpqxx) (cx_cdb_*_plugin) fails. Add the keg pkgconfig dirs.
+set(ENV{PKG_CONFIG_PATH} "/opt/homebrew/lib/pkgconfig:/opt/homebrew/opt/libpqxx/lib/pkgconfig:/opt/homebrew/opt/libpq/lib/pkgconfig:")
+
 set(CMAKE_SKIP_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 if(IS_CI)
