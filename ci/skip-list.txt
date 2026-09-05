@@ -370,3 +370,7 @@ mrpt_tfest
 mrpt_topography
 mrpt_typemeta
 mrpt_viz
+# kuka_external_control_sdk: utils os-core-udp-communication/secure_replier.cc #include <sys/epoll.h>
+# -- epoll is Linux-only (macOS uses kqueue); the SDK's UDP layer has no macOS path. (base pkg;
+# its examples were already skipped.)
+kuka_external_control_sdk
