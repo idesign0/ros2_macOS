@@ -696,6 +696,47 @@ PATCHEOF
   echo "  lely_core_libraries: added 0100-macos-no-as-needed.patch to UPDATE_COMMAND"
 fi
 
+# --- lely_core_libraries: include/lely/libc/unistd.h tentatively DEFINES the getopt globals
+#     (char *optarg; int optind; int opterr; int optopt;) in the HEADER with no `extern`, so every
+#     TU including it emits a definition -> duplicate symbols between getopt.o and sleep.o. -fcommon
+#     merged these under the old macOS linker, but Xcode 26's ld-prime rejects them ("4 duplicate
+#     symbols"). Declare them extern in the header; getopt.c keeps the single definitions. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0101-macos-getopt-extern.patch' "$d/CMakeLists.txt"; then
+  cat > "$d/patches/0101-macos-getopt-extern.patch" <<'PATCHEOF'
+diff --git a/include/lely/libc/unistd.h b/include/lely/libc/unistd.h
+--- a/include/lely/libc/unistd.h
++++ b/include/lely/libc/unistd.h
+@@ -39,20 +39,20 @@ extern "C" {
+ #endif
+
+ /// A pointer to the argument of the current option.
+-char *optarg;
++extern char *optarg;
+
+ /// The index of the next argument to be parsed by getopt().
+-int optind;
++extern int optind;
+
+ /**
+  * A flag indicating whether a diagnostic message should be printed if an
+  * unknown option character or missing argument is detected by getopt(). The
+  * default value is 1.
+  */
+-int opterr;
++extern int opterr;
+
+ /// The last option character to cause an error.
+-int optopt;
++extern int optopt;
+
+ /**
+  * Parses options passed as arguments to `main()`.
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0101-macos-getopt-extern.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0101-macos-getopt-extern.patch to UPDATE_COMMAND"
+fi
+
 # --- Lane 2: boost-python component version. mrt_cmake_modules FindBoostPython
 #     derives the component from find_package(Python3), which resolves the runner's
 #     newest Python (3.14) -> boost_python314, absent from the vendored boost-1.89
