@@ -172,11 +172,11 @@ fi
 # on a tf2_ros change). Call the explicit-interfaces ctor instead (BufferCore& + the 4 interface
 # SharedPtrs, which fuse_core::NodeInterfaces exposes as getters). API-verified against the
 # in-tree tf2_ros transform_listener.hpp explicit-interfaces ctor. (kilted+jazzy.)
-f="$(find "$ROOT" -path '*fuse_publishers/src/pose_2d_publisher.cpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
-if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-fuse-tf-interfaces' "$f"; then
+for f in $(grep -rlE 'make_unique<tf2_ros::TransformListener>' "$ROOT" --include='*.cpp' 2>/dev/null | grep -E '/fuse'); do
+  { [ -f "$f" ] && ! grep -q 'ci-fuse-tf-interfaces' "$f"; } || continue
   perl -0pi -e 's~(\n[ \t]*tf_listener_ = std::make_unique<tf2_ros::TransformListener>\()\n[ \t]*\*tf_buffer_,\n[ \t]*interfaces_\n([ \t]*\);)~${1}  // ci-fuse-tf-interfaces: installed tf2_ros TransformListener template ctor does node->\n        // get_node_*_interface() (expects a Node pointer); pass the interfaces explicitly instead.\n        *tf_buffer_,\n        interfaces_.get_node_base_interface(),\n        interfaces_.get_node_logging_interface(),\n        interfaces_.get_node_parameters_interface(),\n        interfaces_.get_node_topics_interface()\n${2}~' "$f"
-  echo "  fuse_publishers: TransformListener -> explicit node interfaces"
-fi
+  grep -q 'ci-fuse-tf-interfaces' "$f" && echo "  fuse: TransformListener -> explicit node interfaces in ${f#$ROOT/}"
+done
 # auto_apms_behavior_tree_core: tree_document.hpp defines the SubTree insertNode() overloads
 # out-of-line BEFORE model::SubTree is complete (it is only forward-declared there; defined in
 # node_model_type.hpp). insertSubTreeNode() returns model::SubTree BY VALUE and the call is
@@ -2119,6 +2119,15 @@ for _hf in $(find "$ROOT" -path '*ublox_dgnss_node/include/*/ubx/ubx.hpp' -not -
     echo "  ublox_dgnss_node: +inline get_polled_frame (header ODR dup) in ${_hf#$ROOT/}"
   fi
 done
+# ubx_cfg_item.hpp defines storage_size_bytes() non-inline in the header -> duplicate symbol
+# 'ubx::cfg::storage_size_bytes(unsigned long long)' across parameters.cpp/ubx_config_loader.cpp/
+# ublox_dgnss_node.cpp (macOS ld-prime rejects dups). Add inline.
+for _hf in $(find "$ROOT" -path '*ublox_dgnss_node/include/*/ubx/ubx_cfg_item.hpp' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qE '^size_t storage_size_bytes\(' "$_hf"; then
+    perl -pi -e 's{^size_t storage_size_bytes\(}{inline size_t storage_size_bytes(};' "$_hf"
+    echo "  ublox_dgnss_node: +inline storage_size_bytes (header ODR dup) in ${_hf#$ROOT/}"
+  fi
+done
 
 # --- grid_map_pcl (all 3): add_compile_options("${OpenMP_CXX_FLAGS}") passes the whole
 #     string as ONE argv token; on Apple clang OpenMP_CXX_FLAGS is "-Xclang -fopenmp" (two
@@ -2265,11 +2274,12 @@ done
 # --- rmf_fleet_adapter (all 3): LegacyTask.cpp #include <malloc.h> and calls malloc_trim(0)
 #     (glibc-only: releases free heap to the OS) -> "malloc.h file not found" on macOS. Both
 #     are a memory-release optimization; guard with __linux__ (no-op elsewhere). ---
-for _f in $(find "$ROOT" -path '*rmf_fleet_adapter/src/rmf_fleet_adapter/LegacyTask.cpp' 2>/dev/null); do
-  if grep -qxF '#include <malloc.h>' "$_f"; then
-    perl -0pi -e 's{#include <malloc\.h>}{#if defined(__linux__)\n#include <malloc.h>\n#endif}; s{^    malloc_trim\(0\);}{#if defined(__linux__)\n    malloc_trim(0);\n#endif}m;' "$_f"
-    echo "  rmf_fleet_adapter: guard malloc.h/malloc_trim (glibc-only) in ${_f#$ROOT/}"
-  fi
+for _f in $(grep -rlE '#include <malloc\.h>' "$ROOT" --include='*.cpp' --include='*.hpp' --include='*.h' 2>/dev/null | grep rmf_fleet_adapter); do
+  grep -q 'ci-rmf-malloc' "$_f" && continue
+  # guard the include AND define malloc_trim as a no-op elsewhere -> covers every call site
+  # (standalone LegacyTask.cpp and the inline-lambda in agv/internal_FleetUpdateHandle.hpp).
+  perl -0pi -e 's{#include <malloc\.h>}{#if defined(__linux__)\n#include <malloc.h>\n#else\n#define malloc_trim(x) 0  // ci-rmf-malloc: glibc-only, no-op on macOS\n#endif}' "$_f"
+  echo "  rmf_fleet_adapter: guard malloc.h + no-op malloc_trim in ${_f#$ROOT/}"
 done
 
 # --- backward_global_planner (all 3): ament_target_dependencies(... visualization_msgs) but
@@ -2294,15 +2304,17 @@ for _f in $(find "$ROOT" -path '*multisensor_calibration/CMakeLists.txt' -not -p
   fi
 done
 
-# --- rmf_visualization_schedule (all 3): target_link_libraries links bare `OpenSSL`, which
-#     does not pull libcrypto -> "Undefined symbols: _HMAC / _PEM_read_bio_PUBKEY /
-#     _i2d_ECDSA_SIG" (websocketpp TLS). Link the real imported targets OpenSSL::SSL +
-#     OpenSSL::Crypto instead (only in target_link_libraries; ament_export_dependencies
-#     OpenSSL stays). Idempotent. ---
+# --- rmf_visualization_schedule (all 3): bare `OpenSSL` in ament_target_dependencies() ->
+#     websocketpp TLS undefined symbols (_HMAC/_i2d_ECDSA_SIG). ament_target_dependencies wants
+#     PACKAGE names, not the OpenSSL::SSL/Crypto TARGETS (passing those errors "package name
+#     'OpenSSL::SSL' was not found"), so DROP OpenSSL from the ament call and link the imported
+#     targets via target_link_libraries. ament_export_dependencies(OpenSSL) stays for consumers. ---
 for _f in $(find "$ROOT" -path '*rmf_visualization_schedule/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
-  if grep -qE '^    websocketpp\n?' "$_f" && grep -qzE 'websocketpp\n    OpenSSL\n    Threads' "$_f"; then
-    perl -0pi -e 's{    websocketpp\n    OpenSSL\n    Threads}{    websocketpp\n    OpenSSL::SSL\n    OpenSSL::Crypto\n    Threads}' "$_f"
-    echo "  rmf_visualization_schedule: bare OpenSSL -> OpenSSL::SSL+Crypto in ${_f#$ROOT/}"
+  grep -q 'ci-rmfviz-openssl' "$_f" && continue
+  if grep -qzE 'websocketpp\n    OpenSSL\n    Threads' "$_f"; then
+    perl -0pi -e 's{\n    OpenSSL\n    Threads\n}{\n    Threads\n}' "$_f"
+    perl -0pi -e 's{(\nament_target_dependencies\(rmf_visualization_schedule\n.*?\n\)\n)}{$1target_link_libraries(rmf_visualization_schedule PUBLIC OpenSSL::SSL OpenSSL::Crypto)  # ci-rmfviz-openssl\n}s' "$_f"
+    echo "  rmf_visualization_schedule: OpenSSL -> target_link_libraries(OpenSSL::SSL+Crypto) in ${_f#$ROOT/}"
   fi
 done
 
