@@ -150,6 +150,16 @@ if [ -n "$rcd" ]; then
     echo "  rc_dynamics_api: +<string> in ${f#$ROOT/}"
   done
 fi
+# rc_dynamics_api: cmake/Modules/FindProtocolBuffers.cmake keys PROTOBUF_INCLUDE_DIR on service.h,
+# which the modern workspace protobuf (the gz-built one, has runtime_version.h) may not ship -> the
+# include resolves to an OLDER protobuf than the protoc found on PATH, so the generated frame.pb.h's
+# #include <google/protobuf/runtime_version.h> is not found. Pin PROTOBUF_INCLUDE_DIR + LIBRARY to
+# the protoc's own prefix (the workspace protobuf that gz uses) so they always match.
+_fpb="$(find "$ROOT" -path '*rc_dynamics_api/cmake/Modules/FindProtocolBuffers.cmake' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$_fpb" ] && [ -f "$_fpb" ] && ! grep -q 'ci-rcdyn-protoc-match' "$_fpb"; then
+  perl -0pi -e 's{(FIND_PROGRAM\(PROTOBUF_PROTOC_EXECUTABLE NAMES protoc\n             HINTS "\$\{PROTOBUF_ROOT\}/bin"\n             DOC "The Google Protocol Buffers Compiler"\n\)\n)}{$1\n# ci-rcdyn-protoc-match: keep PROTOBUF_INCLUDE_DIR/LIBRARY matched to the protoc that generated\n# the .pb.h (the workspace protobuf), not an older service.h-having protobuf FIND_PATH may pick.\nIF(PROTOBUF_PROTOC_EXECUTABLE)\n  GET_FILENAME_COMPONENT(_ci_pb_bin "\$\{PROTOBUF_PROTOC_EXECUTABLE\}" DIRECTORY)\n  GET_FILENAME_COMPONENT(_ci_pb_root "\$\{_ci_pb_bin\}" DIRECTORY)\n  IF(EXISTS "\$\{_ci_pb_root\}/include/google/protobuf/descriptor.pb.h")\n    SET(PROTOBUF_INCLUDE_DIR "\$\{_ci_pb_root\}/include" CACHE PATH "" FORCE)\n    FILE(GLOB _ci_pb_lib "\$\{_ci_pb_root\}/lib/libprotobuf.dylib" "\$\{_ci_pb_root\}/lib/libprotobuf.a")\n    IF(_ci_pb_lib)\n      LIST(GET _ci_pb_lib 0 _ci_pb_lib0)\n      SET(PROTOBUF_LIBRARY "\$\{_ci_pb_lib0\}" CACHE FILEPATH "" FORCE)\n    ENDIF()\n  ENDIF()\nENDIF()\n}' "$_fpb"
+  echo "  rc_dynamics_api: FindProtocolBuffers pin include+lib to protoc prefix (workspace protobuf)"
+fi
 # zenoh_bridge_dds: the pinned Cargo.lock uses time v0.3.28, which fails to compile on
 # rustc >= 1.80 (E0282 "type annotations needed for Box<_>" in time's format_description
 # parse/mod.rs). The runner's cargo does not honor the crate's rust-toolchain.toml (1.72.0),
