@@ -206,6 +206,10 @@ add_compile_options(
         -Wno-error=braced-scalar-init
         -Wno-error=unknown-warning-option
         -Wno-error=thread-safety-analysis
+        # ci-utf8: urg_c and other Shift-JIS-encoded sources emit -Winvalid-utf8 warnings that dump raw
+        # invalid bytes into the build log, crashing the GitHub runner's UTF-8 log writer
+        # (System.IO.IOException: Illegal byte sequence) and failing the whole job. Suppress the warning.
+        -Wno-invalid-utf8
         -Wno-thread-safety-analysis
  )
 
