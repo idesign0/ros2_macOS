@@ -484,8 +484,8 @@ done
 #     existing sys/types.h clockid_t __APPLE__ patch below). ---
 d="$(_pkg_dir lely_core_libraries)"
 if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'Wno-macro-redefined' "$d/CMakeLists.txt"; then
-  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -fcommon -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1" --prefix#' "$d/CMakeLists.txt"
-  echo "  lely_core_libraries: configure CFLAGS -Wno-macro-redefined + -fcommon (getopt tentative-def dup symbols) + force pthread threads (THREADS_H=0 PTHREAD_H=1)"
+  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -fcommon -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1" ac_cv_header_uchar_h=no --prefix#' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: configure CFLAGS -Wno-macro-redefined + -fcommon (getopt tentative-def dup symbols) + force pthread threads (THREADS_H=0 PTHREAD_H=1) + ac_cv_header_uchar_h=no (macOS has no <uchar.h>; use lely's own char16/32_t fallback -- deterministic, matches shards that already pass)"
 fi
 
 # --- Lane 6: lely_core_libraries's vendored libc/sys/types.h only treats
