@@ -309,6 +309,13 @@ kuka_sunrise_fri_driver
 hri_rviz
 # turtlebot4_bringup: depends on depthai_bridge (skip-listed; Linux depthai camera stack). Skip.
 turtlebot4_bringup
+# callback_isolated_executor: build-depends on cie_thread_configurator, skip-listed above as
+# Linux-only (error.h, CPU_SET/sched_setaffinity). Skip until it has a macOS port.
+callback_isolated_executor
+# agnocastlib: a Linux-kernel zero-copy transport -- needs the agnocast kernel module + epoll/
+# eventfd IPC and find_package(LTTngUST REQUIRED) with tracepoints embedded in its core headers.
+# No macOS path (same class as the agnocast_cie_thread_configurator skip). Skip.
+agnocastlib
 # === category I triage (2026-09-04) ===
 # canboat_vendor: ExternalProject builds upstream canboat, whose install step copies
 # rel/socketcan-serial -- a SocketCAN tool. SocketCAN is Linux-only (no CAN sockets on
