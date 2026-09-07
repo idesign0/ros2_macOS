@@ -1,5 +1,7 @@
 ardrone_sdk
 ardrone_sumo
+# crazyflie_server_cpp: crazyflie build-depends on it but it was orphaned (in-tree, no shard)
+crazyflie_server_cpp
 crazyflie
 crazyflie_description
 crazyflie_examples
