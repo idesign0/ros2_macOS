@@ -178,6 +178,7 @@ sick_safevisionary_tests
 sicks300_ros2
 simple_term_menu_vendor
 sound_play
+sound_play_msgs
 spinnaker_camera_driver
 spinnaker_synchronized_camera_driver
 tecgihan_driver

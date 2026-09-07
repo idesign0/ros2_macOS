@@ -76,6 +76,18 @@ jobs:
             --merge-install --continue-on-error --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
           touch "$GZ_DIR/COLCON_IGNORE"
+          # abseil-compat: the workspace protoc (install/bin/protoc, built here) links brew abseil
+          # by ABSOLUTE path /opt/homebrew/opt/abseil/lib/libabsl_*.<soname>.dylib. The domain shards
+          # can have a DIFFERENT abseil linked (the idesign0 ros2 tap dep pins an older one), so that
+          # exact soname file is absent there and protoc dies at codegen ("Library not loaded:
+          # libabsl_die_if_null.NNNN.dylib" -> rc_dynamics_api Error 134). Snapshot this base's abseil
+          # dylibs into the install/ artifact; each shard restores the MISSING ones (cp -n) next to its
+          # own abseil -- they coexist because the filenames are soname-versioned. Purely additive.
+          if [ -d /opt/homebrew/opt/abseil/lib ]; then
+            mkdir -p install/abseil-compat
+            cp -pP /opt/homebrew/opt/abseil/lib/libabsl_*.dylib install/abseil-compat/ 2>/dev/null || true
+            echo "abseil-compat: snapshotted $(ls install/abseil-compat 2>/dev/null | wc -l | tr -d ' ') abseil dylibs from the base"
+          fi
       - name: Unlink conflicting Homebrew packages
         run: |
           set +e
@@ -257,6 +269,15 @@ jobs:
           # ament-python consumers). Snapshot first, then extract this shard's delta.
           touch /tmp/base_marker
           source install/setup.sh
+          # abseil-compat restore: place the base's protoc-linked abseil dylibs next to THIS shard's
+          # abseil so the workspace protoc's absolute /opt/homebrew/opt/abseil/lib/libabsl_*.<soname>.dylib
+          # path resolves even when brew here has a different abseil linked. cp -n never overwrites this
+          # shard's own abseil (they coexist by soname). Fixes rc_dynamics_api "Library not loaded:
+          # libabsl_die_if_null.NNNN.dylib" (Error 134). See the base "Build External Gazebo" step.
+          if [ -d install/abseil-compat ] && [ -d /opt/homebrew/opt/abseil/lib ]; then
+            cp -n install/abseil-compat/*.dylib /opt/homebrew/opt/abseil/lib/ 2>/dev/null || true
+            echo "abseil-compat: restored base abseil dylibs into /opt/homebrew/opt/abseil/lib"
+          fi
           SEL=$(grep -vE '^\s*#|^\s*$' "ci/shards/dom_${{ matrix.shard }}.txt" | tr '\n' ' ')
           [ -z "$SEL" ] && { echo "empty shard"; exit 0; }
           colcon build --packages-select $SEL --merge-install \
