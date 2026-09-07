@@ -267,17 +267,20 @@ if [ -f "$f" ] && grep -q 'NAMES libmodbus.so' "$f" && ! grep -q 'ci-atsonde-mod
   perl -0pi -e 's~NAMES modbus\.h\n  PATHS /usr/include/modbus~NAMES modbus.h\n  PATHS /usr/include/modbus /opt/homebrew/opt/libmodbus/include/modbus /opt/homebrew/include/modbus~' "$f"
   echo "  at_sonde_ros_driver: LIBMODBUS find NAMES/PATHS -> brew libmodbus in ${f#$ROOT/}"
 fi
-# husarion_ugv_lights: target_link_libraries(animation_plugins ... ${YAML_CPP_LIBRARIES}) where
-# YAML_CPP_LIBRARIES resolves to yaml-cpp::yaml-cpp -- a DIRECTORY-scoped IMPORTED target that
-# find_package(yaml-cpp) does not recreate at generate on macOS -> "Target animation_plugins links
-# to yaml-cpp::yaml-cpp but the target was not found" (CMakeLists:35). Same class as camera_aravis2 /
-# velodyne / mavros_extras. Fabricate the target from the vendored/brew yaml-cpp right after the
+# husarion_ugv_lights / husarion_ugv_diagnostics: link (directly, or transitively via
+# husarion_ugv_utils) yaml-cpp::yaml-cpp -- a DIRECTORY-scoped IMPORTED target that the vendored
+# yaml-cpp config references but does not create at generate on macOS -> "Target ... links to
+# yaml-cpp::yaml-cpp but the target was not found". Same class as camera_aravis2 / velodyne /
+# mavros_extras. Fabricate it (find_library over CMAKE_PREFIX_PATH) right after each package's
 # find_package loop. Idempotent (ci-husarion-yamlcpp).
-f="$(_pkg_dir husarion_ugv_lights)/CMakeLists.txt"
-if [ -f "$f" ] && grep -q 'YAML_CPP_LIBRARIES' "$f" && ! grep -q 'ci-husarion-yamlcpp' "$f"; then
-  perl -0pi -e 's{(\nendforeach\(\)\n)}{$1\n# ci-husarion-yamlcpp: fabricate the directory-scoped yaml-cpp::yaml-cpp IMPORTED target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS "\$\{YAML_CPP_INCLUDE_DIR\}" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\n}' "$f"
-  echo "  husarion_ugv_lights: fabricate yaml-cpp::yaml-cpp target in ${f#$ROOT/}"
-fi
+for _p in husarion_ugv_lights husarion_ugv_diagnostics; do
+  f="$(_pkg_dir "$_p")/CMakeLists.txt"
+  [ -f "$f" ] || continue
+  grep -q 'ci-husarion-yamlcpp' "$f" && continue
+  grep -q 'endforeach' "$f" || continue
+  perl -0pi -e 's{(\nendforeach\(\)\n)}{$1\n# ci-husarion-yamlcpp: fabricate the directory-scoped yaml-cpp::yaml-cpp IMPORTED target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS "\$\{YAML_CPP_INCLUDE_DIR\}" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\n}' "$f"
+  echo "  $_p: fabricate yaml-cpp::yaml-cpp target in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
