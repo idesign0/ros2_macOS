@@ -281,6 +281,15 @@ for _p in husarion_ugv_lights husarion_ugv_diagnostics; do
   perl -0pi -e 's{(\nendforeach\(\)\n)}{$1\n# ci-husarion-yamlcpp: fabricate the directory-scoped yaml-cpp::yaml-cpp IMPORTED target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS "\$\{YAML_CPP_INCLUDE_DIR\}" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\n}' "$f"
   echo "  $_p: fabricate yaml-cpp::yaml-cpp target in ${f#$ROOT/}"
 done
+# ros2_medkit_gateway/default_script_provider.cpp uses pipe2(fds, O_CLOEXEC) -- a Linux/glibc
+# extension with no macOS equivalent -> "use of undeclared identifier 'pipe2'". Emulate it with
+# pipe() + fcntl(FD_CLOEXEC / O_NONBLOCK) on Apple, inserted after <unistd.h> (<fcntl.h> precedes
+# it, so the flag macros are already visible). Idempotent (ci-medkit-pipe2).
+for f in $(grep -rlE '\bpipe2\(' "$ROOT" --include='*.cpp' --include='*.cc' --include='*.hpp' 2>/dev/null | grep ros2_medkit); do
+  grep -q 'ci-medkit-pipe2' "$f" && continue
+  perl -0pi -e 's~(#include <unistd\.h>)~$1\n#if defined(__APPLE__)  // ci-medkit-pipe2: macOS has no pipe2(); emulate via pipe()+fcntl\nstatic inline int pipe2(int _ci_fds[2], int _ci_flags) {\n  if (pipe(_ci_fds) != 0) return -1;\n  if (_ci_flags & O_CLOEXEC) { fcntl(_ci_fds[0], F_SETFD, FD_CLOEXEC); fcntl(_ci_fds[1], F_SETFD, FD_CLOEXEC); }\n  if (_ci_flags & O_NONBLOCK) { fcntl(_ci_fds[0], F_SETFL, fcntl(_ci_fds[0], F_GETFL) | O_NONBLOCK); fcntl(_ci_fds[1], F_SETFL, fcntl(_ci_fds[1], F_GETFL) | O_NONBLOCK); }\n  return 0;\n}\n#endif~' "$f"
+  echo "  ros2_medkit_gateway: pipe2() macOS shim in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
