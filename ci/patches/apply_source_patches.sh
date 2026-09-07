@@ -2044,6 +2044,21 @@ for _f in $(find "$ROOT" -path '*libmavconn/src/interface.cpp' 2>/dev/null); do
   fi
 done
 
+# --- mavros_extras (aerial/mavros submodule, all 3): plugins (fake_gps.cpp,
+#     guided_target.cpp) call GeographicLib::Geocentric::{Geocentric,IntForward,IntReverse}
+#     and the CMakeLists find_package(GeographicLib REQUIRED) + includes ${GeographicLib_INCLUDE_DIRS},
+#     but target_link_libraries(mavros_extras_plugins ...) never links GeographicLib -> ld64
+#     "Undefined symbols: GeographicLib::Geocentric::..." (Linux ld is lazier so upstream
+#     never noticed). Link ${GeographicLib_LIBRARIES} (brew geographiclib CONFIG sets it to
+#     the GeographicLib::GeographicLib_SHARED target; the module form sets the lib path --
+#     either is linkable). Idempotent (ci-mavros-geographiclib). ---
+for _f in $(find "$ROOT" -path '*mavros_extras/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q 'GeographicLib::Geocentric\|GeographicLib_INCLUDE_DIRS' "$_f" && ! grep -q 'ci-mavros-geographiclib' "$_f"; then
+    perl -0pi -e 's{(target_link_libraries\(mavros_extras_plugins PUBLIC\n)(  \$\{geographic_msgs_TARGETS\}\n)}{$1  # ci-mavros-geographiclib: GeographicLib::Geocentric used in fake_gps.cpp but never linked\n  \$\{GeographicLib_LIBRARIES\}\n$2}' "$_f"
+    echo "  mavros_extras: link \${GeographicLib_LIBRARIES} into mavros_extras_plugins in ${_f#$ROOT/}"
+  fi
+done
+
 # --- autoware yaml-cpp::yaml-cpp target scoping (autoware_core, humble esp.): several
 #     autoware packages link ${YAML_CPP_LIBRARIES} (= yaml-cpp::yaml-cpp, set by the
 #     yaml_cpp_vendor fork). But yaml-cpp::yaml-cpp is a DIRECTORY-scoped IMPORTED
