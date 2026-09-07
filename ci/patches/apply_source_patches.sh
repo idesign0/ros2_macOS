@@ -235,6 +235,49 @@ for f in $(grep -rlE '#include <endian\.h>' "$ROOT" --include='*.hpp' --include=
   perl -0pi -e 's~#include <endian\.h>~#if defined(__APPLE__)  // ci-offhw-endian\n#include <libkern/OSByteOrder.h>\n#define htobe16(x) OSSwapHostToBigInt16(x)\n#define htobe32(x) OSSwapHostToBigInt32(x)\n#define htobe64(x) OSSwapHostToBigInt64(x)\n#define htole16(x) OSSwapHostToLittleInt16(x)\n#define htole32(x) OSSwapHostToLittleInt32(x)\n#define htole64(x) OSSwapHostToLittleInt64(x)\n#define be16toh(x) OSSwapBigToHostInt16(x)\n#define be32toh(x) OSSwapBigToHostInt32(x)\n#define be64toh(x) OSSwapBigToHostInt64(x)\n#define le16toh(x) OSSwapLittleToHostInt16(x)\n#define le32toh(x) OSSwapLittleToHostInt32(x)\n#define le64toh(x) OSSwapLittleToHostInt64(x)\n#else\n#include <endian.h>\n#endif~' "$f"
   echo "  off_highway: macOS endian shim in ${f#$ROOT/}"
 done
+# off_highway_premium_radar[_sample]: helper.hpp uses std::bit_cast (C++20; the package sets
+# CMAKE_CXX_STANDARD 20) but never #include <bit>. libgcc pulls <bit> in transitively; libc++
+# does NOT -> "no template named 'bit_cast' in namespace 'std'; did you mean '__bit_cast'?".
+# Add the include (anchored before <cstdint>, always present in these headers). Idempotent.
+for f in $(grep -rlE 'std::bit_cast' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep off_highway); do
+  grep -q 'ci-offhw-bit' "$f" && continue
+  grep -q '#include <bit>' "$f" && continue
+  perl -0pi -e 's~(#include <cstdint>)~#include <bit>  // ci-offhw-bit: std::bit_cast (C++20) is not transitively included on libc++\n$1~' "$f"
+  echo "  off_highway: +#include <bit> for std::bit_cast in ${f#$ROOT/}"
+done
+# nebula_core_ros/sync_tooling/sync_tooling_worker.hpp uses HOST_NAME_MAX (a glibc/Linux limits
+# constant; macOS defines _POSIX_HOST_NAME_MAX / MAXHOSTNAMELEN instead, never HOST_NAME_MAX),
+# so every consumer of the installed header fails "use of undeclared identifier 'HOST_NAME_MAX'"
+# -> nebula_hesai, nebula_continental. Define a fallback to _POSIX_HOST_NAME_MAX (255) on Apple,
+# right after the existing <unistd.h> include. Idempotent (ci-nebula-hostnamemax).
+for f in $(grep -rlE '\bHOST_NAME_MAX\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep nebula); do
+  grep -q 'ci-nebula-hostnamemax' "$f" && continue
+  perl -0pi -e 's~(#include <unistd\.h>)~$1\n#if defined(__APPLE__) && !defined(HOST_NAME_MAX)  // ci-nebula-hostnamemax\n#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX\n#endif~' "$f"
+  echo "  nebula: HOST_NAME_MAX -> _POSIX_HOST_NAME_MAX fallback in ${f#$ROOT/}"
+done
+# at_sonde_ros_driver: find_library(LIBMODBUS NAMES libmodbus.so PATHS /usr/lib) and
+# find_path(LIBMODBUS_INCLUDE_DIR NAMES modbus.h PATHS /usr/include/modbus) are Linux-only --
+# the NAMES is wrong (find_library wants the BASE name 'modbus', not 'libmodbus.so') and the
+# PATHS miss brew. libmodbus is in BREW_BASE at /opt/homebrew/opt/libmodbus -> both vars end up
+# NOTFOUND on macOS ("variables ... set to NOTFOUND: LIBMODBUS_INCLUDE_DIR, LIBMODBUS"). Fix the
+# NAMES and add brew paths. Idempotent (ci-atsonde-modbus).
+f="$(_pkg_dir at_sonde_ros_driver)/CMakeLists.txt"
+if [ -f "$f" ] && grep -q 'NAMES libmodbus.so' "$f" && ! grep -q 'ci-atsonde-modbus' "$f"; then
+  perl -0pi -e 's~NAMES libmodbus\.so\n  PATHS /usr/lib~NAMES modbus libmodbus  # ci-atsonde-modbus\n  PATHS /usr/lib /opt/homebrew/opt/libmodbus/lib~' "$f"
+  perl -0pi -e 's~NAMES modbus\.h\n  PATHS /usr/include/modbus~NAMES modbus.h\n  PATHS /usr/include/modbus /opt/homebrew/opt/libmodbus/include/modbus /opt/homebrew/include/modbus~' "$f"
+  echo "  at_sonde_ros_driver: LIBMODBUS find NAMES/PATHS -> brew libmodbus in ${f#$ROOT/}"
+fi
+# husarion_ugv_lights: target_link_libraries(animation_plugins ... ${YAML_CPP_LIBRARIES}) where
+# YAML_CPP_LIBRARIES resolves to yaml-cpp::yaml-cpp -- a DIRECTORY-scoped IMPORTED target that
+# find_package(yaml-cpp) does not recreate at generate on macOS -> "Target animation_plugins links
+# to yaml-cpp::yaml-cpp but the target was not found" (CMakeLists:35). Same class as camera_aravis2 /
+# velodyne / mavros_extras. Fabricate the target from the vendored/brew yaml-cpp right after the
+# find_package loop. Idempotent (ci-husarion-yamlcpp).
+f="$(_pkg_dir husarion_ugv_lights)/CMakeLists.txt"
+if [ -f "$f" ] && grep -q 'YAML_CPP_LIBRARIES' "$f" && ! grep -q 'ci-husarion-yamlcpp' "$f"; then
+  perl -0pi -e 's{(\nendforeach\(\)\n)}{$1\n# ci-husarion-yamlcpp: fabricate the directory-scoped yaml-cpp::yaml-cpp IMPORTED target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS "\$\{YAML_CPP_INCLUDE_DIR\}" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\n}' "$f"
+  echo "  husarion_ugv_lights: fabricate yaml-cpp::yaml-cpp target in ${f#$ROOT/}"
+fi
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do

@@ -354,6 +354,16 @@ rmf_robot_sim_gz_plugins
 # ign_rviz_plugins: find_package(gz_math_vendor) -- a gz vendor package not built in this
 # ROS workspace (gz/Fortress). No macOS path until the gz vendors are provided.
 ign_rviz_plugins
+# --- humble+jazzy common, blocked by a skipped/absent dep (2026-09-07) ---
+# kuka_{iiqka_eac,rsi,sunrise_fri}_driver: find_package(kuka-external-control-sdk), whose
+# provider kuka_external_control_sdk is skip-listed below (Linux epoll). Skip until it builds.
+kuka_iiqka_eac_driver
+kuka_rsi_driver
+kuka_sunrise_fri_driver
+# hri_rviz: find_package(hri) -- the ROS4HRI 'hri' package is not vendored in this tree. Skip.
+hri_rviz
+# turtlebot4_bringup: depends on depthai_bridge (skip-listed; Linux depthai camera stack). Skip.
+turtlebot4_bringup
 # === category I triage (2026-09-04) ===
 # canboat_vendor: ExternalProject builds upstream canboat, whose install step copies
 # rel/socketcan-serial -- a SocketCAN tool. SocketCAN is Linux-only (no CAN sockets on

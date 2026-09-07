@@ -34,6 +34,8 @@ as2_rviz_plugins
 as2_state_estimator
 as2_usb_camera_interface
 as2_visualization
+# crazyflie_server_cpp: crazyflie build-depends on it but it was orphaned (in-tree, no shard)
+crazyflie_server_cpp
 crazyflie
 crazyflie_description
 crazyflie_examples
