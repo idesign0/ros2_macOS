@@ -747,6 +747,55 @@ PATCHEOF
   echo "  lely_core_libraries: added 0101-macos-getopt-extern.patch to UPDATE_COMMAND"
 fi
 
+# --- mrpt_libbase (all 3): MRPT (fetched as an ExternalProject, pinned 2.15.x) declares its
+#     CArchive scalar stream operators only for the fixed-width integer types listed in
+#     is_simple_type<> (bool, uint8..uint64, int8..int64, float, double). On macOS/arm64
+#     std::size_t is `unsigned long` while uint64_t is `unsigned long long` -- distinct types of
+#     equal width -- so scalar `size_t` matches NO operator and `out << activeAnimation_` in
+#     opengl/CAnimatedAssimpModel.cpp (and other call sites) fails with "invalid operands to
+#     binary expression ('mrpt::serialization::CArchive' and 'const size_t')". Upstream only works
+#     because size_t==uint64_t on LP64/unsigned-long platforms (Linux). Add scalar size_t operators
+#     (serialized as uint64_t, mirroring MRPT's own std::vector<size_t> special-case) to the fetched
+#     CArchive.h via an ExternalProject PATCH_COMMAND -- the header is installed by mrpt_libbase and
+#     consumed by mrpt_libopengl et al. Idempotent: the CMakeLists edit is marker-guarded and the
+#     git-apply reverse-checks before applying (safe on fresh clone and reused local checkout). ---
+d="$(_pkg_dir mrpt_libbase)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0200-mrpt-carchive-sizet.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0200-mrpt-carchive-sizet.patch" <<'PATCHEOF'
+--- a/libs/serialization/include/mrpt/serialization/CArchive.h
++++ b/libs/serialization/include/mrpt/serialization/CArchive.h
+@@ -452,6 +452,25 @@
+ }
+ #endif
+
++// ci-mrpt-sizet: on platforms where std::size_t is a distinct type from the fixed-width
++// integer types in is_simple_type<> above -- notably macOS/arm64, where size_t is
++// 'unsigned long' but uint64_t is 'unsigned long long' -- scalar size_t matches no
++// operator (upstream relies on size_t==uint64_t, true only on LP64/unsigned-long platforms
++// like Linux). Serialize it as uint64_t, mirroring MRPT's std::vector<size_t> special case.
++#if defined(__APPLE__)
++inline CArchive& operator<<(CArchive& out, const std::size_t a)
++{
++  return out << static_cast<uint64_t>(a);
++}
++inline CArchive& operator>>(CArchive& in, std::size_t& a)
++{
++  uint64_t v = 0;
++  in >> v;
++  a = static_cast<std::size_t>(v);
++  return in;
++}
++#endif
++
+ CArchive& operator<<(CArchive& out, const mrpt::Clock::time_point& a);
+ CArchive& operator>>(CArchive& in, mrpt::Clock::time_point& a);
+
+PATCHEOF
+  perl -0pi -e 's{(\n  # no install during build\n  INSTALL_COMMAND "")}{\n  PATCH_COMMAND bash -c "git apply -R --check \x27\$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0200-mrpt-carchive-sizet.patch\x27 2>/dev/null || git apply --whitespace=fix \x27\$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0200-mrpt-carchive-sizet.patch\x27"$1}' "$d/CMakeLists.txt"
+  echo "  mrpt_libbase: added 0200-mrpt-carchive-sizet.patch as ExternalProject PATCH_COMMAND"
+fi
+
 # --- Lane 2: boost-python component version. mrt_cmake_modules FindBoostPython
 #     derives the component from find_package(Python3), which resolves the runner's
 #     newest Python (3.14) -> boost_python314, absent from the vendored boost-1.89
@@ -2101,12 +2150,31 @@ fi
 #     here -- the vendor sets it to the directory-scoped yaml-cpp::yaml-cpp target that
 #     isn't defined at generate on macOS (same as velodyne/swri). Discover the yaml-cpp
 #     .dylib via find_library and link it by ABSOLUTE PATH. Idempotent (ci-aravis-yamlpath). ---
-_f="$(_pkg_dir camera_aravis2)/CMakeLists.txt"
+# NB: camera_aravis2 nests as .../camera_aravis2/camera_aravis2/; _pkg_dir returns the
+# OUTER dir (no CMakeLists.txt) so the old `$(_pkg_dir ...)/CMakeLists.txt` silently missed.
+# Use the explicit nested path (same as the WITH_MATCHED_EVENTS fix above).
+_f="$(find "$ROOT" -path '*camera_aravis2/camera_aravis2/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
 if [ -f "$_f" ] && grep -qE '^\s*\$\{YAML_CPP_LIBRARY_DIRS\}\s*$' "$_f" && ! grep -q 'ci-aravis-yamlpath' "$_f"; then
   perl -0pi -e 's{set\(LIBRARIES\n}{# ci-aravis-yamlpath: link the yaml-cpp .dylib by absolute path (YAML_CPP_LIBRARY_DIRS is\n# a dir; YAML_CPP_LIBRARIES is the dir-scoped yaml-cpp::yaml-cpp target, absent at generate).\nfind_library(_ci_ycpp_lib NAMES yaml-cpp\n  HINTS \$\{YAML_CPP_INCLUDE_DIRS\} \$\{YAML_CPP_INCLUDE_DIR\} \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib ../lib)\nif(NOT _ci_ycpp_lib)\n  set(_ci_ycpp_lib \$\{YAML_CPP_LIBRARIES\})\nendif()\nset(LIBRARIES\n}' "$_f"
   perl -0pi -e 's{image_transport::image_transport\n  \$\{YAML_CPP_LIBRARY_DIRS\}\n\)}{image_transport::image_transport\n  \$\{_ci_ycpp_lib\}\n)}' "$_f"
   echo "  camera_aravis2: link yaml-cpp .dylib by absolute path (was YAML_CPP_LIBRARY_DIRS) in ${_f#$ROOT/}"
 fi
+
+# --- VTK 9.x (brew, all 3): vtk-config.cmake include()s VTK-targets.cmake -- which declares
+#     VTK::jsoncpp's link interface as JsonCpp::JsonCpp -- BEFORE VTK-vtk-module-find-packages.cmake
+#     runs find_package(JsonCpp) that defines that target. When a consumer requests VTK COMPONENTS
+#     that only pull jsoncpp TRANSITIVELY (PCL visualization -> VTK::IOLegacy/IOParallel -> VTK::jsoncpp)
+#     without naming jsoncpp, VTK skips the JsonCpp find, so JsonCpp::JsonCpp is never created and
+#     generate fails: "link interface of target VTK::jsoncpp contains JsonCpp::JsonCpp but the target
+#     was not found (VTK-targets.cmake:NNNN)". Hits grid_map_pcl, rtabmap_rviz_plugins and any
+#     pcl_conversions consumer. Pre-define JsonCpp::JsonCpp before the targets include -- brew jsoncpp
+#     ships a CONFIG that exports it; find_library fallback covers the rest. Idempotent (ci-vtk-jsoncpp). ---
+for _f in /opt/homebrew/lib/cmake/vtk-*/vtk-config.cmake; do
+  [ -f "$_f" ] || continue
+  grep -q 'ci-vtk-jsoncpp' "$_f" && continue
+  perl -0pi -e 's{(include\("\$\{CMAKE_CURRENT_LIST_DIR\}/\$\{CMAKE_FIND_PACKAGE_NAME\}-targets\.cmake"\))}{# ci-vtk-jsoncpp: define JsonCpp::JsonCpp before VTK-targets.cmake references it\nif(NOT TARGET JsonCpp::JsonCpp)\n  find_package(jsoncpp CONFIG QUIET)\n  if(NOT TARGET JsonCpp::JsonCpp)\n    find_library(_ci_jsoncpp_lib NAMES jsoncpp)\n    find_path(_ci_jsoncpp_inc NAMES json/json.h PATH_SUFFIXES jsoncpp)\n    if(_ci_jsoncpp_lib)\n      add_library(JsonCpp::JsonCpp UNKNOWN IMPORTED)\n      set_target_properties(JsonCpp::JsonCpp PROPERTIES IMPORTED_LOCATION "\${_ci_jsoncpp_lib}")\n      if(_ci_jsoncpp_inc)\n        set_target_properties(JsonCpp::JsonCpp PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "\${_ci_jsoncpp_inc}")\n      endif()\n    endif()\n  endif()\nendif()\n$1}' "$_f"
+  echo "  VTK: pre-define JsonCpp::JsonCpp before VTK-targets.cmake in ${_f}"
+done
 
 # --- ublox_dgnss_node (all 3): target_link_libraries links bare 'usb-1.0' -> raw
 #     '-lusb-1.0' with no -L for brew libusb -> "ld: library 'usb-1.0' not found".
