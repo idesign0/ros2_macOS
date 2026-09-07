@@ -207,6 +207,7 @@ sick_scan_xd
 simple_term_menu_vendor
 so_arm_100_hardware
 sound_play
+sound_play_msgs
 spinnaker_camera_driver
 spinnaker_synchronized_camera_driver
 tecgihan_driver
