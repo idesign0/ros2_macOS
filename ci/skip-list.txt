@@ -284,6 +284,21 @@ nmea_hardware_interface
 menge_vendor
 # rmf_building_sim_gz_plugins: build-depends on menge_vendor (skipped above).
 rmf_building_sim_gz_plugins
+# === common-root triage (2026-09-07): blocked by an already-skipped or unavailable dep ===
+# rqt_play_motion_builder: build-depends on rqt_gui_cpp (skip-listed above; the Qt gui C++
+# binding does not build on macOS) -> "rqt_gui_cpp/plugin.h file not found". Same class as
+# rqt_image_overlay. Skip until rqt_gui_cpp builds.
+rqt_play_motion_builder
+# rmf_traffic_editor_test_maps: find_package(menge_vendor) REQUIRED, but menge_vendor is
+# skip-listed above (tinyxml). Skip until menge_vendor builds.
+rmf_traffic_editor_test_maps
+# rmf_robot_sim_gz_plugins: target_link_libraries against gz-sim plugin targets from the
+# gz/Fortress stack that are not built as ROS workspace packages here (same family as
+# rmf_building_sim_gz_plugins above). Skip until the gz plugin targets are provided.
+rmf_robot_sim_gz_plugins
+# ign_rviz_plugins: find_package(gz_math_vendor) -- a gz vendor package not built in this
+# ROS workspace (gz/Fortress). No macOS path until the gz vendors are provided.
+ign_rviz_plugins
 # === category I triage (2026-09-04) ===
 # canboat_vendor: ExternalProject builds upstream canboat, whose install step copies
 # rel/socketcan-serial -- a SocketCAN tool. SocketCAN is Linux-only (no CAN sockets on

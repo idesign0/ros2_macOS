@@ -141,6 +141,7 @@ sick_safevisionary_interfaces
 sick_safevisionary_tests
 sick_scan_xd
 sound_play
+sound_play_msgs
 spinnaker_camera_driver
 spinnaker_synchronized_camera_driver
 ublox
