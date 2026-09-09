@@ -290,6 +290,18 @@ for f in $(grep -rlE '\bpipe2\(' "$ROOT" --include='*.cpp' --include='*.cc' --in
   perl -0pi -e 's~(#include <unistd\.h>)~$1\n#if defined(__APPLE__)  // ci-medkit-pipe2: macOS has no pipe2(); emulate via pipe()+fcntl\nstatic inline int pipe2(int _ci_fds[2], int _ci_flags) {\n  if (pipe(_ci_fds) != 0) return -1;\n  if (_ci_flags & O_CLOEXEC) { fcntl(_ci_fds[0], F_SETFD, FD_CLOEXEC); fcntl(_ci_fds[1], F_SETFD, FD_CLOEXEC); }\n  if (_ci_flags & O_NONBLOCK) { fcntl(_ci_fds[0], F_SETFL, fcntl(_ci_fds[0], F_GETFL) | O_NONBLOCK); fcntl(_ci_fds[1], F_SETFL, fcntl(_ci_fds[1], F_GETFL) | O_NONBLOCK); }\n  return 0;\n}\n#endif~' "$f"
   echo "  ros2_medkit_gateway: pipe2() macOS shim in ${f#$ROOT/}"
 done
+# MRPT/MOLA dynamic plugin loaders gate their POSIX dlopen path on `#if defined(__unix__)` with a
+# Windows LoadLibrary/HMODULE path in the #else. macOS clang defines __APPLE__/__MACH__ but NOT
+# __unix__, so macOS wrongly compiled the Windows branch -> "unknown type name 'HMODULE'"
+# (mola_launcher/MolaDLL_Loader.cpp, mp2p_icp_core/load_plugin.cpp; unblocks the mola/mp2p stack --
+# mola_viz, mola_input_ouster, mrpt_libhwdrivers build on top). dlopen/dlsym/dlclose work on macOS
+# -> add __APPLE__ to every __unix__ guard in these loaders. Idempotent (ci-mola-apple-unix). ---
+for f in $(grep -rlE 'defined\(__unix__\)' "$ROOT" --include='*.cpp' --include='*.h' --include='*.hpp' 2>/dev/null | xargs grep -lE '\bHMODULE\b|LoadLibrary' 2>/dev/null); do
+  grep -q 'ci-mola-apple-unix' "$f" && continue
+  perl -0pi -e 's~defined\(__unix__\)~(defined(__unix__) || defined(__APPLE__))~g' "$f"
+  printf '\n// ci-mola-apple-unix\n' >> "$f"
+  echo "  mola/mp2p: defined(__unix__) -> || __APPLE__ (POSIX dlopen on macOS) in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
