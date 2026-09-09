@@ -302,6 +302,17 @@ for f in $(grep -rlE 'defined\(__unix__\)' "$ROOT" --include='*.cpp' --include='
   printf '\n// ci-mola-apple-unix\n' >> "$f"
   echo "  mola/mp2p: defined(__unix__) -> || __APPLE__ (POSIX dlopen on macOS) in ${f#$ROOT/}"
 done
+# cx_cdb_{loader,saver}_plugin (clips_executive) use brew libpqxx, whose headers reference
+# std::source_location (C++20). The plugins intend C++20 but guard it `if(NOT CMAKE_CXX_STANDARD)
+# set(20)`; our toolchain.cmake sets CMAKE_CXX_STANDARD 17 globally, so the guard never fires and
+# set_property(... CXX_STANDARD ${CMAKE_CXX_STANDARD}) pins the target to 17 -> pqxx/types.hxx
+# "no type named 'source_location' in namespace 'std'". Force the target(s) that pull libpqxx to
+# C++20. Idempotent (ci-cx-cxx20). ---
+for f in $(grep -rlE 'pkg_check_modules\(LIBPQXX' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-cx-cxx20' "$f" && continue
+  perl -0pi -e 's~set_property\(TARGET \$\{PROJECT_NAME\} PROPERTY CXX_STANDARD \$\{CMAKE_CXX_STANDARD\}\)~set_property(TARGET \${PROJECT_NAME} PROPERTY CXX_STANDARD 20)  # ci-cx-cxx20: brew libpqxx headers need std::source_location (C++20); toolchain forces 17~' "$f"
+  echo "  cx pqxx plugin: force target CXX_STANDARD 20 (libpqxx source_location) in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
