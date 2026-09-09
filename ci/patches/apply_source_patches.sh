@@ -2426,16 +2426,22 @@ for _f in $(find "$ROOT" -ipath '*cx_msgs/srv/ListClipsEnvs.srv' -not -path '*/b
 done
 
 # --- grid_map_pcl (all 3): helpers.hpp printTimeElapsedToRosInfoStream() takes a
-#     system_clock::time_point `start` but computes `stop` with high_resolution_clock::now().
-#     On libc++ high_resolution_clock aliases steady_clock (not system_clock as on libstdc++),
-#     so `stop - start` mixes clock types -> "invalid operands to binary expression
-#     (time_point<steady_clock> and time_point<system_clock>)". Use system_clock::now() for
-#     stop so both match. Idempotent. ---
+#     system_clock::time_point `start` but computes `stop` with high_resolution_clock::now(), and
+#     its callers (helpers.cpp) build `start` with high_resolution_clock::now() too. On libc++
+#     high_resolution_clock aliases steady_clock (not system_clock as on libstdc++), so both the
+#     `stop - start` inside the fn AND the `start` argument at the call site mismatch the
+#     system_clock parameter -> "invalid operands ..." / "no matching function for call to
+#     'printTimeElapsedToRosInfoStream'". Use system_clock::now() everywhere so all clocks match.
+#     Idempotent. ---
 for _f in $(find "$ROOT" -path '*grid_map_pcl/include/grid_map_pcl/helpers.hpp' -not -path '*/build/*' 2>/dev/null); do
   if grep -qF 'const auto stop = std::chrono::high_resolution_clock::now();' "$_f"; then
     perl -pi -e 's{const auto stop = std::chrono::high_resolution_clock::now\(\);}{const auto stop = std::chrono::system_clock::now();};' "$_f"
-    echo "  grid_map_pcl: high_resolution_clock -> system_clock (libc++ clock mismatch) in ${_f#$ROOT/}"
+    echo "  grid_map_pcl: helpers.hpp stop high_resolution_clock -> system_clock in ${_f#$ROOT/}"
   fi
+done
+for _f in $(grep -rlF 'std::chrono::high_resolution_clock::now()' "$ROOT" 2>/dev/null | grep -E 'grid_map_pcl/src/.*\.cpp$'); do
+  perl -pi -e 's{std::chrono::high_resolution_clock::now\(\)}{std::chrono::system_clock::now()}g;' "$_f"
+  echo "  grid_map_pcl: caller start high_resolution_clock -> system_clock in ${_f#$ROOT/}"
 done
 
 # === category-I own-error roots (2026-09-04) ===
