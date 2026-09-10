@@ -2136,6 +2136,30 @@ for _f in $(find "$ROOT" -path '*mavros_extras/CMakeLists.txt' -not -path '*/bui
     echo "  mavros_extras: link \${GeographicLib_LIBRARIES} into mavros_extras_plugins in ${_f#$ROOT/}"
   fi
 done
+# mavros (aerial submodule): references the `standard` mavlink dialect --
+# mavlink::standard::MAV_PROTOCOL_CAPABILITY and mavlink::standard::msg::{AUTOPILOT_VERSION,
+# GLOBAL_POSITION_INT} (plugin.hpp, mavros_uas.hpp, mission_protocol_base.hpp, sys_status.cpp,
+# global_position.cpp). The vendored mavlink here provides only the `common` dialect namespace ->
+# "no type named 'MAV_PROTOCOL_CAPABILITY' in namespace 'mavlink::standard'". All four symbols are
+# plain COMMON mavlink entities (the compiler itself suggests mavlink::common::), so repoint the
+# standard-dialect references to common. Idempotent (ci-mavros-common). ---
+for f in $(grep -rlE 'mavlink::standard::' "$ROOT" --include='*.hpp' --include='*.cpp' 2>/dev/null | grep '/mavros/'); do
+  grep -q 'ci-mavros-common' "$f" && continue
+  sed "${SEDI[@]}" 's/mavlink::standard::/mavlink::common::/g' "$f"
+  printf '\n// ci-mavros-common: standard mavlink dialect absent; symbols used are all common\n' >> "$f"
+  echo "  mavros: mavlink::standard:: -> mavlink::common:: in ${f#$ROOT/}"
+done
+# rmf_fleet_adapter TaskManager.cpp: std::max(0l, to_millis(...).count()) -- the literal 0l is `long`,
+# but std::chrono::milliseconds::rep (.count()) is `long long` on libc++ (int64_t == long long on
+# macOS; == long on Linux, which is why it compiled there) -> std::max's two args disagree ->
+# "no matching function for call to 'std::max'". Pin the call to int64_t so both agree. int64_t is
+# already used in this TU. Idempotent (ci-rmf-max-i64). ---
+for f in $(grep -rlE 'std::max\(0l, to_millis' "$ROOT" --include='*.cpp' 2>/dev/null | grep rmf); do
+  grep -q 'ci-rmf-max-i64' "$f" && continue
+  sed "${SEDI[@]}" 's/std::max(0l, to_millis/std::max<std::int64_t>(0, to_millis/g' "$f"
+  printf '\n// ci-rmf-max-i64\n' >> "$f"
+  echo "  rmf_fleet_adapter: std::max(0l, to_millis...) -> std::max<int64_t>(0, ...) in ${f#$ROOT/}"
+done
 
 # --- autoware yaml-cpp::yaml-cpp target scoping (autoware_core, humble esp.): several
 #     autoware packages link ${YAML_CPP_LIBRARIES} (= yaml-cpp::yaml-cpp, set by the
