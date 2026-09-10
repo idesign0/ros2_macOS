@@ -353,6 +353,20 @@ for f in $(grep -rlE 'include_directories\(BEFORE \$\{CMAKE_CURRENT_BINARY_DIR\}
   perl -0pi -e 's~include_directories\(BEFORE \$\{CMAKE_CURRENT_BINARY_DIR\}/\.\./rc_dynamics_api\) # generated protobuf headers~include_directories(BEFORE \${CMAKE_CURRENT_BINARY_DIR}/../rc_dynamics_api \${PROTOBUF_INCLUDE_DIR}) # ci-rcdyn-protobuf-inc: gencode #includes google/protobuf/runtime_version.h (protobuf v26+); tools/examples need the protobuf include dir too~g' "$f"
   echo "  rc_dynamics_api: add \${PROTOBUF_INCLUDE_DIR} to tools/examples include dirs (runtime_version.h) in ${f#$ROOT/}"
 done
+# mvsim/modules/msgs: the mvsim_msgs target's target_include_directories has
+#   #$<BUILD_INTERFACE:${Protobuf_INCLUDE_DIRS}>
+# COMMENTED OUT, so the target that compiles the protobuf_generate_cpp gencode gets no protobuf
+# include dir. Upstream can leave it off because on Linux the system protobuf sits on the default
+# include path; on macOS the workspace protobuf lives in a non-default prefix, so the gencode's
+# #include "google/protobuf/runtime_version.h" (protobuf v26+) is not found -> "fatal error:
+# 'google/protobuf/runtime_version.h' file not found" (AdvertiseServiceRequest.pb.h:14). find_package
+# (Protobuf) already populated Protobuf_INCLUDE_DIRS with the workspace protobuf include; uncomment
+# the line so the target (SYSTEM PUBLIC) exports it to the gencode and to consumers of the .pb.h.
+# Idempotent: the leading # is gone after the rewrite (ci-mvsim-protobuf-inc). ---
+for f in $(grep -rlF '#$<BUILD_INTERFACE:${Protobuf_INCLUDE_DIRS}>' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  perl -0pi -e 's~#\$<BUILD_INTERFACE:\$\{Protobuf_INCLUDE_DIRS\}>~\$<BUILD_INTERFACE:\${Protobuf_INCLUDE_DIRS}>  # ci-mvsim-protobuf-inc: uncommented so gencode finds google/protobuf/runtime_version.h~g' "$f"
+  echo "  mvsim: uncomment \${Protobuf_INCLUDE_DIRS} in mvsim_msgs include dirs (runtime_version.h) in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
