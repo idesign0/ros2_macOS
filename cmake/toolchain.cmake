@@ -245,7 +245,7 @@ set(QT6_PREFIX "/opt/homebrew/opt/qt" CACHE PATH "Qt6 prefix path")
 # for just these two so their whole configure resolves to Qt5. Scoped per-project, so
 # the genuine Qt6 consumers (rviz_satellite, rviz_visual_tools, gz_gui_vendor) are
 # unaffected. CMAKE_DISABLE_FIND_PACKAGE_Qt6 overrides the Qt6_DIR cache var above.
-if("${CMAKE_PROJECT_NAME}" MATCHES "^(navmap_rviz_plugin|rtabmap_rviz_plugins)$")
+if("${CMAKE_PROJECT_NAME}" MATCHES "^(navmap_rviz_plugin|rtabmap_rviz_plugins|multisensor_calibration|extrinsic_camera_lidar_calibration)$")
   set(CMAKE_DISABLE_FIND_PACKAGE_Qt6 ON CACHE BOOL "" FORCE)
 endif()
 
