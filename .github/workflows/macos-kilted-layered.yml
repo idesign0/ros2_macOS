@@ -33,8 +33,74 @@ jobs:
         run: |
           echo "domains=$(jq -R -s -c 'split("\n") | map(select(length>0))' ci/shards/_domains.txt)" >> "$GITHUB_OUTPUT"
 
-  base:
+  # The gz stack (protobuf v32 + the whole gz-macOS tree, built from source) is the single most
+  # expensive thing in the pipeline (~2h cold). It used to run inside base-1, which -- together with
+  # brew installs and the ~1000 base packages -- pushed base-1 past the hard 6h GitHub job limit, so
+  # base-1 was cancelled every run and never saved its ccache (cold-cache death spiral). Split it into
+  # its own job: it fits well under 6h on its own, and its output is cached by (GZ_VERSION + toolchain
+  # hash), so subsequent runs restore it in seconds instead of rebuilding. base-1 then only builds the
+  # base packages and comfortably fits in 6h. Bump the trailing -vN salt to force a gz rebuild when the
+  # gz-macOS branch advances without changing GZ_VERSION.
+  gz:
     needs: plan
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false, fetch-depth: 0 }
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+      - name: Restore gz-install cache
+        id: gzcache
+        uses: actions/cache@v4
+        with:
+          path: gz-install.tar.zst
+          key: gz-install-kilted-${{ env.GZ_VERSION }}-${{ hashFiles('cmake/toolchain.cmake') }}-v1
+      - name: Restore ccache (gz)
+        if: steps.gzcache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-kilted-gz-${{ github.run_id }}
+          restore-keys: ccache-kilted-gz-
+      - name: Build External Gazebo (protobuf + gz)
+        if: steps.gzcache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$GZ_DIR"
+          git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b "$GZ_VERSION" "$GZ_DIR"
+          brew unlink protobuf || true
+          colcon build --packages-select protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
+            --merge-install --continue-on-error --cmake-args -DBUILD_SHARED_LIBS=ON -Dprotobuf_BUILD_TESTS=OFF \
+            -Dprotobuf_BUILD_CONFORMANCE=OFF -Dprotobuf_BUILD_EXAMPLES=OFF \
+            -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
+          colcon build --base-paths "$GZ_DIR/" --packages-ignore protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
+            --merge-install --continue-on-error --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
+          touch "$GZ_DIR/COLCON_IGNORE"
+          # abseil-compat: snapshot the brew abseil dylibs the workspace protoc links (see base note
+          # below) into the install/ tree so they travel with the gz artifact and match this protoc.
+          if [ -d /opt/homebrew/opt/abseil/lib ]; then
+            mkdir -p install/abseil-compat
+            cp -pP /opt/homebrew/opt/abseil/lib/libabsl_*.dylib install/abseil-compat/ 2>/dev/null || true
+            echo "abseil-compat: snapshotted $(ls install/abseil-compat 2>/dev/null | wc -l | tr -d ' ') abseil dylibs"
+          fi
+          # Pack the gz-only install (protobuf + gz + abseil-compat -- base packages are NOT built here)
+          # for base-1 to consume, and for actions/cache to persist across runs.
+          tar --zstd -cf gz-install.tar.zst install
+          echo "gz-install packed: $(du -h gz-install.tar.zst | cut -f1)"
+      - name: Upload gz-install artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gz-install
+          path: gz-install.tar.zst
+          retention-days: 2
+
+  base:
+    needs: gz
     runs-on: macos-26
     timeout-minutes: 360
     steps:
@@ -62,32 +128,16 @@ jobs:
             path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
             [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
           done
-      - name: Build External Gazebo (protobuf + gz)
+      - name: Download gz-install (protobuf + gz, built in the gz job)
+        uses: actions/download-artifact@v4
+        with: { name: gz-install, path: . }
+      - name: Extract gz install
         run: |
-          mkdir -p "$GZ_DIR"
-          git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b "$GZ_VERSION" "$GZ_DIR"
-          brew unlink protobuf || true
-          colcon build --packages-select protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
-            --merge-install --continue-on-error --cmake-args -DBUILD_SHARED_LIBS=ON -Dprotobuf_BUILD_TESTS=OFF \
-            -Dprotobuf_BUILD_CONFORMANCE=OFF -Dprotobuf_BUILD_EXAMPLES=OFF \
-            -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
-          colcon build --base-paths "$GZ_DIR/" --packages-ignore protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
-            --merge-install --continue-on-error --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
-          touch "$GZ_DIR/COLCON_IGNORE"
-          # abseil-compat: the workspace protoc (install/bin/protoc, built here) links brew abseil
-          # by ABSOLUTE path /opt/homebrew/opt/abseil/lib/libabsl_*.<soname>.dylib. The domain shards
-          # can have a DIFFERENT abseil linked (the idesign0 ros2 tap dep pins an older one), so that
-          # exact soname file is absent there and protoc dies at codegen ("Library not loaded:
-          # libabsl_die_if_null.NNNN.dylib" -> rc_dynamics_api Error 134). Snapshot this base's abseil
-          # dylibs into the install/ artifact; each shard restores the MISSING ones (cp -n) next to its
-          # own abseil -- they coexist because the filenames are soname-versioned. Purely additive.
-          if [ -d /opt/homebrew/opt/abseil/lib ]; then
-            mkdir -p install/abseil-compat
-            cp -pP /opt/homebrew/opt/abseil/lib/libabsl_*.dylib install/abseil-compat/ 2>/dev/null || true
-            echo "abseil-compat: snapshotted $(ls install/abseil-compat 2>/dev/null | wc -l | tr -d ' ') abseil dylibs from the base"
-          fi
+          # Unpacks the gz-only install/ (protobuf + gz + abseil-compat) the gz job produced; base-1
+          # then builds the base packages on top of it into the same merged install/.
+          tar --zstd -xf gz-install.tar.zst
+          chmod -R +x install/bin 2>/dev/null || true
+          echo "gz install restored: $(ls install/opt 2>/dev/null | wc -l | tr -d ' ') vendor dirs, protoc $([ -x install/bin/protoc ] && echo present || echo MISSING)"
       - name: Unlink conflicting Homebrew packages
         run: |
           set +e
