@@ -340,6 +340,19 @@ for f in $(grep -rlE 'for \(const pqxx::row & row : rows\) \{' "$ROOT" --include
   perl -0pi -e 's~for \(const pqxx::row & row : rows\) \{~for (auto const & _pqxx_row_src : rows) {  // ci-cdb-rowref\n    const pqxx::row row{_pqxx_row_src};~g' "$f"
   echo "  cx_cdb_loader_plugin: pqxx::row_ref -> explicit pqxx::row in range-for (libpqxx 8.x) in ${f#$ROOT/}"
 done
+# rc_dynamics_api: its generated *.pb.h gencode (built by the workspace protobuf v26+ protoc) begins
+# with #include "google/protobuf/runtime_version.h". The protobuf include dir (which ships that
+# header) is added only directory-scoped in rc_dynamics_api/CMakeLists.txt
+# (include_directories(${CPR_INCLUDE_DIRS} ${PROTOBUF_INCLUDE_DIR})), so the msgs .pb.cc compile
+# fine but the tools/ and examples/ subdirs -- which include the same generated headers (frame.pb.h)
+# -- do NOT get it, giving "fatal error: 'google/protobuf/runtime_version.h' file not found". Add
+# ${PROTOBUF_INCLUDE_DIR} (a global FIND_PATH cache var) to their include_directories line too.
+# Idempotent (ci-rcdyn-protobuf-inc). ---
+for f in $(grep -rlE 'include_directories\(BEFORE \$\{CMAKE_CURRENT_BINARY_DIR\}/\.\./rc_dynamics_api\) # generated protobuf headers' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-rcdyn-protobuf-inc' "$f" && continue
+  perl -0pi -e 's~include_directories\(BEFORE \$\{CMAKE_CURRENT_BINARY_DIR\}/\.\./rc_dynamics_api\) # generated protobuf headers~include_directories(BEFORE \${CMAKE_CURRENT_BINARY_DIR}/../rc_dynamics_api \${PROTOBUF_INCLUDE_DIR}) # ci-rcdyn-protobuf-inc: gencode #includes google/protobuf/runtime_version.h (protobuf v26+); tools/examples need the protobuf include dir too~g' "$f"
+  echo "  rc_dynamics_api: add \${PROTOBUF_INCLUDE_DIR} to tools/examples include dirs (runtime_version.h) in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
