@@ -380,6 +380,49 @@ for f in $(grep -rlF 'external/msgpack-c/include' "$ROOT" --include=CMakeLists.t
   perl -0pi -e 's~include_directories\(\n  include\n  external/msgpack-c/include\n\)~include_directories(\n  include\n  external/msgpack-c/include\n)\n# ci-nao-msgpack: nested submodule external/msgpack-c is not recursed in CI; use brew msgpack-cxx.\nfind_package(msgpack-cxx QUIET)\nif(TARGET msgpack-cxx)\n  get_target_property(_ci_msgpack_inc msgpack-cxx INTERFACE_INCLUDE_DIRECTORIES)\n  include_directories(\${_ci_msgpack_inc})\nendif()~g' "$f"
   echo "  nao_lola: brew msgpack-cxx include fallback (nested submodule not in CI) in ${f#$ROOT/}"
 done
+# rslidar_sdk's vendored rs_driver batches UDP reads with recvmmsg()/struct mmsghdr in
+# unix/input_sock_select.hpp. Those are a Linux (glibc) extension; macOS/BSD libc has neither, so
+# the build fails with "variable has incomplete type 'struct mmsghdr'". rs_driver already ships a
+# QNX fallback (qnx_recvmmsg.hpp) with the exact same shape but gated behind __QNX__ (and #if 0).
+# Inject an equivalent __APPLE__ shim right after <sys/socket.h> (which supplies struct msghdr /
+# recvmsg): define struct mmsghdr and a static recvmmsg() that loops recvmsg(), matching the 5-arg
+# call recvmmsg(fd, msgs, VLEN, MSG_DONTWAIT, NULL). Idempotent (ci-rslidar-mmsghdr). ---
+for f in $(grep -rlE '\brecvmmsg\(' "$ROOT" --include=input_sock_select.hpp 2>/dev/null | grep -E 'rs_driver/driver/input/unix/'); do
+  grep -q 'ci-rslidar-mmsghdr' "$f" && continue
+  RS_MMSGHDR_SHIM=$(cat <<'EOSHIM'
+#ifdef __APPLE__  // ci-rslidar-mmsghdr: macOS/BSD libc has no recvmmsg()/struct mmsghdr; provide a shim
+#include <cerrno>
+#ifndef RS_DRIVER_APPLE_MMSGHDR_SHIM
+#define RS_DRIVER_APPLE_MMSGHDR_SHIM
+struct mmsghdr {
+  struct msghdr msg_hdr;
+  unsigned int  msg_len;
+};
+static inline int recvmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags, struct timespec *timeout)
+{
+  (void)timeout;
+  unsigned int i = 0;
+  for (i = 0; i < vlen; ++i) {
+    ssize_t ret = ::recvmsg(sockfd, &msgvec[i].msg_hdr, flags);
+    if (ret < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) { if (i > 0) return (int)i; return -1; }
+      if (errno == EINTR) { if (i > 0) return (int)i; i--; continue; }
+      if (i == 0) return -1;
+      return (int)i;
+    }
+    msgvec[i].msg_len = (unsigned int)ret;
+  }
+  return (int)i;
+}
+#endif  // RS_DRIVER_APPLE_MMSGHDR_SHIM
+#endif  // __APPLE__
+EOSHIM
+)
+  export RS_MMSGHDR_SHIM
+  perl -0pi -e 's~(#include <sys/socket.h>\n)~$1 . $ENV{RS_MMSGHDR_SHIM} . "\n"~e' "$f"
+  unset RS_MMSGHDR_SHIM
+  echo "  rslidar_sdk: __APPLE__ recvmmsg/mmsghdr shim in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
