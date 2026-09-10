@@ -696,7 +696,7 @@
 	branch = ros2
 [submodule "aerial/webots_ros2"]
 	path = aerial/webots_ros2
-	url = https://github.com/cyberbotics/webots_ros2.git
+	url = https://github.com/idesign0/id_webots_ros2.git
 	branch = master
 [submodule "ament/ament_acceleration"]
 	path = ament/ament_acceleration
