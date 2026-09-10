@@ -562,7 +562,7 @@ done
 #     existing sys/types.h clockid_t __APPLE__ patch below). ---
 d="$(_pkg_dir lely_core_libraries)"
 if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'Wno-macro-redefined' "$d/CMakeLists.txt"; then
-  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -fcommon -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1" "CPPFLAGS=-DLELY_HAVE_UCHAR_H=0" --prefix#' "$d/CMakeLists.txt"
+  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -fcommon -Wno-error=deprecated-declarations -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1" "CPPFLAGS=-DLELY_HAVE_UCHAR_H=0" --prefix#' "$d/CMakeLists.txt"
   echo "  lely_core_libraries: configure CFLAGS (macro-redefined/keyword/fcommon + THREADS_H=0 PTHREAD_H=1) + CPPFLAGS -DLELY_HAVE_UCHAR_H=0 (macOS has no <uchar.h>; lely/libc/uchar.h honours a pre-set LELY_HAVE_UCHAR_H via #ifndef, so this forces its char16/32_t fallback for BOTH C and C++)"
 fi
 
