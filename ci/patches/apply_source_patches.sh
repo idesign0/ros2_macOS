@@ -462,6 +462,20 @@ for f in $(grep -rlF 'project(plansys2_terminal)' "$ROOT" --include=CMakeLists.t
   perl -0pi -e 's~(project\(plansys2_terminal\)\n)~$1# ci-plansys-readline: brew readline is keg-only (not in /opt/homebrew); expose its real prefix so\n# the bare `readline` link target and <readline/readline.h> resolve on macOS.\nif(APPLE AND EXISTS "/opt/homebrew/opt/readline/lib")\n  link_directories(/opt/homebrew/opt/readline/lib)\n  include_directories(/opt/homebrew/opt/readline/include)\nendif()\n~' "$f"
   echo "  plansys2_terminal: expose keg-only brew readline prefix in ${f#$ROOT/}"
 done
+# crazyflie_server_cpp fails to link with undefined CoreFoundation/IOKit symbols
+# (_CFBooleanGetTypeID, _CFDataGetBytes, ...) referenced from libusb-1.0.a(darwin_usb.o) -- libusb's
+# macOS backend needs the IOKit/CoreFoundation/Security frameworks. crazyflie-link-cpp DOES try to
+# add them, but via `set(CMAKE_EXE_LINKER_FLAGS ...)` / CMAKE_MODULE_LINKER_FLAGS, which are
+# directory-scoped and so never reach the crazyflie_server_cpp executable (built in the crazyflie
+# package, a different directory). libusb is linked PRIVATE into the static crazyflieLinkCpp, so its
+# darwin symbols resolve only at the final executable link. Attach the frameworks to the
+# crazyflieLinkCpp target as PUBLIC, so they propagate transitively through crazyflie_cpp to the
+# executable. Idempotent (ci-crazyflie-frameworks). ---
+for f in $(grep -rlF 'set(CMAKE_MODULE_LINKER_FLAGS "-lobjc -framework IOKit -framework CoreFoundation -framework Security")' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-crazyflie-frameworks' "$f" && continue
+  perl -0pi -e 's~(set\(CMAKE_MODULE_LINKER_FLAGS "-lobjc -framework IOKit -framework CoreFoundation -framework Security"\)\n)~$1  # ci-crazyflie-frameworks: the CMAKE_*_LINKER_FLAGS above are directory-scoped and do not reach the\n  # crazyflie_server_cpp executable (built in another package); attach the frameworks to the target\n  # as PUBLIC so libusb\x27s darwin backend symbols resolve at the final link.\n  target_link_libraries(crazyflieLinkCpp PUBLIC "-framework IOKit" "-framework CoreFoundation" "-framework Security" objc)\n~' "$f"
+  echo "  crazyflie: propagate IOKit/CoreFoundation/Security via crazyflieLinkCpp PUBLIC in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
