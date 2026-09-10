@@ -99,7 +99,7 @@ jobs:
           path: gz-install.tar.zst
           retention-days: 2
 
-  base:
+  base-a:
     needs: gz
     runs-on: macos-26
     timeout-minutes: 360
@@ -157,39 +157,123 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-kilted-base-${{ github.run_id }}
-          restore-keys: ccache-kilted-base-
-      - name: Build base (core+vendors)
+          key: ccache-kilted-basea-${{ github.run_id }}
+          restore-keys: ccache-kilted-basea-
+      - name: Build base-a (dependency-ordered first half)
         continue-on-error: true
         run: |
           set +e
-          SEL=$(cat ci/shards/00_base_core.txt ci/shards/01_base_vendors.txt | grep -vE '^\s*#|^\s*$' | tr '\n' ' ')
+          SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/base_a.txt | tr '\n' ' ')
           colcon build --packages-select $SEL \
             --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_base.log
-          echo "== summary =="; grep -E 'Summary:|packages failed' build_base.log || true
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_basea.log
+          echo "== summary =="; grep -E 'Summary:|packages failed' build_basea.log || true
+      - name: Upload install-base-a
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-base-a
+          path: install
+          retention-days: 2
+      - name: Summary base-a
+        if: always()
+        run: |
+          mkdir -p summaries
+          { echo "## base-a"; grep -E 'Failed +<<<' build_basea.log 2>/dev/null | sort -u || true; } > summaries/_base-a.txt
+      - name: Upload summary base
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-_base-a
+          path: summaries
+          retention-days: 5
+
+  base-b:
+    needs: base-a
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false, fetch-depth: 0 }
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+      - name: Shard coverage diagnostics (non-fatal)
+        run: |
+          set +e
+          colcon list --names-only 2>/dev/null | sort -u > /tmp/all_names.txt
+          echo "unique package names: $(wc -l < /tmp/all_names.txt)"
+          cat ci/shards/00_base_core.txt ci/shards/01_base_vendors.txt ci/shards/dom_*.txt ci/skip-list.txt \
+            | grep -vE '^\s*#|^\s*$' | sort -u > /tmp/assigned.txt
+          comm -23 /tmp/all_names.txt /tmp/assigned.txt > /tmp/unassigned.txt
+          echo "not covered by any shard: $(wc -l < /tmp/unassigned.txt)"
+          head -40 /tmp/unassigned.txt
+          exit 0
+      - name: Apply skip-list (COLCON_IGNORE)
+        run: |
+          grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
+            path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
+            [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
+          done
+      - uses: actions/download-artifact@v4
+        with: { name: install-base-a, path: install }
+      - name: Restore executable bits (GitHub artifacts drop +x)
+        run: chmod -R +x install/bin 2>/dev/null || true
+      - name: Unlink conflicting Homebrew packages
+        run: |
+          set +e
+          brew unlink boost || true
+          brew unlink boost-python3 || true
+          brew unlink xtensor || true
+          brew unlink xdm || true
+          brew unlink xtl || true
+          brew unlink qt || true
+          brew unlink asio || true
+          brew unlink orocos-kdl || true
+          brew unlink protobuf || true
+          brew unlink ceres-solver || true
+          brew unlink osqp || true
+          echo "unlink done"
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-kilted-baseb-${{ github.run_id }}
+          restore-keys: ccache-kilted-baseb-
+      - name: Build base-b (dependency-ordered second half)
+        continue-on-error: true
+        run: |
+          set +e
+          source install/setup.sh
+          SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/base_b.txt | tr '\n' ' ')
+          colcon build --packages-select $SEL \
+            --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+            --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_baseb.log
+          echo "== summary =="; grep -E 'Summary:|packages failed' build_baseb.log || true
       - name: Upload install-base
         uses: actions/upload-artifact@v4
         with:
           name: install-base
           path: install
           retention-days: 2
-      - name: Summary base
+      - name: Summary base-b
         if: always()
         run: |
           mkdir -p summaries
-          { echo "## base"; grep -E 'Failed +<<<' build_base.log 2>/dev/null | sort -u || true; } > summaries/_base.txt
+          { echo "## base-b"; grep -E 'Failed +<<<' build_baseb.log 2>/dev/null | sort -u || true; } > summaries/_base-b.txt
       - name: Upload summary base
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: summary-_base
+          name: summary-_base-b
           path: summaries
           retention-days: 5
 
   domains:
-    needs: [plan, base]
+    needs: [plan, base-b]
     runs-on: macos-26
     timeout-minutes: 360
     strategy:
@@ -310,7 +394,7 @@ jobs:
           retention-days: 5
 
   report:
-    needs: [base, domains]
+    needs: [base-b, domains]
     if: always()
     runs-on: ubuntu-latest
     steps:
