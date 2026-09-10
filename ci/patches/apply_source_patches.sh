@@ -313,6 +313,19 @@ for f in $(grep -rlE 'pkg_check_modules\(LIBPQXX' "$ROOT" --include=CMakeLists.t
   perl -0pi -e 's~set_property\(TARGET \$\{PROJECT_NAME\} PROPERTY CXX_STANDARD \$\{CMAKE_CXX_STANDARD\}\)~set_property(TARGET \${PROJECT_NAME} PROPERTY CXX_STANDARD 20)  # ci-cx-cxx20: brew libpqxx headers need std::source_location (C++20); toolchain forces 17~' "$f"
   echo "  cx pqxx plugin: force target CXX_STANDARD 20 (libpqxx source_location) in ${f#$ROOT/}"
 done
+# cx_ros_msgs_plugin (and its client/service/action impls) spell the map key type as
+# std::__cxx11::basic_string<char>. std::__cxx11 is a libstdc++-only inline namespace (the C++11
+# ABI-transition tag); libc++ (macOS) has no such namespace -> "no member named 'basic_string' in
+# namespace 'std::__cxx11'". On libstdc++ __cxx11 is inline so std::__cxx11::basic_string IS
+# std::basic_string; stripping the tag is a no-op there and correct on libc++. Narrow the rewrite
+# to the clips_executive cx_plugins .cpp sources -- do NOT touch third-party files that carry the
+# token in comments or string literals (boost type_name.hpp's tn_remove_prefix("std::__cxx11::"),
+# ros2_tracing test expectation strings), which a blind strip would corrupt. Idempotent: nothing
+# left to match after the rewrite (ci-cxx11-namespace). ---
+for f in $(grep -rlE 'std::__cxx11::' "$ROOT" --include='*.cpp' 2>/dev/null | grep -E 'clips_executive/cx_plugins/'); do
+  perl -pi -e 's~std::__cxx11::~std::~g' "$f"
+  echo "  cx_ros_msgs_plugin: std::__cxx11:: -> std:: (libstdc++-only namespace absent on libc++) in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
