@@ -326,6 +326,20 @@ for f in $(grep -rlE 'std::__cxx11::' "$ROOT" --include='*.cpp' 2>/dev/null | gr
   perl -pi -e 's~std::__cxx11::~std::~g' "$f"
   echo "  cx_ros_msgs_plugin: std::__cxx11:: -> std:: (libstdc++-only namespace absent on libc++) in ${f#$ROOT/}"
 done
+# cx_cdb_loader_plugin/helpers.cpp iterates a pqxx::result with
+#   for (const pqxx::row & row : rows) { ... }
+# On the brew libpqxx (8.x) result iteration yields a pqxx::row_ref proxy, and row(row_ref) is an
+# EXPLICIT constructor, so binding `const pqxx::row &` to the row_ref has "no viable conversion
+# from 'pqxx::row_ref' to 'const pqxx::row'" (7 sites). The loop body also passes the variable to
+# helpers taking const pqxx::row& (optional_field/parse_timed_*), so it must remain a real row.
+# Rebind with `auto const &` and direct-init a genuine pqxx::row from it: braced direct-init invokes
+# the explicit row_ref ctor on new libpqxx and the copy ctor on old, so it is version-agnostic.
+# Narrow to clips_executive cx_plugins .cpp. Idempotent: the original loop text is gone after the
+# rewrite (ci-cdb-rowref). ---
+for f in $(grep -rlE 'for \(const pqxx::row & row : rows\) \{' "$ROOT" --include='*.cpp' 2>/dev/null | grep -E 'clips_executive/cx_plugins/'); do
+  perl -0pi -e 's~for \(const pqxx::row & row : rows\) \{~for (auto const & _pqxx_row_src : rows) {  // ci-cdb-rowref\n    const pqxx::row row{_pqxx_row_src};~g' "$f"
+  echo "  cx_cdb_loader_plugin: pqxx::row_ref -> explicit pqxx::row in range-for (libpqxx 8.x) in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
