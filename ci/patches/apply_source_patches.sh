@@ -436,6 +436,18 @@ for f in $(grep -rlF '-Wno-gnu-zero-variadic-macro-arguments  # deactivate for p
   perl -0pi -e 's~(-Wno-gnu-zero-variadic-macro-arguments  # deactivate for pal_statistics)~$1\n        -Wno-error=conversion  # ci-ros2ctl-conversion: clang -Wconversion (sign/float) is stricter than gcc; keep conversions as warnings~' "$f"
   echo "  ros2_control_cmake: -Wno-error=conversion for Apple clang in ${f#$ROOT/}"
 done
+# easynav_fusion_localizer uses std_srvs::srv::Empty (ukf_wrapper) and find_package(std_srvs) +
+# adds ${std_srvs_INCLUDE_DIRS}, but its target_link_libraries(fusion_localizer ...) never links
+# ${std_srvs_TARGETS}. On Linux the std_srvs typesupport is pulled in transitively (DT_NEEDED) via
+# another dependency; the macOS linker does no such transitive resolution, so the Empty service
+# typesupport is undefined:
+#   "rosidl...get_service_type_support_handle<std_srvs::srv::Empty>()", referenced from: ...
+# Add the missing ${std_srvs_TARGETS} to the link line. Idempotent (ci-easynav-stdsrvs). ---
+for f in $(grep -rlF 'target_link_libraries(fusion_localizer' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-easynav-stdsrvs' "$f" && continue
+  perl -0pi -e 's~(target_link_libraries\(fusion_localizer\n)~$1  \${std_srvs_TARGETS}  # ci-easynav-stdsrvs: macOS needs std_srvs typesupport linked explicitly (no transitive linking)\n~' "$f"
+  echo "  easynav_fusion_localizer: link \${std_srvs_TARGETS} (std_srvs::srv::Empty typesupport) in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
