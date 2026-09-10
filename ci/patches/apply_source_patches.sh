@@ -367,6 +367,19 @@ for f in $(grep -rlF '#$<BUILD_INTERFACE:${Protobuf_INCLUDE_DIRS}>' "$ROOT" --in
   perl -0pi -e 's~#\$<BUILD_INTERFACE:\$\{Protobuf_INCLUDE_DIRS\}>~\$<BUILD_INTERFACE:\${Protobuf_INCLUDE_DIRS}>  # ci-mvsim-protobuf-inc: uncommented so gencode finds google/protobuf/runtime_version.h~g' "$f"
   echo "  mvsim: uncomment \${Protobuf_INCLUDE_DIRS} in mvsim_msgs include dirs (runtime_version.h) in ${f#$ROOT/}"
 done
+# nao_lola / nao_lola_client vendor msgpack as a NESTED git submodule (external/msgpack-c, declared
+# in nao_lola's own .gitmodules) and add it via include_directories(external/msgpack-c/include). The
+# superproject checkout does not recurse into that submodule-of-a-submodule, so in CI the dir is
+# empty and #include <msgpack.hpp> / <msgpack/object.hpp> fails ("file not found"). Fall back to the
+# brew msgpack-cxx headers: it is header-only, non-keg-only, and ships an imported target whose
+# INTERFACE_INCLUDE_DIRECTORIES points at the brew include (msgpack-cxx is added to BREW_BASE for the
+# distros that carry nao_lola). Keep the original submodule include too, so a populated submodule
+# still works. Idempotent (ci-nao-msgpack). ---
+for f in $(grep -rlF 'external/msgpack-c/include' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-nao-msgpack' "$f" && continue
+  perl -0pi -e 's~include_directories\(\n  include\n  external/msgpack-c/include\n\)~include_directories(\n  include\n  external/msgpack-c/include\n)\n# ci-nao-msgpack: nested submodule external/msgpack-c is not recursed in CI; use brew msgpack-cxx.\nfind_package(msgpack-cxx QUIET)\nif(TARGET msgpack-cxx)\n  get_target_property(_ci_msgpack_inc msgpack-cxx INTERFACE_INCLUDE_DIRECTORIES)\n  include_directories(\${_ci_msgpack_inc})\nendif()~g' "$f"
+  echo "  nao_lola: brew msgpack-cxx include fallback (nested submodule not in CI) in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
