@@ -448,6 +448,20 @@ for f in $(grep -rlF 'target_link_libraries(fusion_localizer' "$ROOT" --include=
   perl -0pi -e 's~(target_link_libraries\(fusion_localizer\n)~$1  \${std_srvs_TARGETS}  # ci-easynav-stdsrvs: macOS needs std_srvs typesupport linked explicitly (no transitive linking)\n~' "$f"
   echo "  easynav_fusion_localizer: link \${std_srvs_TARGETS} (std_srvs::srv::Empty typesupport) in ${f#$ROOT/}"
 done
+# plansys2_terminal links a bare `readline` (-lreadline) and includes <readline/readline.h>. macOS
+# has no system libreadline (only libedit), and brew's readline is keg-only -- not symlinked into
+# /opt/homebrew -- so -lreadline finds nothing and the link fails with undefined _readline,
+# _add_history, _rl_attempted_completion_function, _rl_completion_matches, ... The distros wire the
+# `readline` link token onto different targets (the terminal lib vs the executable), so instead of
+# rewriting each link line, expose brew readline's keg-only prefix once, right after project(): a
+# link_directories()/include_directories() (guarded by APPLE + EXISTS) makes the bare -lreadline and
+# the header resolve for every target defined afterwards. readline is added to BREW_BASE for all
+# three distros. Idempotent (ci-plansys-readline). ---
+for f in $(grep -rlF 'project(plansys2_terminal)' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-plansys-readline' "$f" && continue
+  perl -0pi -e 's~(project\(plansys2_terminal\)\n)~$1# ci-plansys-readline: brew readline is keg-only (not in /opt/homebrew); expose its real prefix so\n# the bare `readline` link target and <readline/readline.h> resolve on macOS.\nif(APPLE AND EXISTS "/opt/homebrew/opt/readline/lib")\n  link_directories(/opt/homebrew/opt/readline/lib)\n  include_directories(/opt/homebrew/opt/readline/include)\nendif()\n~' "$f"
+  echo "  plansys2_terminal: expose keg-only brew readline prefix in ${f#$ROOT/}"
+done
 # vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
 # min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
 for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
