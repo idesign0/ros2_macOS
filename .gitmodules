@@ -2372,7 +2372,7 @@
 	branch = master
 [submodule "ros-drivers/imu_gnss/ublox"]
 	path = ros-drivers/imu_gnss/ublox
-	url = https://github.com/KumarRobotics/ublox.git
+	url = https://github.com/idesign0/id_ublox.git
 	branch = ros2
 [submodule "ros2/interfaces/udp_msgs"]
 	path = ros2/interfaces/udp_msgs

@@ -1791,27 +1791,6 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ASIO_INCLUDE_DIR}) # 
   perl -0pi -e 's{(find_package\(asio REQUIRED\)\n)}{$1include_directories(SYSTEM \$\{ASIO_INCLUDE_DIR\}) # ci-asio-include\n}' "$d/CMakeLists.txt"
   echo "  ublox_gps: CMakeLists propagate ASIO_INCLUDE_DIR to targets"
 fi
-_f="$d/include/ublox_gps/async_worker.hpp"
-if [ -n "$d" ] && [ -f "$_f" ] && grep -q 'asio::io_service' "$_f"; then
-  perl -0pi -e 's{#include <asio/io_service\.hpp>}{#include <asio/io_context.hpp>\n#include <asio/post.hpp>}; s{asio::io_service\b}{asio::io_context}g; s{io_service_->post\(}{asio::post(*io_service_, }g;' "$_f"
-  echo "  ublox_gps: async_worker.hpp asio::io_service -> io_context / asio::post"
-fi
-# gps.cpp: io_service rename + the removed resolver::iterator/::query API (both the
-# tcp and udp connect paths). Modern asio: resolve(host, service) returns a
-# results_type range; iterate via .begin(). Verified the ported pattern compiles
-# against the Fast-DDS asio.
-_f="$d/src/gps.cpp"
-if [ -n "$d" ] && [ -f "$_f" ] && grep -q 'asio::io_service\|resolver::iterator' "$_f"; then
-  perl -0pi -e '
-    s{#include <asio/io_service\.hpp>}{#include <asio/io_context.hpp>};
-    s{asio::ip::(tcp|udp)::resolver::iterator endpoint;}{asio::ip::$1::resolver::results_type endpoints;}g;
-    s{endpoint =\s*resolver\.resolve\(asio::ip::(tcp|udp)::resolver::query\(host, port\)\);}{endpoints = resolver.resolve(host, port);}gs;
-    s{asio::io_service\b}{asio::io_context}g;
-    s{\*endpoint\b}{*endpoints.begin()}g;
-    s{\bendpoint->}{endpoints.begin()->}g;
-  ' "$_f"
-  echo "  ublox_gps: gps.cpp asio::io_service + resolver::iterator/query -> io_context + results_type"
-fi
 
 # --- cx_config_plugin (ros-drivers/clips_executive, jazzy+kilted, dir named
 #     config_plugin): `if(NOT CMAKE_CXX_STANDARD) set(CMAKE_CXX_STANDARD 20) endif()`
