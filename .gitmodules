@@ -1576,7 +1576,7 @@
 	branch = foxy-devel
 [submodule "ros-planning/mola"]
 	path = ros-planning/mola
-	url = https://github.com/MOLAorg/mola.git
+	url = https://github.com/idesign0/id_mola.git
 	branch = develop
 [submodule "ros-planning/mola_common"]
 	path = ros-planning/mola_common
@@ -1620,7 +1620,7 @@
 	branch = ros2
 [submodule "ros-planning/mp2p_icp"]
 	path = ros-planning/mp2p_icp
-	url = https://github.com/MOLAorg/mp2p_icp.git
+	url = https://github.com/idesign0/id_mp2p_icp.git
 	branch = develop
 [submodule "ament/mp_units_vendor"]
 	path = ament/mp_units_vendor
