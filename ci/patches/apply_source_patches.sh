@@ -1104,19 +1104,6 @@ for _rf in \
   fi
 done
 
-# --- Lane 4 (real bug): rmf_utils/Modular.hpp uses std::to_string (in the modular-
-#     distance overflow message) but includes only <stdexcept>/<limits>/<type_traits>.
-#     libstdc++ pulls std::to_string transitively through those; libc++ (Apple clang)
-#     does NOT -> "no member named 'to_string' in namespace 'std'" when rmf_traffic
-#     (and every rmf_utils consumer) compiles against the installed header. Add the
-#     missing <string>. Compile-tested Apple clang 21 / libc++ -std=c++17: reproduces
-#     the error without it, clean with it. ---
-for _mh in $(find "$ROOT" -path '*rmf_utils/include/rmf_utils/Modular.hpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
-  if ! grep -qE '#include[[:space:]]*<string>' "$_mh"; then
-    perl -0pi -e 's{(#include <type_traits>)}{$1\n#include <string>  // std::to_string (libc++ does not pull it transitively)}' "$_mh"
-    echo "  rmf_utils/Modular.hpp: +#include <string> (std::to_string on libc++) in ${_mh#$ROOT/}"
-  fi
-done
 
 # --- Lane 4 (real bug): cartographer_ros_msgs/CMakeLists.txt falls back to
 #     set(CMAKE_CXX_STANDARD 14) when the toolchain has not already pinned it. But
