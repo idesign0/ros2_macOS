@@ -1814,23 +1814,6 @@ done
 
 
 
-# --- rmf_websocket (fleet/rmf_ros2 submodule, all 3): its OWN sources use
-#     boost::asio::io_service, io_context::dispatch and io_context::post, all removed
-#     in Boost 1.87+. The brew websocketpp header is patched separately; once that is
-#     in place the compile advances into rmf_websocket's own code and fails:
-#       ClientWebSocketEndpoint.hpp:104: no type named 'io_service' in 'boost::asio'
-#       ClientWebSocketEndpoint.cpp:44:  no member named 'post' in 'boost::asio::io_context'
-#     Port: asio::io_service -> asio::io_context (covers both boost::asio:: and bare
-#     asio::); _io_service.dispatch(f) -> boost::asio::dispatch(_io_service, f);
-#     c->get_io_service().post(f) -> boost::asio::post(c->get_io_service(), f).
-#     boost::asio::dispatch/post arrive via the websocketpp boost-asio include chain.
-#     Unblocks rmf_fleet_adapter, rmf_task_ros2, rmf_dev. Verified against boost-1.89. ---
-for _f in $(find "$ROOT" -path '*rmf_websocket/src/*' \( -name '*.cpp' -o -name '*.hpp' \) 2>/dev/null); do
-  if grep -qE 'asio::io_service|_io_service\.dispatch\(|get_io_service\(\)\.post\(' "$_f"; then
-    perl -pi -e 's{\basio::io_service\b}{asio::io_context}g; s{_io_service\.dispatch\(}{boost::asio::dispatch(_io_service, }g; s{([\w>.-]+?get_io_service\(\))\.post\(}{boost::asio::post($1, }g;' "$_f"
-    echo "  rmf_websocket: asio::io_service->io_context + dispatch/post in ${_f#$ROOT/}"
-  fi
-done
 
 # --- rc_dynamics_api (ros-perception/vision, all 3): data_receiver.h does
 #     _recv_func_map[ MsgType::descriptor()->name() ] = ... but modern protobuf's
@@ -1911,17 +1894,6 @@ for f in $(grep -rlE 'mavlink::standard::' "$ROOT" --include='*.hpp' --include='
   sed "${SEDI[@]}" 's/mavlink::standard::/mavlink::common::/g' "$f"
   printf '\n// ci-mavros-common: standard mavlink dialect absent; symbols used are all common\n' >> "$f"
   echo "  mavros: mavlink::standard:: -> mavlink::common:: in ${f#$ROOT/}"
-done
-# rmf_fleet_adapter TaskManager.cpp: std::max(0l, to_millis(...).count()) -- the literal 0l is `long`,
-# but std::chrono::milliseconds::rep (.count()) is `long long` on libc++ (int64_t == long long on
-# macOS; == long on Linux, which is why it compiled there) -> std::max's two args disagree ->
-# "no matching function for call to 'std::max'". Pin the call to int64_t so both agree. int64_t is
-# already used in this TU. Idempotent (ci-rmf-max-i64). ---
-for f in $(grep -rlE 'std::max\(0l, to_millis' "$ROOT" --include='*.cpp' 2>/dev/null | grep rmf); do
-  grep -q 'ci-rmf-max-i64' "$f" && continue
-  sed "${SEDI[@]}" 's/std::max(0l, to_millis/std::max<std::int64_t>(0, to_millis/g' "$f"
-  printf '\n// ci-rmf-max-i64\n' >> "$f"
-  echo "  rmf_fleet_adapter: std::max(0l, to_millis...) -> std::max<int64_t>(0, ...) in ${f#$ROOT/}"
 done
 
 # --- autoware yaml-cpp::yaml-cpp target scoping (autoware_core, humble esp.): several
@@ -2229,16 +2201,6 @@ for _f in $(find "$ROOT" -path '*plansys2_bringup/src/plansys2_node.cpp' 2>/dev/
   fi
 done
 
-# --- rmf_fleet_adapter (all 3): LegacyTask.cpp #include <malloc.h> and calls malloc_trim(0)
-#     (glibc-only: releases free heap to the OS) -> "malloc.h file not found" on macOS. Both
-#     are a memory-release optimization; guard with __linux__ (no-op elsewhere). ---
-for _f in $(grep -rlE '#include <malloc\.h>' "$ROOT" --include='*.cpp' --include='*.hpp' --include='*.h' 2>/dev/null | grep rmf_fleet_adapter); do
-  grep -q 'ci-rmf-malloc' "$_f" && continue
-  # guard the include AND define malloc_trim as a no-op elsewhere -> covers every call site
-  # (standalone LegacyTask.cpp and the inline-lambda in agv/internal_FleetUpdateHandle.hpp).
-  perl -0pi -e 's{#include <malloc\.h>}{#if defined(__linux__)\n#include <malloc.h>\n#else\n#define malloc_trim(x) 0  // ci-rmf-malloc: glibc-only, no-op on macOS\n#endif}' "$_f"
-  echo "  rmf_fleet_adapter: guard malloc.h + no-op malloc_trim in ${_f#$ROOT/}"
-done
 
 # --- backward_global_planner (all 3): ament_target_dependencies(... visualization_msgs) but
 #     the CMakeLists never find_package(visualization_msgs) -> "the passed package name
