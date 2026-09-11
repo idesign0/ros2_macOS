@@ -67,7 +67,6 @@ rosbag2_test_msgdefs
 rosbridge_msgs
 rosbridge_test_msgs
 rosidl_dynamic_typesupport_fastrtps
-rosx_introspection
 rqt_gui_py
 rtcm_msgs
 sensor_msgs_py
@@ -119,7 +118,6 @@ rclc
 rclcpp_components
 dataspeed_can_usb
 depthimage_to_laserscan
-foxglove_bridge
 image_transport
 compressed_depth_image_transport
 compressed_image_transport
@@ -175,7 +173,6 @@ ros2multicast
 ros2node
 ros2pkg
 ros2launch
-clearpath_diagnostics
 ros2plugin
 ros2run
 ros2test
@@ -206,6 +203,9 @@ rosbot_mavlink_bridge
 rosbridge_library
 rosapi
 rosbridge_server
+rosx_introspection
+foxglove_bridge
+clearpath_diagnostics
 rplidar_ros
 rqt_bag
 rqt_gui
