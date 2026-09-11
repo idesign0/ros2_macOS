@@ -63,7 +63,7 @@ d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name pro
 #     from this script so the next run validates the real source for upstream PRs):
 #       nebula_velodyne_hw_interfaces -> id_nebula (boost/format.hpp)
 #       event_camera_tools           -> id_event_camera_tools (unistd.h)
-#       sick_safetyscanners_base     -> id_sick_safetyscanners_base (posix_time_types.hpp)
+#       sick_safetyscanners_base     -> id_sick_safetyscanners_base (posix_time_types + Boost 1.87 asio io_context port)
 # libcreate: serial_query.h declares boost::asio::deadline_timer, but on Boost 1.89 the
 # umbrella <boost/asio.hpp> no longer pulls in deadline_timer.hpp -> add the explicit
 # include (posix_time bits are header-only, no date_time link needed). The io_service->
@@ -611,48 +611,6 @@ d="$(_pkg_dir rt_usb_9axisimu_driver)"; [ -n "$d" ] && for f in $(grep -rl 'RtUs
   echo "  rt_usb default-arg removed: ${f#$ROOT/}"
 done
 
-# --- Lane 2: sick_safetyscanners_base — full Boost-1.90 asio port.
-#     io_service::work was removed; replace with executor_work_guard and build it
-#     from the io_context's executor. Order matters: do ::work BEFORE the bare
-#     type rename, and fix the construction to pass an executor. ---
-d="$(_pkg_dir sick_safetyscanners_base)"
-if [ -n "$d" ]; then
-  files="$(grep -rl 'io_service' "$d" --include='*.h' --include='*.hpp' --include='*.cpp' --include='*.cc' 2>/dev/null)"
-  echo "$files" | while IFS= read -r f; do
-    [ -z "$f" ] && continue
-    # 1) work type -> executor_work_guard  2) construct from executor  3) bare type rename
-    sed "${SEDI[@]}" \
-      -e 's#boost::asio::io_service::work#boost::asio::executor_work_guard<boost::asio::io_context::executor_type>#g' \
-      -e 's#make_unique<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(m_io_service)#make_unique<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>>(m_io_service.get_executor())#g' \
-      -e 's#boost::asio::io_service#boost::asio::io_context#g' \
-      -e 's#asio::io_service#asio::io_context#g' \
-      "$f"
-  done
-  echo "  sick_safetyscanners_base: io_service->io_context + work->executor_work_guard ($d)"
-  # deadline_timer.hpp exists in vendored 1.89 but is no longer pulled in by the
-  # <boost/asio.hpp> umbrella — include it explicitly where deadline_timer is used.
-  for f in $(grep -rl 'boost::asio::deadline_timer' "$d" 2>/dev/null); do
-    _add_include "$f" '#include <boost/asio/deadline_timer.hpp>'
-  done
-  # Boost 1.87 removed the deprecated static ip::address*::from_string(); the
-  # replacement free functions ip::make_address*() exist since 1.66 (safe on old
-  # Boost too). Applies to CommSettings.h and ConfigData.cpp.
-  for f in $(grep -rlE 'ip::address(_v4|_v6)?::from_string' "$d" \
-      --include='*.h' --include='*.hpp' --include='*.cpp' --include='*.cc' 2>/dev/null); do
-    sed "${SEDI[@]}" \
-      -e 's#ip::address_v4::from_string#ip::make_address_v4#g' \
-      -e 's#ip::address_v6::from_string#ip::make_address_v6#g' \
-      -e 's#ip::address::from_string#ip::make_address#g' \
-      "$f"
-    echo "  sick_safetyscanners_base: address_v4::from_string -> make_address_v4: ${f#$ROOT/}"
-  done
-  # Boost removed address_v4::to_ulong() (deprecated 1.71, gone 1.87). The only
-  # use is on an ip::address_v4 (ChangeCommSettingsCommand.cpp) -> to_uint().
-  for f in $(grep -rlE '\.to_ulong\(\)' "$d" --include='*.cpp' --include='*.cc' 2>/dev/null); do
-    sed "${SEDI[@]}" 's#\.to_ulong()#.to_uint()#g' "$f"
-    echo "  sick_safetyscanners_base: to_ulong -> to_uint: ${f#$ROOT/}"
-  done
-fi
 
 # --- Lane 4/6: rc_dynamics_api forces C++11, but its abseil dependency requires
 #     C++17 (`C++ versions less than C++17 are not supported`). Bump to 17. ---
