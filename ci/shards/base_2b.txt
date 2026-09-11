@@ -1,7 +1,5 @@
 # base_2b (humble) — dependency-ordered first/second half of base-2 (topological split; deps-before-dependents).
 # Auto-generated: half A holds only what half B depends on; regenerate both together if the union changes.
-boeing_gazebo_model_attachment_plugin
-ros1_bridge
 ros2test
 ros2trace
 ros_gz_sim
@@ -29,6 +27,7 @@ rosbag2_py
 ros2bag
 rosbag2_tests
 rosbag2
+rosx_introspection
 rplidar_ros
 rqt_bag
 rqt_gui
@@ -301,6 +300,7 @@ wrapyfi_ros2_interfaces
 yasmin_msgs
 zed_description
 zed_msgs
+ros1_bridge
 chomp_motion_planner
 moveit
 moveit_core
