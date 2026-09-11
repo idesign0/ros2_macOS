@@ -1004,7 +1004,7 @@
 	branch = jazzy
 [submodule "ros-drivers/clips_executive"]
 	path = ros-drivers/clips_executive
-	url = https://github.com/carologistics/clips_executive.git
+	url = https://github.com/idesign0/id_clips_executive.git
 	branch = master
 [submodule "ament/clips_vendor"]
 	path = ament/clips_vendor
