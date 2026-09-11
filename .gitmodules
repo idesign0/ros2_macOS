@@ -1624,7 +1624,7 @@
 	branch = ros2
 [submodule "ros-drivers/mobile_base/husarion_ugv_ros"]
 	path = ros-drivers/mobile_base/husarion_ugv_ros
-	url = https://github.com/husarion/husarion_ugv_ros.git
+	url = https://github.com/idesign0/id_husarion_ugv_ros.git
 	branch = humble
 [submodule "ros-drivers/mobile_base/kobuki_core"]
 	path = ros-drivers/mobile_base/kobuki_core
