@@ -1992,7 +1992,7 @@
 	branch = develop
 [submodule "ros-planning/mola"]
 	path = ros-planning/mola
-	url = https://github.com/MOLAorg/mola.git
+	url = https://github.com/idesign0/id_mola.git
 	branch = develop
 [submodule "ros-planning/mola_academic_datasets"]
 	path = ros-planning/mola_academic_datasets
@@ -2036,7 +2036,7 @@
 	branch = develop
 [submodule "ros-planning/mp2p_icp"]
 	path = ros-planning/mp2p_icp
-	url = https://github.com/MOLAorg/mp2p_icp.git
+	url = https://github.com/idesign0/id_mp2p_icp.git
 	branch = develop
 [submodule "ros-planning/mrpt3"]
 	path = ros-planning/mrpt3
