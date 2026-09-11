@@ -186,16 +186,6 @@ if [ -n "$aad" ] && [ -f "$aad/tree/tree_document.hpp" ] && [ -f "$aad/node/node
   echo "  auto_apms_behavior_tree_core: moved SubTree insertNode defs after complete type"
 fi
 # ros2_ouster: MOVED TO id_ros2_ouster_drivers fork (declare_parameter type) — removed from script.
-# nebula_core_ros/sync_tooling/sync_tooling_worker.hpp uses HOST_NAME_MAX (a glibc/Linux limits
-# constant; macOS defines _POSIX_HOST_NAME_MAX / MAXHOSTNAMELEN instead, never HOST_NAME_MAX),
-# so every consumer of the installed header fails "use of undeclared identifier 'HOST_NAME_MAX'"
-# -> nebula_hesai, nebula_continental. Define a fallback to _POSIX_HOST_NAME_MAX (255) on Apple,
-# right after the existing <unistd.h> include. Idempotent (ci-nebula-hostnamemax).
-for f in $(grep -rlE '\bHOST_NAME_MAX\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep nebula); do
-  grep -q 'ci-nebula-hostnamemax' "$f" && continue
-  perl -0pi -e 's~(#include <unistd\.h>)~$1\n#if defined(__APPLE__) && !defined(HOST_NAME_MAX)  // ci-nebula-hostnamemax\n#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX\n#endif~' "$f"
-  echo "  nebula: HOST_NAME_MAX -> _POSIX_HOST_NAME_MAX fallback in ${f#$ROOT/}"
-done
 # at_sonde_ros_driver: find_library(LIBMODBUS NAMES libmodbus.so PATHS /usr/lib) and
 # find_path(LIBMODBUS_INCLUDE_DIR NAMES modbus.h PATHS /usr/include/modbus) are Linux-only --
 # the NAMES is wrong (find_library wants the BASE name 'modbus', not 'libmodbus.so') and the
@@ -515,22 +505,7 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ]; then
   echo "  qpoases_vendor: dead coin-or SVN -> github releases/3.2.2"
 fi
 
-# --- Lane 4: nebula_core_common/util/errno.hpp assumes the GNU strerror_r
-#     (returns char*); macOS/BSD use the XSI form (returns int, fills the buffer).
-#     Guard both. Clears the nebula errno cluster (decoders, hw_interfaces, …). ---
-for f in $(find "$ROOT" -path '*nebula_core_common*util/errno.hpp' -not -path '*/build/*' 2>/dev/null); do
-  perl -0pi -e 's{std::string_view msg = strerror_r\(err_no, msg_buf\.data\(\), msg_buf\.size\(\)\);}{#if defined(__GLIBC__) \&\& defined(_GNU_SOURCE)\n  std::string_view msg = strerror_r(err_no, msg_buf.data(), msg_buf.size());\n#else\n  strerror_r(err_no, msg_buf.data(), msg_buf.size());  /* XSI/macOS: int, fills buf */\n  std::string_view msg = msg_buf.data();\n#endif}' "$f"
-  echo "  nebula errno.hpp: XSI strerror_r guard: ${f#$ROOT/}"
-done
 
-# --- Lane 7-guard: nebula udp.hpp uses SO_RXQ_OVFL (Linux-only rx-overflow
-#     counter). Guard the setsockopt and the cmsg case so macOS just skips the
-#     drop-reporting feature instead of failing to compile. ---
-for f in $(find "$ROOT" -path '*nebula_core_hw_interfaces*connections/udp.hpp' -not -path '*/build/*' 2>/dev/null); do
-  perl -0pi -e 's{(\n[ \t]*sock_fd_\.setsockopt\(SOL_SOCKET, SO_RXQ_OVFL, 1\)\.value_or_throw\(\);)}{\n#ifdef SO_RXQ_OVFL$1\n#endif}' "$f"
-  perl -0pi -e 's!(case SO_RXQ_OVFL: \{[^}]*\})!#ifdef SO_RXQ_OVFL\n        $1\n#endif!s' "$f"
-  echo "  nebula udp.hpp: guarded SO_RXQ_OVFL: ${f#$ROOT/}"
-done
 
 # --- Lane 6: lely_core_libraries (ros2_canopen) builds lely-core via autotools
 #     with -Werror; its libc/time.h shim redefines CLOCK_MONOTONIC (already defined
