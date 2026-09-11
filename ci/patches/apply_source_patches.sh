@@ -186,21 +186,6 @@ if [ -n "$aad" ] && [ -f "$aad/tree/tree_document.hpp" ] && [ -f "$aad/node/node
   echo "  auto_apms_behavior_tree_core: moved SubTree insertNode defs after complete type"
 fi
 # ros2_ouster: MOVED TO id_ros2_ouster_drivers fork (declare_parameter type) — removed from script.
-# kuka_drivers_core: control_node.cpp sets CPU affinity via Linux-only cpu_set_t /
-# pthread_setaffinity_np. Guard the block with #ifdef __linux__ (macOS has no cpu_set_t).
-# PR-material (portability) — fork kuka_drivers when opening PRs. Cascade root for kuka stack.
-d="$(_pkg_dir kuka_drivers_core)"
-if [ -n "$d" ] && [ -f "$d/src/control_node.cpp" ] && ! grep -q 'CPU affinity not supported on this platform' "$d/src/control_node.cpp"; then
-  perl -0777 -pi -e 's/([ \t]*)(cpu_set_t cpuset;.*?RCLCPP_INFO\(controller_manager->get_logger\(\), "CPU affinity set to core %d", cpu\);\n[ \t]*\})/$1#ifdef __linux__\n$1$2\n$1#else\n$1(void)cpu;\n$1RCLCPP_WARN(controller_manager->get_logger(), "CPU affinity not supported on this platform (non-Linux)");\n$1#endif/s' "$d/src/control_node.cpp"
-  echo "  kuka_drivers_core: #ifdef __linux__ guard around cpu_set_t affinity block"
-fi
-# kuka_drivers_core: control_node.cpp ALSO calls sched_setscheduler(0, SCHED_FIFO, &param)
-# (a separate block from the cpu affinity one) -> "use of undeclared identifier 'sched_setscheduler'"
-# on macOS. Guard with __linux__; fall back to pthread_setschedparam (same struct sched_param).
-if [ -n "$d" ] && [ -f "$d/src/control_node.cpp" ] && ! grep -q 'kuka_sched_failed' "$d/src/control_node.cpp" && grep -q 'sched_setscheduler(0, SCHED_FIFO, &param) == -1' "$d/src/control_node.cpp"; then
-  perl -0pi -e 's/if \(sched_setscheduler\(0, SCHED_FIFO, &param\) == -1\)/#ifdef __linux__\n      bool kuka_sched_failed = (sched_setscheduler(0, SCHED_FIFO, &param) == -1);\n#else\n      bool kuka_sched_failed = (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) != 0);\n#endif\n      if (kuka_sched_failed)/' "$d/src/control_node.cpp"
-  echo "  kuka_drivers_core: __linux__ guard around sched_setscheduler"
-fi
 # nebula_core_ros/sync_tooling/sync_tooling_worker.hpp uses HOST_NAME_MAX (a glibc/Linux limits
 # constant; macOS defines _POSIX_HOST_NAME_MAX / MAXHOSTNAMELEN instead, never HOST_NAME_MAX),
 # so every consumer of the installed header fails "use of undeclared identifier 'HOST_NAME_MAX'"

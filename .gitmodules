@@ -1256,7 +1256,7 @@
 	branch = release
 [submodule "ros2_control/kuka_drivers"]
 	path = ros2_control/kuka_drivers
-	url = https://github.com/kroshu/kuka_drivers.git
+	url = https://github.com/idesign0/id_kuka_drivers.git
 	branch = master
 [submodule "ros-tooling/fuse"]
 	path = ros-tooling/fuse
