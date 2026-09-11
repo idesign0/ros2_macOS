@@ -2016,7 +2016,7 @@
 	branch = jazzy
 [submodule "fleet/rmf_traffic"]
 	path = fleet/rmf_traffic
-	url = https://github.com/open-rmf/rmf_traffic.git
+	url = https://github.com/idesign0/id_rmf_traffic.git
 	branch = jazzy
 [submodule "fleet/rmf_utils"]
 	path = fleet/rmf_utils

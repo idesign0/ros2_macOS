@@ -1078,31 +1078,6 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'find_package(CMakeFunct
   echo "  ecal: find_package(CMakeFunctions) -> direct include (dependency provider never activated by colcon)"
 fi
 
-# --- Lane 4 (real bug, per-distro): rmf_traffic's schedule::Database and
-#     schedule::Mirror classes override Viewer::get_participant /
-#     ItineraryViewer::get_itinerary / get_current_plan_id — the base virtuals
-#     take `ParticipantId` (uint64_t), but Database.hpp/Mirror.hpp (and their
-#     .cpp definitions) declare these three overrides with `std::size_t`
-#     instead. On 64-bit Linux/glibc, uint64_t is `unsigned long` == size_t,
-#     so the mismatch is silently invisible there; on macOS/clang, uint64_t is
-#     `unsigned long long`, a genuinely distinct type from size_t, so these
-#     become non-overriding `final` members that hide the base virtuals ->
-#     hard error. Genuine upstream bug (already fixed in the commit kilted
-#     pins — grep confirms 0 occurrences of "std::size_t participant_id"
-#     there); humble/jazzy pin older commits that still have it -> per-distro
-#     fix, no-ops cleanly on kilted. Compile-tested: built a probe
-#     ItineraryViewer subclass implementing the 3 overrides with ParticipantId
-#     against the real Viewer.hpp/rmf_utils headers -> clean compile. ---
-for _rf in \
-  "$ROOT/fleet/rmf_traffic/rmf_traffic/include/rmf_traffic/schedule/Database.hpp" \
-  "$ROOT/fleet/rmf_traffic/rmf_traffic/include/rmf_traffic/schedule/Mirror.hpp" \
-  "$ROOT/fleet/rmf_traffic/rmf_traffic/src/rmf_traffic/schedule/Database.cpp" \
-  "$ROOT/fleet/rmf_traffic/rmf_traffic/src/rmf_traffic/schedule/Mirror.cpp"; do
-  if [ -f "$_rf" ] && grep -q 'std::size_t participant_id' "$_rf"; then
-    sed "${SEDI[@]}" 's/std::size_t participant_id/ParticipantId participant_id/g' "$_rf"
-    echo "  rmf_traffic: std::size_t -> ParticipantId in ${_rf#$ROOT/}"
-  fi
-done
 
 
 # --- Lane 4 (real bug): cartographer_ros_msgs/CMakeLists.txt falls back to
