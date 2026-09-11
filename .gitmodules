@@ -912,7 +912,7 @@
 	branch = humble
 [submodule "fleet/rmf_ros2"]
 	path = fleet/rmf_ros2
-	url = https://github.com/open-rmf/rmf_ros2.git
+	url = https://github.com/idesign0/id_rmf_ros2.git
 	branch = humble
 [submodule "fleet/rmf_simulation"]
 	path = fleet/rmf_simulation
