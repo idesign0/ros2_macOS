@@ -1380,7 +1380,7 @@
 	branch = humble
 [submodule "ros-drivers/camera/vimbax_ros2_driver"]
 	path = ros-drivers/camera/vimbax_ros2_driver
-	url = https://github.com/alliedvision/vimbax_ros2_driver.git
+	url = https://github.com/idesign0/id_vimbax_ros2_driver.git
 	branch = humble
 [submodule "ros-drivers/camera/zed-ros2-description"]
 	path = ros-drivers/camera/zed-ros2-description

@@ -380,12 +380,6 @@ for f in $(grep -rlF 'set(CMAKE_MODULE_LINKER_FLAGS "-lobjc -framework IOKit -fr
   perl -0pi -e 's~(set\(CMAKE_MODULE_LINKER_FLAGS "-lobjc -framework IOKit -framework CoreFoundation -framework Security"\)\n)~$1  # ci-crazyflie-frameworks: the CMAKE_*_LINKER_FLAGS above are directory-scoped and do not reach the\n  # crazyflie_server_cpp executable (built in another package); attach the frameworks to the target\n  # as PUBLIC so libusb\x27s darwin backend symbols resolve at the final link.\n  target_link_libraries(crazyflieLinkCpp PUBLIC "-framework IOKit" "-framework CoreFoundation" "-framework Security" objc)\n~' "$f"
   echo "  crazyflie: propagate IOKit/CoreFoundation/Security via crazyflieLinkCpp PUBLIC in ${f#$ROOT/}"
 done
-# vimbax_camera: uses _Float64 (GCC/C23 type keyword; Apple clang has no such name) for feature
-# min/max/inc. _Float64 is IEEE binary64 == double -> replace the token. Verified: struct compiles.
-for f in $(grep -rlE '\b_Float64\b' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep vimbax); do
-  perl -pi -e 's/\b_Float64\b/double/g' "$f"
-  echo "  vimbax_camera: _Float64 -> double in ${f#$ROOT/}"
-done
 # cloudini_ros: rclcpp_components_register_node(... EXECUTABLE cloudini_topic_converter) already
 # creates AND installs that executable to lib/cloudini_ros; a redundant install(TARGETS
 # cloudini_topic_converter RUNTIME DESTINATION lib/cloudini_ros) installs it a 2nd time, so macOS
