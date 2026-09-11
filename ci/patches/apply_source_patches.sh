@@ -1702,61 +1702,6 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qF 'if(NOT CMAKE_CXX_STAND
   echo "  cx_config_plugin: force CMAKE_CXX_STANDARD 20 (toolchain's global 17 was defeating the guard)"
 fi
 
-# --- SMACC2 nav2z_client custom_planners family (backward_local_planner,
-#     forward_local_planner, undo_path_global_planner): CMakeLists' `dependencies` list
-#     (read by ament_target_dependencies()) already includes `visualization_msgs`, but
-#     there is no `find_package(visualization_msgs)` call above it -> "ament_target_
-#     dependencies() the passed package name 'visualization_msgs' was not found before".
-#     Works on Linux only by accident (some other found package transitively drags the
-#     include path in); exposed on this macOS toolchain. Add the missing find_package
-#     call next to the package's other find_package() lines. ---
-for _pkg in backward_local_planner forward_local_planner undo_path_global_planner; do
-  d="$(_pkg_dir "$_pkg")"
-  if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q '^  visualization_msgs$' "$d/CMakeLists.txt" && ! grep -q 'find_package(visualization_msgs)' "$d/CMakeLists.txt"; then
-    perl -pi -e 's/^find_package\(ament_cmake REQUIRED\)$/find_package(ament_cmake REQUIRED)\nfind_package(visualization_msgs)/' "$d/CMakeLists.txt"
-    echo "  $_pkg: add missing find_package(visualization_msgs)"
-  fi
-done
-
-# --- pure_spinning_local_planner: same nav2z_client family, but visualization_msgs is
-#     used directly in the header (#include <visualization_msgs/msg/marker_array.hpp>)
-#     without being declared anywhere (not in `dependencies`, not in package.xml) ->
-#     "file not found" at compile time (fails earlier than the ament_target_dependencies
-#     check the sibling planners hit). Add find_package + dependencies-list entry +
-#     package.xml depend. ---
-d="$(_pkg_dir pure_spinning_local_planner)"
-if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'visualization_msgs' "$d/CMakeLists.txt"; then
-  perl -pi -e 's/^find_package\(ament_cmake REQUIRED\)$/find_package(ament_cmake REQUIRED)\nfind_package(visualization_msgs)/' "$d/CMakeLists.txt"
-  perl -0pi -e 's/(set\(dependencies\n  nav2_core\n)/$1  visualization_msgs\n/' "$d/CMakeLists.txt"
-  echo "  pure_spinning_local_planner: add find_package(visualization_msgs) + dependencies-list entry"
-fi
-if [ -n "$d" ] && [ -f "$d/package.xml" ] && ! grep -q '<depend>visualization_msgs</depend>' "$d/package.xml"; then
-  perl -0pi -e 's{(<depend>geometry_msgs</depend>)}{$1\n  <depend>visualization_msgs</depend>}' "$d/package.xml"
-  echo "  pure_spinning_local_planner: add package.xml <depend>visualization_msgs</depend>"
-fi
-
-# --- forward_global_planner + undo_path_global_planner (SMACC2 nav2z_client): real,
-#     platform-independent upstream API drift (would fail identically on Linux with the
-#     same nav2_core version) -- nav2_core::GlobalPlanner::createPlan() gained a 3rd
-#     parameter, `std::function<bool()> cancel_checker`, but these two plugins still
-#     override the old 2-param signature -> "allocating an object of abstract class type"
-#     (pure virtual createPlan never actually overridden). Add the 3rd parameter to both
-#     the header declaration and the .cpp definition; body ignores it (neither planner
-#     currently supports mid-plan cancellation, matching their pre-existing behavior). ---
-for _pkg in forward_global_planner undo_path_global_planner; do
-  d="$(_pkg_dir "$_pkg")"
-  [ -z "$d" ] && continue
-  hf="$(find "$d/include" -iname "${_pkg}.hpp" 2>/dev/null | head -1)"
-  cf="$(find "$d/src" -iname "${_pkg}.cpp" 2>/dev/null | head -1)"
-  if [ -n "$hf" ] && grep -qF 'const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal);' "$hf"; then
-    sed "${SEDI[@]}" 's/const geometry_msgs::msg::PoseStamped \& start, const geometry_msgs::msg::PoseStamped \& goal);/const geometry_msgs::msg::PoseStamped \& start, const geometry_msgs::msg::PoseStamped \& goal,\n    std::function<bool()> cancel_checker) override;/' "$hf"
-    echo "  $_pkg: createPlan header += cancel_checker param (nav2_core::GlobalPlanner API drift)"
-  fi
-  if [ -n "$cf" ] && grep -qF 'const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal)' "$cf"; then
-    sed "${SEDI[@]}" 's/const geometry_msgs::msg::PoseStamped \& start, const geometry_msgs::msg::PoseStamped \& goal)$/const geometry_msgs::msg::PoseStamped \& start, const geometry_msgs::msg::PoseStamped \& goal,\n  std::function<bool()> \/*cancel_checker*\/)/' "$cf"
-    echo "  $_pkg: createPlan definition += cancel_checker param"
-  fi
-done
 
 # --- plansys2_bringup (SMACC2-adjacent, all 3 different per-distro commits, same
 #     construct): plansys2_node.cpp calls the raw Linux syscall wrapper
