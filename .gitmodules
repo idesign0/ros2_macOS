@@ -836,7 +836,7 @@
 	branch = jazzy
 [submodule "ros-drivers/transport_drivers"]
 	path = ros-drivers/transport_drivers
-	url = https://github.com/ros-drivers/transport_drivers.git
+	url = https://github.com/idesign0/id_transport_drivers.git
 	branch = main
 [submodule "ros-drivers/at_sonde_ros_driver"]
 	path = ros-drivers/at_sonde_ros_driver

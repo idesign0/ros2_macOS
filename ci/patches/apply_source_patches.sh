@@ -1956,27 +1956,6 @@ for _f in $(find "$ROOT" -path '*easynav_common/include/easynav_common/Singleton
   fi
 done
 
-# --- io_context (ros-drivers/transport_drivers, all 3): uses the long-removed
-#     asio::io_service / asio::io_service::work / io_context::post member APIs.
-#     The toolchain points asio at Fast-DDS's bundled asio (1.34.2), which dropped
-#     io_service entirely ("no type named 'io_service' in namespace 'asio'"). Port
-#     to the modern equivalents: io_service -> io_context; io_service::work ->
-#     executor_work_guard<io_context::executor_type> (constructed from the
-#     executor); member .post() -> free asio::post(ctx, handler). Root of the
-#     transport_drivers cluster (serial_driver/udp_driver/...). Verified: the
-#     ported io_context.hpp compiles against the Fast-DDS asio with clang++ -std=c++17. ---
-for _f in $(find "$ROOT" -path '*transport_drivers/io_context/include/io_context/io_context.hpp' 2>/dev/null); do
-  if grep -q 'asio::io_service' "$_f"; then
-    perl -0pi -e 's{asio::io_service::work}{asio::executor_work_guard<asio::io_context::executor_type>}g; s{asio::io_service\b}{asio::io_context}g; s{ios\(\)\.post\(}{asio::post(ios(), }g;' "$_f"
-    echo "  io_context.hpp: asio::io_service -> io_context / executor_work_guard / asio::post in ${_f#$ROOT/}"
-  fi
-done
-for _f in $(find "$ROOT" -path '*transport_drivers/io_context/src/io_context.cpp' 2>/dev/null); do
-  if grep -q 'asio::io_service' "$_f"; then
-    perl -0pi -e 's{new asio::io_service::work\(ios\(\)\)}{new asio::executor_work_guard<asio::io_context::executor_type>(ios().get_executor())}g; s{asio::io_service\b}{asio::io_context}g; s{ios\(\)\.post\(}{asio::post(ios(), }g;' "$_f"
-    echo "  io_context.cpp: asio::io_service -> io_context / executor_work_guard / asio::post in ${_f#$ROOT/}"
-  fi
-done
 
 # --- rviz_2d_overlay_plugins (teamspatzenhirn, all 3): its CMakeLists does
 #     find_package(Qt6 QUIET COMPONENTS Widgets) and, when Qt6 is found, links
@@ -2041,17 +2020,6 @@ for _vf in /opt/homebrew/lib/cmake/vtk-9.6/VTK-vtk-module-find-packages.cmake; d
   fi
 done
 
-# --- udp_driver (ros-drivers/transport_drivers, all 3): udp_socket.cpp uses
-#     asio::ip::address::from_string, removed in modern asio (Fast-DDS 1.34.2) ->
-#     "no member named 'from_string' in 'asio::ip::address'". Port to the free
-#     function asio::ip::make_address (available since asio 1.66). Surfaced once
-#     io_context built (udp_driver depends on it). ---
-for _f in $(find "$ROOT" -path '*transport_drivers/udp_driver/src/udp_socket.cpp' 2>/dev/null); do
-  if grep -q 'address::from_string' "$_f"; then
-    perl -pi -e 's{\baddress::from_string\(}{asio::ip::make_address(}g;' "$_f"
-    echo "  udp_driver: address::from_string -> asio::ip::make_address in ${_f#$ROOT/}"
-  fi
-done
 
 # --- easynav_system (EasyNavigation/easynav submodule, jazzy+kilted): system_main.cpp
 #     calls sched_setscheduler(0, SCHED_FIFO, ...), a Linux-only <sched.h> process
