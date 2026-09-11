@@ -406,19 +406,6 @@ EOSHIM
   unset RS_MMSGHDR_SHIM
   echo "  rslidar_sdk: __APPLE__ recvmmsg/mmsghdr shim in ${f#$ROOT/}"
 done
-# ros2_control_cmake's set_compiler_options() macro (used by every ros2_control controller/hardware
-# package) sets -Werror=conversion, promoting the whole -Wconversion group to hard errors. clang's
-# -Wconversion is markedly stricter than the gcc these packages were validated on, so int->size_t
-# subscripts and double/float->bool narrowings that are silent on gcc become fatal on macOS
-# (clearpath_bms_broadcaster: 11 sites of -Wsign-conversion / -Wfloat-conversion as [-Werror,...]).
-# Append -Wno-error=conversion to the macro's Clang-only branch (which runs after the -Werror=
-# conversion above), so on Apple clang conversions stay warnings, not errors -- fixing this class
-# across all ros2_control consumers, not just one package. Idempotent (ci-ros2ctl-conversion). ---
-for f in $(grep -rlF '-Wno-gnu-zero-variadic-macro-arguments  # deactivate for pal_statistics' "$ROOT" --include='*.cmake' 2>/dev/null); do
-  grep -q 'ci-ros2ctl-conversion' "$f" && continue
-  perl -0pi -e 's~(-Wno-gnu-zero-variadic-macro-arguments  # deactivate for pal_statistics)~$1\n        -Wno-error=conversion  # ci-ros2ctl-conversion: clang -Wconversion (sign/float) is stricter than gcc; keep conversions as warnings~' "$f"
-  echo "  ros2_control_cmake: -Wno-error=conversion for Apple clang in ${f#$ROOT/}"
-done
 # easynav_fusion_localizer uses std_srvs::srv::Empty (ukf_wrapper) and find_package(std_srvs) +
 # adds ${std_srvs_INCLUDE_DIRS}, but its target_link_libraries(fusion_localizer ...) never links
 # ${std_srvs_TARGETS}. On Linux the std_srvs typesupport is pulled in transitively (DT_NEEDED) via

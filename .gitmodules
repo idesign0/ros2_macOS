@@ -128,7 +128,7 @@
 	branch = ros2
 [submodule "ros2_control/ros2_control_cmake"]
 	path = ros2_control/ros2_control_cmake
-	url = https://github.com/ros-controls/ros2_control_cmake.git
+	url = https://github.com/idesign0/id_ros2_control_cmake.git
 	branch = master
 [submodule "ros2_control/ros2_control"]
 	path = ros2_control/ros2_control
