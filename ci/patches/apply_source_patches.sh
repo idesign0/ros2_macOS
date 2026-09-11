@@ -296,33 +296,6 @@ for f in $(grep -rlE 'pkg_check_modules\(LIBPQXX' "$ROOT" --include=CMakeLists.t
   perl -0pi -e 's~set_property\(TARGET \$\{PROJECT_NAME\} PROPERTY CXX_STANDARD \$\{CMAKE_CXX_STANDARD\}\)~set_property(TARGET \${PROJECT_NAME} PROPERTY CXX_STANDARD 20)  # ci-cx-cxx20: brew libpqxx headers need std::source_location (C++20); toolchain forces 17~' "$f"
   echo "  cx pqxx plugin: force target CXX_STANDARD 20 (libpqxx source_location) in ${f#$ROOT/}"
 done
-# cx_ros_msgs_plugin (and its client/service/action impls) spell the map key type as
-# std::__cxx11::basic_string<char>. std::__cxx11 is a libstdc++-only inline namespace (the C++11
-# ABI-transition tag); libc++ (macOS) has no such namespace -> "no member named 'basic_string' in
-# namespace 'std::__cxx11'". On libstdc++ __cxx11 is inline so std::__cxx11::basic_string IS
-# std::basic_string; stripping the tag is a no-op there and correct on libc++. Narrow the rewrite
-# to the clips_executive cx_plugins .cpp sources -- do NOT touch third-party files that carry the
-# token in comments or string literals (boost type_name.hpp's tn_remove_prefix("std::__cxx11::"),
-# ros2_tracing test expectation strings), which a blind strip would corrupt. Idempotent: nothing
-# left to match after the rewrite (ci-cxx11-namespace). ---
-for f in $(grep -rlE 'std::__cxx11::' "$ROOT" --include='*.cpp' 2>/dev/null | grep -E 'clips_executive/cx_plugins/'); do
-  perl -pi -e 's~std::__cxx11::~std::~g' "$f"
-  echo "  cx_ros_msgs_plugin: std::__cxx11:: -> std:: (libstdc++-only namespace absent on libc++) in ${f#$ROOT/}"
-done
-# cx_cdb_loader_plugin/helpers.cpp iterates a pqxx::result with
-#   for (const pqxx::row & row : rows) { ... }
-# On the brew libpqxx (8.x) result iteration yields a pqxx::row_ref proxy, and row(row_ref) is an
-# EXPLICIT constructor, so binding `const pqxx::row &` to the row_ref has "no viable conversion
-# from 'pqxx::row_ref' to 'const pqxx::row'" (7 sites). The loop body also passes the variable to
-# helpers taking const pqxx::row& (optional_field/parse_timed_*), so it must remain a real row.
-# Rebind with `auto const &` and direct-init a genuine pqxx::row from it: braced direct-init invokes
-# the explicit row_ref ctor on new libpqxx and the copy ctor on old, so it is version-agnostic.
-# Narrow to clips_executive cx_plugins .cpp. Idempotent: the original loop text is gone after the
-# rewrite (ci-cdb-rowref). ---
-for f in $(grep -rlE 'for \(const pqxx::row & row : rows\) \{' "$ROOT" --include='*.cpp' 2>/dev/null | grep -E 'clips_executive/cx_plugins/'); do
-  perl -0pi -e 's~for \(const pqxx::row & row : rows\) \{~for (auto const & _pqxx_row_src : rows) {  // ci-cdb-rowref\n    const pqxx::row row{_pqxx_row_src};~g' "$f"
-  echo "  cx_cdb_loader_plugin: pqxx::row_ref -> explicit pqxx::row in range-for (libpqxx 8.x) in ${f#$ROOT/}"
-done
 # rc_dynamics_api: its generated *.pb.h gencode (built by the workspace protobuf v26+ protoc) begins
 # with #include "google/protobuf/runtime_version.h". The protobuf include dir (which ships that
 # header) is added only directory-scoped in rc_dynamics_api/CMakeLists.txt
