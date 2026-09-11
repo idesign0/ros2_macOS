@@ -185,15 +185,6 @@ if [ -n "$aad" ] && [ -f "$aad/tree/tree_document.hpp" ] && [ -f "$aad/node/node
   perl -0pi -e 's~(\n\}  // namespace model\n)(\}  // namespace auto_apms_behavior_tree)~${1}\nnamespace core  // ci-autoapms-subtree-defs: SubTree insertNode() defs moved here from tree_document.hpp\n\{                 // (insertSubTreeNode returns model::SubTree by value; clang needs it complete at parse)\ntemplate <class T>\ninline typename std::enable_if_t<std::is_same_v<model::SubTree, T>, model::SubTree>\nTreeDocument::NodeElement::insertNode(const std::string \& tree_name, const NodeElement * before_this)\n\{\n  return insertSubTreeNode(tree_name, before_this);\n\}\n\ntemplate <class T>\ninline typename std::enable_if_t<std::is_same_v<model::SubTree, T>, model::SubTree>\nTreeDocument::NodeElement::insertNode(const TreeElement \& tree, const NodeElement * before_this)\n\{\n  return insertSubTreeNode(tree, before_this);\n\}\n\}  // namespace core\n${2}~' "$aad/node/node_model_type.hpp"
   echo "  auto_apms_behavior_tree_core: moved SubTree insertNode defs after complete type"
 fi
-# off_highway_* sensor drivers: rclcpp_components_register_node(... EXECUTABLE <exe>) already
-# creates AND installs the standalone executable to lib/${PROJECT_NAME}; a redundant
-# install(TARGETS <exe> ...) installs it a SECOND time to the same place, so macOS
-# install_name_tool errors on the duplicate LC_RPATH (Linux/patchelf silently tolerates it).
-# Drop the redundant install(TARGETS receiver/sender ...) across the off_highway family
-# (mm7p10, general_purpose_radar, uss, radar; unblocks off_highway_can + adi_3dtof cascades).
-for f in $(find "$ROOT" -path '*off_highway_sensor_drivers/*' -name CMakeLists.txt -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
-  grep -q 'rclcpp_components_register_node' "$f" 2>/dev/null && perl -0pi -e 's/\ninstall\(TARGETS (?:receiver|sender)[^\)]*\)\n//g' "$f" && echo "  off_highway: dropped redundant install(TARGETS receiver/sender) in ${f#$ROOT/}"
-done
 # ros2_ouster: MOVED TO id_ros2_ouster_drivers fork (declare_parameter type) — removed from script.
 # kuka_drivers_core: control_node.cpp sets CPU affinity via Linux-only cpu_set_t /
 # pthread_setaffinity_np. Guard the block with #ifdef __linux__ (macOS has no cpu_set_t).
@@ -210,24 +201,6 @@ if [ -n "$d" ] && [ -f "$d/src/control_node.cpp" ] && ! grep -q 'kuka_sched_fail
   perl -0pi -e 's/if \(sched_setscheduler\(0, SCHED_FIFO, &param\) == -1\)/#ifdef __linux__\n      bool kuka_sched_failed = (sched_setscheduler(0, SCHED_FIFO, &param) == -1);\n#else\n      bool kuka_sched_failed = (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) != 0);\n#endif\n      if (kuka_sched_failed)/' "$d/src/control_node.cpp"
   echo "  kuka_drivers_core: __linux__ guard around sched_setscheduler"
 fi
-# off_highway_premium_radar[_sample]: helper.hpp / pdu_definitions.cpp #include <endian.h>
-# (Linux-only) and use be16/32/64toh + htobe16/32. macOS has no <endian.h>; provide the same
-# functions via <libkern/OSByteOrder.h>. Verified: shim compiles + byte-roundtrips on Apple clang.
-for f in $(grep -rlE '#include <endian\.h>' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep off_highway); do
-  grep -q 'ci-offhw-endian' "$f" && continue
-  perl -0pi -e 's~#include <endian\.h>~#if defined(__APPLE__)  // ci-offhw-endian\n#include <libkern/OSByteOrder.h>\n#define htobe16(x) OSSwapHostToBigInt16(x)\n#define htobe32(x) OSSwapHostToBigInt32(x)\n#define htobe64(x) OSSwapHostToBigInt64(x)\n#define htole16(x) OSSwapHostToLittleInt16(x)\n#define htole32(x) OSSwapHostToLittleInt32(x)\n#define htole64(x) OSSwapHostToLittleInt64(x)\n#define be16toh(x) OSSwapBigToHostInt16(x)\n#define be32toh(x) OSSwapBigToHostInt32(x)\n#define be64toh(x) OSSwapBigToHostInt64(x)\n#define le16toh(x) OSSwapLittleToHostInt16(x)\n#define le32toh(x) OSSwapLittleToHostInt32(x)\n#define le64toh(x) OSSwapLittleToHostInt64(x)\n#else\n#include <endian.h>\n#endif~' "$f"
-  echo "  off_highway: macOS endian shim in ${f#$ROOT/}"
-done
-# off_highway_premium_radar[_sample]: helper.hpp uses std::bit_cast (C++20; the package sets
-# CMAKE_CXX_STANDARD 20) but never #include <bit>. libgcc pulls <bit> in transitively; libc++
-# does NOT -> "no template named 'bit_cast' in namespace 'std'; did you mean '__bit_cast'?".
-# Add the include (anchored before <cstdint>, always present in these headers). Idempotent.
-for f in $(grep -rlE 'std::bit_cast' "$ROOT" --include='*.hpp' --include='*.cpp' --include='*.h' 2>/dev/null | grep off_highway); do
-  grep -q 'ci-offhw-bit' "$f" && continue
-  grep -q '#include <bit>' "$f" && continue
-  perl -0pi -e 's~(#include <cstdint>)~#include <bit>  // ci-offhw-bit: std::bit_cast (C++20) is not transitively included on libc++\n$1~' "$f"
-  echo "  off_highway: +#include <bit> for std::bit_cast in ${f#$ROOT/}"
-done
 # nebula_core_ros/sync_tooling/sync_tooling_worker.hpp uses HOST_NAME_MAX (a glibc/Linux limits
 # constant; macOS defines _POSIX_HOST_NAME_MAX / MAXHOSTNAMELEN instead, never HOST_NAME_MAX),
 # so every consumer of the installed header fails "use of undeclared identifier 'HOST_NAME_MAX'"

@@ -1772,7 +1772,7 @@
 	branch = ros2
 [submodule "ros-drivers/off_highway_sensor_drivers"]
 	path = ros-drivers/off_highway_sensor_drivers
-	url = https://github.com/bosch-engineering/off_highway_sensor_drivers.git
+	url = https://github.com/idesign0/id_off_highway_sensor_drivers.git
 	branch = jazzy-devel
 [submodule "moveit/open_manipulator"]
 	path = moveit/open_manipulator
