@@ -932,7 +932,7 @@
 	branch = humble
 [submodule "fleet/rmf_utils"]
 	path = fleet/rmf_utils
-	url = https://github.com/open-rmf/rmf_utils.git
+	url = https://github.com/idesign0/id_rmf_utils.git
 	branch = humble
 [submodule "fleet/rmf_variants"]
 	path = fleet/rmf_variants
