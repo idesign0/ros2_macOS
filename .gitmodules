@@ -1744,7 +1744,7 @@
 	branch = ros2
 [submodule "ros-drivers/off_highway_sensor_drivers"]
 	path = ros-drivers/off_highway_sensor_drivers
-	url = https://github.com/bosch-engineering/off_highway_sensor_drivers.git
+	url = https://github.com/idesign0/id_off_highway_sensor_drivers.git
 	branch = humble-devel
 [submodule "ros-drivers/olive-interfaces"]
 	path = ros-drivers/olive-interfaces
