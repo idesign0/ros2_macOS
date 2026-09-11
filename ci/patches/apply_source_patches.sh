@@ -1851,21 +1851,6 @@ for _f in $(find "$ROOT" -path '*ros_battery_monitoring/battery_state_broadcaste
   fi
 done
 
-# --- easynav_common Singleton.hpp (EasyNavigation/easynav submodule, all 3):
-#     removeInstance() resets the once_flag with `init_flag_ = std::once_flag();`,
-#     but std::once_flag deletes copy/move assignment. On libc++ (macOS) this is a
-#     hard error ("overload resolution selected deleted operator '='") the moment a
-#     consumer instantiates it (easynav_sensors), and it CASCADES to the whole
-#     easynav stack (~21 pkgs across all 3 distros). Reset the flag with the portable
-#     destroy + placement-new idiom, which is semantically equivalent and compiles on
-#     both libc++ and libstdc++. ---
-for _f in $(find "$ROOT" -path '*easynav_common/include/easynav_common/Singleton.hpp' 2>/dev/null); do
-  if grep -q 'init_flag_ = std::once_flag()' "$_f"; then
-    grep -q '#include <new>' "$_f" || perl -0pi -e 's{(#include <mutex>\n)}{$1#include <new>\n}' "$_f"
-    perl -0pi -e 's{[ \t]*init_flag_ = std::once_flag\(\);}{    init_flag_.~once_flag();\n    ::new (\&init_flag_) std::once_flag();}' "$_f"
-    echo "  easynav_common Singleton.hpp: reset once_flag via placement-new (libc++ deleted-assign) in ${_f#$ROOT/}"
-  fi
-done
 
 
 # --- rviz_2d_overlay_plugins (teamspatzenhirn, all 3): its CMakeLists does
@@ -1932,17 +1917,6 @@ for _vf in /opt/homebrew/lib/cmake/vtk-9.6/VTK-vtk-module-find-packages.cmake; d
 done
 
 
-# --- easynav_system (EasyNavigation/easynav submodule, jazzy+kilted): system_main.cpp
-#     calls sched_setscheduler(0, SCHED_FIFO, ...), a Linux-only <sched.h> process
-#     scheduling API absent on macOS -> "use of undeclared identifier
-#     'sched_setscheduler'". Guard the RT-scheduling block to __linux__; on macOS log
-#     that RT scheduling is unavailable and run with normal priority (best-effort). ---
-for _f in $(find "$ROOT" -path '*easynav_system/src/system_main.cpp' 2>/dev/null); do
-  if grep -q 'sched_setscheduler' "$_f" && ! grep -q '#if defined(__linux__)' "$_f"; then
-    perl -0pi -e 's{([ \t]*)(sched_param sch; sch\.sched_priority = 80;.*?\n[ \t]*\})}{$1#if defined(__linux__)\n$1$2\n$1#else\n$1  RCLCPP_WARN(system_node->get_logger(), "Real-Time scheduling not supported on this platform. Running with normal priority.");\n$1#endif}s' "$_f"
-    echo "  easynav_system: guard Linux-only sched_setscheduler for macOS in ${_f#$ROOT/}"
-  fi
-done
 
 # --- rmf_websocket (fleet/rmf_ros2 submodule, all 3): its OWN sources use
 #     boost::asio::io_service, io_context::dispatch and io_context::post, all removed

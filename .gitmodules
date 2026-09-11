@@ -1136,7 +1136,7 @@
 	branch = ros2
 [submodule "ros2_control/easynav"]
 	path = ros2_control/easynav
-	url = https://github.com/EasyNavigation/EasyNavigation.git
+	url = https://github.com/idesign0/id_EasyNavigation.git
 	branch = jazzy
 [submodule "ros-planning/easynav_plugins"]
 	path = ros-planning/easynav_plugins
