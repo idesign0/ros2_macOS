@@ -2520,7 +2520,7 @@
 	branch = ros-humble
 [submodule "ros2_control/kuka_drivers"]
 	path = ros2_control/kuka_drivers
-	url = https://github.com/kroshu/kuka_drivers.git
+	url = https://github.com/idesign0/id_kuka_drivers.git
 	branch = humble
 [submodule "ros2_control/linear_feedback_controller"]
 	path = ros2_control/linear_feedback_controller
