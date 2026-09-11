@@ -1264,7 +1264,7 @@
 	branch = main
 [submodule "ros-drivers/arm/turtlebot3_applications"]
 	path = ros-drivers/arm/turtlebot3_applications
-	url = https://github.com/ROBOTIS-GIT/turtlebot3_applications.git
+	url = https://github.com/idesign0/id_turtlebot3_applications.git
 	branch = humble
 [submodule "ros-drivers/arm/turtlebot3_applications_msgs"]
 	path = ros-drivers/arm/turtlebot3_applications_msgs
