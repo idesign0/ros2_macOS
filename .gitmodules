@@ -1900,7 +1900,7 @@
 	branch = main
 [submodule "ros-drivers/lidar/sick_scan_xd"]
 	path = ros-drivers/lidar/sick_scan_xd
-	url = https://github.com/SICKAG/sick_scan_xd.git
+	url = https://github.com/idesign0/id_sick_scan_xd.git
 	branch = develop
 [submodule "ros2/interfaces/simple_actions"]
 	path = ros2/interfaces/simple_actions
