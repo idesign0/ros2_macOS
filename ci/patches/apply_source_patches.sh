@@ -381,15 +381,7 @@ if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-aravis-matched-version' "$f"; the
   perl -0pi -e 's~if\(NOT \$\{rclcpp_DIR\} MATCHES "\.\*/humble/\.\*" AND NOT \$\{rclcpp_DIR\} MATCHES "\.\*/iron/\.\*"\)~# ci-aravis-matched-version: rclcpp_DIR path check is unreliable with a merged/custom install\n# prefix -> WITH_MATCHED_EVENTS wrongly defined on humble. Gate on rclcpp_VERSION instead\n# (rclcpp::MatchedInfo exists 22.0+; humble=16/iron=21 absent, jazzy=28/kilted=29 present).\nif(rclcpp_VERSION VERSION_GREATER_EQUAL "22.0.0")~' "$f"
   echo "  camera_aravis2: WITH_MATCHED_EVENTS gated on rclcpp_VERSION>=22"
 fi
-# leo_filters: links ${YAML_CPP_LIBRARIES}, which yaml_cpp_vendor sets to the IMPORTED target
-# yaml-cpp::yaml-cpp -- true at configure (if(TARGET)) but undefined at generate on macOS ->
-# "Target leo_filters links to yaml-cpp::yaml-cpp which is not a target". Point YAML_CPP_LIBRARIES
-# at the .dylib by absolute path when the target is missing (same class as other yaml-cpp fixes).
-f="$(find "$ROOT" -path '*leo_filters/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
-if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-leo-yamlpath' "$f"; then
-  perl -0pi -e 's~(find_package\(yaml-cpp REQUIRED\)\n)~${1}if(NOT TARGET yaml-cpp::yaml-cpp)  # ci-leo-yamlpath\n  find_library(_ci_leo_ycpp NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  if(_ci_leo_ycpp)\n    set(YAML_CPP_LIBRARIES "\$\{_ci_leo_ycpp\}")\n  endif()\nendif()\n~' "$f"
-  echo "  leo_filters: YAML_CPP_LIBRARIES -> yaml-cpp .dylib abs path"
-fi
+# leo_filters ${YAML_CPP_LIBRARIES} -> yaml-cpp::yaml-cpp target MIGRATED to id_leo_robot fork.
 # ros2_medkit_serialization: dynamic_array_to_yaml_impl_bool() does array_node.push_back(v[ii])
 # where v is std::vector<bool>, so v[ii] is a vector<bool>::const_reference -- on libc++ that is
 # std::__bit_const_reference, for which yaml-cpp has no YAML::convert<> -> "implicit instantiation
@@ -1590,13 +1582,7 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^target_link_libraries
   echo "  husarion_ugv_lights: bare yaml-cpp (x2, non-test targets) -> \${YAML_CPP_LIBRARIES}"
 fi
 
-# --- ros_babel_fish_tools: same bare-yaml-cpp-as-linker-name bug, single INTERFACE
-#     target. ---
-d="$(_pkg_dir ros_babel_fish_tools)"
-if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^  yaml-cpp$' "$d/CMakeLists.txt"; then
-  sed "${SEDI[@]}" 's/^  yaml-cpp$/  ${YAML_CPP_LIBRARIES}/' "$d/CMakeLists.txt"
-  echo "  ros_babel_fish_tools: bare yaml-cpp -> \${YAML_CPP_LIBRARIES}"
-fi
+# ros_babel_fish_tools bare yaml-cpp -> yaml-cpp::yaml-cpp target MIGRATED to id_ros_babel_fish fork.
 
 # ur_client_library httplib accept4 Linux-guard MIGRATED to id_Universal_Robots_Client_Library fork.
 

@@ -1248,8 +1248,8 @@
 	branch = ros2
 [submodule "ros-drivers/mobile_base/leo_robot"]
 	path = ros-drivers/mobile_base/leo_robot
-	url = https://github.com/LeoRover/leo_robot-ros2.git
-	branch = ros2
+	url = https://github.com/idesign0/id_leo_robot.git
+	branch = kilted
 [submodule "ros-drivers/mobile_base/leo_desktop"]
 	path = ros-drivers/mobile_base/leo_desktop
 	url = https://github.com/LeoRover/leo_desktop-ros2.git
@@ -1768,7 +1768,7 @@
 	branch = main
 [submodule "ros2/interfaces/ros_babel_fish"]
 	path = ros2/interfaces/ros_babel_fish
-	url = https://github.com/LOEWE-emergenCITY/ros2_babel_fish.git
+	url = https://github.com/idesign0/id_ros_babel_fish.git
 	branch = kilted
 [submodule "ros2/interfaces/ros_snapd_interfaces"]
 	path = ros2/interfaces/ros_snapd_interfaces
