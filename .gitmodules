@@ -1984,7 +1984,7 @@
 	branch = foxy-devel
 [submodule "ros-planning/grid_map"]
 	path = ros-planning/grid_map
-	url = https://github.com/ANYbotics/grid_map.git
+	url = https://github.com/idesign0/id_grid_map.git
 	branch = humble
 [submodule "ros-planning/gtsam2mrpt_serial"]
 	path = ros-planning/gtsam2mrpt_serial
