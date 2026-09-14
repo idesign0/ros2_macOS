@@ -2168,7 +2168,7 @@
 	branch = main
 [submodule "ros-visualization/etsi_its_messages"]
 	path = ros-visualization/etsi_its_messages
-	url = https://github.com/ika-rwth-aachen/etsi_its_messages.git
+	url = https://github.com/idesign0/id_etsi_its_messages.git
 	branch = main
 [submodule "ros-visualization/fluent_rviz"]
 	path = ros-visualization/fluent_rviz
