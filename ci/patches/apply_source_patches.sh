@@ -1652,19 +1652,7 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^  yaml-cpp$' "$d/CMak
   echo "  ros_babel_fish_tools: bare yaml-cpp -> \${YAML_CPP_LIBRARIES}"
 fi
 
-# --- ur_client_library (all 3, identical commit, vendored 3rdparty/httplib/httplib.h):
-#     `#elif defined SOCK_CLOEXEC` assumes SOCK_CLOEXEC-defined implies accept4() exists.
-#     True on Linux; macOS/Darwin *does* define the SOCK_CLOEXEC constant (for use with
-#     socket()) but has no accept4() syscall at all -> "use of undeclared identifier
-#     'accept4'". Narrow the branch to Linux specifically; macOS falls through to the
-#     plain accept() branch (functionally equivalent minus the atomic CLOEXEC race, which
-#     httplib's own #else path already accepts as fine on platforms without accept4). ---
-d="$(_pkg_dir ur_client_library)"
-f="$d/3rdparty/urcl_3rdparty/httplib/httplib.h"
-if [ -n "$d" ] && [ -f "$f" ] && grep -q '#elif defined SOCK_CLOEXEC$' "$f"; then
-  perl -0pi -e 's/#elif defined SOCK_CLOEXEC\n(\s*socket_t sock = accept4\(svr_sock_, nullptr, nullptr, SOCK_CLOEXEC\);\n)/#elif defined(SOCK_CLOEXEC) \&\& defined(__linux__)\n$1/' "$f"
-  echo "  ur_client_library: vendored httplib.h accept4 branch -> Linux-only (macOS has no accept4)"
-fi
+# ur_client_library httplib accept4 Linux-guard MIGRATED to id_Universal_Robots_Client_Library fork.
 
 # --- ublox_gps (all 3, identical commit): own cmake/Findasio.cmake does a bare
 #     find_path(asio.hpp) with NO PATHS at all -> never finds brew's keg-only-adjacent
