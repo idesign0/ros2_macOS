@@ -2126,18 +2126,7 @@ if [ -f "$_f" ] && grep -q 'DEPENDENCIES builtin_interfaces' "$_f" && ! grep -q 
 fi
 
 
-# --- etsi_its_rviz_plugins (all 3): MAPEMDisplay declares the Q_SLOT changedMAPEMViz() in
-#     mapem_display.hpp but it is never defined (only the changedSPATEM* siblings are) and
-#     never connected/referenced -> a dead slot. Qt MOC still emits a reference to it in the
-#     generated qt_static_metacall -> "Undefined symbols: etsi_its_msgs::displays::
-#     MAPEMDisplay::changedMAPEMViz()". Add an empty definition so it links (no behaviour
-#     change -- the slot was already non-functional). Idempotent. ---
-for _c in $(find "$ROOT" -path '*etsi_its_rviz_plugins*/MAPEM/mapem_display.cpp' -not -path '*/build/*' 2>/dev/null); do
-  if grep -q 'void MAPEMDisplay::changedSPATEMViz()' "$_c" && ! grep -q 'MAPEMDisplay::changedMAPEMViz' "$_c"; then
-    perl -0pi -e 's~void MAPEMDisplay::changedSPATEMViz\(\) \{~void MAPEMDisplay::changedMAPEMViz() {}  // ci: dead slot declared in header, never defined/connected; stub to satisfy MOC metacall\n\nvoid MAPEMDisplay::changedSPATEMViz() {~m' "$_c"
-    echo "  etsi_its_rviz_plugins: +stub MAPEMDisplay::changedMAPEMViz() (undefined MOC slot) in ${_c#$ROOT/}"
-  fi
-done
+# etsi_its_rviz_plugins dead-MOC-slot stub MIGRATED to id_etsi_its_messages fork.
 
 # --- cx_ros_msgs_plugin (all 3): uses std::unordered_map::contains (C++20) in 28 places, and
 #     its CMakeLists only sets CMAKE_CXX_STANDARD 20 `if(NOT CMAKE_CXX_STANDARD)`. But the
