@@ -1147,29 +1147,7 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE 'set\(CMAKE_CXX_STANDAR
   echo "  cartographer_ros_msgs: CMAKE_CXX_STANDARD 14 -> 17 (absl shim needs C++17)"
 fi
 
-# --- Lane 3: rmf_traffic_editor's gui_lib target_link_libraries() lists the
-#     bare word `yaml-cpp` (not an imported target in this scope, not
-#     ${YAML_CPP_LIBRARIES}) -> CMake emits a raw `-lyaml-cpp` link flag ->
-#     "ld: library 'yaml-cpp' not found". toolchain.cmake's global
-#     link_directories(.../opt/yaml_cpp_vendor/lib) covers most bare -lyaml-cpp
-#     consumers, but this target still fails, so swap the bare name for the
-#     toolchain's own ${YAML_CPP_LIBRARIES} absolute-path CACHE variable
-#     (set in cmake/toolchain.cmake) — the same idiom already used natively by
-#     other packages in this tree (camera_calibration_parsers, aruco_opencv,
-#     velodyne_pointcloud, etc), so it's a proven-working substitution, not a
-#     novel one. Same bare-`yaml-cpp` construct present in all 3 distros
-#     (different per-distro rmf commits, same bug) -> shared fix. Not
-#     compile-tested end-to-end (needs a full Qt5 GUI build of gui_lib/
-#     traffic-editor); verified instead that ${YAML_CPP_LIBRARIES} is set
-#     unconditionally in toolchain.cmake and is the exact pattern already
-#     working elsewhere in-tree. ---
-for _rf in \
-  "$ROOT/fleet/rmf_traffic_editor/rmf_traffic_editor/CMakeLists.txt"; do
-  if [ -f "$_rf" ] && grep -qE '^[[:space:]]*yaml-cpp[[:space:]]*$' "$_rf"; then
-    sed "${SEDI[@]}" 's/^\([[:space:]]*\)yaml-cpp\([[:space:]]*\)$/\1${YAML_CPP_LIBRARIES}\2/' "$_rf"
-    echo "  rmf_traffic_editor: bare yaml-cpp -> \${YAML_CPP_LIBRARIES} in ${_rf#$ROOT/}"
-  fi
-done
+# rmf_traffic_editor bare yaml-cpp -> yaml-cpp::yaml-cpp target MIGRATED to id_rmf_traffic_editor fork.
 
 # --- rmf_traffic_ros2 has the identical bare-`yaml-cpp` bug as
 #     rmf_traffic_editor above ("ld: library 'yaml-cpp' not found" at
