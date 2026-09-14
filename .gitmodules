@@ -1848,7 +1848,7 @@
 	branch = master
 [submodule "ros-drivers/imu_gnss/rt_usb_9axisimu_driver"]
 	path = ros-drivers/imu_gnss/rt_usb_9axisimu_driver
-	url = https://github.com/rt-net/rt_usb_9axisimu_driver.git
+	url = https://github.com/idesign0/id_rt_usb_9axisimu_driver.git
 	branch = jazzy
 [submodule "ros-planning/rtabmap_ros"]
 	path = ros-planning/rtabmap_ros
