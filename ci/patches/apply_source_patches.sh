@@ -1420,17 +1420,7 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'aarch64-apple-darwin'
   echo "  foxglove_bridge: +Darwin/arm64 SDK download arm"
 fi
 
-# --- foxglove_bridge: src/message_definition_cache.cpp uses std::map<std::string,
-#     std::string> but never #includes <map>. libstdc++ pulls it in transitively;
-#     libc++ (Apple clang) does not -> "implicit instantiation of undefined template
-#     'std::map'". Add the include. Compile-tested (Apple clang, libc++, -std=c++17):
-#     reproduces the error without it, clean with it. ---
-for _mdc in $(find "$ROOT" -path '*foxglove_bridge/src/message_definition_cache.cpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
-  if ! grep -qE '#include <map>' "$_mdc"; then
-    perl -0pi -e 's{(#include <set>)}{$1\n#include <map>}' "$_mdc"
-    echo "  foxglove_bridge: +#include <map> in ${_mdc#$ROOT/}"
-  fi
-done
+# foxglove_bridge +#include <map> (libc++) MIGRATED to id_foxglove_sdk fork.
 
 
 

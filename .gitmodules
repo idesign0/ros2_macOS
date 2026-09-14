@@ -1100,7 +1100,7 @@
 	branch = ros2
 [submodule "ros-visualization/foxglove-sdk"]
 	path = ros-visualization/foxglove-sdk
-	url = https://github.com/foxglove/foxglove-sdk.git
+	url = https://github.com/idesign0/id_foxglove_sdk.git
 	branch = main
 [submodule "ros-visualization/foxglove_compressed_video_transport"]
 	path = ros-visualization/foxglove_compressed_video_transport
