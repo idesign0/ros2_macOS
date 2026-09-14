@@ -1056,7 +1056,7 @@
 	branch = release
 [submodule "ros2/interfaces/ros2_eventdispatch"]
 	path = ros2/interfaces/ros2_eventdispatch
-	url = https://github.com/cyan-at/ros2_eventdispatch.git
+	url = https://github.com/idesign0/id_ros2_eventdispatch.git
 	branch = main
 [submodule "ros-planning/smach"]
 	path = ros-planning/smach
