@@ -796,7 +796,7 @@
 	branch = main
 [submodule "autonomous_driving/autoware_rviz_plugins"]
 	path = autonomous_driving/autoware_rviz_plugins
-	url = https://github.com/autowarefoundation/autoware_rviz_plugins.git
+	url = https://github.com/idesign0/id_autoware_rviz_plugins.git
 	branch = main
 [submodule "autonomous_driving/autoware_utils"]
 	path = autonomous_driving/autoware_utils
@@ -2232,7 +2232,7 @@
 	branch = kilted_and_prior
 [submodule "ros-visualization/roadmap_explorer"]
 	path = ros-visualization/roadmap_explorer
-	url = https://github.com/suchetanrs/roadmap-explorer.git
+	url = https://github.com/idesign0/id_roadmap_explorer.git
 	branch = main
 [submodule "ros-visualization/rosx_introspection"]
 	path = ros-visualization/rosx_introspection
