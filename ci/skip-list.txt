@@ -406,3 +406,7 @@ mrpt_viz
 # -- epoll is Linux-only (macOS uses kqueue); the SDK's UDP layer has no macOS path. (base pkg;
 # its examples were already skipped.)
 kuka_external_control_sdk
+# husarion_ugv_lights: apa102.hpp/apa102.cpp drive the APA102 LEDs over Linux SPI
+# -- <linux/spi/spidev.h>, SPI_IOC_WR_MODE32/BITS_PER_WORD/MAX_SPEED_HZ, spi_ioc_transfer,
+# SPI_IOC_MESSAGE -- a physical-SPI userspace API with no macOS equivalent. No macOS build.
+husarion_ugv_lights
