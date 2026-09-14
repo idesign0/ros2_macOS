@@ -876,7 +876,7 @@
 	branch = main
 [submodule "ros2/interfaces/camera_aravis2"]
 	path = ros2/interfaces/camera_aravis2
-	url = https://github.com/FraunhoferIOSB/camera_aravis2.git
+	url = https://github.com/idesign0/id_camera_aravis2.git
 	branch = main
 [submodule "ros-perception/vision/image_pipeline"]
 	path = ros-perception/vision/image_pipeline
