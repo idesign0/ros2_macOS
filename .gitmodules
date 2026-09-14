@@ -1644,7 +1644,7 @@
 	branch = humble
 [submodule "ros-drivers/mobile_base/leo_robot"]
 	path = ros-drivers/mobile_base/leo_robot
-	url = https://github.com/LeoRover/leo_robot-ros2.git
+	url = https://github.com/idesign0/id_leo_robot.git
 	branch = humble
 [submodule "ros-drivers/mobile_base/libcreate"]
 	path = ros-drivers/mobile_base/libcreate
