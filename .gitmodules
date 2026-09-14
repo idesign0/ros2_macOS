@@ -2536,7 +2536,7 @@
 	branch = humble-devel
 [submodule "ros2_control/mujoco_ros2_control"]
 	path = ros2_control/mujoco_ros2_control
-	url = https://github.com/ros-controls/mujoco_ros2_control.git
+	url = https://github.com/idesign0/id_mujoco_ros2_control.git
 	branch = main
 [submodule "ros2_control/nmea_hardware_interface"]
 	path = ros2_control/nmea_hardware_interface
