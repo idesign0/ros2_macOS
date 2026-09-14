@@ -459,3 +459,7 @@ kuka_external_control_sdk
 # -- <linux/spi/spidev.h>, SPI_IOC_WR_MODE32/BITS_PER_WORD/MAX_SPEED_HZ, spi_ioc_transfer,
 # SPI_IOC_MESSAGE -- a physical-SPI userspace API with no macOS equivalent. No macOS build.
 husarion_ugv_lights
+# husarion_ugv_diagnostics: system_monitor_node links cppuprofile, whose
+# uprofile::getSystemMemory()/getInstantCpuUsage() read Linux /proc and are not
+# compiled on macOS -> Undefined symbols. No macOS system-introspection path.
+husarion_ugv_diagnostics
