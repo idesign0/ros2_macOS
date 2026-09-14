@@ -956,7 +956,7 @@
 	branch = ros2
 [submodule "ros-planning/cartographer_ros"]
 	path = ros-planning/cartographer_ros
-	url = https://github.com/ros2/cartographer_ros.git
+	url = https://github.com/idesign0/id_cartographer_ros.git
 	branch = ros2
 [submodule "ros2/cascade_lifecycle"]
 	path = ros2/cascade_lifecycle
