@@ -339,7 +339,12 @@ done
 for f in $(grep -rlF 'project(plansys2_terminal)' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
   grep -q 'ci-plansys-readline' "$f" && continue
   perl -0pi -e 's~(project\(plansys2_terminal\)\n)~$1# ci-plansys-readline: brew readline is keg-only (not in /opt/homebrew); expose its real prefix so\n# the bare `readline` link target and <readline/readline.h> resolve on macOS.\nif(APPLE AND EXISTS "/opt/homebrew/opt/readline/lib")\n  link_directories(/opt/homebrew/opt/readline/lib)\n  include_directories(/opt/homebrew/opt/readline/include)\nendif()\n~' "$f"
-  echo "  plansys2_terminal: expose keg-only brew readline prefix in ${f#$ROOT/}"
+  # The `terminal` SHARED library itself calls readline (Terminal.cpp), but readline was linked
+  # only onto the plansys2_terminal EXECUTABLE. On macOS a shared lib must resolve all its own
+  # symbols at link time (unlike Linux), so terminal.dylib fails with undefined _readline/_add_history/
+  # _rl_*. Link readline into the terminal library too (harmless on Linux; readline is in the path).
+  perl -0pi -e 's~(ament_target_dependencies\(terminal \$\{dependencies\}\)\n)~${1}target_link_libraries(terminal readline)  # ci-plansys-readline: terminal.dylib itself uses readline\n~' "$f"
+  echo "  plansys2_terminal: expose keg-only brew readline prefix + link readline into terminal lib in ${f#$ROOT/}"
 done
 # crazyflie_server_cpp fails to link with undefined CoreFoundation/IOKit symbols
 # (_CFBooleanGetTypeID, _CFDataGetBytes, ...) referenced from libusb-1.0.a(darwin_usb.o) -- libusb's
