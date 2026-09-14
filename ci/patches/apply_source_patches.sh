@@ -784,6 +784,49 @@ PATCHEOF
   echo "  lely_core_libraries: added 0101-macos-getopt-extern.patch to UPDATE_COMMAND"
 fi
 
+# --- lely_core_libraries: src/util/daemon.c selects its platform backend with
+#     `#if _WIN32 / #elif _POSIX_C_SOURCE >= 200112L`. This build never defines
+#     _POSIX_C_SOURCE on macOS, so the preprocessor evaluates it as 0 and NEITHER
+#     branch is compiled -> daemon_signal() and daemon_status() are left undefined
+#     while the unconditional daemon_stop/daemon_reload/daemon_pause/daemon_continue
+#     and default_daemon_handler still call them -> at the liblely-util link:
+#       Undefined symbols for architecture arm64:
+#         "_daemon_signal", referenced from: _daemon_stop ...
+#         "_daemon_status", referenced from: _default_daemon_handler ...
+#     The POSIX backend is generic-POSIX, not Linux-only: its one Linux extension
+#     (pipe2 with O_NONBLOCK|O_CLOEXEC) already has a portable `#else` fallback
+#     (pipe()+fcntl()), and everything else it uses (sigaction/sigemptyset/poll/
+#     fcntl) is standard POSIX present on macOS -- the branch even has explicit
+#     `!defined(__linux__)` sub-cases. So enable it on __APPLE__ as well. Same
+#     git-apply-into-UPDATE_COMMAND mechanism as the patches above. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0102-macos-daemon-posix.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0102-macos-daemon-posix.patch" <<'PATCHEOF'
+Subject: [PATCH] Enable the POSIX daemon backend on macOS (__APPLE__)
+
+src/util/daemon.c compiles neither its _WIN32 nor its
+`_POSIX_C_SOURCE >= 200112L` backend on macOS (this build does not
+define _POSIX_C_SOURCE), leaving daemon_signal()/daemon_status()
+undefined at the liblely-util link. The POSIX backend is portable
+(Linux-only calls have `#else` fallbacks), so select it on Apple too.
+---
+diff --git a/src/util/daemon.c b/src/util/daemon.c
+--- a/src/util/daemon.c
++++ b/src/util/daemon.c
+@@ -233,6 +233,6 @@
+ }
+
+-#elif _POSIX_C_SOURCE >= 200112L
++#elif _POSIX_C_SOURCE >= 200112L || defined(__APPLE__)
+
+ #include <fcntl.h>
+ #include <poll.h>
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0102-macos-daemon-posix.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0102-macos-daemon-posix.patch to UPDATE_COMMAND"
+fi
+
 # --- mrpt_libbase (all 3): MRPT (fetched as an ExternalProject, pinned 2.15.x) declares its
 #     CArchive scalar stream operators only for the fixed-width integer types listed in
 #     is_simple_type<> (bool, uint8..uint64, int8..int64, float, double). On macOS/arm64
