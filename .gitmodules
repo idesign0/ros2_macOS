@@ -1596,7 +1596,7 @@
 	branch = develop
 [submodule "ros-planning/mola_input_ouster"]
 	path = ros-planning/mola_input_ouster
-	url = https://github.com/MOLAorg/mola_input_ouster.git
+	url = https://github.com/idesign0/id_mola_input_ouster.git
 	branch = develop
 [submodule "ros-planning/mola_input_rosbag1"]
 	path = ros-planning/mola_input_rosbag1
