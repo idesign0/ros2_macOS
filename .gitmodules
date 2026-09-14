@@ -1664,7 +1664,7 @@
 	branch = master
 [submodule "ros2_control/mujoco_ros2_control"]
 	path = ros2_control/mujoco_ros2_control
-	url = https://github.com/ros-controls/mujoco_ros2_control.git
+	url = https://github.com/idesign0/id_mujoco_ros2_control.git
 	branch = main
 [submodule "gzsim/mujoco_vendor"]
 	path = gzsim/mujoco_vendor
