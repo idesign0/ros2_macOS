@@ -1284,7 +1284,7 @@
 	branch = main
 [submodule "ros-planning/grid_map"]
 	path = ros-planning/grid_map
-	url = https://github.com/ANYbotics/grid_map.git
+	url = https://github.com/idesign0/id_grid_map.git
 	branch = jazzy
 [submodule "ros-drivers/camera/gscam"]
 	path = ros-drivers/camera/gscam
