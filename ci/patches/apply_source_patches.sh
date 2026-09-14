@@ -827,6 +827,19 @@ PATCHEOF
   echo "  lely_core_libraries: added 0102-macos-daemon-posix.patch to UPDATE_COMMAND"
 fi
 
+# --- as2_behaviors_swarm_flocking (humble only): force-includes <cassert>/<assert.h>
+#     with add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-include$<SEMICOLON>cassert>" ...).
+#     $<SEMICOLON> splits it into two SEPARATE compile options (-include, cassert); CMake's
+#     option handling can then separate the pair so `cassert`/`assert.h` is left as a dangling
+#     positional input -> AppleClang "no such file or directory: 'cassert'". Use the SHELL:
+#     prefix so `-include cassert` stays one adjacent, un-deduplicated fragment (same fix as
+#     the ouster -include cstdint case). No-op where the package/pattern is absent. ---
+d="$(_pkg_dir as2_behaviors_swarm_flocking)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'include\$<SEMICOLON>cassert' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{-include\$<SEMICOLON>cassert}{SHELL:-include cassert}g; s{-include\$<SEMICOLON>assert\.h}{SHELL:-include assert.h}g' "$d/CMakeLists.txt"
+  echo "  as2_behaviors_swarm_flocking: -include \$<SEMICOLON> hack -> SHELL:-include (keep the pair adjacent)"
+fi
+
 # --- mrpt_libbase (all 3): MRPT (fetched as an ExternalProject, pinned 2.15.x) declares its
 #     CArchive scalar stream operators only for the fixed-width integer types listed in
 #     is_simple_type<> (bool, uint8..uint64, int8..int64, float, double). On macOS/arm64
