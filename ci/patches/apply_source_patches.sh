@@ -1702,16 +1702,7 @@ if [ -n "$d" ] && [ -f "$f" ] && grep -q 'sched_setscheduler(0, SCHED_FIFO, &sch
   echo "  plansys2_bringup: sched_setscheduler -> pthread_setschedparam on non-Linux"
 fi
 
-# --- find_object_2d (humble only -- pinned at the older 0.7.0-foxy commit; jazzy/kilted
-#     pin a newer commit where this was already dropped upstream): `cmake_policy(SET
-#     CMP0043/CMP0042 OLD)` -- modern CMake (post ~3.20) removed the ability to set these
-#     to OLD at all, now a hard error instead of a silent no-op. Both are legacy
-#     COMPILE_DEFINITIONS-per-config/RPATH shims no longer needed. ---
-d="$(_pkg_dir find_object_2d)"
-if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'cmake_policy(SET CMP0043 OLD)' "$d/CMakeLists.txt"; then
-  perl -0pi -e 's/if \(POLICY CMP0043\)\n\s*cmake_policy\(SET CMP0043 OLD\)\nendif \(POLICY CMP0043\)\n//; s/if \(POLICY CMP0042\)\n\s*cmake_policy\(SET CMP0042 OLD\)\nendif \(POLICY CMP0042\)\n//' "$d/CMakeLists.txt"
-  echo "  find_object_2d: drop no-longer-settable cmake_policy(SET CMP0043/CMP0042 OLD)"
-fi
+# find_object_2d drop CMP0043/CMP0042 OLD (humble) MIGRATED to id_find_object fork.
 
 # --- rc_dynamics_api (all 3, identical commit): net_utils.cc + data_receiver.h use
 #     TEMP_FAILURE_RETRY(), a glibc-only <unistd.h> extension macro with no macOS/libc++
