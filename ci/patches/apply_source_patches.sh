@@ -2114,16 +2114,7 @@ for _p in velodyne_pointcloud swri_transform_util; do
   fi
 done
 
-# --- eventdispatch_ros2_interfaces (humble): rosidl_generate_interfaces(... DEPENDENCIES
-#     builtin_interfaces) but the CMakeLists never find_package(builtin_interfaces) ->
-#     "rosidl_generate_interfaces() the passed dependency 'builtin_interfaces' has not been
-#     found before using find_package()" (rosidl_generate_interfaces.cmake:162). Add the
-#     missing find_package before the generate call. Idempotent. ---
-_f="$(_pkg_dir eventdispatch_ros2_interfaces)/CMakeLists.txt"
-if [ -f "$_f" ] && grep -q 'DEPENDENCIES builtin_interfaces' "$_f" && ! grep -q 'find_package(builtin_interfaces' "$_f"; then
-  perl -0pi -e 's{find_package\(rosidl_default_generators REQUIRED\)\n}{find_package(rosidl_default_generators REQUIRED)\nfind_package(builtin_interfaces REQUIRED)\n}' "$_f"
-  echo "  eventdispatch_ros2_interfaces: +find_package(builtin_interfaces) before rosidl_generate_interfaces in ${_f#$ROOT/}"
-fi
+# eventdispatch_ros2_interfaces +find_package(builtin_interfaces) MIGRATED to id_ros2_eventdispatch fork.
 
 
 # etsi_its_rviz_plugins dead-MOC-slot stub MIGRATED to id_etsi_its_messages fork.
