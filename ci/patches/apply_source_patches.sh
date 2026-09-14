@@ -2114,6 +2114,18 @@ if [ -f "$_f" ] && grep -qF 'add_compile_options("${OpenMP_CXX_FLAGS}")' "$_f"; 
   echo "  grid_map_pcl: separate_arguments OpenMP_CXX_FLAGS (Apple clang -Xclang -fopenmp) in ${_f#$ROOT/}"
 fi
 
+# --- adi_3dtof_image_stitching (humble only): OpenMP wired the GNU way -- links a bare `gomp`
+#     (set(OpenMP_LIBS gomp)) which does not exist on macOS (libomp), and passes OpenMP_CXX_FLAGS
+#     ("-Xclang -fopenmp") as ONE token to target_compile_options -> "unknown argument:
+#     '-Xclang -fopenmp'". Link the portable OpenMP::OpenMP_CXX imported target instead of gomp
+#     (it also carries the compile flags with correct quoting), and split the compile flags with
+#     separate_arguments (same as grid_map_pcl). No-op where the package/patterns are absent. ---
+_f="$(_pkg_dir adi_3dtof_image_stitching)/CMakeLists.txt"
+if [ -f "$_f" ] && grep -qF 'set(OpenMP_LIBS gomp)' "$_f"; then
+  perl -0pi -e 's~set\(OpenMP_LIBS gomp\)~set(OpenMP_LIBS OpenMP::OpenMP_CXX)~; s~target_compile_options\(\$\{PROJECT_NAME\}_node PRIVATE \$\{OpenMP_FLAGS\}\)~separate_arguments(_adi_omp_flags NATIVE_COMMAND "\$\{OpenMP_FLAGS\}")\n  target_compile_options(\$\{PROJECT_NAME\}_node PRIVATE \$\{_adi_omp_flags\})~' "$_f"
+  echo "  adi_3dtof_image_stitching: OpenMP gomp->OpenMP::OpenMP_CXX + separate_arguments OpenMP_FLAGS in ${_f#$ROOT/}"
+fi
+
 # --- data_tamer_cpp (all 3): under colcon CMAKE_PROJECT_NAME==PROJECT_NAME so the
 #     standalone branch turns DATA_TAMER_BUILD_TESTS ON; its tests link ament gtest_vendor
 #     but hit a googletest ABI mismatch (undefined testing::internal::MakeAndRegisterTestInfo
