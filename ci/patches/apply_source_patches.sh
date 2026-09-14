@@ -1980,21 +1980,7 @@ done
 # transform had already extended the CFLAGS string so its `"CFLAGS=-O2 -Wno-macro-redefined"`
 # guard (with closing quote) no longer matched, so -fcommon was silently never appended.
 
-# --- nav2_waypoint_follower (humble esp.): photo_at_waypoint.hpp #includes the
-#     non-standard Debian-ism "opencv4/opencv2/core.hpp"/"opencv4/opencv2/opencv.hpp".
-#     On Linux /usr/include (which contains opencv4/) is a default search dir so it
-#     resolves; on macOS brew OpenCV_INCLUDE_DIRS points AT .../include/opencv4 (added by
-#     ament_target_dependencies(OpenCV)), so the canonical "opencv2/core.hpp" resolves but
-#     the "opencv4/"-prefixed form does NOT -> "fatal error: file not found". This is the
-#     ROOT that fails base-2 and (via navigation2's <exec_depend>) silently drops the whole
-#     navigation2 + nav2_bringup metapackage -> a large humble robot/nav-demo cascade.
-#     Rewrite to the portable opencv2/ form. Idempotent (opencv4/ prefix gone after). ---
-for _f in $(find "$ROOT" -path '*nav2_waypoint_follower/*/photo_at_waypoint.hpp' -not -path '*/build/*' 2>/dev/null); do
-  if grep -q 'opencv4/opencv2/' "$_f"; then
-    perl -pi -e 's{opencv4/opencv2/}{opencv2/}g;' "$_f"
-    echo "  nav2_waypoint_follower: opencv4/opencv2 -> opencv2 include (macOS opencv layout) in ${_f#$ROOT/}"
-  fi
-done
+# nav2_waypoint_follower opencv4/opencv2->opencv2 include (humble) MIGRATED to id_navigation2 fork.
 
 # --- mujoco_ros2_control_plugins (humble): CMake hard-requires the EGL component
 #     (find_package(OpenGL REQUIRED COMPONENTS EGL)) and camera_plugin.{hpp,cpp} use the
