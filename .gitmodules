@@ -1584,7 +1584,7 @@
 	branch = humble-devel
 [submodule "ros-visualization/play_motion_builder"]
 	path = ros-visualization/play_motion_builder
-	url = https://github.com/pal-robotics/play_motion_builder.git
+	url = https://github.com/idesign0/id_play_motion_builder.git
 	branch = humble-devel
 [submodule "ros-visualization/plotjuggler"]
 	path = ros-visualization/plotjuggler
