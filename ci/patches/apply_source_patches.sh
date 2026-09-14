@@ -2104,15 +2104,7 @@ for _hf in $(find "$ROOT" -path '*ublox_dgnss_node/include/*/ubx/ubx_cfg_item.hp
   fi
 done
 
-# --- grid_map_pcl (all 3): add_compile_options("${OpenMP_CXX_FLAGS}") passes the whole
-#     string as ONE argv token; on Apple clang OpenMP_CXX_FLAGS is "-Xclang -fopenmp" (two
-#     tokens) -> clang sees a single unknown arg "-Xclang -fopenmp". Split into a list with
-#     separate_arguments first. Idempotent (guard on the quoted form). ---
-_f="$(_pkg_dir grid_map_pcl)/CMakeLists.txt"
-if [ -f "$_f" ] && grep -qF 'add_compile_options("${OpenMP_CXX_FLAGS}")' "$_f"; then
-  perl -0pi -e 's{add_compile_options\("\$\{OpenMP_CXX_FLAGS\}"\)}{separate_arguments(_gmp_omp_flags NATIVE_COMMAND "\$\{OpenMP_CXX_FLAGS\}")\n  add_compile_options(\$\{_gmp_omp_flags\})}' "$_f"
-  echo "  grid_map_pcl: separate_arguments OpenMP_CXX_FLAGS (Apple clang -Xclang -fopenmp) in ${_f#$ROOT/}"
-fi
+# grid_map_pcl OpenMP-flag split MIGRATED to id_grid_map fork (separate_arguments in CMakeLists).
 
 # --- adi_3dtof_image_stitching (humble only): OpenMP wired the GNU way -- links a bare `gomp`
 #     (set(OpenMP_LIBS gomp)) which does not exist on macOS (libomp), and passes OpenMP_CXX_FLAGS
@@ -2217,24 +2209,7 @@ for _f in $(find "$ROOT" -ipath '*cx_msgs/srv/ListClipsEnvs.srv' -not -path '*/b
   fi
 done
 
-# --- grid_map_pcl (all 3): helpers.hpp printTimeElapsedToRosInfoStream() takes a
-#     system_clock::time_point `start` but computes `stop` with high_resolution_clock::now(), and
-#     its callers (helpers.cpp) build `start` with high_resolution_clock::now() too. On libc++
-#     high_resolution_clock aliases steady_clock (not system_clock as on libstdc++), so both the
-#     `stop - start` inside the fn AND the `start` argument at the call site mismatch the
-#     system_clock parameter -> "invalid operands ..." / "no matching function for call to
-#     'printTimeElapsedToRosInfoStream'". Use system_clock::now() everywhere so all clocks match.
-#     Idempotent. ---
-for _f in $(find "$ROOT" -path '*grid_map_pcl/include/grid_map_pcl/helpers.hpp' -not -path '*/build/*' 2>/dev/null); do
-  if grep -qF 'const auto stop = std::chrono::high_resolution_clock::now();' "$_f"; then
-    perl -pi -e 's{const auto stop = std::chrono::high_resolution_clock::now\(\);}{const auto stop = std::chrono::system_clock::now();};' "$_f"
-    echo "  grid_map_pcl: helpers.hpp stop high_resolution_clock -> system_clock in ${_f#$ROOT/}"
-  fi
-done
-for _f in $(grep -rlF 'std::chrono::high_resolution_clock::now()' "$ROOT" 2>/dev/null | grep -E 'grid_map_pcl/src/.*\.cpp$'); do
-  perl -pi -e 's{std::chrono::high_resolution_clock::now\(\)}{std::chrono::system_clock::now()}g;' "$_f"
-  echo "  grid_map_pcl: caller start high_resolution_clock -> system_clock in ${_f#$ROOT/}"
-done
+# grid_map_pcl high_resolution_clock->system_clock (libc++) MIGRATED to id_grid_map fork.
 
 # === category-I own-error roots (2026-09-04) ===
 
