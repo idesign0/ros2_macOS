@@ -1284,7 +1284,7 @@
 	branch = humble
 [submodule "ros-drivers/arm/ur_client_library"]
 	path = ros-drivers/arm/ur_client_library
-	url = https://github.com/UniversalRobots/Universal_Robots_Client_Library.git
+	url = https://github.com/idesign0/id_Universal_Robots_Client_Library.git
 	branch = master
 [submodule "ros-drivers/arm/ur_description"]
 	path = ros-drivers/arm/ur_description
