@@ -2201,15 +2201,7 @@ for _f in $(find "$ROOT" -path '*plansys2_bringup/src/plansys2_node.cpp' 2>/dev/
 done
 
 
-# --- backward_global_planner (all 3): ament_target_dependencies(... visualization_msgs) but
-#     the CMakeLists never find_package(visualization_msgs) -> "the passed package name
-#     'visualization_msgs' was not found before". Add the missing find_package. Idempotent. ---
-for _f in $(find "$ROOT" -path '*backward_global_planner/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
-  if grep -qF 'find_package(nav_2d_utils)' "$_f" && ! grep -qF 'find_package(visualization_msgs)' "$_f"; then
-    perl -0pi -e 's{find_package\(nav_2d_utils\)\n}{find_package(nav_2d_utils)\nfind_package(visualization_msgs)\n}' "$_f"
-    echo "  backward_global_planner: +find_package(visualization_msgs) in ${_f#$ROOT/}"
-  fi
-done
+# backward_global_planner +find_package(visualization_msgs) (SMACC2) MIGRATED to id_smacc2 fork.
 
 # --- multisensor_calibration (all 3): lists bare `tinyxml2` in its ament dependency set, but
 #     tinyxml2 is a plain-CMake package (target tinyxml2::tinyxml2, already in
