@@ -1896,7 +1896,7 @@
 	branch = release
 [submodule "ros-perception/vision/find_object_2d"]
 	path = ros-perception/vision/find_object_2d
-	url = https://github.com/introlab/find-object.git
+	url = https://github.com/idesign0/id_find_object.git
 	branch = humble-devel
 [submodule "ros-perception/vision/frequency_cam"]
 	path = ros-perception/vision/frequency_cam
