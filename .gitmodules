@@ -1456,7 +1456,7 @@
 	branch = ros2
 [submodule "ros-drivers/imu_gnss/rt_usb_9axisimu_driver"]
 	path = ros-drivers/imu_gnss/rt_usb_9axisimu_driver
-	url = https://github.com/rt-net/rt_usb_9axisimu_driver.git
+	url = https://github.com/idesign0/id_rt_usb_9axisimu_driver.git
 	branch = humble-devel
 [submodule "ros-drivers/imu_gnss/sbg_driver"]
 	path = ros-drivers/imu_gnss/sbg_driver

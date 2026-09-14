@@ -461,13 +461,7 @@ d="$(_pkg_dir naoqi_libqi)"; [ -n "$d" ] && [ -f "$d/src/eventloop.cpp" ] && \
   echo "  naoqi_libqi eventloop.cpp: dropped stray boost/asio/io_service.hpp include"
 }
 
-# --- Lane 4: rt_usb_9axisimu_driver — the out-of-line ctor definition carries a
-#     default arg (`std::string port = ""`) while the header declares it `explicit`
-#     with no default; ill-formed under clang. The only caller passes an arg. ---
-d="$(_pkg_dir rt_usb_9axisimu_driver)"; [ -n "$d" ] && for f in $(grep -rl 'RtUsb9axisimuRosDriver(std::string port = ""' "$d" 2>/dev/null); do
-  sed "${SEDI[@]}" 's/RtUsb9axisimuRosDriver(std::string port = "")/RtUsb9axisimuRosDriver(std::string port)/' "$f"
-  echo "  rt_usb default-arg removed: ${f#$ROOT/}"
-done
+# rt_usb_9axisimu_driver default-arg-on-definition fix MIGRATED to id_rt_usb_9axisimu_driver fork.
 
 
 # --- Lane 4/6: rc_dynamics_api forces C++11, but its abseil dependency requires
