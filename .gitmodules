@@ -748,7 +748,7 @@
 	branch = master
 [submodule "ament/ros2_medkit"]
 	path = ament/ros2_medkit
-	url = https://github.com/selfpatch/ros2_medkit.git
+	url = https://github.com/idesign0/id_ros2_medkit.git
 	branch = main
 [submodule "ament/sol_vendor"]
 	path = ament/sol_vendor
