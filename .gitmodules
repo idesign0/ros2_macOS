@@ -1452,7 +1452,7 @@
 	branch = jazzy
 [submodule "ros-drivers/mobile_base/leo_robot"]
 	path = ros-drivers/mobile_base/leo_robot
-	url = https://github.com/LeoRover/leo_robot-ros2.git
+	url = https://github.com/idesign0/id_leo_robot.git
 	branch = jazzy
 [submodule "ros-drivers/mobile_base/leo_desktop"]
 	path = ros-drivers/mobile_base/leo_desktop
@@ -2060,7 +2060,7 @@
 	branch = main
 [submodule "ros2/interfaces/ros_babel_fish"]
 	path = ros2/interfaces/ros_babel_fish
-	url = https://github.com/LOEWE-emergenCITY/ros2_babel_fish.git
+	url = https://github.com/idesign0/id_ros_babel_fish.git
 	branch = jazzy
 [submodule "ros2/interfaces/ros_snapd_interfaces"]
 	path = ros2/interfaces/ros_snapd_interfaces
