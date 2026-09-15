@@ -463,3 +463,8 @@ husarion_ugv_lights
 # uprofile::getSystemMemory()/getInstantCpuUsage() read Linux /proc and are not
 # compiled on macOS -> Undefined symbols. No macOS system-introspection path.
 husarion_ugv_diagnostics
+# ros2launch_security_examples: find_package(ament_nodl) succeeds but the ament_nodl_register
+# CMake macro is not provided (ament_nodl's cmake extension isn't registered on macOS) ->
+# "Unknown CMake command ament_nodl_register". Niche security EXAMPLE demonstrating NoDL-based
+# access policy; no consumers. Skip until ament_nodl's cmake integration builds on macOS.
+ros2launch_security_examples
