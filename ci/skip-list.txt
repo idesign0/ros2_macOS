@@ -400,3 +400,8 @@ mrpt_viz
 # -- epoll is Linux-only (macOS uses kqueue); the SDK's UDP layer has no macOS path. (base pkg;
 # its examples were already skipped.)
 kuka_external_control_sdk
+# ros2launch_security_examples: find_package(ament_nodl) succeeds but the ament_nodl_register
+# CMake macro is not provided (ament_nodl's cmake extension isn't registered on macOS) ->
+# "Unknown CMake command ament_nodl_register". Niche security EXAMPLE demonstrating NoDL-based
+# access policy; no consumers. Skip until ament_nodl's cmake integration builds on macOS.
+ros2launch_security_examples
