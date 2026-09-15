@@ -405,9 +405,5 @@ kuka_external_control_sdk
 # "Unknown CMake command ament_nodl_register". Niche security EXAMPLE demonstrating NoDL-based
 # access policy; no consumers. Skip until ament_nodl's cmake integration builds on macOS.
 ros2launch_security_examples
-# python_mrpt: MRPT's generated pybind11 std bindings (build/.../std/stl_vector.cpp) use libstdc++-internal __gnu_cxx::__normal_iterator, which does not exist on libc++ (Apple clang) -> 'explicit specialization of non-template class'. Regenerating the bindings for libc++ is out of scope; skip the python bindings.
-python_mrpt
-# auto_apms_behavior_tree: its node-model generator tool (generate_node_model_native) crashes with 'Segmentation fault: 11' at build time on macOS. A build-time tool crash, not a compile error; skip until the generator is fixed for macOS.
-auto_apms_behavior_tree
 # aruco_opencv: aruco_tracker.cpp passes its LifecycleNode to image_transport::create_publisher(rclcpp::Node*), which has no LifecycleNode/NodeInterfaces overload in this image_transport -> 'no viable conversion from ArucoTracker to rclcpp::Node*'. Needs an upstream image_transport API addition; skip.
 aruco_opencv
