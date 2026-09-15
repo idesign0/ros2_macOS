@@ -1868,7 +1868,7 @@
 	branch = kilted_and_prior
 [submodule "ros-planning/pose_cov_ops"]
 	path = ros-planning/pose_cov_ops
-	url = https://github.com/mrpt-ros-pkg/pose_cov_ops.git
+	url = https://github.com/idesign0/id_pose_cov_ops.git
 	branch = master
 [submodule "ros-drivers/mobile_base/ptz_action_server"]
 	path = ros-drivers/mobile_base/ptz_action_server
