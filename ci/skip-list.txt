@@ -409,3 +409,5 @@ ros2launch_security_examples
 python_mrpt
 # auto_apms_behavior_tree: its node-model generator tool (generate_node_model_native) crashes with 'Segmentation fault: 11' at build time on macOS. A build-time tool crash, not a compile error; skip until the generator is fixed for macOS.
 auto_apms_behavior_tree
+# aruco_opencv: aruco_tracker.cpp passes its LifecycleNode to image_transport::create_publisher(rclcpp::Node*), which has no LifecycleNode/NodeInterfaces overload in this image_transport -> 'no viable conversion from ArucoTracker to rclcpp::Node*'. Needs an upstream image_transport API addition; skip.
+aruco_opencv
