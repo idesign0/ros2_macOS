@@ -1936,7 +1936,7 @@
 	branch = master
 [submodule "ros-perception/vision/rc_dynamics_api"]
 	path = ros-perception/vision/rc_dynamics_api
-	url = https://github.com/roboception/rc_dynamics_api.git
+	url = https://github.com/idesign0/id_rc_dynamics_api.git
 	branch = master
 [submodule "ros-perception/vision/rc_genicam_api"]
 	path = ros-perception/vision/rc_genicam_api
