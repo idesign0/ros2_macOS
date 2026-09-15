@@ -818,6 +818,36 @@ PATCHEOF
   echo "  lely_core_libraries: added 0102-macos-daemon-posix.patch to UPDATE_COMMAND"
 fi
 
+# --- lely_core_libraries: include/lely/libc/strings.h sets LELY_HAVE_STRINGS_H only for
+#     _POSIX_C_SOURCE>=200112L / __NEWLIB__. macOS never defines _POSIX_C_SOURCE in this build,
+#     so lely takes the fallback branch and declares its own `static inline int ffs(int)`, which
+#     clashes with the macOS SDK <strings.h> non-static ffs() -> "static declaration of 'ffs'
+#     follows non-static declaration" (co/gw_txt.c). macOS HAS a real POSIX <strings.h> with
+#     ffs(), so add __APPLE__ to the detection (same class as the 0099 sys/types.h fix). ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0103-macos-strings-have.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0103-macos-strings-have.patch" <<'PATCHEOF'
+Subject: [PATCH] Detect <strings.h> on macOS (avoid redeclaring ffs)
+
+On macOS this build does not define _POSIX_C_SOURCE, so LELY_HAVE_STRINGS_H
+is unset and lely declares its own `static inline int ffs(int)`, clashing
+with the non-static ffs() in the macOS SDK <strings.h>. macOS has a real
+POSIX <strings.h> with ffs(), so treat __APPLE__ as having it.
+---
+diff --git a/include/lely/libc/strings.h b/include/lely/libc/strings.h
+--- a/include/lely/libc/strings.h
++++ b/include/lely/libc/strings.h
+@@ -27,3 +27,3 @@
+ #ifndef LELY_HAVE_STRINGS_H
+-#if (_POSIX_C_SOURCE >= 200112L || defined(__NEWLIB__))
++#if (_POSIX_C_SOURCE >= 200112L || defined(__NEWLIB__) || defined(__APPLE__))
+ #define LELY_HAVE_STRINGS_H 1
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0103-macos-strings-have.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0103-macos-strings-have.patch to UPDATE_COMMAND"
+fi
+
 # --- as2_behaviors_swarm_flocking (humble only): force-includes <cassert>/<assert.h>
 #     with add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-include$<SEMICOLON>cassert>" ...).
 #     $<SEMICOLON> splits it into two SEPARATE compile options (-include, cassert); CMake's
