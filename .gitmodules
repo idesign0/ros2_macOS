@@ -1676,7 +1676,7 @@
 	branch = jazzy
 [submodule "ros-planning/mvsim"]
 	path = ros-planning/mvsim
-	url = https://github.com/MRPT/mvsim.git
+	url = https://github.com/idesign0/id_mvsim.git
 	branch = develop
 [submodule "ros2/interfaces/nao_interfaces"]
 	path = ros2/interfaces/nao_interfaces
