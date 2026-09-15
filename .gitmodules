@@ -2068,7 +2068,7 @@
 	branch = ros2
 [submodule "ros-planning/mvsim"]
 	path = ros-planning/mvsim
-	url = https://github.com/MRPT/mvsim.git
+	url = https://github.com/idesign0/id_mvsim.git
 	branch = develop
 [submodule "ros-planning/neo_nav2_bringup"]
 	path = ros-planning/neo_nav2_bringup
