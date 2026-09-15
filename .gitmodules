@@ -548,7 +548,7 @@
 	branch = kilted
 [submodule "gazebo-release/gz_math_vendor"]
 	path = gazebo-release/gz_math_vendor
-	url = https://github.com/gazebo-release/gz_math_vendor.git
+	url = https://github.com/idesign0/id_gz_math_vendor.git
 	branch = kilted
 [submodule "gazebo-release/gz_utils_vendor"]
 	path = gazebo-release/gz_utils_vendor
