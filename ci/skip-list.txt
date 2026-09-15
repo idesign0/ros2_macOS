@@ -468,3 +468,5 @@ husarion_ugv_diagnostics
 # "Unknown CMake command ament_nodl_register". Niche security EXAMPLE demonstrating NoDL-based
 # access policy; no consumers. Skip until ament_nodl's cmake integration builds on macOS.
 ros2launch_security_examples
+# python_mrpt: MRPT's generated pybind11 std bindings (build/.../std/stl_vector.cpp) use libstdc++-internal __gnu_cxx::__normal_iterator, which does not exist on libc++ (Apple clang) -> 'explicit specialization of non-template class'. Regenerating the bindings for libc++ is out of scope; skip the python bindings.
+python_mrpt
