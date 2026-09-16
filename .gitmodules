@@ -816,7 +816,7 @@
 	branch = ros2
 [submodule "ros2/interfaces/autoapms"]
 	path = ros2/interfaces/autoapms
-	url = https://github.com/AutoAPMS/auto-apms.git
+	url = https://github.com/idesign0/id_auto-apms.git
 	branch = master
 [submodule "ros-drivers/automotive_autonomy_msgs"]
 	path = ros-drivers/automotive_autonomy_msgs
