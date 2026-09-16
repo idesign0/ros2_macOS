@@ -472,6 +472,20 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^find_package\(jsoncpp
   echo "  ros2_ouster: guard find_package(jsoncpp) against double jsoncpp_lib target in ${d#$ROOT/}/CMakeLists.txt"
 fi
 
+# --- plotjuggler ToolboxMosaico plugin (all): its bundled mosaico_sdk ALWAYS links
+#     ArrowFlight::arrow_flight_static. brew Arrow Flight's Flight.pb.cc.o references modern
+#     protobuf symbols (google::protobuf::internal::UntypedMapBase::ClearTableImpl,
+#     kDescriptorMethods) that the workspace's (older, gz-built) protobuf does not export -> a wall
+#     of "Undefined symbols" at the final plotjuggler link. ToolboxMosaico is an optional data-
+#     service plugin and the only Arrow *Flight* user (DataLoadParquet/ToolboxCSV use Arrow core
+#     only), so disable just this plugin on macOS. Idempotent (ci-drop-mosaico). ---
+for _f in $(find "$ROOT" -path '*plotjuggler_plugins/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  grep -q 'ci-drop-mosaico' "$_f" && continue
+  grep -q 'add_subdirectory(ToolboxMosaico)' "$_f" || continue
+  perl -0pi -e 's{^add_subdirectory\(ToolboxMosaico\)}{# ci-drop-mosaico: ToolboxMosaico/mosaico_sdk links Arrow Flight (brew), whose Flight.pb.cc\n# references modern protobuf symbols absent from the workspace protobuf -> undefined at link.\nif(NOT APPLE)\n  add_subdirectory(ToolboxMosaico)\nendif()}m' "$_f"
+  echo "  plotjuggler: guard ToolboxMosaico (Arrow Flight vs workspace protobuf) on APPLE in ${_f#$ROOT/}"
+done
+
 # --- Lane 4 cluster: fmt >= 11 (brew ships fmt 12) moved fmt::format out of
 #     <fmt/core.h> into <fmt/format.h>. Packages written for fmt <= 10 include
 #     only core.h and fail with "no member named 'format' in namespace 'fmt'".
