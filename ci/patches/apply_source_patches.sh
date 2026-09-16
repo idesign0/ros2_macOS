@@ -456,6 +456,17 @@ for _f in $(grep -rlE 'yaml-cpp::yaml-cpp' "$ROOT" --include=CMakeLists.txt 2>/d
   echo "  yaml-cpp: fabricate namespaced yaml-cpp::yaml-cpp in ${_f#$ROOT/}"
 done
 
+# --- ros2_ouster (humble): find_package(jsoncpp REQUIRED) creates the imported target
+#     jsoncpp_lib, but PCL/pcl_conversions (found just above in the same CMakeLists) already
+#     pulled brew jsoncpp and created jsoncpp_lib -> "add_library cannot create imported target
+#     jsoncpp_lib because another target with the same name already exists" at jsoncppConfig.cmake.
+#     Guard the redundant find. Idempotent (ci-ouster-jsoncpp). ---
+d="$(_pkg_dir ros2_ouster)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^find_package\(jsoncpp REQUIRED\)' "$d/CMakeLists.txt" && ! grep -q 'ci-ouster-jsoncpp' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{^find_package\(jsoncpp REQUIRED\)}{# ci-ouster-jsoncpp: jsoncpp_lib may already be created transitively by PCL/pcl_conversions\nif(NOT TARGET jsoncpp_lib)\n  find_package(jsoncpp REQUIRED)\nendif()}m' "$d/CMakeLists.txt"
+  echo "  ros2_ouster: guard find_package(jsoncpp) against double jsoncpp_lib target in ${d#$ROOT/}/CMakeLists.txt"
+fi
+
 # --- Lane 4 cluster: fmt >= 11 (brew ships fmt 12) moved fmt::format out of
 #     <fmt/core.h> into <fmt/format.h>. Packages written for fmt <= 10 include
 #     only core.h and fail with "no member named 'format' in namespace 'fmt'".
