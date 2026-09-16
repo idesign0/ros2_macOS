@@ -1752,7 +1752,27 @@ for _d in /opt/homebrew/lib/cmake/jsoncpp /opt/homebrew/opt/jsoncpp/lib/cmake/js
   echo "  jsoncpp: created missing jsoncppConfigVersion.cmake (v$_jv) in $_d (VTK/PCL fix)"
 done
 
-# --- VTK 9.6 (brew) Boost EXACT pin (post-brew): VTK-vtk-module-find-packages.cmake does
+# --- PCL (brew) hardcoded VTK_DIR (post-brew, all 3): PCLConfig.cmake's find_VTK() macro does
+#     set(VTK_DIR "/opt/homebrew/lib/cmake/vtk-9.6" CACHE PATH ...) then find_package(VTK QUIET
+#     COMPONENTS ...). When brew installs a NEWER VTK (currently 9.7) the hardcoded 9.6 path does
+#     not exist, the QUIET find fails, and PCL aborts with "visualization is required but vtk was
+#     not found" -> every PCL-visualization consumer dies at configure (rtabmap_rviz_plugins via
+#     pcl_conversions, multisensor_calibration via pcl_ros, navmap_rviz_plugin, ...). Repoint the
+#     hardcoded brew VTK_DIR at the actually-installed vtk-9.x cmake dir (highest version present).
+#     Only the /opt/homebrew brew path is touched; the PCL_ALL_IN_ONE_INSTALLER 3rdParty paths are
+#     left alone. Idempotent (skips once VTK_DIR already names the real dir). ---
+_vtk_real="$(ls -d /opt/homebrew/lib/cmake/vtk-9.* 2>/dev/null | sort -V | tail -1)"
+if [ -n "$_vtk_real" ]; then
+  for _pcl in /opt/homebrew/share/pcl-1.*/PCLConfig.cmake; do
+    [ -f "$_pcl" ] || continue
+    grep -qE 'set\(VTK_DIR "/opt/homebrew/lib/cmake/vtk-9\.[0-9]+"' "$_pcl" || continue
+    grep -qE "set\(VTK_DIR \"$_vtk_real\"" "$_pcl" && continue
+    sed "${SEDI[@]}" -E "s#(set\(VTK_DIR \")/opt/homebrew/lib/cmake/vtk-9\.[0-9]+(\")#\\1$_vtk_real\\2#" "$_pcl"
+    echo "  pcl: repoint hardcoded brew VTK_DIR -> $_vtk_real in $_pcl"
+  done
+fi
+
+# --- VTK 9.x (brew) Boost EXACT pin (post-brew): VTK-vtk-module-find-packages.cmake does
 #     find_package(Boost 1.90.0 EXACT), but this workspace routes Boost to the vendored
 #     boost-1.89 -> "Could not find the VTK package due to a missing dependency: Boost"
 #     -> VTK not found -> PCL's find_package(VTK COMPONENTS ...) fails (QUIET) -> PCL
@@ -1761,11 +1781,12 @@ done
 #     BoostGraphAlgorithms module; PCL-visualization/rviz consumers use VTK rendering, not
 #     that module, so relax the EXACT 1.90.0 pin to accept the vendored 1.89. Runs post-brew
 #     (idempotent: the 1.90.0/EXACT lines are gone after). ---
-for _vf in /opt/homebrew/lib/cmake/vtk-9.6/VTK-vtk-module-find-packages.cmake; do
+for _vf in /opt/homebrew/lib/cmake/vtk-9.*/VTK-vtk-module-find-packages.cmake; do
   [ -f "$_vf" ] || continue
-  if grep -qE '^    1\.90\.0$' "$_vf"; then
-    perl -0pi -e 's{find_package\(Boost\n    1\.90\.0\n    EXACT\n}{find_package(Boost\n    \n    \n}g;' "$_vf"
-    echo "  VTK: relax find_package(Boost 1.90.0 EXACT) -> any (vendored boost-1.89) in $_vf"
+  # Match ANY pinned version (brew bumps it: 1.90.0, 1.91.0, ...), not just 1.90.0.
+  if grep -qE 'find_package\(Boost$' "$_vf" && grep -qE '^    EXACT$' "$_vf"; then
+    perl -0pi -e 's{find_package\(Boost\n    [0-9]+\.[0-9]+\.[0-9]+\n    EXACT\n}{find_package(Boost\n    \n    \n}g;' "$_vf"
+    echo "  VTK: relax find_package(Boost <ver> EXACT) -> any (vendored boost-1.89) in $_vf"
   fi
 done
 
