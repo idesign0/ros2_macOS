@@ -1632,7 +1632,7 @@
 	branch = kilted
 [submodule "ros-planning/python_mrpt_ros"]
 	path = ros-planning/python_mrpt_ros
-	url = https://github.com/MRPT/python_mrpt_ros.git
+	url = https://github.com/idesign0/id_python_mrpt_ros.git
 	branch = main
 [submodule "autonomous_driving/qpoases_vendor"]
 	path = autonomous_driving/qpoases_vendor
