@@ -2091,6 +2091,17 @@ if [ -f "$_f" ] && grep -qF 'set(OpenMP_LIBS gomp)' "$_f"; then
   perl -0pi -e 's~set\(OpenMP_LIBS gomp\)~set(OpenMP_LIBS OpenMP::OpenMP_CXX)~; s~target_compile_options\(\$\{PROJECT_NAME\}_node PRIVATE \$\{OpenMP_FLAGS\}\)~separate_arguments(_adi_omp_flags NATIVE_COMMAND "\$\{OpenMP_FLAGS\}")\n  target_compile_options(\$\{PROJECT_NAME\}_node PRIVATE \$\{_adi_omp_flags\})~' "$_f"
   echo "  adi_3dtof_image_stitching: OpenMP gomp->OpenMP::OpenMP_CXX + separate_arguments OpenMP_FLAGS in ${_f#$ROOT/}"
 fi
+# --- adi_3dtof_image_stitching (humble only): headers do #include <pcl/registration/icp.h> etc.,
+#     but the CMakeLists never find_package(PCL) and its include_directories() hardcodes the Linux
+#     path /opt/ros/humble/include (absent on macOS) instead of ${PCL_INCLUDE_DIRS} -> "fatal error:
+#     'pcl/registration/icp.h' file not found". Add find_package(PCL) and put ${PCL_INCLUDE_DIRS} on
+#     the include path (brew pcl-1.15 ships pcl/registration/). Idempotent (ci-adi-pcl). ---
+_f="$(_pkg_dir adi_3dtof_image_stitching)/CMakeLists.txt"
+if [ -f "$_f" ] && grep -qE '^find_package\(pcl_conversions' "$_f" && ! grep -q 'ci-adi-pcl' "$_f"; then
+  grep -qE '^find_package\(PCL\b' "$_f" || perl -0pi -e 's~(^find_package\(pcl_conversions[^\n]*\n)~$1find_package(PCL REQUIRED)  # ci-adi-pcl\n~m' "$_f"
+  perl -0pi -e 's~(include_directories\(\n\s*include\n)~$1  \$\{PCL_INCLUDE_DIRS\}\n~' "$_f"
+  echo "  adi_3dtof_image_stitching: find_package(PCL) + \${PCL_INCLUDE_DIRS} on include path in ${_f#$ROOT/}"
+fi
 
 # --- data_tamer_cpp (all 3): under colcon CMAKE_PROJECT_NAME==PROJECT_NAME so the
 #     standalone branch turns DATA_TAMER_BUILD_TESTS ON; its tests link ament gtest_vendor
