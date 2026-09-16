@@ -234,3 +234,4 @@ rqt_image_view
 rqt_msg
 rqt_reconfigure
 rqt_topic
+btcpp_ros2_interfaces
