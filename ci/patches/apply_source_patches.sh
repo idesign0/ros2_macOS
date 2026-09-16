@@ -421,6 +421,18 @@ if [ -n "$d" ] && grep -qE 'VCS_VERSION[[:space:]]+0\.8' "$d/CMakeLists.txt" 2>/
   done
 fi
 
+# --- autoware_map_loader (jazzy/kilted, yaml-cpp 0.8.0): links the BARE name `yaml-cpp` in
+#     target_link_libraries -> the linker treats it as `-lyaml-cpp` with no -L for the vendored
+#     yaml-cpp -> "ld: library 'yaml-cpp' not found". yaml-cpp 0.8.0 exports only the NAMESPACED
+#     target (which carries IMPORTED_LOCATION), so rewrite the bare token to yaml-cpp::yaml-cpp
+#     (then the namespaced-target fabrication below covers the 0.7.0/humble case). Runs BEFORE
+#     that fabrication so the rewritten file is picked up. Idempotent. ---
+d="$(_pkg_dir autoware_map_loader)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE 'target_link_libraries\([^)]* yaml-cpp\)' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{(target_link_libraries\([^)]*?) yaml-cpp\)}{$1 yaml-cpp::yaml-cpp)}g' "$d/CMakeLists.txt"
+  echo "  autoware_map_loader: bare yaml-cpp -> yaml-cpp::yaml-cpp in ${d#$ROOT/}/CMakeLists.txt"
+fi
+
 # --- yaml-cpp namespaced target (humble esp.): packages written for yaml-cpp >= 0.8.0 link the
 #     NAMESPACED target `yaml-cpp::yaml-cpp`, but yaml-cpp 0.7.0 (what yaml_cpp_vendor builds on
 #     humble) exports only the UNNAMESPACED `yaml-cpp` target, AND most consumers call
