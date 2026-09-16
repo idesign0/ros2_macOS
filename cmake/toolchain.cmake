@@ -126,6 +126,11 @@ endif()
 # --- RPATH settings for macOS ---
 # ci-pkgconfig-keg: keg-only formulae (libpqxx/libpq) do not put their .pc on the default pkg-config
 # path, so pkg_check_modules(libpqxx) (cx_cdb_*_plugin) fails. Add the keg pkgconfig dirs.
+# beluga_vdb finds OpenVDB via MODULE mode + a glob of /usr/lib//FindOpenVDB.cmake (Linux only);
+# point it at brew openvdb's CMake module dir so find_package(OpenVDB) resolves on macOS.
+if(EXISTS "/opt/homebrew/opt/openvdb/lib/cmake/OpenVDB")
+  set(OPENVDB_CMAKE_MODULE_PATH "/opt/homebrew/opt/openvdb/lib/cmake/OpenVDB" CACHE PATH "brew OpenVDB module dir" FORCE)
+endif()
 set(ENV{PKG_CONFIG_PATH} "/opt/homebrew/lib/pkgconfig:/opt/homebrew/opt/libpqxx/lib/pkgconfig:/opt/homebrew/opt/libpq/lib/pkgconfig:")
 
 set(CMAKE_SKIP_RPATH FALSE)
