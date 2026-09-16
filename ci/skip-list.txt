@@ -435,3 +435,6 @@ btcpp_ros2_samples
 
 # agnocast_components: depends on agnocastlib (Linux-only shared-mem IPC, already skipped) -> cascade. Skip.
 agnocast_components
+
+# raph_oak: depends on depthai (Luxonis Linux/USB SDK, already skipped — no macOS build) -> cascade. Skip.
+raph_oak
