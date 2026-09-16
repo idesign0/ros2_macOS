@@ -357,6 +357,11 @@ done
 # executable. Idempotent (ci-crazyflie-frameworks). ---
 for f in $(grep -rlF 'set(CMAKE_MODULE_LINKER_FLAGS "-lobjc -framework IOKit -framework CoreFoundation -framework Security")' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
   grep -q 'ci-crazyflie-frameworks' "$f" && continue
+  # The CMAKE_MODULE_LINKER_FLAGS set() appears in BOTH crazyflie_tools/CMakeLists.txt (where
+  # crazyflieLinkCpp is NOT defined) and crazyflie-link-cpp/CMakeLists.txt (where it IS). Only the
+  # latter can target_link_libraries(crazyflieLinkCpp ...) -- injecting into the former yields
+  # "Cannot specify link libraries for target crazyflieLinkCpp which is not built by this project".
+  grep -qE 'add_library\(\s*crazyflieLinkCpp' "$f" || continue
   perl -0pi -e 's~(set\(CMAKE_MODULE_LINKER_FLAGS "-lobjc -framework IOKit -framework CoreFoundation -framework Security"\)\n)~$1  # ci-crazyflie-frameworks: the CMAKE_*_LINKER_FLAGS above are directory-scoped and do not reach the\n  # crazyflie_server_cpp executable (built in another package); attach the frameworks to the target\n  # as PUBLIC so libusb\x27s darwin backend symbols resolve at the final link.\n  target_link_libraries(crazyflieLinkCpp PUBLIC "-framework IOKit" "-framework CoreFoundation" "-framework Security" objc)\n~' "$f"
   echo "  crazyflie: propagate IOKit/CoreFoundation/Security via crazyflieLinkCpp PUBLIC in ${f#$ROOT/}"
 done
