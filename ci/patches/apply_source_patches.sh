@@ -848,18 +848,18 @@ PATCHEOF
   echo "  lely_core_libraries: added 0103-macos-strings-have.patch to UPDATE_COMMAND"
 fi
 
-# --- as2_behaviors_swarm_flocking (humble only): force-includes <cassert>/<assert.h>
+# --- aerostack2 (humble esp.): several packages force-include <cassert>/<assert.h>
 #     with add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-include$<SEMICOLON>cassert>" ...).
 #     $<SEMICOLON> splits it into two SEPARATE compile options (-include, cassert); CMake's
 #     option handling can then separate the pair so `cassert`/`assert.h` is left as a dangling
 #     positional input -> AppleClang "no such file or directory: 'cassert'". Use the SHELL:
 #     prefix so `-include cassert` stays one adjacent, un-deduplicated fragment (same fix as
-#     the ouster -include cstdint case). No-op where the package/pattern is absent. ---
-d="$(_pkg_dir as2_behaviors_swarm_flocking)"
-if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'include\$<SEMICOLON>cassert' "$d/CMakeLists.txt"; then
-  perl -0pi -e 's{-include\$<SEMICOLON>cassert}{SHELL:-include cassert}g; s{-include\$<SEMICOLON>assert\.h}{SHELL:-include assert.h}g' "$d/CMakeLists.txt"
-  echo "  as2_behaviors_swarm_flocking: -include \$<SEMICOLON> hack -> SHELL:-include (keep the pair adjacent)"
-fi
+#     the ouster -include cstdint case). Scan ALL package CMakeLists for the pattern (hits
+#     as2_behaviors_swarm_flocking, as2_behaviors_trajectory_generation, ...). No-op if absent. ---
+for _f in $(grep -rlE 'include\$<SEMICOLON>(cassert|assert\.h)' "$ROOT" --include=CMakeLists.txt 2>/dev/null | grep -v '/build/'); do
+  perl -0pi -e 's{-include\$<SEMICOLON>cassert}{SHELL:-include cassert}g; s{-include\$<SEMICOLON>assert\.h}{SHELL:-include assert.h}g' "$_f"
+  echo "  aerostack2: -include \$<SEMICOLON> hack -> SHELL:-include in ${_f#$ROOT/}"
+done
 
 # --- mrpt_libbase (all 3): MRPT (fetched as an ExternalProject, pinned 2.15.x) declares its
 #     CArchive scalar stream operators only for the fixed-width integer types listed in
