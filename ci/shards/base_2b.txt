@@ -235,3 +235,4 @@ clearpath_generator_common
 moveit
 clearpath_common
 behaviortree_ros2
+rosx_introspection

@@ -91,7 +91,6 @@ point_cloud_msg_wrapper
 py_trees_ros_interfaces
 realsense2_camera_msgs
 rmw_implementation
-rosx_introspection
 sensor_msgs_py
 soccer_vision_3d_msgs
 stereo_msgs
