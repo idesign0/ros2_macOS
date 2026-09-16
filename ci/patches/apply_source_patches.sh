@@ -1842,16 +1842,28 @@ done
 # mavros (aerial submodule): references the `standard` mavlink dialect --
 # mavlink::standard::MAV_PROTOCOL_CAPABILITY and mavlink::standard::msg::{AUTOPILOT_VERSION,
 # GLOBAL_POSITION_INT} (plugin.hpp, mavros_uas.hpp, mission_protocol_base.hpp, sys_status.cpp,
-# global_position.cpp). The vendored mavlink here provides only the `common` dialect namespace ->
-# "no type named 'MAV_PROTOCOL_CAPABILITY' in namespace 'mavlink::standard'". All four symbols are
-# plain COMMON mavlink entities (the compiler itself suggests mavlink::common::), so repoint the
-# standard-dialect references to common. Idempotent (ci-mavros-common). ---
-for f in $(grep -rlE 'mavlink::standard::' "$ROOT" --include='*.hpp' --include='*.cpp' 2>/dev/null | grep '/mavros/'); do
-  grep -q 'ci-mavros-common' "$f" && continue
-  sed "${SEDI[@]}" 's/mavlink::standard::/mavlink::common::/g' "$f"
-  printf '\n// ci-mavros-common: standard mavlink dialect absent; symbols used are all common\n' >> "$f"
-  echo "  mavros: mavlink::standard:: -> mavlink::common:: in ${f#$ROOT/}"
-done
+# global_position.cpp). Where the enum/messages live depends on the PINNED mavlink version and
+# differs per distro, so this rewrite must self-adapt (the script is byte-identical across distros):
+#   * newer mavlink (kilted/jazzy pin 71c47402): MAV_PROTOCOL_CAPABILITY is defined in common.xml
+#     and standard.xml `<include>`s common.xml, so in the standard-dialect build the symbols live in
+#     mavlink::common:: only -> mavros's mavlink::standard:: refs fail ("no type named
+#     MAV_PROTOCOL_CAPABILITY in namespace mavlink::standard") -> rewrite standard:: -> common::.
+#   * older mavlink (humble pin fc95b961): standard.xml SELF-DEFINES MAV_PROTOCOL_CAPABILITY (it
+#     `<include>`s minimal.xml, not common.xml), so mavlink::standard:: is correct and there is no
+#     mavlink::common::MAV_PROTOCOL_CAPABILITY -> rewriting would BREAK it -> skip the rewrite.
+# Detect by asking the checked-out mavlink whether standard.xml self-defines the enum.
+# Idempotent (ci-mavros-common). ---
+_mavlink_std_xml=$(find "$ROOT" -path '*mavlink/message_definitions/v1.0/standard.xml' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)
+if [ -n "$_mavlink_std_xml" ] && grep -q 'enum name="MAV_PROTOCOL_CAPABILITY"' "$_mavlink_std_xml"; then
+  echo "  mavros: pinned mavlink standard.xml self-defines MAV_PROTOCOL_CAPABILITY -> keep mavlink::standard:: (skip common rewrite)"
+else
+  for f in $(grep -rlE 'mavlink::standard::' "$ROOT" --include='*.hpp' --include='*.cpp' 2>/dev/null | grep '/mavros/'); do
+    grep -q 'ci-mavros-common' "$f" && continue
+    sed "${SEDI[@]}" 's/mavlink::standard::/mavlink::common::/g' "$f"
+    printf '\n// ci-mavros-common: standard mavlink dialect absent; symbols used are all common\n' >> "$f"
+    echo "  mavros: mavlink::standard:: -> mavlink::common:: in ${f#$ROOT/}"
+  done
+fi
 
 # --- autoware yaml-cpp::yaml-cpp target scoping (autoware_core, humble esp.): several
 #     autoware packages link ${YAML_CPP_LIBRARIES} (= yaml-cpp::yaml-cpp, set by the
