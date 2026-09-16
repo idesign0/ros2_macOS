@@ -478,3 +478,8 @@ foxglove_sdk_vendor
 # caret_trace: requires LTTngUST (Linux userspace tracing) with tracepoints embedded in its headers;
 # LTTng-UST does not build on macOS. Skip (same class as the LTTng agnostic skips).
 caret_trace
+
+# ros1_bridge / ros1_rosbag_storage_vendor: bridge/vendor to ROS 1 (roscpp, ROS1 rosbag storage);
+# no ROS 1 on macOS. Skip.
+ros1_bridge
+ros1_rosbag_storage_vendor

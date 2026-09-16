@@ -31,3 +31,4 @@ ros2_medkit_sovd_service_interface
 ros2_medkit_topic_beacon
 sol_vendor
 tinyspline_vendor
+ros_industrial_cmake_boilerplate
