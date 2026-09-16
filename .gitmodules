@@ -692,7 +692,7 @@
 	branch = release/humble/mavlink
 [submodule "aerial/mavros"]
 	path = aerial/mavros
-	url = https://github.com/mavlink/mavros.git
+	url = https://github.com/idesign0/id_mavros.git
 	branch = ros2
 [submodule "aerial/webots_ros2"]
 	path = aerial/webots_ros2
