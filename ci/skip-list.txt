@@ -421,3 +421,11 @@ husarion_ugv_diagnostics
 ros2launch_security_examples
 # aruco_opencv: aruco_tracker.cpp passes its LifecycleNode to image_transport::create_publisher(rclcpp::Node*), which has no LifecycleNode/NodeInterfaces overload in this image_transport -> 'no viable conversion from ArucoTracker to rclcpp::Node*'. Needs an upstream image_transport API addition; skip.
 aruco_opencv
+
+# foxglove_sdk_vendor: ships PREBUILT binaries for Linux x86_64/aarch64 only (CMakeLists FATAL_ERROR
+# "currently only supports Linux hosts"); no macOS artifact and no from-source build. Skip.
+foxglove_sdk_vendor
+
+# caret_trace: requires LTTngUST (Linux userspace tracing) with tracepoints embedded in its headers;
+# LTTng-UST does not build on macOS. Skip (same class as the LTTng agnostic skips).
+caret_trace
