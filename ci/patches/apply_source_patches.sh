@@ -1860,6 +1860,21 @@ for _f in $(find "$ROOT" -path '*mavros_extras/CMakeLists.txt' -not -path '*/bui
     echo "  mavros_extras: link \${GeographicLib_LIBRARIES} into mavros_extras_plugins in ${_f#$ROOT/}"
   fi
 done
+
+# --- mavlink (aerial submodule, pin 71c47402 on kilted/jazzy): its CMakeLists defaults
+#     Py_VERSION to "2" when ROS_PYTHON_VERSION is unset (it is unset here), so it does
+#     find_package(Python2). macOS runners have no Python2 -> Python2_EXECUTABLE resolves to
+#     the literal "_Python2_EXECUTABLE-NOTFOUND", and the header-generation custom command runs
+#     `env _Python2_EXECUTABLE-NOTFOUND <gen> ...` -> "env: _Python2_EXECUTABLE-NOTFOUND: No such
+#     file or directory" (Error 127) -> mavlink aborts and cascades mavros_msgs/mavros. ROS 2 is
+#     Python 3 everywhere here (the toolchain pins framework Python 3.11), and the mavlink
+#     generator runs fine under Python 3, so default Py_VERSION to "3". Self-adapting: only files
+#     that still say "2" are touched (humble's newer mavlink already ships "3"). Idempotent. ---
+for _f in $(grep -rlE 'set\(Py_VERSION "2"\)' "$ROOT" --include=CMakeLists.txt 2>/dev/null | grep -v '/build/'); do
+  sed "${SEDI[@]}" 's/set(Py_VERSION "2")/set(Py_VERSION "3")/' "$_f"
+  echo "  mavlink: default Py_VERSION 2 -> 3 (ROS 2 uses Python 3; avoid absent Python2) in ${_f#$ROOT/}"
+done
+
 # mavros (aerial submodule): references the `standard` mavlink dialect --
 # mavlink::standard::MAV_PROTOCOL_CAPABILITY and mavlink::standard::msg::{AUTOPILOT_VERSION,
 # GLOBAL_POSITION_INT} (plugin.hpp, mavros_uas.hpp, mission_protocol_base.hpp, sys_status.cpp,
