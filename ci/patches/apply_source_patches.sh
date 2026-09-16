@@ -2103,6 +2103,21 @@ if [ -f "$_f" ] && grep -qE '^find_package\(pcl_conversions' "$_f" && ! grep -q 
   echo "  adi_3dtof_image_stitching: find_package(PCL) + \${PCL_INCLUDE_DIRS} on include path in ${_f#$ROOT/}"
 fi
 
+# --- as2_motion_controller / pid_speed_controller (humble aerostack2): its CMakeLists does
+#     find_package(pid_controller QUIET), expecting the RPS98 header-only pid_controller lib
+#     (github.com/RPS98/pid_controller, providing include/pid_controller/pid.hpp), and only vendors
+#     that repo (FetchContent) when NOT found. But the name COLLIDES with ros2_controllers'
+#     unrelated `pid_controller` controller package (also in this workspace); once that is
+#     installed, pid_controller_FOUND is TRUE, the RPS98 clone is skipped, thirdparties/ stays
+#     empty, and pid_speed_controller.hpp's `#include "pid_controller/pid.hpp"` is not found. Force
+#     the vendored-clone branch. Idempotent (ci-as2-pidctrl). ---
+for _f in $(find "$ROOT" -path '*as2_motion_controller/plugins/pid_speed_controller/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  grep -q 'ci-as2-pidctrl' "$_f" && continue
+  grep -qF 'if(${pid_controller_FOUND})' "$_f" || continue
+  perl -0pi -e 's{if\(\$\{pid_controller_FOUND\}\)}{if(FALSE)  # ci-as2-pidctrl: ros2_controllers pid_controller shadows the RPS98 header lib; always vendor}' "$_f"
+  echo "  as2_motion_controller: force-vendor RPS98 pid_controller (find_package name collision) in ${_f#$ROOT/}"
+done
+
 # --- data_tamer_cpp (all 3): under colcon CMAKE_PROJECT_NAME==PROJECT_NAME so the
 #     standalone branch turns DATA_TAMER_BUILD_TESTS ON; its tests link ament gtest_vendor
 #     but hit a googletest ABI mismatch (undefined testing::internal::MakeAndRegisterTestInfo
