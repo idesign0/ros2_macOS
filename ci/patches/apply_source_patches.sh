@@ -421,6 +421,29 @@ if [ -n "$d" ] && grep -qE 'VCS_VERSION[[:space:]]+0\.8' "$d/CMakeLists.txt" 2>/
   done
 fi
 
+# --- yaml-cpp namespaced target (humble esp.): packages written for yaml-cpp >= 0.8.0 link the
+#     NAMESPACED target `yaml-cpp::yaml-cpp`, but yaml-cpp 0.7.0 (what yaml_cpp_vendor builds on
+#     humble) exports only the UNNAMESPACED `yaml-cpp` target, AND most consumers call
+#     find_package(yaml-cpp) directly (bypassing the yaml_cpp_vendor extras) -> generate-time
+#     "Target <X> links to yaml-cpp::yaml-cpp but the target was not found" (rmf_traffic_ros2,
+#     velodyne_pointcloud, leo_filters, nebula_velodyne_common, swri_transform_util, ~24 pkgs).
+#     Inject a fabrication guard before the first target_link_libraries of every CMakeLists that
+#     names the namespaced target: if it is missing but `yaml-cpp` exists, wrap it in an INTERFACE
+#     IMPORTED alias. On yaml-cpp 0.8.0 (jazzy/kilted) the namespaced target already exists so the
+#     guard is a runtime no-op -> the script stays byte-identical and self-adapts per distro. Skip
+#     files that already carry a yaml-cpp::yaml-cpp fabrication (husarion/medkit above, forks).
+#     Idempotent (ci-yamlcpp-ns-alias). ---
+for _f in $(grep -rlE 'yaml-cpp::yaml-cpp' "$ROOT" --include=CMakeLists.txt 2>/dev/null | grep -vE '/build/|/install/'); do
+  grep -q 'ci-yamlcpp-ns-alias' "$_f" && continue
+  grep -q 'add_library(yaml-cpp::yaml-cpp' "$_f" && continue
+  # Inject the guard before EACH target_link_libraries whose argument list actually contains
+  # yaml-cpp::yaml-cpp (matching one level of nested parens for generator expressions), so the
+  # fabrication runs in the SAME scope/conditional as the use -- injecting only before the FIRST
+  # target_link_libraries can land inside a disabled if(BUILD_TESTING) block and never run.
+  perl -0pi -e 's{(target_link_libraries\s*\((?:[^()]|\([^()]*\))*?yaml-cpp::yaml-cpp)}{# ci-yamlcpp-ns-alias: yaml-cpp 0.7.0 exports only the unnamespaced `yaml-cpp` target;\n# fabricate the `yaml-cpp::yaml-cpp` name consumers expect (runtime no-op on yaml-cpp 0.8.0).\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  if(NOT TARGET yaml-cpp)\n    find_package(yaml-cpp QUIET)\n  endif()\n  if(TARGET yaml-cpp)\n    add_library(yaml-cpp::yaml-cpp INTERFACE IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp)\n  endif()\nendif()\n$1}g' "$_f"
+  echo "  yaml-cpp: fabricate namespaced yaml-cpp::yaml-cpp in ${_f#$ROOT/}"
+done
+
 # --- Lane 4 cluster: fmt >= 11 (brew ships fmt 12) moved fmt::format out of
 #     <fmt/core.h> into <fmt/format.h>. Packages written for fmt <= 10 include
 #     only core.h and fail with "no member named 'format' in namespace 'fmt'".
