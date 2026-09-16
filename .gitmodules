@@ -1044,7 +1044,7 @@
 	branch = foxy-devel
 [submodule "moveit/crane_plus"]
 	path = moveit/crane_plus
-	url = https://github.com/rt-net/crane_plus.git
+	url = https://github.com/idesign0/id_crane_plus.git
 	branch = master
 [submodule "ros2/interfaces/cras_msgs"]
 	path = ros2/interfaces/cras_msgs
