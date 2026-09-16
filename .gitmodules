@@ -2084,7 +2084,7 @@
 	branch = master
 [submodule "ros-planning/python_mrpt_ros"]
 	path = ros-planning/python_mrpt_ros
-	url = https://github.com/MRPT/python_mrpt_ros.git
+	url = https://github.com/idesign0/id_python_mrpt_ros.git
 	branch = main
 [submodule "ros-planning/raspimouse_slam_navigation_ros2"]
 	path = ros-planning/raspimouse_slam_navigation_ros2
