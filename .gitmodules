@@ -1488,7 +1488,7 @@
 	branch = master
 [submodule "aerial/mavros"]
 	path = aerial/mavros
-	url = https://github.com/mavlink/mavros.git
+	url = https://github.com/idesign0/id_mavros.git
 	branch = ros2
 [submodule "ros-drivers/phidgets_drivers"]
 	path = ros-drivers/phidgets_drivers
