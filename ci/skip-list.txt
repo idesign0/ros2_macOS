@@ -483,3 +483,6 @@ caret_trace
 # no ROS 1 on macOS. Skip.
 ros1_bridge
 ros1_rosbag_storage_vendor
+
+# agnocast_components: depends on agnocastlib (Linux-only shared-mem IPC, already skipped) -> cascade. Skip.
+agnocast_components
