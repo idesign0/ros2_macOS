@@ -78,13 +78,22 @@ set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpy
 set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
 
 # Check the package/project name
-if("${CMAKE_PROJECT_NAME}" MATCHES "^(kinematics_interface_pinocchio|linear_feedback_controller)$")
+if("${CMAKE_PROJECT_NAME}" MATCHES "^(kinematics_interface_pinocchio|linear_feedback_controller|libfranka)$")
     message(STATUS "Stitching Boost and Boost-Python for ${CMAKE_PROJECT_NAME}")
     set(Boost_INCLUDE_DIR "/opt/homebrew/opt/boost/include" CACHE PATH "" FORCE)
     # Explicitly map the Python 3.14 library path you just found
     set(Boost_PYTHON314_LIBRARY_RELEASE "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
     set(Boost_PYTHON314_LIBRARY_DEBUG "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
     set(Boost_NO_SYSTEM_PATHS OFF CACHE BOOL "" FORCE)
+    # Point CONFIG-mode find_package(Boost) (realtime_tools/hardware_interface extras that
+    # do find_package(Boost) with no components) at brew boost's BoostConfig.cmake, else those
+    # transitive finds fail: "Could not find a package configuration file provided by Boost".
+    file(GLOB _brew_boost_cmake_dirs "/opt/homebrew/opt/boost/lib/cmake/Boost-*")
+    if(_brew_boost_cmake_dirs)
+        list(GET _brew_boost_cmake_dirs 0 _brew_boost_cmake_dir)
+        set(Boost_DIR "${_brew_boost_cmake_dir}" CACHE PATH "" FORCE)
+    endif()
+    set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/boost;${CMAKE_PREFIX_PATH}")
 else()
     message(STATUS "Using custom CMake Boost for ${CMAKE_PROJECT_NAME}")
 
