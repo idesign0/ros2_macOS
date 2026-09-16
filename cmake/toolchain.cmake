@@ -67,6 +67,28 @@ set(Python_FIND_STRATEGY "LOCATION" CACHE STRING "" FORCE)
 set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib" CACHE FILEPATH "Python 3.11 library" FORCE)
 set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
 
+# Boost: a few packages pull brew eigenpy, whose /opt/homebrew/lib/cmake/eigenpy/boost.cmake
+# does find_package(Boost COMPONENTS python314) (Python 3.14). The vendored boost-1.89 ships
+# only boost_python311 -> "Could NOT find Boost (missing: python314)" (libfranka,
+# kinematics_interface_pinocchio, linear_feedback_controller). Route ONLY those projects to brew
+# boost + brew boost-python314; everyone else keeps the vendored boost-1.89 (mirrors the
+# kilted/jazzy toolchain guard).
+if("${CMAKE_PROJECT_NAME}" MATCHES "^(kinematics_interface_pinocchio|linear_feedback_controller|libfranka)$")
+    message(STATUS "Stitching Boost and Boost-Python (brew python314) for ${CMAKE_PROJECT_NAME}")
+    set(Boost_INCLUDE_DIR "/opt/homebrew/opt/boost/include" CACHE PATH "" FORCE)
+    set(Boost_PYTHON314_LIBRARY_RELEASE "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
+    set(Boost_PYTHON314_LIBRARY_DEBUG "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
+    set(Boost_NO_SYSTEM_PATHS OFF CACHE BOOL "" FORCE)
+    # Point CONFIG-mode find_package(Boost) (realtime_tools/hardware_interface extras that
+    # do find_package(Boost) with no components) at brew boost's BoostConfig.cmake, else those
+    # transitive finds fail: "Could not find a package configuration file provided by Boost".
+    file(GLOB _brew_boost_cmake_dirs "/opt/homebrew/opt/boost/lib/cmake/Boost-*")
+    if(_brew_boost_cmake_dirs)
+        list(GET _brew_boost_cmake_dirs 0 _brew_boost_cmake_dir)
+        set(Boost_DIR "${_brew_boost_cmake_dir}" CACHE PATH "" FORCE)
+    endif()
+    set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/boost;${CMAKE_PREFIX_PATH}")
+else()
 # Boost (Custom ROS 2 build, not Homebrew)
 WORKSPACE_PATH(BOOST_ROOT "ros-commondep/boost-1.89")
 set(BOOST_INCLUDEDIR "${BOOST_ROOT}/include" CACHE PATH "Boost include")
@@ -82,6 +104,7 @@ add_definitions(-DBOOST_TIMER_ENABLE_DEPRECATED)
 set(Boost_PYTHON_LIBRARY "${BOOST_LIBRARYDIR}/libboost_python311.dylib" CACHE FILEPATH "Boost Python library")
 set(Boost_PYTHON_INCLUDE_DIR "${BOOST_INCLUDEDIR}" CACHE PATH "Boost Python include dir")
 set(CMAKE_PREFIX_PATH "${BOOST_ROOT}/lib/cmake/Boost-1.89.0;${CMAKE_PREFIX_PATH}" CACHE PATH "Boost CMake path")
+endif()
 
 
 # RPATH settings for macOS
