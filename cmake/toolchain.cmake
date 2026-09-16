@@ -374,7 +374,7 @@ endif()
 set(GTSAM_BUILD_TESTS              OFF CACHE BOOL "" FORCE)  # default ON  - skip tests
 set(GTSAM_BUILD_EXAMPLES_ALWAYS    OFF CACHE BOOL "" FORCE)  # default ON  - skip examples
 set(GTSAM_BUILD_TIMING_ALWAYS      OFF CACHE BOOL "" FORCE)
-set(GTSAM_BUILD_UNSTABLE           OFF CACHE BOOL "" FORCE)  # consumers do not use gtsam_unstable
+set(GTSAM_BUILD_UNSTABLE           ON  CACHE BOOL "" FORCE)  # mola_state_estimation_smoother needs GTSAM_UNSTABLE
 set(GTSAM_UNSTABLE_BUILD_PYTHON    OFF CACHE BOOL "" FORCE)
 set(GTSAM_BUILD_PYTHON             OFF CACHE BOOL "" FORCE)
 set(GTSAM_INSTALL_MATLAB_TOOLBOX   OFF CACHE BOOL "" FORCE)
