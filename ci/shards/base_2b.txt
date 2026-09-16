@@ -350,3 +350,4 @@ turtlebot3_manipulation_moveit_config
 moveit
 moveit_task_constructor_capabilities
 tiago_pro_moveit_config
+rosx_introspection

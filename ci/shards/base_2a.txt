@@ -226,7 +226,6 @@ rmf_task_msgs
 rmw_implementation
 robot_calibration_msgs
 ros2_medkit_msgs
-rosx_introspection
 rtabmap_msgs
 sensor_msgs_py
 soccer_vision_2d_msgs
