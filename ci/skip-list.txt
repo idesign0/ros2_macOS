@@ -486,3 +486,9 @@ ros1_rosbag_storage_vendor
 
 # agnocast_components: depends on agnocastlib (Linux-only shared-mem IPC, already skipped) -> cascade. Skip.
 agnocast_components
+
+# cie_sample_application: depends on cie_thread_configurator (skip-listed, Linux-only agnocast)
+cie_sample_application
+
+# ign_rviz: depends on ign_rviz_common/ign_rviz_plugins (skip-listed, gz Fortress)
+ign_rviz
