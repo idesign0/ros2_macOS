@@ -438,3 +438,18 @@ agnocast_components
 
 # raph_oak: depends on depthai (Luxonis Linux/USB SDK, already skipped — no macOS build) -> cascade. Skip.
 raph_oak
+
+# cie_sample_application: depends on cie_thread_configurator (skip-listed, Linux-only agnocast)
+cie_sample_application
+
+# ign_rviz: depends on ign_rviz_common/ign_rviz_plugins (skip-listed, gz Fortress not built as ROS pkgs)
+ign_rviz
+
+# cx_bringup: depends on cx_protobuf_plugin (skip-listed)
+cx_bringup
+
+# compass_conversions: depends on compass_interfaces/magnetic_model (skip-listed) + cras_cpp_common (absent)
+compass_conversions
+
+# nebula_continental: depends on nebula_continental_hw_interfaces (skip-listed)
+nebula_continental
