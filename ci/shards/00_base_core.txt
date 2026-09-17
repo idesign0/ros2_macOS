@@ -99,8 +99,6 @@ clearpath_common
 clearpath_config
 clearpath_control
 clearpath_description
-clearpath_diagnostics
-clearpath_generator_common
 clearpath_manipulators
 clearpath_manipulators_description
 clearpath_mounts_description

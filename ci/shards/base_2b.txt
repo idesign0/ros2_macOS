@@ -13,7 +13,6 @@ velodyne_driver
 velodyne_pointcloud
 zstd_image_transport
 canopen_proxy_driver
-clearpath_diagnostics
 clearpath_platform_description
 control_toolbox
 controller_interface
@@ -231,7 +230,6 @@ moveit_setup_srdf_plugins
 clearpath_manipulators
 moveit_setup_assistant
 turtlebot3_manipulation_moveit_config
-clearpath_generator_common
 moveit
 clearpath_common
 behaviortree_ros2

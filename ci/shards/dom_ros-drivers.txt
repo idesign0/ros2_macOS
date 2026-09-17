@@ -268,3 +268,6 @@ wireless_watcher
 zbar_ros
 zbar_ros_interfaces
 zed_msgs
+btcpp_ros2_interfaces
+behaviortree_ros2
+clearpath_generator_common

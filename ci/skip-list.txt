@@ -453,3 +453,7 @@ compass_conversions
 
 # nebula_continental: depends on nebula_continental_hw_interfaces (skip-listed)
 nebula_continental
+
+# clearpath_diagnostics: build_depends foxglove_bridge (a ros-visualization DOMAIN package) but was
+# placed in the base -> unsatisfiable cross-layer dep. humble does not build it either. Skip.
+clearpath_diagnostics
