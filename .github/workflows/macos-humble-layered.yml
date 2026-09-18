@@ -406,6 +406,7 @@ jobs:
           colcon build --packages-select $SEL --merge-install \
             --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "build_${{ matrix.shard }}.log"
           mkdir -p install_shard
           find install -type f -newer /tmp/base_marker 2>/dev/null | while read -r f; do
@@ -416,6 +417,12 @@ jobs:
         run: |
           mkdir -p summaries
           { echo "## shard: ${{ matrix.shard }}"; grep -E 'Summary:|packages failed' "build_${{ matrix.shard }}.log" 2>/dev/null || true; grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sort -u || true; } > "summaries/${{ matrix.shard }}.txt"
+          # Diagnostic: capture the compile database of every failed package (small JSON) so
+          # include-path / flag issues that the non-verbose make log hides (e.g. cartographer_rviz's
+          # "<cstddef> tried including <stddef.h>" libc++ shadowing) can be inspected from the artifact.
+          for _pkg in $(grep -oE 'Failed +<<< [A-Za-z0-9_]+' "build_${{ matrix.shard }}.log" 2>/dev/null | awk '{print $NF}' | sort -u); do
+            [ -f "build/$_pkg/compile_commands.json" ] && cp "build/$_pkg/compile_commands.json" "summaries/${_pkg}.compile_commands.json" 2>/dev/null || true
+          done
       - name: Upload shard delta
         if: always()
         uses: actions/upload-artifact@v4
