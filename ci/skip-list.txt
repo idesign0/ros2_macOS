@@ -415,3 +415,15 @@ foxglove_sdk_vendor
 # caret_trace: requires LTTngUST (Linux userspace tracing) with tracepoints embedded in its headers;
 # LTTng-UST does not build on macOS. Skip (same class as the LTTng agnostic skips).
 caret_trace
+
+# ign_rviz: metapackage over ign_rviz_common/ign_rviz_plugins (both skipped — classic
+# ignition-math6 / gz vendor packages unavailable on macOS). Consumer cascades; skip.
+ign_rviz
+
+# cx_bringup: build-depends cx_protobuf_plugin (skipped above — needs Fawkes ProtobufComm,
+# not in tree). Unsatisfiable cascade; skip.
+cx_bringup
+
+# compass_conversions: build-depends compass_interfaces (skipped above — needs cras_cpp_common,
+# not in tree). Unsatisfiable cascade; skip.
+compass_conversions
