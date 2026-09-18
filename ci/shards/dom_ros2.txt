@@ -2,6 +2,9 @@ action_tutorials_cpp
 action_tutorials_py
 base2d_kinematics
 camera_aravis2
+# color_util: co-located from dom_ros-visualization.txt -- metro_nav_demo_utils (this shard)
+# depends on it and colcon --packages-select does not build deps; duplicate build is harmless.
+color_util
 composition
 dataspeed_can
 dataspeed_can_tools
