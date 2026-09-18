@@ -212,6 +212,30 @@ for _p in husarion_ugv_lights husarion_ugv_diagnostics; do
   perl -0pi -e 's{(\nendforeach\(\)\n)}{$1\n# ci-husarion-yamlcpp: fabricate the directory-scoped yaml-cpp::yaml-cpp IMPORTED target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS "\$\{YAML_CPP_INCLUDE_DIR\}" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\n}' "$f"
   echo "  $_p: fabricate yaml-cpp::yaml-cpp target in ${f#$ROOT/}"
 done
+# velodyne_pointcloud / nebula_velodyne_common: link the BARE `yaml-cpp` target (velodyne via its
+# ${YAML_CPP_TARGET} fallback, nebula directly). The vendored/brew yaml-cpp config exports only the
+# namespaced yaml-cpp::yaml-cpp (and even that is directory-scoped), so at generate the bare name is
+# not a target -> "find_package call is missing for an IMPORTED target / ALIAS target missing" and
+# "CMake Generate step failed". Right after the first find_package, ensure a GLOBAL yaml-cpp::yaml-cpp
+# exists and fabricate a bare `yaml-cpp` INTERFACE target that forwards to it (an INTERFACE target,
+# not an ALIAS, to avoid the ALIAS-to-non-global-imported restriction). Idempotent (ci-yamlcpp-bare).
+for _p in velodyne_pointcloud nebula_velodyne_common; do
+  f="$(_pkg_dir "$_p")/CMakeLists.txt"
+  [ -f "$f" ] || continue
+  grep -q 'ci-yamlcpp-bare' "$f" && continue
+  grep -qE '^find_package\(' "$f" || continue
+  perl -0pi -e 's{(\nfind_package\([^\n]*\)\n)}{$1\n# ci-yamlcpp-bare: ensure GLOBAL yaml-cpp::yaml-cpp + a bare yaml-cpp forwarding target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED GLOBAL)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\nif(NOT TARGET yaml-cpp AND TARGET yaml-cpp::yaml-cpp)\n  add_library(yaml-cpp INTERFACE IMPORTED GLOBAL)\n  set_target_properties(yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp::yaml-cpp)\nendif()\n}' "$f"
+  echo "  $_p: ensure GLOBAL yaml-cpp::yaml-cpp + bare yaml-cpp forwarding target in ${f#$ROOT/}"
+done
+# libfranka (ros-drivers/arm, all 3): src/network.cpp sets the TCP keep-alive idle option via
+# TCP_KEEPIDLE, a Linux name. macOS/BSD spell the same option TCP_KEEPALIVE (TCP_KEEPCNT /
+# TCP_KEEPINTVL do exist) -> "use of undeclared identifier 'TCP_KEEPIDLE'". Map it on Apple.
+# Idempotent (ci-tcp-keepidle). ---
+_lf="$ROOT/ros-drivers/arm/libfranka/src/network.cpp"
+if [ -f "$_lf" ] && ! grep -q 'ci-tcp-keepidle' "$_lf"; then
+  perl -0pi -e 's{(#include "network\.h"\n)}{$1\n// ci-tcp-keepidle: TCP_KEEPIDLE is the Linux name for the keep-alive idle option;\n// macOS/BSD call it TCP_KEEPALIVE. Map it so setOption(IPPROTO_TCP, TCP_KEEPIDLE, ...) builds.\n#if defined(__APPLE__) && !defined(TCP_KEEPIDLE)\n#include <netinet/tcp.h>\n#define TCP_KEEPIDLE TCP_KEEPALIVE\n#endif\n}' "$_lf"
+  echo "  libfranka: map TCP_KEEPIDLE -> TCP_KEEPALIVE on Apple in ros-drivers/arm/libfranka/src/network.cpp"
+fi
 # ros2_medkit_gateway/default_script_provider.cpp uses pipe2(fds, O_CLOEXEC) -- a Linux/glibc
 # extension with no macOS equivalent -> "use of undeclared identifier 'pipe2'". Emulate it with
 # pipe() + fcntl(FD_CLOEXEC / O_NONBLOCK) on Apple, inserted after <unistd.h> (<fcntl.h> precedes
@@ -924,6 +948,19 @@ fi
 for _f in $(grep -rlE 'include\$<SEMICOLON>(cassert|assert\.h)' "$ROOT" --include=CMakeLists.txt 2>/dev/null | grep -v '/build/'); do
   perl -0pi -e 's{-include\$<SEMICOLON>cassert}{SHELL:-include cassert}g; s{-include\$<SEMICOLON>assert\.h}{SHELL:-include assert.h}g' "$_f"
   echo "  aerostack2: -include \$<SEMICOLON> hack -> SHELL:-include in ${_f#$ROOT/}"
+done
+
+# --- point_cloud_msg_wrapper (ApexAI, all 3): point_cloud_msg_wrapper.hpp #includes
+#     <experimental/optional> and uses std::experimental::optional<>. libc++ removed the
+#     <experimental/optional> TS header (superseded by <optional> since C++17) -> AppleClang
+#     "fatal error: 'experimental/optional' file not found", which dooms every consumer
+#     (autoware_ground_filter via sanity_check.cpp, ...). Upstream is a GitLab repo (not one of
+#     our GitHub forks), so patch the header in place: <experimental/optional> -> <optional> and
+#     std::experimental::optional -> std::optional. Idempotent (skips once no experimental use
+#     remains). PR-able upstream. ---
+for _f in $(grep -rlE 'experimental/optional|std::experimental::optional' "$ROOT" --include='*.hpp' --include='*.h' 2>/dev/null | grep -i 'point_cloud_msg_wrapper' | grep -v '/build/'); do
+  sed "${SEDI[@]}" -e 's#<experimental/optional>#<optional>#g' -e 's#std::experimental::optional#std::optional#g' "$_f"
+  echo "  point_cloud_msg_wrapper: <experimental/optional>/std::experimental::optional -> <optional>/std::optional in ${_f#$ROOT/}"
 done
 
 # --- Lane 2: boost-python component version. mrt_cmake_modules FindBoostPython
