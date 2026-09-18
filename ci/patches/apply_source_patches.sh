@@ -227,6 +227,45 @@ for _p in velodyne_pointcloud nebula_velodyne_common swri_transform_util camera_
   perl -0pi -e 's{(\nfind_package\([^\n]*\)\n)}{$1\n# ci-yamlcpp-bare: ensure GLOBAL yaml-cpp::yaml-cpp + a bare yaml-cpp forwarding target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED GLOBAL)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\nif(NOT TARGET yaml-cpp AND TARGET yaml-cpp::yaml-cpp)\n  add_library(yaml-cpp INTERFACE IMPORTED GLOBAL)\n  set_target_properties(yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp::yaml-cpp)\nendif()\n}' "$f"
   echo "  $_p: ensure GLOBAL yaml-cpp::yaml-cpp + bare yaml-cpp forwarding target in ${f#$ROOT/}"
 done
+
+# rmf_task_ros2 / rmf_visualization_navgraphs / rmf_visualization_rviz2_plugins /
+# rmf_visualization_schedule: each find_package(rmf_traffic_ros2 REQUIRED)s. rmf_traffic_ros2's
+# exported target's INTERFACE_LINK_LIBRARIES names the string yaml-cpp::yaml-cpp (fabricated only in
+# rmf_traffic_ros2's OWN CMake run by the ci-yamlcpp-ns-alias guard above -- that fabrication does not
+# propagate into an installed Config.cmake). yaml-cpp 0.7.0 (humble) exports no namespaced target, so
+# a fresh CMake run in each of these CONSUMING packages never creates yaml-cpp::yaml-cpp itself ->
+# "find_package call is missing for an IMPORTED target ... yaml-cpp::yaml-cpp" at generate. Fabricate
+# it right after project() (a reliable single-line anchor present in all four, unlike find_package --
+# rmf_visualization_navgraphs' find_package calls are inside a foreach() and never match a line-start
+# ^find_package( anchor). No-op on yaml-cpp 0.8.0 (jazzy/kilted), which already exports the namespaced
+# target. Idempotent (ci-rmf-yamlcpp-ns).
+for _p in rmf_task_ros2 rmf_visualization_navgraphs rmf_visualization_rviz2_plugins rmf_visualization_schedule; do
+  f="$(_pkg_dir "$_p")/CMakeLists.txt"
+  [ -f "$f" ] || continue
+  grep -q 'ci-rmf-yamlcpp-ns' "$f" && continue
+  grep -qE '^project\(' "$f" || continue
+  perl -0pi -e 's{(\nproject\([^\n]*\)\n)}{$1\n# ci-rmf-yamlcpp-ns: find_package(rmf_traffic_ros2) resolves an exported target whose link\n# interface names yaml-cpp::yaml-cpp; yaml-cpp 0.7.0 (humble) exports only the unnamespaced\n# `yaml-cpp` target, so fabricate the namespaced alias here too (no-op on yaml-cpp 0.8.0).\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  if(NOT TARGET yaml-cpp)\n    find_package(yaml-cpp QUIET)\n  endif()\n  if(TARGET yaml-cpp)\n    add_library(yaml-cpp::yaml-cpp INTERFACE IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp)\n  endif()\nendif()\n}' "$f"
+  echo "  $_p: fabricate namespaced yaml-cpp::yaml-cpp (rmf_traffic_ros2 link-interface) in ${f#$ROOT/}"
+done
+
+# rmf_traffic_editor: target_link_libraries(gui_lib ... ceres ...) links the bare `ceres` target,
+# which IS the correct name here -- this tree's vendored ceres-solver (ros-planning/dependencies/
+# ceres-solver, v1.14.0, brew ceres-solver is explicitly unlinked) predates namespaced CMake targets:
+# its CeresConfig.cmake.in exports a target literally called `ceres` (there is no Ceres::ceres to
+# link instead; that would just be a different undefined-target error). The real bug: ceres-solver
+# 1.14's internal/ceres/CMakeLists.txt builds that target via plain add_library()+include_directories()
+# rather than target_include_directories(), so the EXPORTED `ceres` target carries no
+# INTERFACE_INCLUDE_DIRECTORIES at all -- linking it (correctly) still leaves gui_lib's compile
+# without Ceres' headers -> "fatal error: 'ceres/ceres.h' file not found". find_package(Ceres) does
+# populate the legacy CERES_INCLUDE_DIRS variable; add it explicitly. Idempotent (ci-rmf-editor-ceres-inc).
+# NOTE: hardcoded path, not _pkg_dir -- the submodule's own container dir (fleet/rmf_traffic_editor)
+# shares its name with the actual package dir (fleet/rmf_traffic_editor/rmf_traffic_editor), and
+# `find -name rmf_traffic_editor | head -1` returns the (CMakeLists.txt-less) outer one first.
+f="$ROOT/fleet/rmf_traffic_editor/rmf_traffic_editor/CMakeLists.txt"
+if [ -f "$f" ] && grep -qE '^find_package\(Ceres REQUIRED\)' "$f" && ! grep -q 'ci-rmf-editor-ceres-inc' "$f"; then
+  perl -0pi -e 's{(\nfind_package\(Ceres REQUIRED\)\n)}{$1include_directories(\$\{CERES_INCLUDE_DIRS\})  # ci-rmf-editor-ceres-inc: vendored ceres 1.14'"'"'s `ceres` target has no INTERFACE_INCLUDE_DIRECTORIES\n}' "$f"
+  echo "  rmf_traffic_editor: add \${CERES_INCLUDE_DIRS} (vendored ceres 1.14 target carries no include interface) in ${f#$ROOT/}"
+fi
 # libfranka (ros-drivers/arm, all 3): src/network.cpp sets the TCP keep-alive idle option via
 # TCP_KEEPIDLE, a Linux name. macOS/BSD spell the same option TCP_KEEPALIVE (TCP_KEEPCNT /
 # TCP_KEEPINTVL do exist) -> "use of undeclared identifier 'TCP_KEEPIDLE'". Map it on Apple.
