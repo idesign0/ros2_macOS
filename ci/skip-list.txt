@@ -354,7 +354,9 @@ puma_motor_driver
 husarion_ugv_hardware_interfaces
 # lidar_situational_graphs: find_package(ndt_omp) -- ndt_omp is not a standalone vendored package
 # in this tree (it only exists embedded inside autoware_ndt_scan_matcher). Skip until vendored.
-lidar_situational_graphs# === MRPT consolidation (2026-09-04): keep mrpt_ros v2.x (mrpt_lib*), drop mrpt3 v3.x ===
+lidar_situational_graphs
+
+# === MRPT consolidation (2026-09-04): keep mrpt_ros v2.x (mrpt_lib*), drop mrpt3 v3.x ===
 # mrpt3 (ros-planning/mrpt3, v3.1.3 modules) and mrpt_ros (v2.15.21, mrpt_lib*) both install
 # mrpt/*.h -> incompatible header clobber (exceptions.cpp return-type conflict) that breaks the
 # mrpt_ros v2.x build. mrpt3 has ZERO external consumers; the entire mola / mrpt_navigation /
