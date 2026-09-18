@@ -457,3 +457,7 @@ nebula_continental
 # clearpath_diagnostics: build_depends foxglove_bridge (a ros-visualization DOMAIN package) but was
 # placed in the base -> unsatisfiable cross-layer dep. humble does not build it either. Skip.
 clearpath_diagnostics
+
+# magnetometer_compass: build-depends compass_conversions (skipped — needs compass_interfaces
+# -> cras_cpp_common, not in tree). Unsatisfiable cascade; skip.
+magnetometer_compass
