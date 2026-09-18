@@ -577,8 +577,8 @@ fi
 #     existing sys/types.h clockid_t __APPLE__ patch below). ---
 d="$(_pkg_dir lely_core_libraries)"
 if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'Wno-macro-redefined' "$d/CMakeLists.txt"; then
-  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -fcommon -Wno-error=deprecated-declarations -Wno-unknown-warning-option -Wno-error=unterminated-string-initialization -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1" "CPPFLAGS=-DLELY_HAVE_UCHAR_H=0" --prefix#' "$d/CMakeLists.txt"
-  echo "  lely_core_libraries: configure CFLAGS (macro-redefined/keyword/fcommon + THREADS_H=0 PTHREAD_H=1 + unterminated-string-initialization off) + CPPFLAGS -DLELY_HAVE_UCHAR_H=0 (macOS has no <uchar.h>; lely/libc/uchar.h honours a pre-set LELY_HAVE_UCHAR_H via #ifndef, so this forces its char16/32_t fallback for BOTH C and C++)"
+  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -fcommon -Wno-error=deprecated-declarations -Wno-unknown-warning-option -Wno-error=unterminated-string-initialization" "CXXFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -fcommon -Wno-error=deprecated-declarations -Wno-unknown-warning-option -Wno-error=unterminated-string-initialization" "CPPFLAGS=-DLELY_HAVE_UCHAR_H=0 -DLELY_HAVE_TIMESPEC=1 -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1" --prefix#' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: configure CFLAGS+CXXFLAGS (macro-redefined/keyword/fcommon + unterminated-string-initialization off) + CPPFLAGS -DLELY_HAVE_UCHAR_H=0 -DLELY_HAVE_TIMESPEC=1 -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1. TIMESPEC: lely/libc/time.h only sets LELY_HAVE_TIMESPEC via __STDC_VERSION__/_POSIX_C_SOURCE/_TIMESPEC_DEFINED, none of which hold for the C++ coapp TUs on macOS, so it redefined 'struct timespec' (hard error) + CLOCK_* macros; forcing =1 (honoured via #if !LELY_HAVE_TIMESPEC) suppresses the fallback. The feature -D's move to CPPFLAGS so BOTH C and the C++ coapp files (device.cpp etc.) see them; CXXFLAGS mirrors CFLAGS so the CLOCK_* -Wmacro-redefined does not -Werror in C++."
 fi
 
 # --- Lane 6: lely_core_libraries's vendored libc/sys/types.h only treats
@@ -925,55 +925,6 @@ for _f in $(grep -rlE 'include\$<SEMICOLON>(cassert|assert\.h)' "$ROOT" --includ
   perl -0pi -e 's{-include\$<SEMICOLON>cassert}{SHELL:-include cassert}g; s{-include\$<SEMICOLON>assert\.h}{SHELL:-include assert.h}g' "$_f"
   echo "  aerostack2: -include \$<SEMICOLON> hack -> SHELL:-include in ${_f#$ROOT/}"
 done
-
-# --- mrpt_libbase (all 3): MRPT (fetched as an ExternalProject, pinned 2.15.x) declares its
-#     CArchive scalar stream operators only for the fixed-width integer types listed in
-#     is_simple_type<> (bool, uint8..uint64, int8..int64, float, double). On macOS/arm64
-#     std::size_t is `unsigned long` while uint64_t is `unsigned long long` -- distinct types of
-#     equal width -- so scalar `size_t` matches NO operator and `out << activeAnimation_` in
-#     opengl/CAnimatedAssimpModel.cpp (and other call sites) fails with "invalid operands to
-#     binary expression ('mrpt::serialization::CArchive' and 'const size_t')". Upstream only works
-#     because size_t==uint64_t on LP64/unsigned-long platforms (Linux). Add scalar size_t operators
-#     (serialized as uint64_t, mirroring MRPT's own std::vector<size_t> special-case) to the fetched
-#     CArchive.h via an ExternalProject PATCH_COMMAND -- the header is installed by mrpt_libbase and
-#     consumed by mrpt_libopengl et al. Idempotent: the CMakeLists edit is marker-guarded and the
-#     git-apply reverse-checks before applying (safe on fresh clone and reused local checkout). ---
-d="$(_pkg_dir mrpt_libbase)"
-if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0200-mrpt-carchive-sizet.patch' "$d/CMakeLists.txt"; then
-  mkdir -p "$d/patches"
-  cat > "$d/patches/0200-mrpt-carchive-sizet.patch" <<'PATCHEOF'
---- a/libs/serialization/include/mrpt/serialization/CArchive.h
-+++ b/libs/serialization/include/mrpt/serialization/CArchive.h
-@@ -452,6 +452,25 @@
- }
- #endif
-
-+// ci-mrpt-sizet: on platforms where std::size_t is a distinct type from the fixed-width
-+// integer types in is_simple_type<> above -- notably macOS/arm64, where size_t is
-+// 'unsigned long' but uint64_t is 'unsigned long long' -- scalar size_t matches no
-+// operator (upstream relies on size_t==uint64_t, true only on LP64/unsigned-long platforms
-+// like Linux). Serialize it as uint64_t, mirroring MRPT's std::vector<size_t> special case.
-+#if defined(__APPLE__)
-+inline CArchive& operator<<(CArchive& out, const std::size_t a)
-+{
-+  return out << static_cast<uint64_t>(a);
-+}
-+inline CArchive& operator>>(CArchive& in, std::size_t& a)
-+{
-+  uint64_t v = 0;
-+  in >> v;
-+  a = static_cast<std::size_t>(v);
-+  return in;
-+}
-+#endif
-+
- CArchive& operator<<(CArchive& out, const mrpt::Clock::time_point& a);
- CArchive& operator>>(CArchive& in, mrpt::Clock::time_point& a);
-
-PATCHEOF
-  perl -0pi -e 's{(\n  # no install during build\n  INSTALL_COMMAND "")}{\n  PATCH_COMMAND bash -c "git apply -R --check \x27\$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0200-mrpt-carchive-sizet.patch\x27 2>/dev/null || git apply --whitespace=fix \x27\$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0200-mrpt-carchive-sizet.patch\x27"$1}' "$d/CMakeLists.txt"
-  echo "  mrpt_libbase: added 0200-mrpt-carchive-sizet.patch as ExternalProject PATCH_COMMAND"
-fi
 
 # --- Lane 2: boost-python component version. mrt_cmake_modules FindBoostPython
 #     derives the component from find_package(Python3), which resolves the runner's
@@ -1830,10 +1781,22 @@ _vtk_real="$(ls -d /opt/homebrew/lib/cmake/vtk-9.* 2>/dev/null | sort -V | tail 
 if [ -n "$_vtk_real" ]; then
   for _pcl in /opt/homebrew/share/pcl-1.*/PCLConfig.cmake; do
     [ -f "$_pcl" ] || continue
-    grep -qE 'set\(VTK_DIR "/opt/homebrew/lib/cmake/vtk-9\.[0-9]+"' "$_pcl" || continue
-    grep -qE "set\(VTK_DIR \"$_vtk_real\"" "$_pcl" && continue
-    sed "${SEDI[@]}" -E "s#(set\(VTK_DIR \")/opt/homebrew/lib/cmake/vtk-9\.[0-9]+(\")#\\1$_vtk_real\\2#" "$_pcl"
-    echo "  pcl: repoint hardcoded brew VTK_DIR -> $_vtk_real in $_pcl"
+    # (a) Repoint a STALE hardcoded brew VTK_DIR at the actually-installed vtk-9.x. (When the pcl
+    #     bottle was already built against the current vtk, this line is a no-op.)
+    if grep -qE 'set\(VTK_DIR "/opt/homebrew/lib/cmake/vtk-9\.[0-9]+"' "$_pcl" \
+       && ! grep -qE "set\(VTK_DIR \"$_vtk_real\"" "$_pcl"; then
+      sed "${SEDI[@]}" -E "s#(set\(VTK_DIR \")/opt/homebrew/lib/cmake/vtk-9\.[0-9]+(\")#\\1$_vtk_real\\2#" "$_pcl"
+      echo "  pcl: repoint hardcoded brew VTK_DIR -> $_vtk_real in $_pcl"
+    fi
+    # (b) DIAGNOSTIC: PCL's find_VTK() does find_package(VTK ${QUIET_} COMPONENTS ...) QUIET, so when
+    #     VTK's component resolution fails (observed with brew vtk 9.7 — passes with 9.6) PCL prints
+    #     only the terse "visualization is required but vtk was not found" with no cause, dooming
+    #     multisensor_calibration / rtabmap_rviz_plugins / navmap_rviz_plugin. Drop QUIET_ so the real
+    #     "Could NOT find VTK (missing: <component>/<dependency>)" is logged. Idempotent.
+    if grep -qE 'find_package\(VTK \$\{QUIET_\} COMPONENTS' "$_pcl"; then
+      sed "${SEDI[@]}" -E 's#(find_package\(VTK) \$\{QUIET_\}( COMPONENTS)#\1\2#' "$_pcl"
+      echo "  pcl: de-QUIET find_package(VTK COMPONENTS ...) to surface the vtk-9.7 cause in $_pcl"
+    fi
   done
 fi
 
