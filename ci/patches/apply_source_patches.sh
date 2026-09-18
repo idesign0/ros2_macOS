@@ -219,7 +219,7 @@ done
 # "CMake Generate step failed". Right after the first find_package, ensure a GLOBAL yaml-cpp::yaml-cpp
 # exists and fabricate a bare `yaml-cpp` INTERFACE target that forwards to it (an INTERFACE target,
 # not an ALIAS, to avoid the ALIAS-to-non-global-imported restriction). Idempotent (ci-yamlcpp-bare).
-for _p in velodyne_pointcloud nebula_velodyne_common swri_transform_util; do
+for _p in velodyne_pointcloud nebula_velodyne_common swri_transform_util camera_aravis2; do
   f="$(_pkg_dir "$_p")/CMakeLists.txt"
   [ -f "$f" ] || continue
   grep -q 'ci-yamlcpp-bare' "$f" && continue
