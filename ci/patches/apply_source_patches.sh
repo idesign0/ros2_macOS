@@ -219,7 +219,7 @@ done
 # "CMake Generate step failed". Right after the first find_package, ensure a GLOBAL yaml-cpp::yaml-cpp
 # exists and fabricate a bare `yaml-cpp` INTERFACE target that forwards to it (an INTERFACE target,
 # not an ALIAS, to avoid the ALIAS-to-non-global-imported restriction). Idempotent (ci-yamlcpp-bare).
-for _p in velodyne_pointcloud nebula_velodyne_common; do
+for _p in velodyne_pointcloud nebula_velodyne_common swri_transform_util; do
   f="$(_pkg_dir "$_p")/CMakeLists.txt"
   [ -f "$f" ] || continue
   grep -q 'ci-yamlcpp-bare' "$f" && continue
@@ -236,6 +236,15 @@ if [ -f "$_lf" ] && ! grep -q 'ci-tcp-keepidle' "$_lf"; then
   perl -0pi -e 's{(#include "network\.h"\n)}{$1\n// ci-tcp-keepidle: TCP_KEEPIDLE is the Linux name for the keep-alive idle option;\n// macOS/BSD call it TCP_KEEPALIVE. Map it so setOption(IPPROTO_TCP, TCP_KEEPIDLE, ...) builds.\n#if defined(__APPLE__) && !defined(TCP_KEEPIDLE)\n#include <netinet/tcp.h>\n#define TCP_KEEPIDLE TCP_KEEPALIVE\n#endif\n}' "$_lf"
   echo "  libfranka: map TCP_KEEPIDLE -> TCP_KEEPALIVE on Apple in ros-drivers/arm/libfranka/src/network.cpp"
 fi
+
+# adi_3dtof_image_stitching (ros-drivers, all 3): adi_3dtof_image_stitching.h #includes
+# <pcl/registration/transforms.h>, a forwarding header removed in PCL >= 1.13 (the functions moved
+# to <pcl/common/transforms.h> long ago). brew ships PCL 1.15 -> "fatal error:
+# 'pcl/registration/transforms.h' file not found". Repoint the include. Idempotent. ---
+for _f in $(grep -rlE 'pcl/registration/transforms\.h' "$ROOT" --include='*.h' --include='*.hpp' 2>/dev/null | grep -i 'adi_3dtof' | grep -v '/build/'); do
+  sed "${SEDI[@]}" -e 's#pcl/registration/transforms\.h#pcl/common/transforms.h#g' "$_f"
+  echo "  adi_3dtof_image_stitching: pcl/registration/transforms.h -> pcl/common/transforms.h in ${_f#$ROOT/}"
+done
 # ros2_medkit_gateway/default_script_provider.cpp uses pipe2(fds, O_CLOEXEC) -- a Linux/glibc
 # extension with no macOS equivalent -> "use of undeclared identifier 'pipe2'". Emulate it with
 # pipe() + fcntl(FD_CLOEXEC / O_NONBLOCK) on Apple, inserted after <unistd.h> (<fcntl.h> precedes
