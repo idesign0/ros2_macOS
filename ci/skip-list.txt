@@ -562,3 +562,17 @@ desktop_full
 # file not found" after a ~22min build. Deep MRPT-internal (nanogui submodule not vendored for the
 # python build) and tied to the same MRPT two-distribution mess. Skip until MRPT is consolidated.
 python_mrpt
+
+# turtlebot3_gazebo: find_package(gazebo) -> Gazebo *classic* (gazebo11), which is not built/
+# available on macOS ARM (the workspace ships gz/ignition, not classic Gazebo). Unsatisfiable.
+turtlebot3_gazebo
+
+# cartographer_rviz: Eigen 3.4's <Eigen/Core> pulls libc++ <complex>, which fails to compile under
+# the MacOSX26.5 SDK libc++ inside the Qt moc-autogen TU (cartographer_rviz_autogen/
+# mocs_compilation.cpp): std::abs(__c.imag()) -> "reference to unresolved using declaration" and
+# std::isinf(...) -> "expected unqualified-id", because ::abs/::isinf (imported into std via
+# _LIBCPP_USING_IF_EXISTS in <cmath>) are not declared at that point. Package already builds at
+# C++17, so it is a bleeding-edge SDK/libc++/Eigen include-order issue in moc autogen, not a
+# cartographer bug; needs a toolchain-level fix (verified via the compile_commands.json capture on
+# a fresh run). Skip until that is resolved.
+cartographer_rviz
