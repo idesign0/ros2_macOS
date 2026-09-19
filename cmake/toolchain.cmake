@@ -459,6 +459,10 @@ add_compile_definitions(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
 # 'std::execution'" without the flag; clean compile+link+run with it.
 if(APPLE)
   add_compile_options(-fexperimental-library)
+  # ...and at LINK too: std::execution::par backend symbols (std::__pstl::__libdispatch::*) live in
+  # libc++experimental, which the clang driver only links with -fexperimental-library on the LINK
+  # line; add_compile_options alone leaves them undefined at link (beluga_amcl amcl nodes).
+  add_link_options(-fexperimental-library)
 endif()
 # std::codecvt_utf8_utf16 (rosidl_runtime_cpp/traits.hpp:132) is _LIBCPP_DEPRECATED_IN_CXX17;
 # autoware & others compile with -Werror and re-add it AFTER the toolchain's
