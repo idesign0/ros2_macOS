@@ -871,6 +871,29 @@ PATCHEOF
   echo "  lely_core_libraries: added 0100-macos-no-as-needed.patch to UPDATE_COMMAND"
 fi
 
+# --- lely_core_libraries: coapp/node.cpp builds a std::chrono::system_clock::time_point directly
+#     from util::from_timespec(), which returns std::chrono::nanoseconds. On Linux/libstdc++
+#     system_clock::duration IS nanoseconds so the value binds to time_point(const duration&); on
+#     macOS/libc++ system_clock::duration is MICROseconds, so a nanoseconds value has no matching
+#     time_point constructor -> "no matching constructor for ... system_clock::time_point". Wrap the
+#     from_timespec() result in duration_cast<system_clock::duration>. Done as a PATCH-step COMMAND
+#     (the source is fetched by ExternalProject); the script only rewrites time_point-construction
+#     sites, leaving other from_timespec() uses alone. Idempotent (ci-lely-chrono marker). ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-lely-chrono' "$d/CMakeLists.txt"; then
+  cat > "$d/patches/ci_lely_chrono_duration.sh" <<'SCRIPTEOF'
+#!/usr/bin/env bash
+# <SOURCE_DIR> passed as $1. system_clock::duration is microseconds on macOS (nanoseconds on
+# Linux); util::from_timespec() returns nanoseconds, so `system_clock::time_point t(from_timespec(..))`
+# has no matching constructor on libc++. Wrap in duration_cast<system_clock::duration>.
+f="$1/src/coapp/node.cpp"
+[ -f "$f" ] && sed -i.bak -E 's#(system_clock::time_point [A-Za-z_][A-Za-z0-9_]*\()util::from_timespec\(([^)]*)\)\)#\1::std::chrono::duration_cast<::std::chrono::system_clock::duration>(util::from_timespec(\2)))#g' "$f"
+exit 0
+SCRIPTEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  # ci-lely-chrono: from_timespec() -> duration_cast<system_clock::duration> (macOS us vs ns)\n  COMMAND bash \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/ci_lely_chrono_duration.sh <SOURCE_DIR>$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added ci_lely_chrono_duration.sh (from_timespec -> duration_cast) to PATCH step"
+fi
+
 # --- lely_core_libraries: include/lely/libc/unistd.h tentatively DEFINES the getopt globals
 #     (char *optarg; int optind; int opterr; int optopt;) in the HEADER with no `extern`, so every
 #     TU including it emits a definition -> duplicate symbols between getopt.o and sleep.o. -fcommon

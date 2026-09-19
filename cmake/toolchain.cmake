@@ -537,6 +537,12 @@ add_compile_definitions(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
 # 'std::execution'" without the flag; clean compile+link+run with it.
 if(APPLE)
   add_compile_options(-fexperimental-library)
+  # ...and at LINK too: with std::execution::par the parallel backend symbols
+  # (std::__pstl::__libdispatch::__dispatch_apply / __partition_chunks) live in
+  # libc++experimental, which the clang driver only links when -fexperimental-library is on the
+  # LINK line. add_compile_options alone leaves them undefined at link (beluga_amcl's amcl nodes
+  # instantiate par-using beluga templates -> "Undefined symbols ... __pstl::__libdispatch...").
+  add_link_options(-fexperimental-library)
 endif()
 # std::codecvt_utf8_utf16 (rosidl_runtime_cpp/traits.hpp:132) is _LIBCPP_DEPRECATED_IN_CXX17;
 # autoware & others compile with -Werror and re-add it AFTER the toolchain's
