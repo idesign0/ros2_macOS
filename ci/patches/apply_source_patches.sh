@@ -1882,6 +1882,16 @@ if [ -n "$_vtk_real" ]; then
       sed "${SEDI[@]}" -E 's#(find_package\(VTK) \$\{QUIET_\}( COMPONENTS)#\1\2#' "$_pcl"
       echo "  pcl: de-QUIET find_package(VTK COMPONENTS ...) to surface the vtk-9.7 cause in $_pcl"
     fi
+    # (c) FIX: PCL_VTK_COMPONENTS requires GUISupportQt, but the brew vtk 9.7 bottle is built without
+    #     Qt, so that module is absent -> "Could not find the VTK package with the following required
+    #     components: GUISupportQt" (the cause surfaced by (b)) -> multisensor_calibration /
+    #     rtabmap_rviz_plugins / navmap_rviz_plugin die at find_package(PCL). These consumers use VTK
+    #     rendering, not the Qt widget module, so drop GUISupportQt from the required component list.
+    #     Idempotent (only rewrites the line while GUISupportQt is still listed).
+    if grep -qE 'set\(PCL_VTK_COMPONENTS .*GUISupportQt' "$_pcl"; then
+      sed "${SEDI[@]}" -E 's#(set\(PCL_VTK_COMPONENTS[^)]*);GUISupportQt#\1#' "$_pcl"
+      echo "  pcl: drop GUISupportQt from PCL_VTK_COMPONENTS (brew vtk 9.7 has no Qt module) in $_pcl"
+    fi
   done
 fi
 
