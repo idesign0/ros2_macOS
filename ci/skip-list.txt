@@ -429,3 +429,7 @@ cx_bringup
 # compass_conversions: build-depends compass_interfaces (skipped above — needs cras_cpp_common,
 # not in tree). Unsatisfiable cascade; skip.
 compass_conversions
+
+# magnetometer_compass: build-depends compass_conversions (skipped — needs compass_interfaces
+# -> cras_cpp_common, not in tree). Unsatisfiable cascade; skip.
+magnetometer_compass
