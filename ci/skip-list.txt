@@ -530,3 +530,7 @@ rqt_mocap4r2_control
 
 # nebula_continental: depends on nebula_continental_hw_interfaces (already skip-listed) -> cascade. Skip.
 nebula_continental
+
+# magnetometer_compass: build-depends compass_conversions (skipped — needs compass_interfaces
+# -> cras_cpp_common, not in tree). Unsatisfiable cascade; skip.
+magnetometer_compass
