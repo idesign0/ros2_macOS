@@ -83,6 +83,18 @@ d="$(_pkg_dir libcreate)"; [ -n "$d" ] && for f in $(find "$d" -name serial.cpp 
 # sick_safetyscanners2: boost::asio::ip::address_v4::from_string removed in Boost 1.87 -> make_address_v4.
 # Compile-tested: make_address_v4() compiles, address_v4::from_string is gone, vs brew boost 1.89.
 d="$(_pkg_dir sick_safetyscanners2)"; [ -n "$d" ] && for f in $(grep -rl 'address_v4::from_string' "$d" 2>/dev/null); do sed "${SEDI[@]}" 's/address_v4::from_string/make_address_v4/g' "$f"; done
+
+# rviz_imu_plugin (kilted, base_b shard): find_package(Qt5 COMPONENTS Widgets Test) collides with a
+# transitively-discovered Qt6 -- brew `qt` (Qt6) is reachable and the rviz/ament_cmake dependency
+# chain reaches Qt6Gui (via WrapOpenGL), which sets QT_MAJOR_VERSION=6 before this package's Qt5 is
+# resolved -> "INTERFACE_QT_MAJOR_VERSION property of Qt5::Core does not agree with QT_MAJOR_VERSION
+# already determined". rviz_imu_plugin and the base rviz (rviz_common/rviz_rendering) are all Qt5, so
+# block Qt6 discovery in this package's configure to keep QT_MAJOR_VERSION=5. Idempotent (ci-imu-noqt6).
+d="$(_pkg_dir rviz_imu_plugin)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-imu-noqt6' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{(\nproject\(rviz_imu_plugin[^\n]*\)\n)}{$1# ci-imu-noqt6: keep this Qt5 plugin off the transitively-reachable brew Qt6 (QT_MAJOR_VERSION clash)\nset(CMAKE_DISABLE_FIND_PACKAGE_Qt6 ON)\n}' "$d/CMakeLists.txt"
+  echo "  rviz_imu_plugin: block Qt6 discovery (CMAKE_DISABLE_FIND_PACKAGE_Qt6) in ${d#$ROOT/}"
+fi
 # onnxruntime_vendor: hard-rejects Darwin with FATAL_ERROR, but Microsoft publishes an osx-arm64
 # prebuilt with the SAME .tgz layout the Linux path uses (verified onnxruntime-osx-arm64-<ver>.tgz
 # exists on the v<ver> release). The vendor's copy/install is platform-agnostic (file(COPY) +
