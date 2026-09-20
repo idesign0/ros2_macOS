@@ -70,10 +70,10 @@ set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/inclu
 # Boost: a few packages pull brew eigenpy, whose /opt/homebrew/lib/cmake/eigenpy/boost.cmake
 # does find_package(Boost COMPONENTS python314) (Python 3.14). The vendored boost-1.89 ships
 # only boost_python311 -> "Could NOT find Boost (missing: python314)" (libfranka,
-# kinematics_interface_pinocchio, linear_feedback_controller). Route ONLY those projects to brew
+# kinematics_interface_pinocchio, linear_feedback_controller, franka_example_controllers). Route ONLY those projects to brew
 # boost + brew boost-python314; everyone else keeps the vendored boost-1.89 (mirrors the
 # kilted/jazzy toolchain guard).
-if("${CMAKE_PROJECT_NAME}" MATCHES "^(kinematics_interface_pinocchio|linear_feedback_controller|libfranka)$")
+if("${CMAKE_PROJECT_NAME}" MATCHES "^(kinematics_interface_pinocchio|linear_feedback_controller|libfranka|franka_example_controllers)$")
     message(STATUS "Stitching Boost and Boost-Python (brew python314) for ${CMAKE_PROJECT_NAME}")
     set(Boost_INCLUDE_DIR "/opt/homebrew/opt/boost/include" CACHE PATH "" FORCE)
     set(Boost_PYTHON314_LIBRARY_RELEASE "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
