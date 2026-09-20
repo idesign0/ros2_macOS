@@ -239,7 +239,7 @@ done
 # rmf_visualization_navgraphs' find_package calls are inside a foreach() and never match a line-start
 # ^find_package( anchor). No-op on yaml-cpp 0.8.0 (jazzy/kilted), which already exports the namespaced
 # target. Idempotent (ci-rmf-yamlcpp-ns).
-for _p in rmf_task_ros2 rmf_visualization_navgraphs rmf_visualization_rviz2_plugins rmf_visualization_schedule; do
+for _p in rmf_task_ros2 rmf_fleet_adapter rmf_visualization_navgraphs rmf_visualization_rviz2_plugins rmf_visualization_schedule; do
   f="$(_pkg_dir "$_p")/CMakeLists.txt"
   [ -f "$f" ] || continue
   grep -q 'ci-rmf-yamlcpp-ns' "$f" && continue
