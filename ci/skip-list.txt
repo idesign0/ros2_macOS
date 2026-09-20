@@ -510,3 +510,23 @@ turtlebot3_gazebo
 # cartographer bug; needs a toolchain-level fix (verified via the compile_commands.json capture on
 # a fresh run). Skip until that is resolved.
 cartographer_rviz
+
+# --- more mrpt3 two-distribution cluster (need v3.x modules; see note above) ---
+mola_gtsam_factors
+mrpt_path_planning_core
+
+# rmf_building_sim_gz_classic_plugins: find_package(gazebo) = Gazebo *classic* (gazebo11),
+# not available on macOS ARM (same class as turtlebot3_gazebo). Unsatisfiable.
+rmf_building_sim_gz_classic_plugins
+
+# irobot_create_gz_toolbox / irobot_create_nodes: both find_package(irobot_create_toolbox),
+# which is itself skip-listed (gz_math_vendor cascade) -> they can never configure. Skip the
+# dependents that are blocked by a skip-listed dep.
+irobot_create_gz_toolbox
+irobot_create_nodes
+
+# schunk_svh_simulation: CMakeLists hardcodes MUJOCO_DIR=$HOME/mujoco-3.2.3 and links
+# lib/libmujoco.so (Linux path + .so naming); that standalone MuJoCo tree does not exist on the
+# macOS runner (the workspace ships mujoco_vendor, a different layout) -> "'mujoco/mujoco.h' file
+# not found". Not macOS-portable as written; skip (could later be repointed at mujoco_vendor).
+schunk_svh_simulation
