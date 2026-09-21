@@ -76,6 +76,18 @@ d="$(_pkg_dir aruco_ros)"; [ -n "$d" ] && for f in $(grep -rl 'opencv4/opencv2/'
 # schunk_svh_library: Serial.h includes Linux-only <termio.h>; macOS has only <termios.h>, and the
 # class uses the termios struct anyway. Swap the legacy header.
 d="$(_pkg_dir schunk_svh_library)"; [ -n "$d" ] && for f in $(grep -rl '<termio.h>' "$d" 2>/dev/null); do sed "${SEDI[@]}" 's#<termio\.h>#<termios.h>#g' "$f"; done
+
+# multisensor_calibration (ament): lib3D/core/exceptions.hpp #defines FN_NAME (used across the
+# bundled lib3D headers: geometry.hpp, extrinsics.hpp, ...) only for WIN32 or __linux__/__unix__.
+# macOS defines __APPLE__/__MACH__ but neither __linux__ nor __unix__, so FN_NAME is left undefined
+# -> "use of undeclared identifier 'FN_NAME'". Extend the __PRETTY_FUNCTION__ branch to __APPLE__.
+d="$(_pkg_dir multisensor_calibration)"
+if [ -n "$d" ]; then
+  for f in $(grep -rl 'defined(__linux__) || defined(__unix__)' "$d" 2>/dev/null); do
+    sed "${SEDI[@]}" 's/#elif defined(__linux__) || defined(__unix__)$/#elif defined(__linux__) || defined(__unix__) || defined(__APPLE__)/' "$f"
+    echo "  multisensor_calibration: FN_NAME __PRETTY_FUNCTION__ now covers __APPLE__ in ${f#$ROOT/}"
+  done
+fi
 # libcreate (peel #2): serial.cpp calls io_context::reset() — renamed to restart() in Boost 1.87.
 # (io_service->io_context handled by patch_io_service_typeonly; deadline_timer include above.)
 # Compile-tested: io_context::restart() compiles, io.reset() is gone, vs brew boost 1.89.

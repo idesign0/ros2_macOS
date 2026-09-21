@@ -486,3 +486,27 @@ irobot_create_nodes
 # macOS runner (the workspace ships mujoco_vendor, a different layout) -> "'mujoco/mujoco.h' file
 # not found". Not macOS-portable as written; skip (could later be repointed at mujoco_vendor).
 schunk_svh_simulation
+
+# --- second-layer mrpt/mola cluster revealed after the first mrpt3 skips (all cascade from the
+# skip-listed mrpt3 v3.x modules / mrpt_libros_bridge=mrpt-ros2bridge; same two-distribution root) ---
+mola_input_rosbag2
+mola_state_estimation_simple
+mola_state_estimation_smoother
+mrpt_msgs_bridge
+mrpt_reactivenav2d
+mrpt_sensorlib
+mrpt_trajectory_follower
+mvsim
+pose_cov_ops
+rosbag2rawlog
+# mp2p_icp_viz: mm-viewer main.cpp uses undeclared load_plugins/trajectory (mp2p_icp/mola viz app,
+# tied to the same mrpt3 stack that is skip-listed). Skip with the cluster.
+mp2p_icp_viz
+
+# canopen_core: mixes plain + keyword target_link_libraries signatures for node_canopen_driver/
+# node_canopen_master (CMake rejects on this toolchain), and the whole ros2_canopen stack targets
+# Linux SocketCAN (see canopen_fake_slaves) so it is not macOS-usable. Skip the CAN stack root.
+canopen_core
+# canopen_fake_slaves: #includes <lely/io2/linux/can.hpp> (Linux SocketCAN) -> not available on
+# macOS. Linux-only.
+canopen_fake_slaves
