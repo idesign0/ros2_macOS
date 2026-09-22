@@ -16,6 +16,20 @@ _pkg_dir() {
   find "$ROOT" -type d -name "$1" -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1
 }
 
+# Like _pkg_dir, but returns the CMakeLists.txt of the package named $1 -- skipping
+# a same-named REPO directory that has no CMakeLists.txt of its own (e.g.
+# camera_aravis2/camera_aravis2, resource_retriever/resource_retriever). _pkg_dir
+# returns the outer dir there, so "$(_pkg_dir x)/CMakeLists.txt" silently misses.
+_pkg_cml() {
+  local d
+  while read -r d; do
+    [ -f "$d/CMakeLists.txt" ] && { echo "$d/CMakeLists.txt"; return 0; }
+  done <<EOF
+$(find "$ROOT" -type d -name "$1" -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null)
+EOF
+  return 0
+}
+
 # --- Lane 2 (Boost 1.90): boost::asio::io_service was removed (== io_context).
 #     Only for packages that use the bare TYPE (no ::work / resolver::iterator). ---
 patch_io_service_typeonly() {
@@ -244,11 +258,11 @@ done
 # exists and fabricate a bare `yaml-cpp` INTERFACE target that forwards to it (an INTERFACE target,
 # not an ALIAS, to avoid the ALIAS-to-non-global-imported restriction). Idempotent (ci-yamlcpp-bare).
 for _p in velodyne_pointcloud nebula_velodyne_common swri_transform_util camera_aravis2; do
-  f="$(_pkg_dir "$_p")/CMakeLists.txt"
-  [ -f "$f" ] || continue
+  f="$(_pkg_cml "$_p")"
+  [ -n "$f" ] && [ -f "$f" ] || continue
   grep -q 'ci-yamlcpp-bare' "$f" && continue
   grep -qE '^find_package\(' "$f" || continue
-  perl -0pi -e 's{(\nfind_package\([^\n]*\)\n)}{$1\n# ci-yamlcpp-bare: ensure GLOBAL yaml-cpp::yaml-cpp + a bare yaml-cpp forwarding target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED GLOBAL)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\nif(NOT TARGET yaml-cpp AND TARGET yaml-cpp::yaml-cpp)\n  add_library(yaml-cpp INTERFACE IMPORTED GLOBAL)\n  set_target_properties(yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp::yaml-cpp)\nendif()\n}' "$f"
+  perl -0pi -e 's{(\nfind_package\([^\n]*\)\n)}{$1\n# ci-yamlcpp-bare: ensure GLOBAL yaml-cpp::yaml-cpp + a bare yaml-cpp forwarding target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  if(YAML_CPP_LIBRARIES AND EXISTS "\$\{YAML_CPP_LIBRARIES\}")\n    set(_ci_ycpp_lib "\$\{YAML_CPP_LIBRARIES\}")\n    set(_ci_ycpp_inc "\$\{YAML_CPP_INCLUDE_DIRS\}")\n  else()\n    find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS \$\{CMAKE_PREFIX_PATH\} "\$\{CMAKE_INSTALL_PREFIX\}/opt/yaml_cpp_vendor/lib" PATH_SUFFIXES lib)\n    find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS \$\{CMAKE_PREFIX_PATH\} "\$\{CMAKE_INSTALL_PREFIX\}/opt/yaml_cpp_vendor/include" PATH_SUFFIXES include)\n  endif()\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED GLOBAL)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\nif(NOT TARGET yaml-cpp AND TARGET yaml-cpp::yaml-cpp)\n  add_library(yaml-cpp INTERFACE IMPORTED GLOBAL)\n  set_target_properties(yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp::yaml-cpp)\nendif()\n}' "$f"
   echo "  $_p: ensure GLOBAL yaml-cpp::yaml-cpp + bare yaml-cpp forwarding target in ${f#$ROOT/}"
 done
 
@@ -263,7 +277,7 @@ done
 # rmf_visualization_navgraphs' find_package calls are inside a foreach() and never match a line-start
 # ^find_package( anchor). No-op on yaml-cpp 0.8.0 (jazzy/kilted), which already exports the namespaced
 # target. Idempotent (ci-rmf-yamlcpp-ns).
-for _p in rmf_task_ros2 rmf_fleet_adapter rmf_visualization_navgraphs rmf_visualization_rviz2_plugins rmf_visualization_schedule; do
+for _p in rmf_task_ros2 rmf_fleet_adapter rmf_fleet_adapter_python rmf_visualization_navgraphs rmf_visualization_rviz2_plugins rmf_visualization_schedule; do
   f="$(_pkg_dir "$_p")/CMakeLists.txt"
   [ -f "$f" ] || continue
   grep -q 'ci-rmf-yamlcpp-ns' "$f" && continue
@@ -2341,3 +2355,110 @@ for _f in $(find "$ROOT" -path '*rmf_visualization_schedule/CMakeLists.txt' -not
 done
 
 # play_motion_builder bare yaml-cpp -> yaml-cpp::yaml-cpp (yaml_cpp_vendor) MIGRATED to id_play_motion_builder fork.
+
+# --- canopen_core (all 3, upstream master): after the keyword-form
+#     `target_link_libraries(node_canopen_driver PUBLIC ...)` the CMakeLists adds a
+#     SECOND, PLAIN-form call `target_link_libraries(node_canopen_driver\n  yaml-cpp::yaml-cpp\n)`
+#     (same for node_canopen_master). CMake rejects mixing the two signatures on one
+#     target -- "All uses of target_link_libraries with a target must be either
+#     all-keyword or all-plain" (CMakeLists.txt:63 / :98) -> configure fails, which
+#     also cascades to canopen_proxy_driver / canopen_ros2_control /
+#     canopen_ros2_controllers / canopen_inventus_driver. Not macOS-specific, but it is
+#     what blocks the CAN stack here. Rewrite the two plain calls to keyword form.
+#     Idempotent (only fires while a plain-form call is still present). ---
+_f="$(_pkg_cml canopen_core)"
+if [ -n "$_f" ] && [ -f "$_f" ]; then
+  if perl -0ne 'exit(!/^target_link_libraries\(node_canopen_(?:driver|master)\n/m)' "$_f"; then
+    perl -0pi -e 's{^target_link_libraries\((node_canopen_(?:driver|master))\n}{target_link_libraries($1 PUBLIC\n}mg' "$_f"
+    echo "  canopen_core: plain-form target_link_libraries(node_canopen_driver/master) -> keyword form"
+  fi
+fi
+
+# --- lely_core_libraries (all 3): the INSTALLED lely/libc/time.h still carries the
+#     `#if !LELY_HAVE_TIMESPEC -> struct timespec {...}` fallback. The configure-time
+#     `-DLELY_HAVE_TIMESPEC=1` (CPPFLAGS, above) only covers lely's OWN build; a consumer
+#     TU (canopen_core -> lely/coapp/driver.hpp -> ... -> lely/libc/time.h) never defines
+#     it, so the header re-declares `struct timespec` over the SDK's _STRUCT_TIMESPEC ->
+#     "error: redefinition of 'timespec'" (install/include/lely/libc/time.h:88). Fix it in
+#     the header itself: lely already accepts _TIMESPEC_DEFINED / __timespec_defined as
+#     "the platform has timespec"; add Apple's equivalent macro, _STRUCT_TIMESPEC, which
+#     <time.h> (included 9 lines above the guard) always defines on macOS. ITIMERSPEC is
+#     deliberately left alone -- macOS does NOT define `struct itimerspec`, so lely must
+#     keep providing it. Verified: patch applies cleanly to lely-core fb735b79. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0101-macos-timespec.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0101-macos-timespec.patch" <<'PATCHEOF'
+From 0000000000000000000000000000000000000101 Mon Sep 17 00:00:00 2001
+From: Build Fix <noreply@example.com>
+Date: Mon, 22 Sep 2026 00:00:00 +0000
+Subject: [PATCH] Recognize Apple's _STRUCT_TIMESPEC in LELY_HAVE_TIMESPEC
+
+lely/libc/time.h decides whether the platform already provides
+`struct timespec` from __STDC_VERSION__ / _MSC_VER / _POSIX_C_SOURCE /
+__CYGWIN__ / _TIMESPEC_DEFINED / __timespec_defined. On macOS none of
+those hold for a plain C++ TU, so the header defines its own
+`struct timespec`, which collides with the SDK's:
+
+  install/include/lely/libc/time.h:88:8: error: redefinition of 'timespec'
+  .../sys/_types/_timespec.h:33:1: note: previous definition is here
+
+macOS signals "timespec is already declared" with _STRUCT_TIMESPEC,
+defined by <time.h> -- which this header includes before the check --
+so treat it like the other platform macros already listed.
+
+struct itimerspec is intentionally NOT covered: macOS does not provide
+it, so lely's own definition must stay.
+---
+ include/lely/libc/time.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/include/lely/libc/time.h b/include/lely/libc/time.h
+index b4946d9..0430a1b 100644
+--- a/include/lely/libc/time.h
++++ b/include/lely/libc/time.h
+@@ -36,7 +36,8 @@
+ #ifndef LELY_HAVE_TIMESPEC
+ #if __STDC_VERSION__ >= 201112L || _MSC_VER >= 1900 \
+ 		|| _POSIX_C_SOURCE >= 199309L || defined(__CYGWIN__) \
+-		|| defined(_TIMESPEC_DEFINED) || defined(__timespec_defined)
++		|| defined(_TIMESPEC_DEFINED) || defined(__timespec_defined) \
++		|| defined(_STRUCT_TIMESPEC)
+ #define LELY_HAVE_TIMESPEC 1
+ #endif
+ #endif
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0101-macos-timespec.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0101-macos-timespec.patch to UPDATE_COMMAND"
+fi
+
+# --- adi_3dtof_image_stitching (humble only): stitch_frames_core_cpu.cpp uses M_PIf32,
+#     a glibc _GNU_SOURCE float constant (<math.h>, __USE_GNU). The macOS SDK has no
+#     M_PIf32/M_PIf64 family -> "use of undeclared identifier 'M_PIf32'". The expression
+#     is float arithmetic, so the portable spelling is a cast of M_PI. ---
+for _f in $(grep -rl 'M_PIf32' "$ROOT" --include='*.cpp' --include='*.h' --include='*.hpp' 2>/dev/null | grep -v '/build/' | grep -v '/install/'); do
+  sed "${SEDI[@]}" 's/M_PIf32/static_cast<float>(M_PI)/g' "$_f"
+  echo "  M_PIf32 -> static_cast<float>(M_PI) (glibc-only macro) in ${_f#$ROOT/}"
+done
+
+# --- VTK 9.7 (brew, all 3): the runner's brew VTK moved 9.6 -> 9.7, and the 9.7 bottle
+#     IS built with Qt6 -- so VTK-targets.cmake now declares VTK::GUISupportQt with
+#     `Qt6::OpenGLWidgets` in its link interface. vtk-config.cmake include()s
+#     VTK-targets.cmake before any Qt find, and set_target_properties() validates every
+#     named target, so the whole find_package(VTK) aborts:
+#       CMake Error at .../vtk-9.7/VTK-targets.cmake:2328 (set_target_properties):
+#         The link interface of target "VTK::GUISupportQt" contains: Qt6::OpenGLWidgets
+#         but the target was not found.
+#     reached via PCLConfig find_VTK() from pcl_conversions -> kills rtabmap_conversions
+#     on all 3 distros. Same shape as the JsonCpp::JsonCpp case above, so the same cure:
+#     pre-define the missing target. A bare INTERFACE IMPORTED stub is deliberate -- this
+#     workspace's rviz/ROS stack is Qt5 (see the Qt5/Qt6 prefix-ordering rules) and must
+#     NOT have a Qt6 find dragged in from inside a VTK find; nothing here links
+#     VTK::GUISupportQt anyway (GUISupportQt is stripped from PCL_VTK_COMPONENTS above),
+#     the target only has to EXIST for VTK-targets.cmake to load. ---
+for _f in /opt/homebrew/lib/cmake/vtk-*/vtk-config.cmake; do
+  [ -f "$_f" ] || continue
+  grep -q 'ci-vtk-qt6openglwidgets' "$_f" && continue
+  perl -0pi -e 's{(include\("\$\{CMAKE_CURRENT_LIST_DIR\}/\$\{CMAKE_FIND_PACKAGE_NAME\}-targets\.cmake"\))}{# ci-vtk-qt6openglwidgets: VTK 9.7 GUISupportQt names Qt6::OpenGLWidgets in its link\n# interface; satisfy the target-exists check without pulling Qt6 into this Qt5 workspace.\nif(NOT TARGET Qt6::OpenGLWidgets)\n  add_library(Qt6::OpenGLWidgets INTERFACE IMPORTED)\nendif()\n$1}' "$_f"
+  echo "  VTK: pre-define Qt6::OpenGLWidgets stub before VTK-targets.cmake in ${_f}"
+done

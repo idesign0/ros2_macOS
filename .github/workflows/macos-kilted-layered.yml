@@ -240,6 +240,26 @@ jobs:
           done
       - uses: actions/download-artifact@v4
         with: { name: install-base-a, path: install }
+      - name: Verify downloaded base prefix
+        run: |
+          # actions/download-artifact can END WITHOUT FAILING on a truncated download -- seen on
+          # humble run 35511271212, where the ros-visualization and gzsim shards stopped after
+          # "Starting download of artifact to: .../install", never printed the digest line, and
+          # then built against a PARTIAL base prefix: 37 packages "failed" in ~2-3s each because
+          # std_msgs/rclcpp/rosidl_runtime_c were simply absent (data_tamer_cpp failed in one
+          # shard and finished in another from the same artifact). Assert the prefix here so a
+          # bad download fails this job loudly instead of producing a phantom cascade.
+          missing=0
+          for p in ament_cmake_core std_msgs rclcpp; do
+            [ -d "install/share/$p" ] || { echo "::error::base prefix incomplete: install/share/$p is missing"; missing=1; }
+          done
+          n=$(ls install/share 2>/dev/null | wc -l | tr -d ' ')
+          [ "${n:-0}" -ge 300 ] || { echo "::error::base prefix has only $n packages (expected >= 300)"; missing=1; }
+          if [ "$missing" != 0 ]; then
+            echo "The 'install-base' artifact download above was incomplete -- re-run this job."
+            exit 1
+          fi
+          echo "base prefix OK: $n packages in install/share"
       - name: Restore executable bits (GitHub artifacts drop +x)
         run: chmod -R +x install/bin 2>/dev/null || true
       - name: Unlink conflicting Homebrew packages
@@ -312,6 +332,26 @@ jobs:
           brew-base-formulae: ${{ env.BREW_BASE }}
       - uses: actions/download-artifact@v4
         with: { name: install-base, path: install }
+      - name: Verify downloaded base prefix
+        run: |
+          # actions/download-artifact can END WITHOUT FAILING on a truncated download -- seen on
+          # humble run 35511271212, where the ros-visualization and gzsim shards stopped after
+          # "Starting download of artifact to: .../install", never printed the digest line, and
+          # then built against a PARTIAL base prefix: 37 packages "failed" in ~2-3s each because
+          # std_msgs/rclcpp/rosidl_runtime_c were simply absent (data_tamer_cpp failed in one
+          # shard and finished in another from the same artifact). Assert the prefix here so a
+          # bad download fails this job loudly instead of producing a phantom cascade.
+          missing=0
+          for p in ament_cmake_core std_msgs rclcpp; do
+            [ -d "install/share/$p" ] || { echo "::error::base prefix incomplete: install/share/$p is missing"; missing=1; }
+          done
+          n=$(ls install/share 2>/dev/null | wc -l | tr -d ' ')
+          [ "${n:-0}" -ge 300 ] || { echo "::error::base prefix has only $n packages (expected >= 300)"; missing=1; }
+          if [ "$missing" != 0 ]; then
+            echo "The 'install-base' artifact download above was incomplete -- re-run this job."
+            exit 1
+          fi
+          echo "base prefix OK: $n packages in install/share"
       - name: Restore executable bits (GitHub artifacts drop +x)
         run: chmod -R +x install/bin 2>/dev/null || true
       - name: Apply skip-list (COLCON_IGNORE)
@@ -376,6 +416,20 @@ jobs:
         run: |
           mkdir -p summaries
           { echo "## shard: ${{ matrix.shard }}"; grep -E 'Summary:|packages failed' "build_${{ matrix.shard }}.log" 2>/dev/null || true; grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sort -u || true; } > "summaries/${{ matrix.shard }}.txt"
+          # Collect macOS crash reports. Every process killed by a signal leaves a .ips
+          # report here -- which is the only way to see WHERE a build-time tool died when
+          # colcon just prints "Segmentation fault: 11" (auto_apms_behavior_tree's
+          # create_node_model, generating node_model_native.xml, does exactly that, and the
+          # stack is what is needed to fix it). Cheap, and only fires when something crashed.
+          for _d in "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports; do
+            [ -d "$_d" ] || continue
+            if [ -e /tmp/base_marker ]; then _find=(find "$_d" -name '*.ips' -newer /tmp/base_marker)
+            else _find=(find "$_d" -name '*.ips'); fi
+            "${_find[@]}" 2>/dev/null | while read -r _r; do
+              cp -p "$_r" "summaries/crash_$(basename "$_r")" 2>/dev/null || true
+            done
+          done
+          ls -1 summaries
       - name: Upload shard delta
         if: always()
         uses: actions/upload-artifact@v4
@@ -399,6 +453,26 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with: { name: install-base, path: install }
+      - name: Verify downloaded base prefix
+        run: |
+          # actions/download-artifact can END WITHOUT FAILING on a truncated download -- seen on
+          # humble run 35511271212, where the ros-visualization and gzsim shards stopped after
+          # "Starting download of artifact to: .../install", never printed the digest line, and
+          # then built against a PARTIAL base prefix: 37 packages "failed" in ~2-3s each because
+          # std_msgs/rclcpp/rosidl_runtime_c were simply absent (data_tamer_cpp failed in one
+          # shard and finished in another from the same artifact). Assert the prefix here so a
+          # bad download fails this job loudly instead of producing a phantom cascade.
+          missing=0
+          for p in ament_cmake_core std_msgs rclcpp; do
+            [ -d "install/share/$p" ] || { echo "::error::base prefix incomplete: install/share/$p is missing"; missing=1; }
+          done
+          n=$(ls install/share 2>/dev/null | wc -l | tr -d ' ')
+          [ "${n:-0}" -ge 300 ] || { echo "::error::base prefix has only $n packages (expected >= 300)"; missing=1; }
+          if [ "$missing" != 0 ]; then
+            echo "The 'install-base' artifact download above was incomplete -- re-run this job."
+            exit 1
+          fi
+          echo "base prefix OK: $n packages in install/share"
       - name: Restore executable bits (GitHub artifacts drop +x)
         run: chmod -R +x install/bin 2>/dev/null || true
       - uses: actions/download-artifact@v4
