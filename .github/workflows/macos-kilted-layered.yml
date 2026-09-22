@@ -189,18 +189,55 @@ jobs:
             --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_basea.log
+          # --- transient-failure retry pass -------------------------------------------------
+          # A few packages per run die with "make: *** [...] Alarm clock: 14" (SIGALRM killing a
+          # make job, usually in rosidl typesupport generation under the parallel executor) --
+          # not a code defect: cx_rl_interfaces and play_motion_builder_msgs both build clean on
+          # a re-run. Re-run ONLY packages whose own stderr block carries a transient signature,
+          # so a genuine failure is never masked and never paid for twice. Deliberately NOT
+          # keyed on "jobserver tokens" alone: that line also trails real crashes (auto_apms).
+          RETRY=$(grep -E 'Failed +<<<' build_basea.log 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/\1/' | sort -u | while read -r _p; do
+            awk -v p="$_p" '$0=="--- stderr: "p{f=1} f{print} f&&/^(Failed|Finished) +<<< /{exit}' build_basea.log \
+              | grep -qE 'Alarm clock|Resource temporarily unavailable|Killed: 9' && echo "$_p"
+          done | tr '\n' ' ')
+          if [ -n "${RETRY// /}" ]; then
+            echo "::warning::retrying transient failures: $RETRY"
+            colcon build --packages-select $RETRY --merge-install \
+              --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+              --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_basea.log
+          fi
           echo "== summary =="; grep -E 'Summary:|packages failed' build_basea.log || true
+      - name: Pack install-base-a
+        run: |
+          # Ship the base prefix as ONE compressed file instead of ~50k loose files.
+          # Raw-directory artifacts are what made run 35511271212 lie: two shards' downloads
+          # stopped mid-stream, actions/download-artifact did NOT fail, and they built against
+          # a partial prefix (37 phantom failures). A single tar.zst cannot fail that way --
+          # a truncated transfer dies at extraction -- and it also preserves the +x bits that
+          # GitHub artifacts strip. Same format the gz job has used reliably all along.
+          tar --zstd -cf install-base-a.tar.zst install
+          echo "packed $(du -h install-base-a.tar.zst | cut -f1) from $(find install -type f | wc -l | tr -d ' ') files"
       - name: Upload install-base-a
         uses: actions/upload-artifact@v4
         with:
           name: install-base-a
-          path: install
+          path: install-base-a.tar.zst
           retention-days: 2
       - name: Summary base-a
         if: always()
         run: |
           mkdir -p summaries
-          { echo "## base-a"; grep -E 'Failed +<<<' build_basea.log 2>/dev/null | sort -u || true; } > summaries/_base-a.txt
+          { echo "## base-a"
+            grep -E 'Summary:|packages failed' build_basea.log 2>/dev/null || true
+            # Drop packages that failed in the main pass but were recovered by the
+            # transient-failure retry pass, so the summary reports REAL failures only.
+            grep -E 'Failed +<<<' build_basea.log 2>/dev/null | sort -u | while read -r _l; do
+              _p=$(echo "$_l" | sed -E 's/.*<<< ([^ ]+).*/\1/')
+              grep -qE "Finished +<<< $_p " retry_basea.log 2>/dev/null || echo "$_l"
+            done
+            grep -E 'Finished +<<<' retry_basea.log 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/  recovered on retry: \1/' || true
+          } > summaries/_base-a.txt
       - name: Upload summary base
         if: always()
         uses: actions/upload-artifact@v4
@@ -238,28 +275,37 @@ jobs:
             path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
             [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
           done
-      - uses: actions/download-artifact@v4
-        with: { name: install-base-a, path: install }
-      - name: Verify downloaded base prefix
+      - name: Fetch and extract install-base-a
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # actions/download-artifact can END WITHOUT FAILING on a truncated download -- seen on
-          # humble run 35511271212, where the ros-visualization and gzsim shards stopped after
-          # "Starting download of artifact to: .../install", never printed the digest line, and
-          # then built against a PARTIAL base prefix: 37 packages "failed" in ~2-3s each because
-          # std_msgs/rclcpp/rosidl_runtime_c were simply absent (data_tamer_cpp failed in one
-          # shard and finished in another from the same artifact). Assert the prefix here so a
-          # bad download fails this job loudly instead of producing a phantom cascade.
+          # Retry-capable replacement for actions/download-artifact, which has no retry and
+          # can end WITHOUT failing on a truncated download (run 35511271212: 37 phantom
+          # failures across two shards). Three layers of safety:
+          #   1. gh run download in a retry loop        -> a dropped transfer is retried
+          #   2. tar --zstd -xf                         -> a truncated/corrupt archive ERRORS
+          #   3. the package assertions below           -> last-resort sanity check
+          # NOTE the assertions name only base-a packages: rclcpp is built in base-b, so it
+          # must NOT be required here.
+          ok=0
+          for n in 1 2 3; do
+            rm -rf install install-base-a.tar.zst
+            if gh run download "$GITHUB_RUN_ID" -n install-base-a -D . && tar --zstd -xf install-base-a.tar.zst; then
+              ok=1; break
+            fi
+            echo "::warning::install-base-a fetch/extract attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          [ "$ok" = 1 ] || { echo "::error::could not fetch a complete install-base-a after 3 attempts"; exit 1; }
+          rm -f install-base-a.tar.zst
           missing=0
-          for p in ament_cmake_core std_msgs rclcpp; do
+          for p in ament_cmake_core std_msgs; do
             [ -d "install/share/$p" ] || { echo "::error::base prefix incomplete: install/share/$p is missing"; missing=1; }
           done
           n=$(ls install/share 2>/dev/null | wc -l | tr -d ' ')
-          [ "${n:-0}" -ge 300 ] || { echo "::error::base prefix has only $n packages (expected >= 300)"; missing=1; }
-          if [ "$missing" != 0 ]; then
-            echo "The 'install-base' artifact download above was incomplete -- re-run this job."
-            exit 1
-          fi
-          echo "base prefix OK: $n packages in install/share"
+          [ "${n:-0}" -ge 100 ] || { echo "::error::base prefix has only $n packages (expected >= 100)"; missing=1; }
+          [ "$missing" = 0 ] || exit 1
+          echo "install-base-a OK: $n packages in install/share"
       - name: Restore executable bits (GitHub artifacts drop +x)
         run: chmod -R +x install/bin 2>/dev/null || true
       - name: Unlink conflicting Homebrew packages
@@ -293,18 +339,55 @@ jobs:
             --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_baseb.log
+          # --- transient-failure retry pass -------------------------------------------------
+          # A few packages per run die with "make: *** [...] Alarm clock: 14" (SIGALRM killing a
+          # make job, usually in rosidl typesupport generation under the parallel executor) --
+          # not a code defect: cx_rl_interfaces and play_motion_builder_msgs both build clean on
+          # a re-run. Re-run ONLY packages whose own stderr block carries a transient signature,
+          # so a genuine failure is never masked and never paid for twice. Deliberately NOT
+          # keyed on "jobserver tokens" alone: that line also trails real crashes (auto_apms).
+          RETRY=$(grep -E 'Failed +<<<' build_baseb.log 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/\1/' | sort -u | while read -r _p; do
+            awk -v p="$_p" '$0=="--- stderr: "p{f=1} f{print} f&&/^(Failed|Finished) +<<< /{exit}' build_baseb.log \
+              | grep -qE 'Alarm clock|Resource temporarily unavailable|Killed: 9' && echo "$_p"
+          done | tr '\n' ' ')
+          if [ -n "${RETRY// /}" ]; then
+            echo "::warning::retrying transient failures: $RETRY"
+            colcon build --packages-select $RETRY --merge-install \
+              --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+              --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_baseb.log
+          fi
           echo "== summary =="; grep -E 'Summary:|packages failed' build_baseb.log || true
+      - name: Pack install-base
+        run: |
+          # Ship the base prefix as ONE compressed file instead of ~50k loose files.
+          # Raw-directory artifacts are what made run 35511271212 lie: two shards' downloads
+          # stopped mid-stream, actions/download-artifact did NOT fail, and they built against
+          # a partial prefix (37 phantom failures). A single tar.zst cannot fail that way --
+          # a truncated transfer dies at extraction -- and it also preserves the +x bits that
+          # GitHub artifacts strip. Same format the gz job has used reliably all along.
+          tar --zstd -cf install-base.tar.zst install
+          echo "packed $(du -h install-base.tar.zst | cut -f1) from $(find install -type f | wc -l | tr -d ' ') files"
       - name: Upload install-base
         uses: actions/upload-artifact@v4
         with:
           name: install-base
-          path: install
+          path: install-base.tar.zst
           retention-days: 2
       - name: Summary base-b
         if: always()
         run: |
           mkdir -p summaries
-          { echo "## base-b"; grep -E 'Failed +<<<' build_baseb.log 2>/dev/null | sort -u || true; } > summaries/_base-b.txt
+          { echo "## base-b"
+            grep -E 'Summary:|packages failed' build_baseb.log 2>/dev/null || true
+            # Drop packages that failed in the main pass but were recovered by the
+            # transient-failure retry pass, so the summary reports REAL failures only.
+            grep -E 'Failed +<<<' build_baseb.log 2>/dev/null | sort -u | while read -r _l; do
+              _p=$(echo "$_l" | sed -E 's/.*<<< ([^ ]+).*/\1/')
+              grep -qE "Finished +<<< $_p " retry_baseb.log 2>/dev/null || echo "$_l"
+            done
+            grep -E 'Finished +<<<' retry_baseb.log 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/  recovered on retry: \1/' || true
+          } > summaries/_base-b.txt
       - name: Upload summary base
         if: always()
         uses: actions/upload-artifact@v4
@@ -330,28 +413,35 @@ jobs:
           deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
-      - uses: actions/download-artifact@v4
-        with: { name: install-base, path: install }
-      - name: Verify downloaded base prefix
+      - name: Fetch and extract install-base
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # actions/download-artifact can END WITHOUT FAILING on a truncated download -- seen on
-          # humble run 35511271212, where the ros-visualization and gzsim shards stopped after
-          # "Starting download of artifact to: .../install", never printed the digest line, and
-          # then built against a PARTIAL base prefix: 37 packages "failed" in ~2-3s each because
-          # std_msgs/rclcpp/rosidl_runtime_c were simply absent (data_tamer_cpp failed in one
-          # shard and finished in another from the same artifact). Assert the prefix here so a
-          # bad download fails this job loudly instead of producing a phantom cascade.
+          # Retry-capable replacement for actions/download-artifact, which has no retry and
+          # can end WITHOUT failing on a truncated download (run 35511271212: 37 phantom
+          # failures across two shards). Three layers of safety:
+          #   1. gh run download in a retry loop        -> a dropped transfer is retried
+          #   2. tar --zstd -xf                         -> a truncated/corrupt archive ERRORS
+          #   3. the package assertions below           -> last-resort sanity check
+          ok=0
+          for n in 1 2 3; do
+            rm -rf install install-base.tar.zst
+            if gh run download "$GITHUB_RUN_ID" -n install-base -D . && tar --zstd -xf install-base.tar.zst; then
+              ok=1; break
+            fi
+            echo "::warning::install-base fetch/extract attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          [ "$ok" = 1 ] || { echo "::error::could not fetch a complete install-base after 3 attempts"; exit 1; }
+          rm -f install-base.tar.zst
           missing=0
           for p in ament_cmake_core std_msgs rclcpp; do
             [ -d "install/share/$p" ] || { echo "::error::base prefix incomplete: install/share/$p is missing"; missing=1; }
           done
           n=$(ls install/share 2>/dev/null | wc -l | tr -d ' ')
           [ "${n:-0}" -ge 300 ] || { echo "::error::base prefix has only $n packages (expected >= 300)"; missing=1; }
-          if [ "$missing" != 0 ]; then
-            echo "The 'install-base' artifact download above was incomplete -- re-run this job."
-            exit 1
-          fi
-          echo "base prefix OK: $n packages in install/share"
+          [ "$missing" = 0 ] || exit 1
+          echo "install-base OK: $n packages in install/share"
       - name: Restore executable bits (GitHub artifacts drop +x)
         run: chmod -R +x install/bin 2>/dev/null || true
       - name: Apply skip-list (COLCON_IGNORE)
@@ -407,6 +497,24 @@ jobs:
             --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "build_${{ matrix.shard }}.log"
+          # --- transient-failure retry pass -------------------------------------------------
+          # A few packages per run die with "make: *** [...] Alarm clock: 14" (SIGALRM killing a
+          # make job, usually in rosidl typesupport generation under the parallel executor) --
+          # not a code defect: cx_rl_interfaces and play_motion_builder_msgs both build clean on
+          # a re-run. Re-run ONLY packages whose own stderr block carries a transient signature,
+          # so a genuine failure is never masked and never paid for twice. Deliberately NOT
+          # keyed on "jobserver tokens" alone: that line also trails real crashes (auto_apms).
+          RETRY=$(grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/\1/' | sort -u | while read -r _p; do
+            awk -v p="$_p" '$0=="--- stderr: "p{f=1} f{print} f&&/^(Failed|Finished) +<<< /{exit}' "build_${{ matrix.shard }}.log" \
+              | grep -qE 'Alarm clock|Resource temporarily unavailable|Killed: 9' && echo "$_p"
+          done | tr '\n' ' ')
+          if [ -n "${RETRY// /}" ]; then
+            echo "::warning::retrying transient failures: $RETRY"
+            colcon build --packages-select $RETRY --merge-install \
+              --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+              --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "retry_${{ matrix.shard }}.log"
+          fi
           mkdir -p install_shard
           find install -type f -newer /tmp/base_marker 2>/dev/null | while read -r f; do
             rel="${f#install/}"; mkdir -p "install_shard/$(dirname "$rel")"; cp -p "$f" "install_shard/$rel"
@@ -415,7 +523,16 @@ jobs:
         if: always()
         run: |
           mkdir -p summaries
-          { echo "## shard: ${{ matrix.shard }}"; grep -E 'Summary:|packages failed' "build_${{ matrix.shard }}.log" 2>/dev/null || true; grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sort -u || true; } > "summaries/${{ matrix.shard }}.txt"
+          { echo "## shard: ${{ matrix.shard }}"
+            grep -E 'Summary:|packages failed' "build_${{ matrix.shard }}.log" 2>/dev/null || true
+            # Drop packages that failed in the main pass but were recovered by the
+            # transient-failure retry pass, so the summary reports REAL failures only.
+            grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sort -u | while read -r _l; do
+              _p=$(echo "$_l" | sed -E 's/.*<<< ([^ ]+).*/\1/')
+              grep -qE "Finished +<<< $_p " "retry_${{ matrix.shard }}.log" 2>/dev/null || echo "$_l"
+            done
+            grep -E 'Finished +<<<' "retry_${{ matrix.shard }}.log" 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/  recovered on retry: \1/' || true
+          } > "summaries/${{ matrix.shard }}.txt"
           # Collect macOS crash reports. Every process killed by a signal leaves a .ips
           # report here -- which is the only way to see WHERE a build-time tool died when
           # colcon just prints "Segmentation fault: 11" (auto_apms_behavior_tree's
@@ -451,28 +568,35 @@ jobs:
     if: always()
     runs-on: macos-26
     steps:
-      - uses: actions/download-artifact@v4
-        with: { name: install-base, path: install }
-      - name: Verify downloaded base prefix
+      - name: Fetch and extract install-base
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # actions/download-artifact can END WITHOUT FAILING on a truncated download -- seen on
-          # humble run 35511271212, where the ros-visualization and gzsim shards stopped after
-          # "Starting download of artifact to: .../install", never printed the digest line, and
-          # then built against a PARTIAL base prefix: 37 packages "failed" in ~2-3s each because
-          # std_msgs/rclcpp/rosidl_runtime_c were simply absent (data_tamer_cpp failed in one
-          # shard and finished in another from the same artifact). Assert the prefix here so a
-          # bad download fails this job loudly instead of producing a phantom cascade.
+          # Retry-capable replacement for actions/download-artifact, which has no retry and
+          # can end WITHOUT failing on a truncated download (run 35511271212: 37 phantom
+          # failures across two shards). Three layers of safety:
+          #   1. gh run download in a retry loop        -> a dropped transfer is retried
+          #   2. tar --zstd -xf                         -> a truncated/corrupt archive ERRORS
+          #   3. the package assertions below           -> last-resort sanity check
+          ok=0
+          for n in 1 2 3; do
+            rm -rf install install-base.tar.zst
+            if gh run download "$GITHUB_RUN_ID" -n install-base -D . && tar --zstd -xf install-base.tar.zst; then
+              ok=1; break
+            fi
+            echo "::warning::install-base fetch/extract attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          [ "$ok" = 1 ] || { echo "::error::could not fetch a complete install-base after 3 attempts"; exit 1; }
+          rm -f install-base.tar.zst
           missing=0
           for p in ament_cmake_core std_msgs rclcpp; do
             [ -d "install/share/$p" ] || { echo "::error::base prefix incomplete: install/share/$p is missing"; missing=1; }
           done
           n=$(ls install/share 2>/dev/null | wc -l | tr -d ' ')
           [ "${n:-0}" -ge 300 ] || { echo "::error::base prefix has only $n packages (expected >= 300)"; missing=1; }
-          if [ "$missing" != 0 ]; then
-            echo "The 'install-base' artifact download above was incomplete -- re-run this job."
-            exit 1
-          fi
-          echo "base prefix OK: $n packages in install/share"
+          [ "$missing" = 0 ] || exit 1
+          echo "install-base OK: $n packages in install/share"
       - name: Restore executable bits (GitHub artifacts drop +x)
         run: chmod -R +x install/bin 2>/dev/null || true
       - uses: actions/download-artifact@v4
@@ -481,11 +605,18 @@ jobs:
         run: |
           if [ -d deltas ]; then find deltas -mindepth 1 -maxdepth 1 -type d | while read -r d; do rsync -a "$d/" install/; done; fi
           du -sh install || true
+      - name: Pack full workspace install
+        run: |
+          # One tar.zst, like every other install artifact in this workflow: reliable to
+          # transfer, and it PRESERVES THE EXECUTABLE BITS -- a raw-directory artifact is
+          # zipped by GitHub and every binary in install/bin comes back non-executable.
+          tar --zstd -cf install-full-kilted.tar.zst install
+          echo "packed $(du -h install-full-kilted.tar.zst | cut -f1)"
       - name: Upload full workspace install
         uses: actions/upload-artifact@v4
         with:
           name: install-full-kilted
-          path: install
+          path: install-full-kilted.tar.zst
           retention-days: 5
 
   report:
