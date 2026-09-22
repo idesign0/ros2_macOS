@@ -483,3 +483,12 @@ add_compile_definitions(B460800=460800 B500000=500000 B921600=921600
 if(APPLE)
   add_compile_options(-include "${CMAKE_CURRENT_LIST_DIR}/macos_compat.h")
 endif()
+
+# --- Per-project hook ---------------------------------------------------------------
+# CMAKE_PROJECT_INCLUDE is read at the END of every project() call, i.e. after language
+# detection, which is the only point where CMAKE_<LANG>_IMPLICIT_INCLUDE_DIRECTORIES can
+# be extended without the compiler-detection step overwriting it again. See
+# cmake/project_include.cmake for what it does (stripping the SDK's usr/include from the
+# generated compile lines, which otherwise shadows libc++'s headers).
+set(CMAKE_PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/project_include.cmake"
+    CACHE FILEPATH "Workspace-wide per-project CMake hook")
