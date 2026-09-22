@@ -271,3 +271,8 @@ zed_msgs
 btcpp_ros2_interfaces
 behaviortree_ros2
 clearpath_generator_common
+# clearpath_common: moved here from base_2b 2026-09-22 -- this metapackage exec_depends
+# clearpath_generator_common, which de337d78 moved into this shard, so colcon could not
+# find its package.sh from the base half. Its dependents (clearpath_viz, clearpath_gz)
+# are in this shard as well.
+clearpath_common

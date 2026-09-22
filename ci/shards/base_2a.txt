@@ -141,7 +141,6 @@ canopen_core
 create3_republisher
 dataspeed_can_usb
 depthimage_to_laserscan
-foxglove_bridge
 generate_parameter_library
 joy
 kinematics_interface

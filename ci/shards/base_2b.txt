@@ -231,6 +231,9 @@ clearpath_manipulators
 moveit_setup_assistant
 turtlebot3_manipulation_moveit_config
 moveit
-clearpath_common
 behaviortree_ros2
 rosx_introspection
+# foxglove_bridge: moved here from base_2a 2026-09-22 -- it needs rosbag2_cpp and
+# rosx_introspection, both of which live in this half (rosx_introspection was moved
+# base_2a -> base_2b by b7b8271c), so building it in base_2a aborted at configure.
+foxglove_bridge

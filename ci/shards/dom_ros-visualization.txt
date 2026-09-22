@@ -91,3 +91,7 @@ rviz_2d_overlay_plugins
 rviz_mbf_plugins
 rviz_satellite
 soccer_vision_3d_rviz_markers
+# data_tamer_msgs: added 2026-09-22 -- data_tamer_cpp is built in this shard too (line ~70)
+# but its msgs package was only listed in dom_moveit, so this shard aborted on the missing
+# data_tamer_msgs/package.sh. A duplicate build of a tiny msgs package is harmless.
+data_tamer_msgs

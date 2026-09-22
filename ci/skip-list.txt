@@ -471,9 +471,10 @@ agnocast_sample_application
 
 # --- mrpt3 (v3.x) two-distribution cluster: the workspace builds mrpt_ros v2.x (mrpt_lib*) and
 # skip-lists the ~30 mrpt3 v3.x modules (mrpt_containers/mrpt_math/mrpt_maps/...) to avoid the
-# duplicate mrpt/core header install. mola, gtsam2mrpt_serial, kitti_metrics_eval and
-# mrpt_libros_bridge find_package() the v3.x module names, so they cannot build until the two
-# MRPT distributions are consolidated (upstream/maintainer task). Skip until then.
+# duplicate mrpt/core header install. mola, gtsam2mrpt_serial and kitti_metrics_eval
+# find_package() the v3.x module names, so they cannot build until the two MRPT distributions
+# are consolidated (upstream/maintainer task). Skip until then. (mrpt_libros_bridge was in this
+# list by mistake -- it is v2; see its entry below.)
 mola_gnss_to_markers
 mola_imu_preintegration
 mola_input_euroc_dataset
@@ -484,7 +485,11 @@ mola_input_paris_luco_dataset
 mola_input_rosbag1
 gtsam2mrpt_serial
 kitti_metrics_eval
-mrpt_libros_bridge
+# mrpt_libros_bridge: UN-SKIPPED 2026-09-22 -- it belongs to mrpt_ros v2 (mrpt_ros_bridge
+# ros2bridge 3.5.3, deps mrpt_libobs + mrpt_libmaps, both built), not to the mrpt3 v3.x module
+# set it was grouped with. It provides both the dash config mrpt-ros2bridge and the ament config
+# mrpt_libros_bridge that the eight consumers above look for.
+#mrpt_libros_bridge
 
 # desktop_full: metapackage that pulls ros_gz_sim_demos (a gz demo package not built on macOS);
 # unsatisfiable cascade. Skip.
@@ -522,26 +527,17 @@ irobot_create_nodes
 # not found". Not macOS-portable as written; skip (could later be repointed at mujoco_vendor).
 schunk_svh_simulation
 
-# --- second-layer mrpt/mola cluster revealed after the first mrpt3 skips (all cascade from the
-# skip-listed mrpt3 v3.x modules / mrpt_libros_bridge=mrpt-ros2bridge; same two-distribution root) ---
-mola_input_rosbag2
+# --- second-layer mrpt/mola cluster: UN-SKIPPED 2026-09-22 ---------------------------------
+# These eight (mola_input_rosbag2, mrpt_msgs_bridge, mrpt_reactivenav2d, mrpt_sensorlib,
+# mrpt_trajectory_follower, mvsim, pose_cov_ops, rosbag2rawlog) were skipped as "mrpt3 cascade",
+# but the run logs show they all fail on ONE missing config: mrpt-ros2bridge / mrpt_libros_bridge.
+# That package is mrpt_ros_bridge's ros2bridge (v3.5.3) and depends only on mrpt_libobs +
+# mrpt_libmaps -- both of which BUILD here (every mrpt_lib* package reports Finished). It was
+# swept into the mrpt3 v3.x skip set by mistake, so it is un-skipped above and these eight go
+# with it. mola_state_estimation_simple/_smoother stay skipped: they need mrpt_obs, a genuine
+# mrpt3 v3.x module.
 mola_state_estimation_simple
 mola_state_estimation_smoother
-mrpt_msgs_bridge
-mrpt_reactivenav2d
-mrpt_sensorlib
-mrpt_trajectory_follower
-mvsim
-pose_cov_ops
-rosbag2rawlog
-# mp2p_icp_viz: mm-viewer main.cpp uses undeclared load_plugins/trajectory (mp2p_icp/mola viz app,
-# tied to the same mrpt3 stack that is skip-listed). Skip with the cluster.
-mp2p_icp_viz
-
-# canopen_core: mixes plain + keyword target_link_libraries signatures for node_canopen_driver/
-# node_canopen_master (CMake rejects on this toolchain), and the whole ros2_canopen stack targets
-# Linux SocketCAN (see canopen_fake_slaves) so it is not macOS-usable. Skip the CAN stack root.
-canopen_core
 # canopen_fake_slaves: #includes <lely/io2/linux/can.hpp> (Linux SocketCAN) -> not available on
 # macOS. Linux-only.
 canopen_fake_slaves
