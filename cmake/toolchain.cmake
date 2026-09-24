@@ -175,7 +175,6 @@ set(YAML_CPP_LIBRARIES "${YAML_CPP_PREFIX}/lib/libyaml-cpp.dylib" CACHE FILEPATH
 
 # Make headers visible globally (optional)
 include_directories(${YAML_CPP_INCLUDE_DIRS})
-link_directories("${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib")  # resolve bare -lyaml-cpp from consumers
 
 # Backward ROS
 # On macOS, do NOT add Linux-only flags
@@ -509,6 +508,37 @@ include_directories(SYSTEM /opt/homebrew/include)
 foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
   set(${_lf} "${${_lf}} -L/opt/homebrew/lib" CACHE STRING "" FORCE)
 endforeach()
+
+# --- Make the vendored yaml-cpp resolvable for a BARE `-lyaml-cpp` -------------------------
+# yaml_cpp_vendor installs to the nested prefix install/opt/yaml_cpp_vendor/{lib,include}, which is
+# not on the normal <prefix>/lib search path, so any package linking the bare name `yaml-cpp`
+# (rather than the yaml-cpp::yaml-cpp target) gets a plain -lyaml-cpp with no -L and dies with
+# "ld: library 'yaml-cpp' not found" -- which is why a dozen packages carry a bespoke patch.
+#
+# This lived above as `link_directories(...)`, which NEVER WORKED: link_directories() called from a
+# toolchain file does not reach the project. Measured on CMake 4.x / Apple clang 21:
+#   link_directories directly in CMakeLists.txt  -> -L emitted, links
+#   link_directories in the toolchain file       -> NO -L      <-- the old line
+#   link_directories via CMAKE_PROJECT_INCLUDE   -> NO -L
+#   CMAKE_*_LINKER_FLAGS_INIT                    -> seeded, but this toolchain then overwrites
+#                                                   CMAKE_*_LINKER_FLAGS outright (lines above)
+# So use the same CACHE/FORCE append the /opt/homebrew/lib block right above uses -- the one idiom
+# that demonstrably survives here -- placed after every other assignment to those variables.
+#
+# EXISTS-guarded: an -L to a missing directory makes ld warn on every single link, and the early
+# base packages configure before yaml_cpp_vendor is installed (they do not need it).
+# FIND-guarded: the toolchain is re-read on every configure and these are FORCEd cache appends,
+# so without it the flag would accumulate on repeat configures of the same build tree.
+set(_ci_ycpp_libdir "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib")
+if(EXISTS "${_ci_ycpp_libdir}")
+  foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
+    string(FIND "${${_lf}}" "${_ci_ycpp_libdir}" _ci_ycpp_seen)
+    if(_ci_ycpp_seen EQUAL -1)
+      set(${_lf} "${${_lf}} -L${_ci_ycpp_libdir}" CACHE STRING "" FORCE)
+    endif()
+  endforeach()
+  unset(_ci_ycpp_seen)
+endif()
 
 # ---------------------------------------------------------------------------
 # OpenCV (Homebrew) — pin to opencv@4. Brew's default `opencv` is now 5.0,
