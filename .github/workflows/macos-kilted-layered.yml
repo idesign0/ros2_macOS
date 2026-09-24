@@ -208,6 +208,22 @@ jobs:
               -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_basea.log
           fi
           echo "== summary =="; grep -E 'Summary:|packages failed' build_basea.log || true
+      - name: Relax recorded brew dependency version pins
+        run: |
+          # ceres-solver bakes the EXACT brew SuiteSparse/METIS version it was configured against
+          # into its installed CeresConfig.cmake (`find_dependency(SuiteSparse 7.12.2)`). Jobs in one
+          # run provision Homebrew independently and start hours apart, so a formula can roll forward
+          # mid-run and split the workspace: jazzy run 35777229974 built ceres in base-1 against
+          # suite-sparse 7.14.1, base-2a then got 7.14.0 -> "Found unsuitable version 7.14.0, but
+          # required is at least 7.14.1" -> 16 packages lost (beluga, cartographer + _ros + _rviz,
+          # nav2_constrained_smoother, slam_toolbox, robot_calibration, rmf_traffic_editor and 8
+          # cascades), while humble and kilted built every one of them from the same commit.
+          # Drop just the version argument: a SuiteSparse/METIS patch bump is ABI-compatible and the
+          # COMPONENTS check still runs.
+          for _c in $(find install -name CeresConfig.cmake 2>/dev/null); do
+            perl -pi -e 's{(find_dependency\(\s*(?:SuiteSparse|METIS))\s+[0-9][0-9.]*}{$1}g' "$_c"
+            echo "relaxed SuiteSparse/METIS version pins in $_c"
+          done
       - name: Pack install-base-a
         run: |
           # Ship the base prefix as ONE compressed file instead of ~50k loose files.
@@ -283,6 +299,8 @@ jobs:
           # can end WITHOUT failing on a truncated download (run 35511271212: 37 phantom
           # failures across two shards). Three layers of safety:
           #   1. gh run download in a retry loop        -> a dropped transfer is retried
+          # -R is explicit because gh infers the repo from the git remote, and the assemble
+          # job has no actions/checkout -> "fatal: not a git repository" without it.
           #   2. tar --zstd -xf                         -> a truncated/corrupt archive ERRORS
           #   3. the package assertions below           -> last-resort sanity check
           # NOTE the assertions name only base-a packages: rclcpp is built in base-b, so it
@@ -290,7 +308,7 @@ jobs:
           ok=0
           for n in 1 2 3; do
             rm -rf install install-base-a.tar.zst
-            if gh run download "$GITHUB_RUN_ID" -n install-base-a -D . && tar --zstd -xf install-base-a.tar.zst; then
+            if gh run download "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" -n install-base-a -D . && tar --zstd -xf install-base-a.tar.zst; then
               ok=1; break
             fi
             echo "::warning::install-base-a fetch/extract attempt $n failed; retrying in $((n*20))s"
@@ -358,6 +376,22 @@ jobs:
               -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_baseb.log
           fi
           echo "== summary =="; grep -E 'Summary:|packages failed' build_baseb.log || true
+      - name: Relax recorded brew dependency version pins
+        run: |
+          # ceres-solver bakes the EXACT brew SuiteSparse/METIS version it was configured against
+          # into its installed CeresConfig.cmake (`find_dependency(SuiteSparse 7.12.2)`). Jobs in one
+          # run provision Homebrew independently and start hours apart, so a formula can roll forward
+          # mid-run and split the workspace: jazzy run 35777229974 built ceres in base-1 against
+          # suite-sparse 7.14.1, base-2a then got 7.14.0 -> "Found unsuitable version 7.14.0, but
+          # required is at least 7.14.1" -> 16 packages lost (beluga, cartographer + _ros + _rviz,
+          # nav2_constrained_smoother, slam_toolbox, robot_calibration, rmf_traffic_editor and 8
+          # cascades), while humble and kilted built every one of them from the same commit.
+          # Drop just the version argument: a SuiteSparse/METIS patch bump is ABI-compatible and the
+          # COMPONENTS check still runs.
+          for _c in $(find install -name CeresConfig.cmake 2>/dev/null); do
+            perl -pi -e 's{(find_dependency\(\s*(?:SuiteSparse|METIS))\s+[0-9][0-9.]*}{$1}g' "$_c"
+            echo "relaxed SuiteSparse/METIS version pins in $_c"
+          done
       - name: Pack install-base
         run: |
           # Ship the base prefix as ONE compressed file instead of ~50k loose files.
@@ -421,12 +455,14 @@ jobs:
           # can end WITHOUT failing on a truncated download (run 35511271212: 37 phantom
           # failures across two shards). Three layers of safety:
           #   1. gh run download in a retry loop        -> a dropped transfer is retried
+          # -R is explicit because gh infers the repo from the git remote, and the assemble
+          # job has no actions/checkout -> "fatal: not a git repository" without it.
           #   2. tar --zstd -xf                         -> a truncated/corrupt archive ERRORS
           #   3. the package assertions below           -> last-resort sanity check
           ok=0
           for n in 1 2 3; do
             rm -rf install install-base.tar.zst
-            if gh run download "$GITHUB_RUN_ID" -n install-base -D . && tar --zstd -xf install-base.tar.zst; then
+            if gh run download "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" -n install-base -D . && tar --zstd -xf install-base.tar.zst; then
               ok=1; break
             fi
             echo "::warning::install-base fetch/extract attempt $n failed; retrying in $((n*20))s"
@@ -576,12 +612,14 @@ jobs:
           # can end WITHOUT failing on a truncated download (run 35511271212: 37 phantom
           # failures across two shards). Three layers of safety:
           #   1. gh run download in a retry loop        -> a dropped transfer is retried
+          # -R is explicit because gh infers the repo from the git remote, and the assemble
+          # job has no actions/checkout -> "fatal: not a git repository" without it.
           #   2. tar --zstd -xf                         -> a truncated/corrupt archive ERRORS
           #   3. the package assertions below           -> last-resort sanity check
           ok=0
           for n in 1 2 3; do
             rm -rf install install-base.tar.zst
-            if gh run download "$GITHUB_RUN_ID" -n install-base -D . && tar --zstd -xf install-base.tar.zst; then
+            if gh run download "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" -n install-base -D . && tar --zstd -xf install-base.tar.zst; then
               ok=1; break
             fi
             echo "::warning::install-base fetch/extract attempt $n failed; retrying in $((n*20))s"

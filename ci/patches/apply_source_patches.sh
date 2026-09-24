@@ -247,7 +247,7 @@ for _p in husarion_ugv_lights husarion_ugv_diagnostics; do
   [ -f "$f" ] || continue
   grep -q 'ci-husarion-yamlcpp' "$f" && continue
   grep -q 'endforeach' "$f" || continue
-  perl -0pi -e 's{(\nendforeach\(\)\n)}{$1\n# ci-husarion-yamlcpp: fabricate the directory-scoped yaml-cpp::yaml-cpp IMPORTED target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS "\$\{YAML_CPP_INCLUDE_DIR\}" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\n}' "$f"
+  perl -0pi -e 's{(\nendforeach\(\)\n)}{$1\n# ci-husarion-yamlcpp: fabricate the directory-scoped yaml-cpp::yaml-cpp IMPORTED target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycppb_lib NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycppb_inc NAMES yaml-cpp/yaml.h HINTS "\$\{YAML_CPP_INCLUDE_DIR\}" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycppb_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycppb_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycppb_inc\}")\n  endif()\nendif()\n}' "$f"
   echo "  $_p: fabricate yaml-cpp::yaml-cpp target in ${f#$ROOT/}"
 done
 # velodyne_pointcloud / nebula_velodyne_common: link the BARE `yaml-cpp` target (velodyne via its
@@ -257,12 +257,18 @@ done
 # "CMake Generate step failed". Right after the first find_package, ensure a GLOBAL yaml-cpp::yaml-cpp
 # exists and fabricate a bare `yaml-cpp` INTERFACE target that forwards to it (an INTERFACE target,
 # not an ALIAS, to avoid the ALIAS-to-non-global-imported restriction). Idempotent (ci-yamlcpp-bare).
-for _p in velodyne_pointcloud nebula_velodyne_common swri_transform_util camera_aravis2; do
+# ONLY leaf packages belong here. A fabricated IMPORTED target name leaks into the exported
+# link interface of anything with downstream consumers -- nebula_velodyne_common did exactly that
+# and broke nebula_velodyne_decoders/_hw_interfaces with "the link interface of target
+# nebula_velodyne_common::nebula_velodyne_common contains yaml-cpp::yaml-cpp but the target was not
+# found". Packages WITH consumers (swri_transform_util 5, nebula_velodyne_common 3, canopen_core 5)
+# link the .dylib by ABSOLUTE PATH instead, via their own blocks further down.
+for _p in camera_aravis2; do
   f="$(_pkg_cml "$_p")"
   [ -n "$f" ] && [ -f "$f" ] || continue
   grep -q 'ci-yamlcpp-bare' "$f" && continue
   grep -qE '^find_package\(' "$f" || continue
-  perl -0pi -e 's{(\nfind_package\([^\n]*\)\n)}{$1\n# ci-yamlcpp-bare: ensure GLOBAL yaml-cpp::yaml-cpp + a bare yaml-cpp forwarding target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  if(YAML_CPP_LIBRARIES AND EXISTS "\$\{YAML_CPP_LIBRARIES\}")\n    set(_ci_ycpp_lib "\$\{YAML_CPP_LIBRARIES\}")\n    set(_ci_ycpp_inc "\$\{YAML_CPP_INCLUDE_DIRS\}")\n  else()\n    find_library(_ci_ycpp_lib NAMES yaml-cpp HINTS \$\{CMAKE_PREFIX_PATH\} "\$\{CMAKE_INSTALL_PREFIX\}/opt/yaml_cpp_vendor/lib" PATH_SUFFIXES lib)\n    find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h HINTS \$\{CMAKE_PREFIX_PATH\} "\$\{CMAKE_INSTALL_PREFIX\}/opt/yaml_cpp_vendor/include" PATH_SUFFIXES include)\n  endif()\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED GLOBAL)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycpp_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycpp_inc\}")\n  endif()\nendif()\nif(NOT TARGET yaml-cpp AND TARGET yaml-cpp::yaml-cpp)\n  add_library(yaml-cpp INTERFACE IMPORTED GLOBAL)\n  set_target_properties(yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp::yaml-cpp)\nendif()\n}' "$f"
+  perl -0pi -e 's{(\nfind_package\([^\n]*\)\n)}{$1\n# ci-yamlcpp-bare: ensure GLOBAL yaml-cpp::yaml-cpp + a bare yaml-cpp forwarding target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  if(YAML_CPP_LIBRARIES AND EXISTS "\$\{YAML_CPP_LIBRARIES\}")\n    set(_ci_ycppb_lib "\$\{YAML_CPP_LIBRARIES\}")\n    set(_ci_ycppb_inc "\$\{YAML_CPP_INCLUDE_DIRS\}")\n  else()\n    find_library(_ci_ycppb_lib NAMES yaml-cpp HINTS \$\{CMAKE_PREFIX_PATH\} "\$\{CMAKE_INSTALL_PREFIX\}/opt/yaml_cpp_vendor/lib" PATH_SUFFIXES lib)\n    find_path(_ci_ycppb_inc NAMES yaml-cpp/yaml.h HINTS \$\{CMAKE_PREFIX_PATH\} "\$\{CMAKE_INSTALL_PREFIX\}/opt/yaml_cpp_vendor/include" PATH_SUFFIXES include)\n  endif()\n  if(_ci_ycppb_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED GLOBAL)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycppb_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycppb_inc\}")\n  endif()\nendif()\nif(NOT TARGET yaml-cpp AND TARGET yaml-cpp::yaml-cpp)\n  add_library(yaml-cpp INTERFACE IMPORTED GLOBAL)\n  set_target_properties(yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp::yaml-cpp)\nendif()\n}' "$f"
   echo "  $_p: ensure GLOBAL yaml-cpp::yaml-cpp + bare yaml-cpp forwarding target in ${f#$ROOT/}"
 done
 
@@ -2105,7 +2111,7 @@ fi
 #     Idempotent via ci-yaml-cpp-target marker. ---
 for _f in $(find "$ROOT" -path '*autoware*/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
   if grep -q 'autoware_package()' "$_f" && grep -q 'YAML_CPP_LIBRARIES' "$_f" && ! grep -q 'ci-yaml-cpp-target' "$_f"; then
-    perl -0pi -e 's{(autoware_package\(\)\n)}{$1\n# ci-yaml-cpp-target: yaml-cpp::yaml-cpp is a directory-scoped IMPORTED target that\n# find_package(yaml-cpp) does not recreate at this scope; fabricate it from the\n# vendored yaml_cpp_vendor install so target_link_libraries(... yaml-cpp::yaml-cpp) links.\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  unset(yaml-cpp_FOUND CACHE)\n  unset(yaml-cpp_FOUND)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  get_filename_component(_ci_ycpp_root "\${yaml-cpp_DIR}" DIRECTORY)\n  get_filename_component(_ci_ycpp_root "\${_ci_ycpp_root}" DIRECTORY)\n  get_filename_component(_ci_ycpp_root "\${_ci_ycpp_root}" DIRECTORY)\n  find_library(_ci_ycpp_lib NAMES yaml-cpp\n    HINTS "\${_ci_ycpp_root}/lib" "\${YAML_CPP_INCLUDE_DIR}/../lib" \${CMAKE_PREFIX_PATH}\n    PATH_SUFFIXES lib)\n  find_path(_ci_ycpp_inc NAMES yaml-cpp/yaml.h\n    HINTS "\${YAML_CPP_INCLUDE_DIR}" "\${_ci_ycpp_root}/include" \${CMAKE_PREFIX_PATH}\n    PATH_SUFFIXES include)\n  if(_ci_ycpp_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES\n      IMPORTED_LOCATION "\${_ci_ycpp_lib}"\n      INTERFACE_INCLUDE_DIRECTORIES "\${_ci_ycpp_inc}")\n    message(STATUS "[ci-yaml-cpp-target] fabricated yaml-cpp::yaml-cpp from \${_ci_ycpp_lib}")\n  else()\n    find_package(yaml-cpp REQUIRED)\n  endif()\nendif()\n}' "$_f"
+    perl -0pi -e 's{(autoware_package\(\)\n)}{$1\n# ci-yaml-cpp-target: yaml-cpp::yaml-cpp is a directory-scoped IMPORTED target that\n# find_package(yaml-cpp) does not recreate at this scope; fabricate it from the\n# vendored yaml_cpp_vendor install so target_link_libraries(... yaml-cpp::yaml-cpp) links.\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  unset(yaml-cpp_FOUND CACHE)\n  unset(yaml-cpp_FOUND)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  get_filename_component(_ci_ycpp_root "\${yaml-cpp_DIR}" DIRECTORY)\n  get_filename_component(_ci_ycpp_root "\${_ci_ycpp_root}" DIRECTORY)\n  get_filename_component(_ci_ycpp_root "\${_ci_ycpp_root}" DIRECTORY)\n  find_library(_ci_ycppb_lib NAMES yaml-cpp\n    HINTS "\${_ci_ycpp_root}/lib" "\${YAML_CPP_INCLUDE_DIR}/../lib" \${CMAKE_PREFIX_PATH}\n    PATH_SUFFIXES lib)\n  find_path(_ci_ycppb_inc NAMES yaml-cpp/yaml.h\n    HINTS "\${YAML_CPP_INCLUDE_DIR}" "\${_ci_ycpp_root}/include" \${CMAKE_PREFIX_PATH}\n    PATH_SUFFIXES include)\n  if(_ci_ycppb_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES\n      IMPORTED_LOCATION "\${_ci_ycppb_lib}"\n      INTERFACE_INCLUDE_DIRECTORIES "\${_ci_ycppb_inc}")\n    message(STATUS "[ci-yaml-cpp-target] fabricated yaml-cpp::yaml-cpp from \${_ci_ycppb_lib}")\n  else()\n    find_package(yaml-cpp REQUIRED)\n  endif()\nendif()\n}' "$_f"
     echo "  autoware: fabricate yaml-cpp::yaml-cpp target in ${_f#$ROOT/}"
   fi
 done
@@ -2276,7 +2282,7 @@ fi
 for _p in velodyne_pointcloud swri_transform_util; do
   _f="$(_pkg_dir "$_p")/CMakeLists.txt"
   if [ -f "$_f" ] && grep -qF 'if(TARGET yaml-cpp::yaml-cpp)' "$_f" && ! grep -q 'ci-yamlcpp-pathlink' "$_f"; then
-    perl -0pi -e 's~if\(TARGET yaml-cpp::yaml-cpp\)\n  set\(YAML_CPP_TARGET "yaml-cpp::yaml-cpp"\)\nelse\(\)\n  set\(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\}\)\nendif\(\)~# ci-yamlcpp-pathlink: find_package(yaml-cpp) can leave yaml-cpp::yaml-cpp as a\n# directory-scoped IMPORTED target (TRUE here, absent at generate on macOS). Link the\n# vendored yaml-cpp .dylib by ABSOLUTE PATH so it also exports cleanly to consumers.\nfind_library(_ci_ycpp_lib NAMES yaml-cpp\n  HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\}\n  PATH_SUFFIXES lib)\nif(_ci_ycpp_lib)\n  set(YAML_CPP_TARGET "\$\{_ci_ycpp_lib\}")\n  include_directories("\$\{YAML_CPP_INCLUDE_DIR\}")\nelseif(TARGET yaml-cpp::yaml-cpp)\n  set(YAML_CPP_TARGET "yaml-cpp::yaml-cpp")\nelse()\n  set(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\})\nendif()~' "$_f"
+    perl -0pi -e 's~if\(TARGET yaml-cpp::yaml-cpp\)\n  set\(YAML_CPP_TARGET "yaml-cpp::yaml-cpp"\)\nelse\(\)\n  set\(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\}\)\nendif\(\)~# ci-yamlcpp-pathlink: find_package(yaml-cpp) can leave yaml-cpp::yaml-cpp as a\n# directory-scoped IMPORTED target (TRUE here, absent at generate on macOS). Link the\n# vendored yaml-cpp .dylib by ABSOLUTE PATH so it also exports cleanly to consumers.\nif(YAML_CPP_LIBRARIES AND EXISTS "\$\{YAML_CPP_LIBRARIES\}")\n  set(_ci_ycpp_lib "\$\{YAML_CPP_LIBRARIES\}")\nelse()\n  find_library(_ci_ycpp_lib NAMES yaml-cpp\n    HINTS "\$\{YAML_CPP_INCLUDE_DIRS\}/../lib" "\$\{yaml-cpp_DIR\}/../.." "\$\{CMAKE_INSTALL_PREFIX\}/opt/yaml_cpp_vendor/lib" \$\{CMAKE_PREFIX_PATH\}\n    PATH_SUFFIXES lib)\nendif()\nif(_ci_ycpp_lib)\n  set(YAML_CPP_TARGET "\$\{_ci_ycpp_lib\}")\n  if(YAML_CPP_INCLUDE_DIRS)\n    include_directories(\$\{YAML_CPP_INCLUDE_DIRS\})\n  endif()\nelseif(TARGET yaml-cpp::yaml-cpp)\n  set(YAML_CPP_TARGET "yaml-cpp::yaml-cpp")\nelse()\n  set(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\})\nendif()~' "$_f"
     echo "  $_p: link yaml-cpp .dylib by absolute path (export-safe) in ${_f#$ROOT/}"
   fi
 done
@@ -2374,6 +2380,33 @@ if [ -n "$_f" ] && [ -f "$_f" ]; then
   fi
 fi
 
+# --- canopen_core (all 3): its target_link_libraries lists the BARE name `yaml-cpp`. The
+#     vendored yaml_cpp_vendor exports only yaml-cpp::yaml-cpp (0.8.0) or nothing usable (0.7.0),
+#     so CMake passes the bare name through as `-lyaml-cpp` and the link dies:
+#       ld: library 'yaml-cpp' not found -> libnode_canopen_driver.dylib
+#     canopen_core has FIVE downstream consumers (canopen_base_driver, canopen_402_driver,
+#     canopen_proxy_driver, canopen_ros2_control, canopen_ros2_controllers), so a fabricated
+#     IMPORTED target name is NOT an option here -- it would leak into the exported link interface
+#     and break all of them (exactly what happened to nebula_velodyne_common). Substitute the
+#     toolchain's ABSOLUTE ${YAML_CPP_LIBRARIES} path, which exports cleanly. Idempotent. ---
+if [ -n "$_f" ] && [ -f "$_f" ] && grep -qE '^[[:space:]]+yaml-cpp$' "$_f"; then
+  perl -0pi -e 's{^([ \t]+)yaml-cpp$}{$1\$\{YAML_CPP_LIBRARIES\}}mg' "$_f"
+  echo "  canopen_core: bare yaml-cpp link item -> \${YAML_CPP_LIBRARIES} (export-safe absolute path)"
+fi
+
+# --- canopen_core (humble branch only): node_canopen_driver.hpp calls
+#     `this->config_["dcf_path"].as<std::string>()` inside a CLASS TEMPLATE, where config_ is a
+#     dependent expression -- so `as` must be spelled `.template as<...>` or clang rejects it:
+#       node_canopen_driver.hpp:198:43: error: use 'template' keyword to treat 'as' as a
+#       dependent template name
+#     gcc accepts the sloppy form, which is why it survives on Linux. Upstream master already
+#     carries the fix; this backports it to the humble branch. No-op where `.template` is present. ---
+_h="$(dirname "$_f")/include/canopen_core/node_interfaces/node_canopen_driver.hpp"
+if [ -f "$_h" ] && grep -qE '\]\.as<' "$_h"; then
+  perl -pi -e 's{(\["(?:dcf_path|dcf)"\])\.as<}{$1.template as<}g' "$_h"
+  echo "  canopen_core: config_[...].as<> -> .template as<> (dependent template name) in node_canopen_driver.hpp"
+fi
+
 # --- lely_core_libraries (all 3): the INSTALLED lely/libc/time.h still carries the
 #     `#if !LELY_HAVE_TIMESPEC -> struct timespec {...}` fallback. The configure-time
 #     `-DLELY_HAVE_TIMESPEC=1` (CPPFLAGS, above) only covers lely's OWN build; a consumer
@@ -2462,3 +2495,21 @@ for _f in /opt/homebrew/lib/cmake/vtk-*/vtk-config.cmake; do
   perl -0pi -e 's{(include\("\$\{CMAKE_CURRENT_LIST_DIR\}/\$\{CMAKE_FIND_PACKAGE_NAME\}-targets\.cmake"\))}{# ci-vtk-qt6openglwidgets: VTK 9.7 GUISupportQt names Qt6::OpenGLWidgets in its link\n# interface; satisfy the target-exists check without pulling Qt6 into this Qt5 workspace.\nif(NOT TARGET Qt6::OpenGLWidgets)\n  add_library(Qt6::OpenGLWidgets INTERFACE IMPORTED)\nendif()\n$1}' "$_f"
   echo "  VTK: pre-define Qt6::OpenGLWidgets stub before VTK-targets.cmake in ${_f}"
 done
+
+# --- multisensor_calibration (kilted/jazzy): OpenCV 4.7 rewrote the aruco module. Two sites in
+#     CalibrationTarget.hpp still use the pre-4.7 API and fail on brew opencv@4:
+#       :105 `pArucoDictionary = cv::aruco::getPredefinedDictionary(...)` -- 4.7+ returns a
+#            Dictionary BY VALUE, the member is a cv::Ptr<Dictionary> -> "no viable overloaded '='"
+#       :128 `cv::aruco::Board::create(corners, dict, ids)` -- the static factory was removed in
+#            4.7+ in favour of the Board constructor -> "no member named 'create' in
+#            'cv::aruco::Board'"
+#     Keep the members as cv::Ptr (the nullptr checks at :308/:309 and the estimatePoseBoard /
+#     detectMarkers call sites rely on it) and just construct them with cv::makePtr. Guarded on the
+#     OpenCV version so a pre-4.7 tree still compiles. Idempotent (ci-msc-aruco47 marker). ---
+_f="$(_pkg_cml multisensor_calibration)"
+_f="$(dirname "${_f:-/nonexistent}")/include/multisensor_calibration/calibration_target/CalibrationTarget.hpp"
+if [ -f "$_f" ] && ! grep -q 'ci-msc-aruco47' "$_f"; then
+  perl -0pi -e 's{\n([ \t]*)pArucoDictionary = cv::aruco::getPredefinedDictionary\(cv::aruco::DICT_6X6_250\);}{"\n$1// ci-msc-aruco47: OpenCV 4.7+ returns Dictionary by value; this member is a cv::Ptr\n#if CV_VERSION_MAJOR > 4 || (CV_VERSION_MAJOR == 4 \&\& CV_VERSION_MINOR >= 7)\n$1pArucoDictionary = cv::makePtr<cv::aruco::Dictionary>(\n$1  cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250));\n#else\n$1pArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);\n#endif"}e' "$_f"
+  perl -0pi -e 's{\n([ \t]*)pArucoBoard = cv::aruco::Board::create\(boardCorners, pArucoDictionary,\s*\n\s*markerIds\);}{"\n$1// ci-msc-aruco47: Board::create() was removed in OpenCV 4.7+; use the constructor\n#if CV_VERSION_MAJOR > 4 || (CV_VERSION_MAJOR == 4 \&\& CV_VERSION_MINOR >= 7)\n$1pArucoBoard = cv::makePtr<cv::aruco::Board>(boardCorners, *pArucoDictionary, markerIds);\n#else\n$1pArucoBoard = cv::aruco::Board::create(boardCorners, pArucoDictionary, markerIds);\n#endif"}e' "$_f"
+  echo "  multisensor_calibration: aruco getPredefinedDictionary/Board::create -> OpenCV 4.7+ API in ${_f#$ROOT/}"
+fi
