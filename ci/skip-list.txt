@@ -485,11 +485,13 @@ mola_input_paris_luco_dataset
 mola_input_rosbag1
 gtsam2mrpt_serial
 kitti_metrics_eval
-# mrpt_libros_bridge: UN-SKIPPED 2026-09-22 -- it belongs to mrpt_ros v2 (mrpt_ros_bridge
-# ros2bridge 3.5.3, deps mrpt_libobs + mrpt_libmaps, both built), not to the mrpt3 v3.x module
-# set it was grouped with. It provides both the dash config mrpt-ros2bridge and the ament config
-# mrpt_libros_bridge that the eight consumers above look for.
-#mrpt_libros_bridge
+# mrpt_libros_bridge: RE-SKIPPED 2026-09-23. The 2026-09-22 un-skip was wrong and the run proved
+# it on all three distros identically:
+#   CMakeLists.txt:30 (find_package): "mrpt_maps" (requested version 3.0) not found
+# The .gitmodules branch (MRPT/mrpt_ros_bridge @ ros2) now tips at 4.0.0, which requires the
+# UNDERSCORE mrpt3 v3.x modules -- the very set skip-listed above. The earlier reasoning came from
+# the pinned local copy (3.5.3, dash `mrpt-maps`), not the branch tip CI actually builds.
+mrpt_libros_bridge
 
 # desktop_full: metapackage that pulls ros_gz_sim_demos (a gz demo package not built on macOS);
 # unsatisfiable cascade. Skip.
@@ -527,17 +529,42 @@ irobot_create_nodes
 # not found". Not macOS-portable as written; skip (could later be repointed at mujoco_vendor).
 schunk_svh_simulation
 
-# --- second-layer mrpt/mola cluster: UN-SKIPPED 2026-09-22 ---------------------------------
-# These eight (mola_input_rosbag2, mrpt_msgs_bridge, mrpt_reactivenav2d, mrpt_sensorlib,
-# mrpt_trajectory_follower, mvsim, pose_cov_ops, rosbag2rawlog) were skipped as "mrpt3 cascade",
-# but the run logs show they all fail on ONE missing config: mrpt-ros2bridge / mrpt_libros_bridge.
-# That package is mrpt_ros_bridge's ros2bridge (v3.5.3) and depends only on mrpt_libobs +
-# mrpt_libmaps -- both of which BUILD here (every mrpt_lib* package reports Finished). It was
-# swept into the mrpt3 v3.x skip set by mistake, so it is un-skipped above and these eight go
-# with it. mola_state_estimation_simple/_smoother stay skipped: they need mrpt_obs, a genuine
-# mrpt3 v3.x module.
+# --- second-layer mrpt/mola cluster (re-skipped 2026-09-23) --------------------------------
+# All eight fail on the single missing mrpt-ros2bridge / mrpt_libros_bridge config, which is
+# skip-listed again (see its entry above -- branch tip 4.0.0 needs mrpt3 v3.x mrpt_maps).
+# NOTE colcon SKIPS the dependents of a failed package, so while mrpt_libros_bridge was un-skipped
+# these eight never even appeared as failures -- they were silently not built. Skipping them is the
+# honest state, and identical in outcome.
+mola_input_rosbag2
+mrpt_msgs_bridge
+mrpt_reactivenav2d
+mrpt_sensorlib
+mrpt_trajectory_follower
+mvsim
+pose_cov_ops
+rosbag2rawlog
+# mp2p_icp_viz is NOT here: its failure was never mrpt-version related (upstream #if
+# MRPT_HAS_NANOGUI guard), and it now builds -- fork id_mp2p_icp@develop a58aa94.
+# mola_state_estimation_*: genuine mrpt_obs (mrpt3 v3.x) dependency.
 mola_state_estimation_simple
 mola_state_estimation_smoother
+# mola_georeferencing: find_package(mola_gtsam_factors), itself skip-listed in the mrpt3 cluster.
+# Unsatisfiable cascade (new in the 2026-09-23 run, once mola built deeper).
+mola_georeferencing
 # canopen_fake_slaves: #includes <lely/io2/linux/can.hpp> (Linux SocketCAN) -> not available on
 # macOS. Linux-only.
 canopen_fake_slaves
+
+# rtabmap_rviz_plugins: a Qt5 rviz plugin (find_package(Qt5 QUIET COMPONENTS Widgets)) whose
+# transitive dependency chain re-runs brew's RTABMapConfig.cmake, which hard-requires Qt6:
+#   Found package configuration file: /opt/homebrew/lib/rtabmap-0.23/RTABMapConfig.cmake
+#   but it set RTABMap_FOUND to FALSE ... RTABMap could not be found because dependency Qt6
+#   could not be found.
+# Qt6 is deliberately disabled for this project in cmake/toolchain.cmake, because letting Qt6 in
+# poisons QT_MAJOR_VERSION=6 and then its own Qt5::Core mismatches -- the base rviz stack here is
+# Qt5. So the two requirements are mutually exclusive: brew ships a Qt6-built rtabmap (whose
+# rtabmap::gui rtabmap_conversions re-exports), and rviz here is Qt5; loading both Qt majors in one
+# process would be unsound even if it linked. This only became visible in run 35777232883 once
+# rtabmap_conversions itself started building (the VTK 9.7 Qt6::OpenGLWidgets stub). Skip until brew
+# rtabmap is Qt5-built or rtabmap_conversions stops exporting rtabmap::gui.
+rtabmap_rviz_plugins
