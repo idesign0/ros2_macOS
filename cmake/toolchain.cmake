@@ -288,13 +288,35 @@ set(CSPARSE_LIBRARY "/opt/homebrew/lib/libsuitesparse.dylib")
 # (robot_calibration, rmf_traffic_editor). Prepend the NEWEST installed suite-sparse keg to
 # CMAKE_PREFIX_PATH so find_package(SuiteSparse) resolves the >=7.14 one consistently in
 # every job (also keeps base and domain shards on one version).
-file(GLOB _ss_kegs "/opt/homebrew/Cellar/suite-sparse/*")
-if(_ss_kegs)
-  list(SORT _ss_kegs COMPARE NATURAL)
-  list(LENGTH _ss_kegs _ss_n)
-  math(EXPR _ss_last "${_ss_n}-1")
-  list(GET _ss_kegs ${_ss_last} _ss_newest)
-  set(CMAKE_PREFIX_PATH "${_ss_newest};${CMAKE_PREFIX_PATH}")
+# PREFER THE STABLE SYMLINK. Pointing CMAKE_PREFIX_PATH at a versioned Cellar keg makes every
+# recorded path version-specific, and jobs in one run provision Homebrew independently hours apart:
+# humble run 35983456051 built ceres in base-1 against suite-sparse 7.14.1, base-2a then had only
+# 7.14.0, and cartographer died with
+#   make: *** No rule to make target '/opt/homebrew/Cellar/suite-sparse/7.14.1/lib/libspqr.dylib'
+# (after the CeresConfig version-pin strip had already got it past the find_package check -- that
+# fixed the version COMPARISON but not the baked-in absolute PATH). /opt/homebrew/opt/suite-sparse
+# is a symlink brew keeps pointing at the current keg, so a path recorded through it stays valid in
+# every job whatever version that job has. Only fall back to a versioned keg if the symlink is
+# older than what Ceres needs (>= 7.14.0), which is the case this block originally existed for.
+set(_ss_prefix "")
+if(EXISTS "/opt/homebrew/opt/suite-sparse")
+  file(REAL_PATH "/opt/homebrew/opt/suite-sparse" _ss_real)
+  get_filename_component(_ss_linked_ver "${_ss_real}" NAME)
+  if(_ss_linked_ver VERSION_GREATER_EQUAL 7.14.0)
+    set(_ss_prefix "/opt/homebrew/opt/suite-sparse")
+  endif()
+endif()
+if(NOT _ss_prefix)
+  file(GLOB _ss_kegs "/opt/homebrew/Cellar/suite-sparse/*")
+  if(_ss_kegs)
+    list(SORT _ss_kegs COMPARE NATURAL)
+    list(LENGTH _ss_kegs _ss_n)
+    math(EXPR _ss_last "${_ss_n}-1")
+    list(GET _ss_kegs ${_ss_last} _ss_prefix)
+  endif()
+endif()
+if(_ss_prefix)
+  set(CMAKE_PREFIX_PATH "${_ss_prefix};${CMAKE_PREFIX_PATH}")
 endif()
 
 # 1. Set the GDAL_CONFIG variable (often found in /opt/homebrew/bin)
