@@ -224,6 +224,19 @@ jobs:
             perl -pi -e 's{(find_dependency\(\s*(?:SuiteSparse|METIS))\s+[0-9][0-9.]*}{$1}g' "$_c"
             echo "relaxed SuiteSparse/METIS version pins in $_c"
           done
+          # ...and the same drift in its worse form: a VERSIONED Cellar path baked into an exported
+          # target. Relaxing the version CHECK was not enough -- humble run 35983456051 then died with
+          #   make: *** No rule to make target '/opt/homebrew/Cellar/suite-sparse/7.14.1/lib/libspqr.dylib'
+          # because base-1 recorded 7.14.1 and base-2a only had 7.14.0. Rewrite every versioned Cellar
+          # path in the installed CMake files to the equivalent /opt/homebrew/opt/<formula>/ symlink,
+          # which brew keeps pointing at whatever keg that job has. Only touches paths that carry an
+          # explicit version directory, so /opt/homebrew/opt/... paths are left alone.
+          _n=0
+          for _c in $(grep -rl "/opt/homebrew/Cellar/" install --include='*.cmake' 2>/dev/null); do
+            perl -pi -e 's{/opt/homebrew/Cellar/([A-Za-z0-9@+._-]+)/[0-9][^/"]*/}{/opt/homebrew/opt/$1/}g' "$_c"
+            _n=$((_n+1))
+          done
+          echo "de-versioned brew Cellar paths in $_n installed cmake file(s)"
       - name: Pack install-base1
         run: |
           # Ship the base prefix as ONE compressed file instead of ~50k loose files.
@@ -378,6 +391,19 @@ jobs:
             perl -pi -e 's{(find_dependency\(\s*(?:SuiteSparse|METIS))\s+[0-9][0-9.]*}{$1}g' "$_c"
             echo "relaxed SuiteSparse/METIS version pins in $_c"
           done
+          # ...and the same drift in its worse form: a VERSIONED Cellar path baked into an exported
+          # target. Relaxing the version CHECK was not enough -- humble run 35983456051 then died with
+          #   make: *** No rule to make target '/opt/homebrew/Cellar/suite-sparse/7.14.1/lib/libspqr.dylib'
+          # because base-1 recorded 7.14.1 and base-2a only had 7.14.0. Rewrite every versioned Cellar
+          # path in the installed CMake files to the equivalent /opt/homebrew/opt/<formula>/ symlink,
+          # which brew keeps pointing at whatever keg that job has. Only touches paths that carry an
+          # explicit version directory, so /opt/homebrew/opt/... paths are left alone.
+          _n=0
+          for _c in $(grep -rl "/opt/homebrew/Cellar/" install --include='*.cmake' 2>/dev/null); do
+            perl -pi -e 's{/opt/homebrew/Cellar/([A-Za-z0-9@+._-]+)/[0-9][^/"]*/}{/opt/homebrew/opt/$1/}g' "$_c"
+            _n=$((_n+1))
+          done
+          echo "de-versioned brew Cellar paths in $_n installed cmake file(s)"
       - name: Pack install-base2a
         run: |
           # Ship the base prefix as ONE compressed file instead of ~50k loose files.
@@ -533,6 +559,19 @@ jobs:
             perl -pi -e 's{(find_dependency\(\s*(?:SuiteSparse|METIS))\s+[0-9][0-9.]*}{$1}g' "$_c"
             echo "relaxed SuiteSparse/METIS version pins in $_c"
           done
+          # ...and the same drift in its worse form: a VERSIONED Cellar path baked into an exported
+          # target. Relaxing the version CHECK was not enough -- humble run 35983456051 then died with
+          #   make: *** No rule to make target '/opt/homebrew/Cellar/suite-sparse/7.14.1/lib/libspqr.dylib'
+          # because base-1 recorded 7.14.1 and base-2a only had 7.14.0. Rewrite every versioned Cellar
+          # path in the installed CMake files to the equivalent /opt/homebrew/opt/<formula>/ symlink,
+          # which brew keeps pointing at whatever keg that job has. Only touches paths that carry an
+          # explicit version directory, so /opt/homebrew/opt/... paths are left alone.
+          _n=0
+          for _c in $(grep -rl "/opt/homebrew/Cellar/" install --include='*.cmake' 2>/dev/null); do
+            perl -pi -e 's{/opt/homebrew/Cellar/([A-Za-z0-9@+._-]+)/[0-9][^/"]*/}{/opt/homebrew/opt/$1/}g' "$_c"
+            _n=$((_n+1))
+          done
+          echo "de-versioned brew Cellar paths in $_n installed cmake file(s)"
       - name: Pack install-base
         run: |
           # Ship the base prefix as ONE compressed file instead of ~50k loose files.
