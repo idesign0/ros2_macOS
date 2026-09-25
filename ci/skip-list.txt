@@ -533,3 +533,43 @@ canopen_fake_slaves
 # rtabmap_conversions itself started building (the VTK 9.7 Qt6::OpenGLWidgets stub). Skip until brew
 # rtabmap is Qt5-built or rtabmap_conversions stops exporting rtabmap::gui.
 rtabmap_rviz_plugins
+
+# --- second-order cascade from the mrpt/mola re-skips (observed in run 35983461657) -------
+# Skipping the 8 mrpt_libros_bridge consumers made THEIR consumers fail visibly. Note the
+# difference: while a dependency merely FAILS, colcon silently skips its dependents; once the
+# dependency is COLCON_IGNOREd the dependents are still selected and fail at configure with
+# "Could not find a package configuration file provided by <dep>". Same packages either way --
+# only the reporting changes. Each entry below is what actually failed, with its missing dep:
+mola_lidar_odometry            # <- mrpt_maps (mrpt3 v3.x)
+mola_sm_loop_closure           # <- mola_georeferencing
+mrpt_generic_sensor            # <- mrpt_sensorlib
+mrpt_map_server                # <- mrpt_maps
+mrpt_path_planning_apps        # <- mrpt_path_planning
+mrpt_pf_localization           # <- pose_cov_ops
+mrpt_pointcloud_pipeline       # <- mrpt_maps
+mrpt_sensor_bumblebee_stereo   # <- mrpt_sensorlib
+mrpt_sensor_gnss_nmea          # <- mrpt_sensorlib
+mrpt_sensor_gnss_novatel       # <- mrpt_sensorlib
+mrpt_sensor_imu_taobotics      # <- mrpt_sensorlib
+
+# --- canopen: RE-SKIPPED 2026-09-25, reverting my 2026-09-22 un-skip ----------------------
+# I un-skipped canopen_core because its visible failure was a fixable CMake signature clash. Two
+# rounds of fixes later (keyword target_link_libraries, lely timespec, .template as<>, yaml-cpp
+# absolute path) it compiles the driver and then dies on what the original 2026-09-21 skip said
+# all along:
+#   canopen_core/include/canopen_core/node_interfaces/node_canopen_master.hpp:24:10:
+#   fatal error: 'lely/io2/linux/can.hpp' file not found
+# That include is unconditional -- the CAN master IS Linux SocketCAN. Not macOS-portable. The
+# CI patches for it are kept (correct in themselves, and idempotent) but the package and its
+# consumers are skipped.
+canopen_core
+canopen_base_driver
+canopen_master_driver
+canopen_402_driver
+canopen_proxy_driver
+canopen_ros2_control
+canopen_ros2_controllers
+canopen_inventus_driver
+canopen
+canopen_tests
+
