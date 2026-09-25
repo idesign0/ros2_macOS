@@ -557,7 +557,6 @@ kitti_metrics_eval
 # The .gitmodules branch (MRPT/mrpt_ros_bridge @ ros2) now tips at 4.0.0, which requires the
 # UNDERSCORE mrpt3 v3.x modules -- the very set skip-listed above. The earlier reasoning came from
 # the pinned local copy (3.5.3, dash `mrpt-maps`), not the branch tip CI actually builds.
-mrpt_libros_bridge
 
 # desktop_full: metapackage that pulls ros_gz_sim_demos (a gz demo package not built on macOS);
 # unsatisfiable cascade. Skip.
@@ -601,14 +600,6 @@ schunk_svh_simulation
 # NOTE colcon SKIPS the dependents of a failed package, so while mrpt_libros_bridge was un-skipped
 # these eight never even appeared as failures -- they were silently not built. Skipping them is the
 # honest state, and identical in outcome.
-mola_input_rosbag2
-mrpt_msgs_bridge
-mrpt_reactivenav2d
-mrpt_sensorlib
-mrpt_trajectory_follower
-mvsim
-pose_cov_ops
-rosbag2rawlog
 # mp2p_icp_viz is NOT here: its failure was never mrpt-version related (upstream #if
 # MRPT_HAS_NANOGUI guard), and it now builds -- fork id_mp2p_icp@develop a58aa94.
 # mola_state_estimation_*: genuine mrpt_obs (mrpt3 v3.x) dependency.
@@ -643,15 +634,9 @@ rtabmap_rviz_plugins
 # only the reporting changes. Each entry below is what actually failed, with its missing dep:
 mola_lidar_odometry            # <- mrpt_maps (mrpt3 v3.x)
 mola_sm_loop_closure           # <- mola_georeferencing
-mrpt_generic_sensor            # <- mrpt_sensorlib
 mrpt_map_server                # <- mrpt_maps
 mrpt_path_planning_apps        # <- mrpt_path_planning
-mrpt_pf_localization           # <- pose_cov_ops
 mrpt_pointcloud_pipeline       # <- mrpt_maps
-mrpt_sensor_bumblebee_stereo   # <- mrpt_sensorlib
-mrpt_sensor_gnss_nmea          # <- mrpt_sensorlib
-mrpt_sensor_gnss_novatel       # <- mrpt_sensorlib
-mrpt_sensor_imu_taobotics      # <- mrpt_sensorlib
 
 # --- canopen: RE-SKIPPED 2026-09-25, reverting my 2026-09-22 un-skip ----------------------
 # I un-skipped canopen_core because its visible failure was a fixable CMake signature clash. Two
@@ -674,3 +659,17 @@ canopen_inventus_driver
 canopen
 canopen_tests
 
+# --- mrpt_ros_bridge PINNED 2026-09-25, cluster un-skipped -------------------------------
+# The submodule now points at idesign0/id_mrpt_ros_bridge @ ros2, held at upstream 2c1a384.
+# Why: CI builds submodule BRANCH TIPS, and MRPT/mrpt_ros_bridge's ros2 tip moved to 4.0.0, which
+# wants the UNDERSCORE mrpt3 v3.x modules (find_package(mrpt_maps 3.0) / mrpt_obs 3.0) that this
+# workspace does not build. 2c1a384 uses find_package(mrpt-maps) -- the DASH v2 config that our
+# mrpt_ros v2 (mrpt_lib*) packages install and that every consumer still asks for:
+#   mvsim/pose_cov_ops/mrpt_navigation/mrpt_sensors/mola/mp2p_icp -> mrpt-ros2bridge, mrpt-maps,
+#   mrpt-poses, mrpt-obs ... (all dash at their own tips)
+# Forks are never rebased by update_forked_submodules.sh (it skips a submodule whose .gitmodules
+# URL owner matches origin's), so the pin holds.
+# Un-skipped below: the bridge, its 8 direct consumers, and the 6 that were blocked only through
+# those. STILL SKIPPED are the ones blocked by genuine mrpt3 v3.x modules -- mola_lidar_odometry,
+# mrpt_map_server, mrpt_pointcloud_pipeline (mrpt_maps), mrpt_path_planning_apps
+# (mrpt_path_planning), mola_sm_loop_closure + mola_georeferencing, mola_state_estimation_*.
