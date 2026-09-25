@@ -2513,3 +2513,14 @@ if [ -f "$_f" ] && ! grep -q 'ci-msc-aruco47' "$_f"; then
   perl -0pi -e 's{\n([ \t]*)pArucoBoard = cv::aruco::Board::create\(boardCorners, pArucoDictionary,\s*\n\s*markerIds\);}{"\n$1// ci-msc-aruco47: Board::create() was removed in OpenCV 4.7+; use the constructor\n#if CV_VERSION_MAJOR > 4 || (CV_VERSION_MAJOR == 4 \&\& CV_VERSION_MINOR >= 7)\n$1pArucoBoard = cv::makePtr<cv::aruco::Board>(boardCorners, *pArucoDictionary, markerIds);\n#else\n$1pArucoBoard = cv::aruco::Board::create(boardCorners, pArucoDictionary, markerIds);\n#endif"}e' "$_f"
   echo "  multisensor_calibration: aruco getPredefinedDictionary/Board::create -> OpenCV 4.7+ API in ${_f#$ROOT/}"
 fi
+
+# --- multisensor_calibration, part 2 (the .cpp): OpenCV 4.7+ also removed
+#     cv::aruco::DetectorParameters::create(). The member stays a cv::Ptr (line 353 passes it to
+#     detectMarkers), so construct one with cv::makePtr. Revealed only after the header fix above
+#     let the package compile for 5 minutes instead of 30 seconds. Idempotent. ---
+_f="$(_pkg_cml multisensor_calibration)"
+_f="$(dirname "${_f:-/nonexistent}")/src/sensor_data_processing/CameraDataProcessor.cpp"
+if [ -f "$_f" ] && ! grep -q 'ci-msc-aruco47-params' "$_f"; then
+  perl -0pi -e 's{\n([ \t]*)pArucoDetectorParameters_(\s*)= cv::aruco::DetectorParameters::create\(\);}{"\n$1// ci-msc-aruco47-params: DetectorParameters::create() was removed in OpenCV 4.7+\n#if CV_VERSION_MAJOR > 4 || (CV_VERSION_MAJOR == 4 \&\& CV_VERSION_MINOR >= 7)\n$1pArucoDetectorParameters_$2= cv::makePtr<cv::aruco::DetectorParameters>();\n#else\n$1pArucoDetectorParameters_$2= cv::aruco::DetectorParameters::create();\n#endif"}e' "$_f"
+  echo "  multisensor_calibration: aruco DetectorParameters::create -> makePtr (OpenCV 4.7+) in ${_f#$ROOT/}"
+fi
