@@ -172,6 +172,19 @@ set(yaml-cpp_DIR "${YAML_CPP_PREFIX}/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp co
 # Explicit include dirs and library (optional)
 set(YAML_CPP_INCLUDE_DIRS "${YAML_CPP_PREFIX}/include" CACHE PATH "yaml-cpp include directory")
 set(YAML_CPP_LIBRARIES "${YAML_CPP_PREFIX}/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
+# A PRIVATE, unclobberable handle on the vendored yaml-cpp. YAML_CPP_LIBRARIES has TWO meanings
+# here: the absolute path set just above (before anyone calls find_package), and the yaml-cpp::yaml-cpp
+# TARGET NAME that the vendor config deliberately sets (see the yaml_cpp_vendor patch in
+# apply_source_patches.sh). Which one a package sees depends on whether find_package(yaml-cpp) has run
+# yet -- so a patch that rewrites a link line to ${YAML_CPP_LIBRARIES} is a coin flip.
+# nebula_velodyne_common lost that flip: autoware_package() runs find_package(yaml-cpp) at line 5,
+# so by line 18 the variable held the target name, and the link failed with
+#   Target "nebula_velodyne_common" links to: yaml-cpp::yaml-cpp
+#   but the target was not found
+# Nothing else ever assigns CI_YAML_CPP_LIB, so a rewrite pointed at it always gets the absolute path
+# -- which links locally AND exports cleanly to consumers (a fabricated target name does not).
+set(CI_YAML_CPP_LIB "${YAML_CPP_PREFIX}/lib/libyaml-cpp.dylib"
+    CACHE FILEPATH "Absolute path to the vendored yaml-cpp (never overwritten by find_package)")
 
 # Make headers visible globally (optional)
 include_directories(${YAML_CPP_INCLUDE_DIRS})
