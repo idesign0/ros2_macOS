@@ -144,6 +144,19 @@ set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
 set(yaml-cpp_DIR "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/share/cmake/yaml-cpp" CACHE PATH "yaml-cpp config directory")  # humble builds yaml-cpp 0.7.0 -> config in DATADIR/cmake=share/ (0.8.0 distros use lib/)
 set(YAML_CPP_INCLUDE_DIRS "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/include" CACHE PATH "yaml-cpp include directory")
 set(YAML_CPP_LIBRARIES "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
+# A PRIVATE, unclobberable handle on the vendored yaml-cpp. YAML_CPP_LIBRARIES has TWO meanings
+# here: the absolute path set just above (before anyone calls find_package), and the yaml-cpp::yaml-cpp
+# TARGET NAME that the vendor config deliberately sets (see the yaml_cpp_vendor 0.7.0 patch in
+# apply_source_patches.sh). Which one a package sees depends on whether find_package(yaml-cpp) has run
+# yet -- so a patch that rewrites a link line to ${YAML_CPP_LIBRARIES} is a coin flip.
+# nebula_velodyne_common lost that flip: autoware_package() runs find_package(yaml-cpp) at line 5,
+# so by line 18 the variable held the target name, and the link failed with
+#   Target "nebula_velodyne_common" links to: yaml-cpp::yaml-cpp
+#   but the target was not found
+# Nothing else ever assigns CI_YAML_CPP_LIB, so a rewrite pointed at it always gets the absolute path
+# -- which links locally AND exports cleanly to consumers (a fabricated target name does not).
+set(CI_YAML_CPP_LIB "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib/libyaml-cpp.dylib"
+    CACHE FILEPATH "Absolute path to the vendored yaml-cpp (never overwritten by find_package)")
 include_directories(${YAML_CPP_INCLUDE_DIRS})
 set(CMAKE_EXE_LINKER_FLAGS "${backward_ros_full_path_LIBRARIES} ${CMAKE_EXE_LINKER_FLAGS}" CACHE STRING "Linker flags" FORCE)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")

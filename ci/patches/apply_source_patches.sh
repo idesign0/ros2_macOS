@@ -1363,9 +1363,9 @@ fi
 d="$(_pkg_dir nebula_velodyne_common)"
 if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'target_link_libraries(nebula_velodyne_common PUBLIC yaml-cpp)' "$d/CMakeLists.txt"; then
   sed "${SEDI[@]}" \
-    -e 's/target_link_libraries(nebula_velodyne_common PUBLIC yaml-cpp)/target_link_libraries(nebula_velodyne_common PUBLIC ${YAML_CPP_LIBRARIES})/' \
+    -e 's/target_link_libraries(nebula_velodyne_common PUBLIC yaml-cpp)/target_link_libraries(nebula_velodyne_common PUBLIC ${CI_YAML_CPP_LIB})/' \
     "$d/CMakeLists.txt"
-  echo "  nebula_velodyne_common: bare yaml-cpp -> \${YAML_CPP_LIBRARIES}"
+  echo "  nebula_velodyne_common: bare yaml-cpp -> \${CI_YAML_CPP_LIB} (unclobberable absolute path)"
 fi
 
 # --- Lane 7-guard: rmw_stats_shim's `if(CMAKE_COMPILER_IS_GNUCXX OR
@@ -2390,8 +2390,8 @@ fi
 #     and break all of them (exactly what happened to nebula_velodyne_common). Substitute the
 #     toolchain's ABSOLUTE ${YAML_CPP_LIBRARIES} path, which exports cleanly. Idempotent. ---
 if [ -n "$_f" ] && [ -f "$_f" ] && grep -qE '^[[:space:]]+yaml-cpp$' "$_f"; then
-  perl -0pi -e 's{^([ \t]+)yaml-cpp$}{$1\$\{YAML_CPP_LIBRARIES\}}mg' "$_f"
-  echo "  canopen_core: bare yaml-cpp link item -> \${YAML_CPP_LIBRARIES} (export-safe absolute path)"
+  perl -0pi -e 's{^([ \t]+)yaml-cpp$}{$1\$\{CI_YAML_CPP_LIB\}}mg' "$_f"
+  echo "  canopen_core: bare yaml-cpp link item -> \${CI_YAML_CPP_LIB} (unclobberable absolute path)"
 fi
 
 # --- canopen_core (humble branch only): node_canopen_driver.hpp calls
