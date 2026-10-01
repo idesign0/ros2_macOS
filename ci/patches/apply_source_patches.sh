@@ -2524,3 +2524,54 @@ if [ -f "$_f" ] && ! grep -q 'ci-msc-aruco47-params' "$_f"; then
   perl -0pi -e 's{\n([ \t]*)pArucoDetectorParameters_(\s*)= cv::aruco::DetectorParameters::create\(\);}{"\n$1// ci-msc-aruco47-params: DetectorParameters::create() was removed in OpenCV 4.7+\n#if CV_VERSION_MAJOR > 4 || (CV_VERSION_MAJOR == 4 \&\& CV_VERSION_MINOR >= 7)\n$1pArucoDetectorParameters_$2= cv::makePtr<cv::aruco::DetectorParameters>();\n#else\n$1pArucoDetectorParameters_$2= cv::aruco::DetectorParameters::create();\n#endif"}e' "$_f"
   echo "  multisensor_calibration: aruco DetectorParameters::create -> makePtr (OpenCV 4.7+) in ${_f#$ROOT/}"
 fi
+
+# --- tf2_ros: consumers that pass the NODE BY REFERENCE (all 3) -------------------------------
+#     The tf2_ros in this workspace takes pointer-like / interface arguments:
+#       CreateTimerROS(NodeBaseInterface::SharedPtr, NodeTimersInterface::SharedPtr, ...)
+#       TransformListener(buffer, NodeT && node, ...)   -> body calls node->get_node_base_interface()
+#     Several consumers' branch TIPS have moved to the newer convention of handing it `*this`:
+#       imu_transformer.cpp:16           make_shared<tf2_ros::CreateTimerROS>(*this)
+#       laserscan_to_pointcloud_node.cpp make_shared<tf2_ros::CreateTimerROS>(*this)
+#       pointcloud_to_laserscan_node.cpp make_shared<tf2_ros::CreateTimerROS>(*this)
+#       dual_laser_merger.cpp:44         make_shared<tf2_ros::TransformListener>(*buf, *this)
+#     which fails as "no matching constructor for initialization of 'tf2_ros::CreateTimerROS'" and
+#     "member reference type 'merger_node::MergerNode' is not a pointer". Their PINNED commits use
+#     the pointer form, so this is pure tip drift. Rewrite to the pointer/interface form, which both
+#     the old and new tf2_ros accept. Idempotent (the `*this` spelling is gone afterwards). ---
+for _f in $(grep -rl 'tf2_ros::CreateTimerROS>(\*this)\|tf2_ros::TransformListener>(\*[A-Za-z0-9_]*, \*this)' "$ROOT" \
+            --include='*.cpp' --include='*.hpp' 2>/dev/null | grep -v '/build/' | grep -v '/install/'); do
+  perl -pi -e 's{tf2_ros::CreateTimerROS>\(\*this\)}{tf2_ros::CreateTimerROS>(this->get_node_base_interface(), this->get_node_timers_interface())}g;' \
+            -e 's{(tf2_ros::TransformListener>\(\*[A-Za-z0-9_]+, )\*this\)}{$1this)}g;' "$_f"
+  echo "  tf2_ros: node-by-reference -> pointer/interface form in ${_f#$ROOT/}"
+done
+
+# --- multisensor_calibration: explicit instantiations placed BEFORE a member definition --------
+#     ExtrinsicCalibrationBase.cpp has `template class ExtrinsicCalibrationBase<A,B>;` at ~:907 but
+#     defines updateCalibrationResult() at ~:914 -- AFTER them. An explicit class instantiation only
+#     emits the members defined at that point, so that one is never emitted and every consumer fails
+#     at link:
+#       Undefined symbols: ExtrinsicCalibrationBase<LidarDataProcessor, ...>::updateCalibrationResult(
+#         std::pair<std::string, double>, int), referenced from ...finalizeCalibration()
+#     Move the five instantiation statements to the END of the file, after all definitions.
+#     Idempotent (guarded on the block still preceding the definition). ---
+_f="$(_pkg_cml multisensor_calibration)"
+_f="$(dirname "${_f:-/nonexistent}")/src/calibration/ExtrinsicCalibrationBase.cpp"
+if [ -f "$_f" ] && ! grep -q 'ci-msc-instantiation-order' "$_f"; then
+  python3 - "$_f" <<'PYEOF'
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+blk = re.findall(r'^template class ExtrinsicCalibrationBase<[^;]+>;\n', s, re.M)
+if blk:
+    for b in blk:
+        s = s.replace(b, '')
+    s = s.rstrip('\n') + (
+        '\n\n// ci-msc-instantiation-order: these explicit instantiations used to sit mid-file, BEFORE\n'
+        '// updateCalibrationResult() was defined -- so that member was never emitted and every\n'
+        '// consumer failed at link with an undefined symbol. An explicit class instantiation only\n'
+        '// emits the members already defined at that point, so they must come after all of them.\n'
+        + ''.join(blk))
+    open(p, 'w').write(s)
+    print("  multisensor_calibration: moved %d explicit instantiation(s) to end of ExtrinsicCalibrationBase.cpp" % len(blk))
+PYEOF
+fi
