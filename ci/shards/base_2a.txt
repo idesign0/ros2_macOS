@@ -349,3 +349,9 @@ turtlesim
 velodyne_laserscan
 camera_calibration
 controller_interface
+# orbbec_camera_msgs: moved here from base_1 2026-10-01 -- it build_depends unique_identifier_msgs
+# and action_msgs, both of which live in THIS half, so building it in base_1 aborted at
+# configure with "Failed to find install/share/action_msgs/package.sh". Its only consumer,
+# orbbec_camera, is not in base_1 either. (jazzy already builds it in dom_ros-drivers; kilted
+# does not build it at all -- this was humble-only.)
+orbbec_camera_msgs

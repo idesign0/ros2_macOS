@@ -174,7 +174,6 @@ novatel_oem7_msgs
 off_highway_premium_radar_msgs
 off_highway_premium_radar_sample_msgs
 openvdb_vendor
-orbbec_camera_msgs
 orocos_kdl_vendor
 osqp_vendor
 osrf_pycommon
