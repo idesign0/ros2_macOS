@@ -476,7 +476,6 @@ agnocast_sample_application
 # are consolidated (upstream/maintainer task). Skip until then. (mrpt_libros_bridge was in this
 # list by mistake -- it is v2; see its entry below.)
 mola_gnss_to_markers
-mola_imu_preintegration
 mola_input_euroc_dataset
 mola_input_kitti360_dataset
 mola_input_kitti_dataset
@@ -509,8 +508,6 @@ turtlebot3_gazebo
 
 
 # --- more mrpt3 two-distribution cluster (need v3.x modules; see note above) ---
-mola_gtsam_factors
-mrpt_path_planning_core
 
 # rmf_building_sim_gz_classic_plugins: find_package(gazebo) = Gazebo *classic* (gazebo11),
 # not available on macOS ARM (same class as turtlebot3_gazebo). Unsatisfiable.
@@ -537,11 +534,8 @@ schunk_svh_simulation
 # mp2p_icp_viz is NOT here: its failure was never mrpt-version related (upstream #if
 # MRPT_HAS_NANOGUI guard), and it now builds -- fork id_mp2p_icp@develop a58aa94.
 # mola_state_estimation_*: genuine mrpt_obs (mrpt3 v3.x) dependency.
-mola_state_estimation_simple
-mola_state_estimation_smoother
 # mola_georeferencing: find_package(mola_gtsam_factors), itself skip-listed in the mrpt3 cluster.
 # Unsatisfiable cascade (new in the 2026-09-23 run, once mola built deeper).
-mola_georeferencing
 # canopen_fake_slaves: #includes <lely/io2/linux/can.hpp> (Linux SocketCAN) -> not available on
 # macOS. Linux-only.
 canopen_fake_slaves
@@ -566,11 +560,6 @@ rtabmap_rviz_plugins
 # dependency is COLCON_IGNOREd the dependents are still selected and fail at configure with
 # "Could not find a package configuration file provided by <dep>". Same packages either way --
 # only the reporting changes. Each entry below is what actually failed, with its missing dep:
-mola_lidar_odometry            # <- mrpt_maps (mrpt3 v3.x)
-mola_sm_loop_closure           # <- mola_georeferencing
-mrpt_map_server                # <- mrpt_maps
-mrpt_path_planning_apps        # <- mrpt_path_planning
-mrpt_pointcloud_pipeline       # <- mrpt_maps
 
 # --- canopen: RE-SKIPPED 2026-09-25, reverting my 2026-09-22 un-skip ----------------------
 # I un-skipped canopen_core because its visible failure was a fixable CMake signature clash. Two
@@ -607,3 +596,16 @@ canopen_tests
 # those. STILL SKIPPED are the ones blocked by genuine mrpt3 v3.x modules -- mola_lidar_odometry,
 # mrpt_map_server, mrpt_pointcloud_pipeline (mrpt_maps), mrpt_path_planning_apps
 # (mrpt_path_planning), mola_sm_loop_closure + mola_georeferencing, mola_state_estimation_*.
+
+# --- mrpt/mola repos PINNED to their gitlinks 2026-10-01 ------------------------------------
+# Six more repos pinned to idesign0 forks held at the commit the superproject already recorded,
+# the same move that made mrpt_libros_bridge build:
+#   id_mrpt_sensors@ros2 eef39f1          id_mrpt_navigation@ros2 3b8c564
+#   id_mola_lidar_odometry@develop 4655d41 id_mola_state_estimation@develop fd60c10
+#   id_mola_imu_preintegration@develop 05b73c2  id_mrpt_path_planning@develop 45850e7
+# Each of those commits does find_package(mrpt-maps / mrpt-obs / mrpt-nav / mrpt-hwdrivers ...) --
+# the DASH configs our mrpt_ros v2 (mrpt_lib*) packages install -- while every repo's branch TIP had
+# moved to the UNDERSCORE mrpt3 v3.x module names we deliberately do not build. CI follows branch
+# tips, so it was building the v3-era code against a v2 workspace. Pinning simply makes CI build what
+# the gitlink already says.
+# NOTE this freezes those repos: upstream changes stop arriving until someone re-bases the pin.
