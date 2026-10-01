@@ -609,3 +609,9 @@ canopen_tests
 # tips, so it was building the v3-era code against a v2 workspace. Pinning simply makes CI build what
 # the gitlink already says.
 # NOTE this freezes those repos: upstream changes stop arriving until someone re-bases the pin.
+
+# cl_px4_mr: find_package(px4_msgs) -- and px4_msgs is not in this workspace at all (no submodule,
+# no shard entry, not skip-listed). Unsatisfiable rather than broken, so it follows the same policy
+# as the other blocked-by-absent-dependency entries. Adding the PX4 message definitions as a new
+# submodule would be a scope decision, not a fix.
+cl_px4_mr
