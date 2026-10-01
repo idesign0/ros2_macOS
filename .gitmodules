@@ -388,7 +388,7 @@
 	branch = jazzy
 [submodule "gzsim/gps_umd"]
 	path = gzsim/gps_umd
-	url = https://github.com/swri-robotics/gps_umd.git
+	url = https://github.com/idesign0/id_gps_umd.git
 	branch = ros2-devel
 [submodule "gzsim/gz_ros2_control"]
 	path = gzsim/gz_ros2_control
