@@ -2008,7 +2008,7 @@
 	branch = develop
 [submodule "ros-planning/mola_imu_preintegration"]
 	path = ros-planning/mola_imu_preintegration
-	url = https://github.com/MOLAorg/mola_imu_preintegration.git
+	url = https://github.com/idesign0/id_mola_imu_preintegration.git
 	branch = develop
 [submodule "ros-planning/mola_input_ouster"]
 	path = ros-planning/mola_input_ouster
@@ -2020,7 +2020,7 @@
 	branch = develop
 [submodule "ros-planning/mola_lidar_odometry"]
 	path = ros-planning/mola_lidar_odometry
-	url = https://github.com/MOLAorg/mola_lidar_odometry.git
+	url = https://github.com/idesign0/id_mola_lidar_odometry.git
 	branch = develop
 [submodule "ros-planning/mola_sm_loop_closure"]
 	path = ros-planning/mola_sm_loop_closure
@@ -2028,7 +2028,7 @@
 	branch = develop
 [submodule "ros-planning/mola_state_estimation"]
 	path = ros-planning/mola_state_estimation
-	url = https://github.com/MOLAorg/mola_state_estimation.git
+	url = https://github.com/idesign0/id_mola_state_estimation.git
 	branch = develop
 [submodule "ros-planning/mola_test_datasets"]
 	path = ros-planning/mola_test_datasets
@@ -2048,11 +2048,11 @@
 	branch = master
 [submodule "ros-planning/mrpt_navigation"]
 	path = ros-planning/mrpt_navigation
-	url = https://github.com/mrpt-ros-pkg/mrpt_navigation.git
+	url = https://github.com/idesign0/id_mrpt_navigation.git
 	branch = ros2
 [submodule "ros-planning/mrpt_path_planning"]
 	path = ros-planning/mrpt_path_planning
-	url = https://github.com/MRPT/mrpt_path_planning.git
+	url = https://github.com/idesign0/id_mrpt_path_planning.git
 	branch = develop
 [submodule "ros-planning/mrpt_ros"]
 	path = ros-planning/mrpt_ros
@@ -2064,7 +2064,7 @@
 	branch = ros2
 [submodule "ros-planning/mrpt_sensors"]
 	path = ros-planning/mrpt_sensors
-	url = https://github.com/mrpt-ros-pkg/mrpt_sensors.git
+	url = https://github.com/idesign0/id_mrpt_sensors.git
 	branch = ros2
 [submodule "ros-planning/mvsim"]
 	path = ros-planning/mvsim
