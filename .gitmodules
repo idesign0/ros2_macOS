@@ -1168,7 +1168,7 @@
 	branch = kilted
 [submodule "ros-drivers/imu_gnss/imu_pipeline"]
 	path = ros-drivers/imu_gnss/imu_pipeline
-	url = https://github.com/ros-perception/imu_pipeline.git
+	url = https://github.com/idesign0/id_imu_pipeline.git
 	branch = ros2
 [submodule "ros-visualization/interactive_marker_twist_server"]
 	path = ros-visualization/interactive_marker_twist_server
@@ -1608,7 +1608,7 @@
 	branch = kilted
 [submodule "ros-drivers/lidar/pointcloud_to_laserscan"]
 	path = ros-drivers/lidar/pointcloud_to_laserscan
-	url = https://github.com/ros-perception/pointcloud_to_laserscan.git
+	url = https://github.com/idesign0/id_pointcloud_to_laserscan.git
 	branch = rolling
 [submodule "ros-visualization/polygon_ros"]
 	path = ros-visualization/polygon_ros

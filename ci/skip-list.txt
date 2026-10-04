@@ -587,3 +587,8 @@ cl_px4_mr
 #     and started failing on mola_input_kitti_dataset, which lives here and was skip-listed as
 #     part of the mrpt3 cluster. Its pin uses the DASH mrpt configs we build, so it is
 #     recoverable like the rest.
+
+# sm_cl_px4_mr_test_1 / _2: find_package(cl_px4_mr), which is skip-listed above because px4_msgs
+# is not in this workspace at all. Cascade of that skip.
+sm_cl_px4_mr_test_1
+sm_cl_px4_mr_test_2
