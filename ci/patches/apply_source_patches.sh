@@ -2584,3 +2584,25 @@ if blk:
     print("  multisensor_calibration: moved %d explicit instantiation(s) to end of ExtrinsicCalibrationBase.cpp" % len(blk))
 PYEOF
 fi
+
+# --- ${YAML_CPP_LIBRARIES} as a LINK item -> ${CI_YAML_CPP_LIB} (all 3) -----------------------
+#     YAML_CPP_LIBRARIES is a coin flip in this workspace: the toolchain sets it to the absolute
+#     .dylib path, but the vendor config (and our own 0.7.0 patch) sets it to the TARGET NAME
+#     yaml-cpp::yaml-cpp -- so which one a package sees depends on whether find_package(yaml-cpp)
+#     has run in its scope yet. cl_moveit2z and moveit2z_client lost that flip:
+#       CMakeLists.txt:51 (target_link_libraries): Target "cl_moveit2z" links to:
+#         yaml-cpp::yaml-cpp   but the target was not found
+#     which also took out their consumers. CI_YAML_CPP_LIB (set in cmake/toolchain.cmake) is never
+#     assigned by anything else, always holds the absolute path, and exports cleanly to consumers --
+#     unlike a target name. Rewrite it everywhere it is used as a LINK item; several of these sites
+#     were themselves created by the bare-yaml-cpp patches further up, so this closes the class
+#     rather than the instance. Idempotent. ---
+for _f in $(grep -rl 'YAML_CPP_LIBRARIES' "$ROOT" --include=CMakeLists.txt 2>/dev/null \
+            | grep -v '/build/' | grep -v '/install/'); do
+  grep -q 'ci-yamlcpp-linkvar' "$_f" && continue
+  if perl -0ne 'exit(!/target_link_libraries\([^)]*\$\{YAML_CPP_LIBRARIES\}/s)' "$_f"; then
+    perl -0pi -e 's{(target_link_libraries\([^)]*?)\$\{YAML_CPP_LIBRARIES\}}{$1\$\{CI_YAML_CPP_LIB\}}gs' "$_f"
+    perl -0pi -e 's{\A}{# ci-yamlcpp-linkvar: \$\{YAML_CPP_LIBRARIES\} in link lines -> \$\{CI_YAML_CPP_LIB\} (absolute path,\n# never clobbered by find_package, exports cleanly). See apply_source_patches.sh.\n}' "$_f"
+    echo "  ${_f#$ROOT/}: \${YAML_CPP_LIBRARIES} -> \${CI_YAML_CPP_LIB} in link line(s)"
+  fi
+done
