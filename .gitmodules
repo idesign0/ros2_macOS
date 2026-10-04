@@ -1428,7 +1428,7 @@
 	branch = ros2
 [submodule "ros-drivers/imu_gnss/imu_pipeline"]
 	path = ros-drivers/imu_gnss/imu_pipeline
-	url = https://github.com/ros-perception/imu_pipeline.git
+	url = https://github.com/idesign0/id_imu_pipeline.git
 	branch = jazzy
 [submodule "ros-drivers/imu_gnss/marvelmind_ros2_release"]
 	path = ros-drivers/imu_gnss/marvelmind_ros2_release
@@ -1520,7 +1520,7 @@
 	branch = humble-devel
 [submodule "ros-drivers/lidar/pointcloud_to_laserscan"]
 	path = ros-drivers/lidar/pointcloud_to_laserscan
-	url = https://github.com/ros-perception/pointcloud_to_laserscan.git
+	url = https://github.com/idesign0/id_pointcloud_to_laserscan.git
 	branch = humble
 [submodule "ros-drivers/lidar/rplidar_driver"]
 	path = ros-drivers/lidar/rplidar_driver
