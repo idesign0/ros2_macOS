@@ -2565,12 +2565,21 @@ blk = re.findall(r'^template class ExtrinsicCalibrationBase<[^;]+>;\n', s, re.M)
 if blk:
     for b in blk:
         s = s.replace(b, '')
-    s = s.rstrip('\n') + (
-        '\n\n// ci-msc-instantiation-order: these explicit instantiations used to sit mid-file, BEFORE\n'
+    tail = (
+        '\n// ci-msc-instantiation-order: these explicit instantiations used to sit mid-file, BEFORE\n'
         '// updateCalibrationResult() was defined -- so that member was never emitted and every\n'
         '// consumer failed at link with an undefined symbol. An explicit class instantiation only\n'
-        '// emits the members already defined at that point, so they must come after all of them.\n'
+        '// emits the members already defined at that point, so they must come after all of them --\n'
+        '// but still INSIDE the namespace, or the template arguments no longer resolve\n'
+        '// ("unknown type name \\'CameraDataProcessor\\'").\n'
         + ''.join(blk))
+    # anchor on the LAST namespace-closing brace, not end-of-file
+    m = list(re.finditer(r'^\}\s*//\s*namespace\s+\S+.*$', s, re.M))
+    if m:
+        last = m[-1]
+        s = s[:last.start()] + tail + '\n' + s[last.start():]
+    else:
+        s = s.rstrip('\n') + '\n' + tail
     open(p, 'w').write(s)
     print("  multisensor_calibration: moved %d explicit instantiation(s) to end of ExtrinsicCalibrationBase.cpp" % len(blk))
 PYEOF
