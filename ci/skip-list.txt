@@ -542,14 +542,8 @@ magnetometer_compass
 # are consolidated (upstream/maintainer task). Skip until then. (mrpt_libros_bridge was in this
 # list by mistake -- it is v2; see its entry below.)
 mola_gnss_to_markers
-mola_input_euroc_dataset
-mola_input_kitti360_dataset
-mola_input_kitti_dataset
-mola_input_mulran_dataset
-mola_input_paris_luco_dataset
 mola_input_rosbag1
 gtsam2mrpt_serial
-kitti_metrics_eval
 # mrpt_libros_bridge: RE-SKIPPED 2026-09-23. The 2026-09-22 un-skip was wrong and the run proved
 # it on all three distros identically:
 #   CMakeLists.txt:30 (find_package): "mrpt_maps" (requested version 3.0) not found
@@ -681,3 +675,16 @@ canopen_tests
 # as the other blocked-by-absent-dependency entries. Adding the PX4 message definitions as a new
 # submodule would be a scope decision, not a fix.
 cl_px4_mr
+
+# --- rtabmap_ros + mola_academic_datasets PINNED 2026-10-04 -------------------------------
+# Same tip-drift pattern as the other pins.
+#   rtabmap_ros: the pin asks find_package(RTABMap 0.23.5) -- satisfied by brew's 0.23.8 --
+#     while the tip asks 0.23.13, which brew does not ship:
+#       "Could not find a configuration file for package RTABMap that is compatible with
+#        requested version 0.23.13 ... version found is not compatible"
+#     Pinned per distro (humble-devel c25a091 / jazzy-devel ba1f0bf / kilted-devel 2776d6c),
+#     since this repo has a branch and gitlink per distro.
+#   mola_academic_datasets (c4cffce, develop): mola_lidar_odometry stopped failing on mrpt_maps
+#     and started failing on mola_input_kitti_dataset, which lives here and was skip-listed as
+#     part of the mrpt3 cluster. Its pin uses the DASH mrpt configs we build, so it is
+#     recoverable like the rest.

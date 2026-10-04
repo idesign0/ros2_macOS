@@ -1996,7 +1996,7 @@
 	branch = develop
 [submodule "ros-planning/mola_academic_datasets"]
 	path = ros-planning/mola_academic_datasets
-	url = https://github.com/MOLAorg/mola_academic_datasets.git
+	url = https://github.com/idesign0/id_mola_academic_datasets.git
 	branch = develop
 [submodule "ros-planning/mola_common"]
 	path = ros-planning/mola_common
@@ -2104,7 +2104,7 @@
 	branch = develop
 [submodule "ros-planning/rtabmap_ros"]
 	path = ros-planning/rtabmap_ros
-	url = https://github.com/introlab/rtabmap_ros.git
+	url = https://github.com/idesign0/id_rtabmap_ros.git
 	branch = humble-devel
 [submodule "ros-planning/smacc2"]
 	path = ros-planning/smacc2
