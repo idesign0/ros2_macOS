@@ -1200,7 +1200,7 @@
 	branch = master
 [submodule "ros-planning/mola_academic_datasets"]
 	path = ros-planning/mola_academic_datasets
-	url = https://github.com/MOLAorg/mola_academic_datasets.git
+	url = https://github.com/idesign0/id_mola_academic_datasets.git
 	branch = develop
 [submodule "ros-drivers/mobile_base/kobuki_core"]
 	path = ros-drivers/mobile_base/kobuki_core
@@ -1852,7 +1852,7 @@
 	branch = jazzy
 [submodule "ros-planning/rtabmap_ros"]
 	path = ros-planning/rtabmap_ros
-	url = https://github.com/introlab/rtabmap_ros.git
+	url = https://github.com/idesign0/id_rtabmap_ros.git
 	branch = kilted-devel
 [submodule "ros2/interfaces/rtcm_msgs"]
 	path = ros2/interfaces/rtcm_msgs
