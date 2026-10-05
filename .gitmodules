@@ -1376,7 +1376,7 @@
 	branch = develop
 [submodule "ros-planning/mola_sm_loop_closure"]
 	path = ros-planning/mola_sm_loop_closure
-	url = https://github.com/MOLAorg/mola_sm_loop_closure.git
+	url = https://github.com/idesign0/id_mola_sm_loop_closure.git
 	branch = develop
 [submodule "ros-planning/mola_test_datasets"]
 	path = ros-planning/mola_test_datasets
