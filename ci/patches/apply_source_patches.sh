@@ -2583,6 +2583,11 @@ if blk:
     open(p, 'w').write(s)
     print("  multisensor_calibration: moved %d explicit instantiation(s) to end of ExtrinsicCalibrationBase.cpp" % len(blk))
 PYEOF
+  # A broken heredoc body (python SyntaxError) exits non-zero and is otherwise
+  # invisible -- that cost three CI rounds once. Make it an annotation.
+  if [ $? -ne 0 ] || ! grep -q 'ci-msc-instantiation-order' "$_f"; then
+    echo "::error::apply_source_patches: the multisensor_calibration instantiation-order patch did not apply to ${_f#$ROOT/}"
+  fi
 fi
 
 # --- ${YAML_CPP_LIBRARIES} as a LINK item -> ${CI_YAML_CPP_LIB} (all 3) -----------------------
