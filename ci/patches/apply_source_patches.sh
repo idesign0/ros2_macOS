@@ -2571,7 +2571,7 @@ if blk:
         '// consumer failed at link with an undefined symbol. An explicit class instantiation only\n'
         '// emits the members already defined at that point, so they must come after all of them --\n'
         '// but still INSIDE the namespace, or the template arguments no longer resolve\n'
-        '// ("unknown type name \\'CameraDataProcessor\\'").\n'
+        '// ("unknown type name CameraDataProcessor").\n'
         + ''.join(blk))
     # anchor on the LAST namespace-closing brace, not end-of-file
     m = list(re.finditer(r'^\}\s*//\s*namespace\s+\S+.*$', s, re.M))
