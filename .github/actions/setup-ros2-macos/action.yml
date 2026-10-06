@@ -22,20 +22,23 @@ runs:
     # instead of each re-cloning ~650 submodules (the flaky-setup root cause).
     # base runs first (populates on miss); every later job restores -> local
     # checkout, no network clone. restore-keys reuses it across runs too.
-    - name: Cache submodule git data
-      uses: actions/cache@v4
-      with:
-        path: .git/modules
-        key: submodules-${{ hashFiles('.gitmodules') }}
-        restore-keys: |
-          submodules-
+    # .git/modules is deliberately NOT cached. Measured on humble 37193719299:
+    # the entry was 11.08 GB -- larger on its own than GitHub's unraisable 10 GB
+    # per-repo cache budget -- and it hit in 1 job out of 8, because its key is
+    # hashFiles('.gitmodules') and every submodule pin rewrites it. Each rewrite
+    # evicted the 6.75 GB Homebrew cache and every ccache entry, so base jobs ran
+    # cold on essentially every run. The trade, both sides measured in that run:
+    #   submodule checkout  2m14s cached vs 6m16s cold  -> ~4 min, won 1 job in 8
+    #   brew install step  22m09s cached vs 33m21s cold -> ~11 min, every job
+    # Dropping this frees the whole budget for the Homebrew and ccache entries,
+    # which is where the time actually is. The clone below already retries, since
+    # cold was the common path anyway.
 
     - name: Update submodules
       shell: bash
       run: |
         git submodule sync --recursive
-        # With .git/modules restored from cache this is a fast local checkout;
-        # on a cold cache it clones, with retry+backoff for transient flakes.
+        # Always a cold clone now (see the note above); retry+backoff for transient flakes.
         n=0
         until git submodule update --init --recursive --jobs 8; do
           n=$((n+1))
