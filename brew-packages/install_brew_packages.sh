@@ -84,24 +84,55 @@ else
     echo "✅ No new packages to install."
 fi
 
-# Staying non-fatal is deliberate: some entries are legitimately unavailable on this runner and
-# nothing in the workspace needs them. But a missing formula must never again be discoverable
-# only as someone else's find_package failure 40 000 log lines later.
+# A few entries are legitimately not installable here and nothing in the workspace needs them;
+# those are listed in allow_install_failures.txt. Anything else is fatal. Failing now costs one
+# job; letting it through costs a whole run of phantom failures somewhere else entirely, because
+# a missing formula only resurfaces as somebody else's find_package error in a later job.
+ALLOW_FILE="$SCRIPT_DIR/allow_install_failures.txt"
+is_allowed_failure() {
+    local pkg="$1" line
+    [ -f "$ALLOW_FILE" ] || return 1
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="$(echo "$line" | awk '{print $1}')"
+        [ -z "$line" ] && continue
+        [ "$line" = "$pkg" ] && return 0
+    done < "$ALLOW_FILE"
+    return 1
+}
+
 if [ ${#FAILED_PKGS[@]:-0} -gt 0 ]; then
-    echo "::error::brew: ${#FAILED_PKGS[@]} formula(e) did not install after 3 attempts: ${FAILED_PKGS[*]}"
-    echo "Not installed: ${FAILED_PKGS[*]}"
+    UNEXPECTED=()
+    for pkg in "${FAILED_PKGS[@]}"; do
+        if is_allowed_failure "$pkg"; then
+            echo "   (tolerated) $pkg is listed in allow_install_failures.txt"
+        else
+            UNEXPECTED+=("$pkg")
+        fi
+    done
+
     if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
         {
             echo "### Homebrew formulae that failed to install"
             echo
             for pkg in "${FAILED_PKGS[@]}"; do
-                echo "- \`${pkg}\`"
+                if is_allowed_failure "$pkg"; then
+                    echo "- \`${pkg}\` (tolerated)"
+                else
+                    echo "- \`${pkg}\` **UNEXPECTED**"
+                fi
             done
-            echo
-            echo "Any package whose CMake asks for one of these will fail with a"
-            echo "\"Could NOT find ...\" that has nothing to do with its own source."
         } >> "$GITHUB_STEP_SUMMARY"
     fi
+
+    if [ ${#UNEXPECTED[@]:-0} -gt 0 ]; then
+        echo "::error::brew: ${#UNEXPECTED[@]} formula(e) failed to install and are not in allow_install_failures.txt: ${UNEXPECTED[*]}"
+        echo "Refusing to build against an incomplete Homebrew prefix. Re-run this job;"
+        echo "if the formula is genuinely unavailable, add it to allow_install_failures.txt."
+        exit 1
+    fi
+
+    echo "All install failures are in allow_install_failures.txt; continuing."
 fi
 
 
