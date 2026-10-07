@@ -74,7 +74,7 @@ jobs:
         brew install \
           graphviz \
           eigen@3 \
-          GeographicLib \
+          geographiclib \
           vtk \
           opencv@4
 
