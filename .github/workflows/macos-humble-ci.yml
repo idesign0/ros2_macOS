@@ -68,7 +68,7 @@ jobs:
         brew install \
           graphviz \
           eigen@3 \
-          GeographicLib \
+          geographiclib \
           vtk
       
         # Symlink eigen3 for standard discovery

@@ -69,7 +69,7 @@ jobs:
           graphviz \
           eigen@3 \
           eigen \
-          GeographicLib \
+          geographiclib \
           vtk
       
         # Symlink eigen3 for standard discovery
