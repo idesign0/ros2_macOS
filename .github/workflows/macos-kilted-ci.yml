@@ -75,7 +75,7 @@ jobs:
           graphviz \
           eigen@3 \
           eigen \
-          GeographicLib \
+          geographiclib \
           vtk \
           opencv@4
       
