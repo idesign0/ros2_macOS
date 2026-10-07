@@ -73,13 +73,33 @@ runs:
           ./ci/patches/apply_source_patches.sh .
         fi
 
-    - name: Cache Homebrew directories
+    # Cache brew's DOWNLOAD cache, not the installed prefix.
+    #
+    # Caching /opt/homebrew itself (key prefix macOS-brew-v2-) broke every distro on
+    # 2026-10-06. kilted's gz job ran first; its `brew update` died in a github.com DNS
+    # outage ("Fetching /opt/homebrew/Library/Taps/homebrew/homebrew-core failed!"), and its
+    # post step then cached that prefix -- including the half-fetched homebrew-core tap.
+    # humble and jazzy base-1 restored that snapshot, and because HOMEBREW_NO_INSTALL_FROM_API
+    # is set, brew had to resolve oldnames from that broken local tap:
+    #   ##[warning]No available formula with the name "glfw3". Did you mean glfw?
+    #   ##[error]Process completed with exit code 1
+    # base-1 died, base-2a/2b/domains were skipped, all three runs lost. Restoring the prefix
+    # is also unreliable on its own: on humble the extract hit symlink conflicts
+    # ("Cannot create symlink ... File exists", gtar exit 2) after pulling 8.3 GB.
+    #
+    # ~/Library/Caches/Homebrew holds the downloaded bottles (~3.8 GB) and is purely additive:
+    # entries are checksum-named, so a stale or partial one is re-fetched rather than trusted,
+    # and nothing it contains can corrupt the installed prefix or a tap. That keeps the saving
+    # that actually mattered -- the bottle downloads, i.e. 457 formulae vs 36, ~11 min/job --
+    # without the failure mode. The key prefix is bumped to brewbottles-v1 so the poisoned
+    # macOS-brew-v2-* entries can never be restored by the restore-keys fallback again.
+    - name: Cache Homebrew downloads
       uses: actions/cache@v4
       with:
-        path: /opt/homebrew
-        key: ${{ runner.os }}-brew-v2-${{ hashFiles('brew-packages/install_brew_packages.sh') }}
+        path: ~/Library/Caches/Homebrew
+        key: ${{ runner.os }}-brewbottles-v1-${{ hashFiles('brew-packages/matched_packages.txt') }}
         restore-keys: |
-          ${{ runner.os }}-brew-v2-
+          ${{ runner.os }}-brewbottles-v1-
 
     - name: Configure Homebrew parallelism
       shell: bash
@@ -90,8 +110,22 @@ runs:
     - name: Update Homebrew and install base packages
       shell: bash
       run: |
-        brew tap osrf/simulation https://github.com/osrf/homebrew-simulation
-        brew install ccache ${{ inputs.brew-base-formulae }}
+        # Both commands below talk to github.com, which has gone down twice in two days
+        # ("Could not resolve host: github.com"). Retry so a DNS blip is not mistaken for a
+        # real error. The hard failure is PRESERVED on purpose: an invalid or tapped formula
+        # name in BREW_BASE must still kill this job rather than silently drop a dependency,
+        # and a genuinely bad name fails all three attempts just the same.
+        retry() {
+          local n=0
+          until "$@"; do
+            n=$((n+1))
+            if [ "$n" -ge 3 ]; then echo "::error::failed after $n attempts: $*"; return 1; fi
+            echo "attempt $n failed (transient?); retrying in $((n*20))s: $*"
+            sleep $((n*20))
+          done
+        }
+        retry brew tap osrf/simulation https://github.com/osrf/homebrew-simulation
+        retry brew install ccache ${{ inputs.brew-base-formulae }}
         # Symlink eigen3 for standard discovery
         sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
 
@@ -100,7 +134,14 @@ runs:
       run: |
         chmod +x brew-packages/install_brew_packages.sh
         ./brew-packages/install_brew_packages.sh
-        brew update
+        # `brew update` here is non-essential: it runs AFTER every formula is installed, so it
+        # only refreshes metadata for later steps, and HOMEBREW_NO_AUTO_UPDATE=1 is set anyway.
+        # It must not be able to fail the job -- it did exactly that on kilted 37460304339,
+        # where a github.com DNS outage made it report "Error: Fetching /opt/homebrew failed!"
+        # and killed gz, which skipped base-a/base-b and the whole domain matrix.
+        # Refreshing formula definitions mid-run is also how formulae drift between jobs of one
+        # run, so there is nothing to gain by insisting it succeed.
+        brew update || echo "::warning::brew update failed (non-fatal); continuing with the formulae already installed"
 
     - name: Re-apply source patches for brew-installed headers (post-brew)
       shell: bash
