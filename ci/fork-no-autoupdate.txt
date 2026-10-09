@@ -1,0 +1,26 @@
+# ci/fork-no-autoupdate.txt -- forks that must NEVER be rebased onto upstream.
+#
+# These are PINS. Each one exists specifically to stop tracking upstream: its branch was
+# force-set to the commit this superproject records, because upstream's tip had drifted
+# to something that no longer builds here (the mrpt v2/v3 split, an RTABMap version brew
+# does not ship, and so on). Rebasing one onto upstream would undo the pin and bring the
+# original failure straight back.
+#
+# add_upstream_remotes.sh refuses to add an `upstream` remote for anything listed here,
+# so update_forked_submodules.sh cannot see it and cannot touch it.
+#
+# Remove a line only when you have deliberately decided that fork should track upstream
+# again. One path per line.
+gzsim/gps_umd
+ros-drivers/imu_gnss/imu_pipeline
+ros-drivers/lidar/pointcloud_to_laserscan
+ros-planning/mola_academic_datasets
+ros-planning/mola_imu_preintegration
+ros-planning/mola_lidar_odometry
+ros-planning/mola_sm_loop_closure
+ros-planning/mola_state_estimation
+ros-planning/mrpt_navigation
+ros-planning/mrpt_path_planning
+ros-planning/mrpt_ros_bridge
+ros-planning/mrpt_sensors
+ros-planning/rtabmap_ros
