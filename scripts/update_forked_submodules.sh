@@ -17,6 +17,26 @@ SKIPPED=$(mktemp)
 MANUAL=$(mktemp)
 trap 'rm -f "$UPDATED" "$SKIPPED" "$MANUAL"' EXIT
 
+# Forks that must never be rebased (pins). Belt-and-braces: add_upstream_remotes.sh
+# already withholds/removes their `upstream` remote, which alone keeps them out of this
+# loop, but a hand-added remote on a developer machine would defeat that. Enforce the
+# invariant here too, where it actually matters.
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CI_FORK_SKIP=""
+if [ -f "$REPO_ROOT/ci/fork-no-autoupdate.txt" ]; then
+    CI_FORK_SKIP=$(grep -v '^[[:space:]]*#' "$REPO_ROOT/ci/fork-no-autoupdate.txt" \
+                   | grep -v '^[[:space:]]*$' || true)
+fi
+export CI_FORK_SKIP
+
+# DRY_RUN=1 does everything except the force-push, so a run can be inspected first.
+# Default 0 keeps the existing local behaviour unchanged.
+DRY_RUN="${DRY_RUN:-0}"
+export DRY_RUN
+if [ "$DRY_RUN" = "1" ]; then
+    echo "DRY RUN: rebases will be computed, nothing will be pushed"
+fi
+
 echo "🔹 Starting recursive submodule update..."
 echo ""
 
@@ -24,6 +44,12 @@ echo ""
 # while \$name / \$LOCAL_BRANCH are expanded by the inner subshell.
 git submodule foreach --recursive "
     set +e
+
+    if [ -n \"\$CI_FORK_SKIP\" ] && printf '%s\\n' \"\$CI_FORK_SKIP\" | grep -qxF \"\$name\"; then
+        echo \"PINNED \$name: in ci/fork-no-autoupdate.txt — refusing to rebase\"
+        echo \"\$name||n/a|pinned (ci/fork-no-autoupdate.txt)\" >> \"$SKIPPED\"
+        exit 0
+    fi
 
     if ! git remote get-url upstream >/dev/null 2>&1; then
         echo \"➡️  \$name: no upstream remote — skipped\"
@@ -98,6 +124,12 @@ git submodule foreach --recursive "
         fi
     fi
 
+    if [ \"\$DRY_RUN\" = \"1\" ]; then
+        echo \"   DRY RUN: would push \$name [\$LOCAL_BRANCH]\"
+        echo \"\$name||\$LOCAL_BRANCH|dry run, not pushed\" >> \"$SKIPPED\"
+        exit 0
+    fi
+
     if git push --force-with-lease origin \"\$LOCAL_BRANCH\"; then
         echo \"✅ \$name [\$LOCAL_BRANCH]: pushed\"
         echo \"\$name||\$LOCAL_BRANCH|\" >> \"$UPDATED\"
@@ -113,7 +145,10 @@ echo "════════════════════════�
 echo "📋  SUMMARY"
 echo "════════════════════════════════════════════════════════"
 
-count_lines() { grep -c '' "$1" 2>/dev/null || echo 0; }
+# grep -c '' prints 0 AND exits 1 on an empty file, so the old
+# `grep -c '' "$1" || echo 0` emitted "0\n0" and every later [ "$N" -gt 0 ] test
+# died with "integer expression expected". Count only when there is something to count.
+count_lines() { if [ -s "$1" ]; then grep -c '' "$1"; else echo 0; fi; }
 
 UPDATED_N=$(count_lines "$UPDATED")
 SKIPPED_N=$(count_lines "$SKIPPED")

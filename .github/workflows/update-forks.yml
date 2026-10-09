@@ -1,0 +1,112 @@
+# ------------------------------------------------------------------
+# Update forked submodules from upstream -- kilted
+#
+# This is the ONE place fork updating happens. It used to be called from
+# .github/actions/setup-ros2-macos (i.e. from every job of every build), where it
+# could never work: it needs an `upstream` git remote, that remote lives in the
+# uncommitted .git/modules/<path>/config, and CI clones submodules fresh with only
+# `origin`. Every build logged "Skipped (648) -- no upstream remote".
+#
+# It must not go back into the per-job path. That action is used by 4 call sites and
+# the last kilted run had 27 jobs, so the updater would rebase and force-push each
+# fork up to 27 times per run, in parallel, across three distros at once. Jobs early
+# and late in the same run would then build DIFFERENT fork commits, which destroys
+# the one property that makes a failure traceable.
+#
+# Here it runs once, serialized, on a schedule or by hand, and pushes. A later build
+# then compiles a fixed, known state.
+#
+# SAFETY
+#   - ci/fork-no-autoupdate.txt lists the pins. add_upstream_remotes.sh withholds (and
+#     actively removes) their `upstream` remote, and update_forked_submodules.sh refuses
+#     them by name as well. A pin exists to stop tracking upstream; rebasing one would
+#     reintroduce the failure it was created to avoid.
+#   - Manual runs default to dry_run=true. The schedule passes false.
+#   - concurrency is shared across all three distro workflows, so two of them can never
+#     force-push the same fork branch at the same time.
+# ------------------------------------------------------------------
+name: Update forked submodules (kilted)
+
+on:
+  schedule:
+    # Weekly, Sunday 04:00 UTC -- deliberately not daily: each run rewrites fork
+    # branches, and a weekly cadence keeps that reviewable.
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Compute rebases but do not push (recommended for a first look)"
+        type: boolean
+        default: true
+
+concurrency:
+  # Shared name across humble/jazzy/kilted on purpose -- these must serialize.
+  group: update-forked-submodules
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    # Plain git work; no macOS runner needed.
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout kilted-new
+        uses: actions/checkout@v4
+        with:
+          ref: kilted-new
+          fetch-depth: 0
+          token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+
+      - name: Authenticate git for fork pushes
+        run: |
+          git config --global user.name  "ros2-macos-ci"
+          git config --global user.email "ros2-macos-ci@users.noreply.github.com"
+          git config --global url."https://${{ secrets.CATS_DEPLOY_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Check out submodules
+        run: |
+          git submodule sync --recursive
+          n=0
+          until git submodule update --init --recursive --jobs 8; do
+            n=$((n+1))
+            if [ "$n" -ge 6 ]; then echo "::error::submodule update failed after $n attempts"; exit 1; fi
+            echo "attempt $n failed (transient); retrying in $((n*20))s"
+            git submodule sync --recursive || true
+            sleep $((n*20))
+          done
+
+      - name: Put each submodule on its .gitmodules branch
+        run: |
+          chmod +x scripts/sync-submodules-branches.sh
+          ./scripts/sync-submodules-branches.sh
+
+      - name: Give forks their upstream remote
+        run: |
+          chmod +x scripts/add_upstream_remotes.sh
+          ./scripts/add_upstream_remotes.sh
+
+      - name: Rebase forks onto upstream
+        env:
+          # Manual dispatch defaults to a dry run; the schedule (empty input) pushes.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
+        run: |
+          chmod +x scripts/update_forked_submodules.sh
+          ./scripts/update_forked_submodules.sh | tee /tmp/fork-update.log
+
+      - name: Summarize
+        if: always()
+        run: |
+          {
+            echo "### Fork update (kilted)"
+            echo
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "**Dry run** -- nothing was pushed."
+              echo
+            fi
+            echo '```'
+            sed -n '/SUMMARY/,$p' /tmp/fork-update.log 2>/dev/null | head -200
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

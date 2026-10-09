@@ -1020,7 +1020,7 @@
 	branch = kilted
 [submodule "ros-planning/easynav_plugins"]
 	path = ros-planning/easynav_plugins
-	url = https://github.com/EasyNavigation/easynav_plugins.git
+	url = https://github.com/idesign0/id_easynav_plugins.git
 	branch = kilted
 [submodule "middleware/ecal"]
 	path = middleware/ecal

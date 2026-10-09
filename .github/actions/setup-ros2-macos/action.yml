@@ -54,16 +54,28 @@ runs:
         chmod +x scripts/sync-submodules-branches.sh
         ./scripts/sync-submodules-branches.sh
 
-    - name: Configure git credentials for fork updates
+    # Kept: rewrites github.com URLs to carry the token, which also helps submodule
+    # fetches against rate limits. Harmless when nothing pushes.
+    - name: Configure git credentials
       shell: bash
       run: |
         git config --global url."https://${{ inputs.deploy-token }}@github.com/".insteadOf "https://github.com/"
 
-    - name: Update forked submodules from upstream
-      shell: bash
-      run: |
-        chmod +x scripts/update_forked_submodules.sh
-        ./scripts/update_forked_submodules.sh
+    # update_forked_submodules.sh is deliberately NOT called here any more.
+    #
+    # It never worked in this path: it needs an `upstream` remote, that remote lives in
+    # the uncommitted .git/modules/<path>/config, and CI clones submodules fresh with
+    # only `origin`. Every job logged "Skipped (648) -- no upstream remote" after walking
+    # all 648 submodules, so it cost time and achieved nothing.
+    #
+    # It also must not be made to work here. This action has 4 call sites and the last
+    # kilted run had 27 jobs, so a working updater would rebase and force-push every fork
+    # up to 27 times per run, concurrently, across three distros. Jobs early and late in
+    # one run would then build DIFFERENT fork commits -- which would make a failure
+    # impossible to attribute.
+    #
+    # Fork updating now runs once, serialized, in .github/workflows/update-forks.yml.
+    # Builds compile whatever that last pushed.
 
     - name: Apply in-tree source patches
       shell: bash
