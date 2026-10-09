@@ -75,15 +75,23 @@ jobs:
         env:
           DISTRO: ${{ inputs.distro || 'all' }}
         run: |
+          # Every superproject branch is covered, main AND -new, because each has its own
+          # .gitmodules and therefore its own set of forks and fork branches. Updating only
+          # one set would leave the other building stale forks -- which is how this started:
+          # id_rmw never picked up upstream and the main branches failed on it.
+          h='{"distro":"humble","ref":"humble"},{"distro":"humble","ref":"humble-new"}'
+          j='{"distro":"jazzy","ref":"jazzy"},{"distro":"jazzy","ref":"jazzy-new"}'
+          k='{"distro":"kilted","ref":"kilted"},{"distro":"kilted","ref":"kilted-new"}'
           case "$DISTRO" in
-            humble) m='{"include":[{"distro":"humble","ref":"humble-new"}]}' ;;
-            jazzy)  m='{"include":[{"distro":"jazzy","ref":"jazzy-new"}]}' ;;
-            kilted) m='{"include":[{"distro":"kilted","ref":"kilted-new"}]}' ;;
-            all|"") m='{"include":[{"distro":"humble","ref":"humble-new"},{"distro":"jazzy","ref":"jazzy-new"},{"distro":"kilted","ref":"kilted-new"}]}' ;;
+            humble) m="{\"include\":[$h]}" ;;
+            jazzy)  m="{\"include\":[$j]}" ;;
+            kilted) m="{\"include\":[$k]}" ;;
+            all|"") m="{\"include\":[$h,$j,$k]}" ;;
             *) echo "::error::unknown distro: $DISTRO"; exit 1 ;;
           esac
           echo "matrix=$m" >> "$GITHUB_OUTPUT"
           echo "will process: $DISTRO"
+          echo "$m"
 
   update:
     needs: plan
@@ -146,7 +154,7 @@ jobs:
         if: always()
         run: |
           {
-            echo "### ${{ matrix.distro }} (${{ matrix.ref }})"
+            echo "### ${{ matrix.distro }} -- branch ${{ matrix.ref }}"
             echo
             echo "DRY_RUN=${{ inputs.dry_run && '1' || '0' }}"
             echo
