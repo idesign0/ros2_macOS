@@ -1,0 +1,34 @@
+# ci/fork-upstreams.tsv -- the real upstream of each idesign0 fork submodule, for THIS branch.
+#
+# update_forked_submodules.sh only touches a submodule that has an `upstream` git remote.
+# That remote lives in .git/modules/<path>/config, which is never committed, so it exists
+# only on a developer machine. In CI every submodule is a fresh clone with just `origin`,
+# which is why the updater reported "Skipped (N) -- no upstream remote" and had never
+# updated anything there. This file is the missing record; scripts/add_upstream_remotes.sh
+# reads it and adds the remote.
+#
+# Generated from `gh api repos/idesign0/<repo> --jq .parent.clone_url` -- GitHub's own
+# record of what each fork was forked from. The two entries marked "verified by shared
+# history" are repos GitHub reports no parent for (created with `gh repo create` + push);
+# their upstream was confirmed by finding a commit shared with the candidate, not guessed.
+#
+# FORMAT  <submodule path><TAB><upstream clone url>
+# Paths in ci/fork-no-autoupdate.txt are skipped regardless of what is listed here.
+eProsima/Fast-DDS	https://github.com/eProsima/Fast-DDS.git
+gazebo-release/gz_dartsim_vendor	https://github.com/gazebo-release/gz_dartsim_vendor.git
+gazebo-release/gz_ogre_next_vendor	https://github.com/gazebo-release/gz_ogre_next_vendor.git
+gzsim/gz_ros2_control	https://github.com/ros-controls/gz_ros2_control.git
+moveit/geometric_shapes	https://github.com/moveit/geometric_shapes.git
+moveit/moveit2	https://github.com/moveit/moveit2.git
+moveit/moveit_task_constructor	https://github.com/moveit/moveit_task_constructor.git
+ros-planning/dependencies/ceres-solver	https://github.com/ceres-solver/ceres-solver.git
+ros-planning/dependencies/vision_opencv	https://github.com/ros-perception/vision_opencv.git
+ros-planning/navigation2	https://github.com/ros-navigation/navigation2.git
+ros-planning/slam_toolbox	https://github.com/SteveMacenski/slam_toolbox.git
+ros-planning/spatio_temporal_voxel_layer	https://github.com/SteveMacenski/spatio_temporal_voxel_layer.git
+ros-visualization/python_qt_binding	https://github.com/ros-visualization/python_qt_binding.git
+ros/backward_ros	https://github.com/ros2-gbp/backward_ros-release.git
+ros2/geometry2	https://github.com/ros2/geometry2.git
+ros2/rosbag2	https://github.com/ros2/rosbag2.git
+ros2/rviz	https://github.com/ros2/rviz.git
+ros2_control/ros2_control	https://github.com/ros-controls/ros2_control.git
