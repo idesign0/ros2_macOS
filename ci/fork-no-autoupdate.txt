@@ -1,0 +1,9 @@
+# ci/fork-no-autoupdate.txt -- forks that must NEVER be rebased onto upstream.
+#
+# These are PINS: each one's branch was force-set to the commit this superproject records,
+# because upstream's tip had drifted to something that no longer builds here. Rebasing one
+# would undo the pin and bring the original failure straight back.
+#
+# add_upstream_remotes.sh withholds AND actively removes their `upstream` remote, and
+# update_forked_submodules.sh refuses them by name too. One path per line.
+# (no pinned forks on this branch)
