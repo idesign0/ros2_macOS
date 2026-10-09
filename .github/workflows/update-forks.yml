@@ -31,10 +31,17 @@
 name: Update forked submodules
 
 on:
-  schedule:
-    # Weekly, Sunday 04:00 UTC. Deliberately not daily: each real run rewrites fork
-    # branches, and a weekly cadence keeps that reviewable.
-    - cron: "0 4 * * 0"
+  # No schedule of its own: scheduler.yml runs this and THEN dispatches the builds, so
+  # the builds always start from forks that were just updated. One cron, one ordering,
+  # nothing to drift.
+  workflow_call:
+    inputs:
+      dry_run:
+        type: boolean
+        default: false
+      distro:
+        type: string
+        default: all
   workflow_dispatch:
     inputs:
       dry_run:
@@ -55,25 +62,38 @@ permissions:
   contents: read
 
 jobs:
+  # The matrix is built here because `matrix` is NOT available in a job-level `if`
+  # (that expression is evaluated before the matrix expands, and GitHub rejects the
+  # whole file with "Unrecognized named-value: 'matrix'"). Filtering the matrix itself
+  # is the supported way to run a subset.
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - id: pick
+        env:
+          DISTRO: ${{ inputs.distro || 'all' }}
+        run: |
+          case "$DISTRO" in
+            humble) m='{"include":[{"distro":"humble","ref":"humble-new"}]}' ;;
+            jazzy)  m='{"include":[{"distro":"jazzy","ref":"jazzy-new"}]}' ;;
+            kilted) m='{"include":[{"distro":"kilted","ref":"kilted-new"}]}' ;;
+            all|"") m='{"include":[{"distro":"humble","ref":"humble-new"},{"distro":"jazzy","ref":"jazzy-new"},{"distro":"kilted","ref":"kilted-new"}]}' ;;
+            *) echo "::error::unknown distro: $DISTRO"; exit 1 ;;
+          esac
+          echo "matrix=$m" >> "$GITHUB_OUTPUT"
+          echo "will process: $DISTRO"
+
   update:
+    needs: plan
     # Plain git work; no macOS runner needed.
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
       max-parallel: 1
       fail-fast: false
-      matrix:
-        include:
-          - distro: humble
-            ref: humble-new
-          - distro: jazzy
-            ref: jazzy-new
-          - distro: kilted
-            ref: kilted-new
-    if: >-
-      github.event_name != 'workflow_dispatch'
-      || inputs.distro == 'all'
-      || inputs.distro == matrix.distro
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - name: Checkout ${{ matrix.ref }}
         uses: actions/checkout@v4
@@ -117,7 +137,7 @@ jobs:
       - name: Rebase forks onto upstream
         env:
           # Manual dispatch defaults to a dry run; the schedule (no inputs) pushes.
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
         run: |
           chmod +x scripts/update_forked_submodules.sh
           ./scripts/update_forked_submodules.sh 2>&1 | tee /tmp/fork-update.log
@@ -128,7 +148,7 @@ jobs:
           {
             echo "### ${{ matrix.distro }} (${{ matrix.ref }})"
             echo
-            echo "DRY_RUN=${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}"
+            echo "DRY_RUN=${{ inputs.dry_run && '1' || '0' }}"
             echo
             echo '```'
             sed -n '/SUMMARY/,$p' /tmp/fork-update.log 2>/dev/null | head -300
