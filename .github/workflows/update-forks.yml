@@ -1,0 +1,136 @@
+# ------------------------------------------------------------------
+# Update forked submodules from upstream (all distros)
+#
+# THIS FILE LIVES ON THE DEFAULT BRANCH ON PURPOSE.
+#   GitHub only fires `schedule` from the default branch, and only lists workflows
+#   present on it for workflow_dispatch. A copy on humble-new/jazzy-new/kilted-new
+#   would never run. Each matrix leg therefore checks out its own distro branch and
+#   runs the scripts from THAT checkout, so the code here stays generic.
+#
+# WHY IT IS A SEPARATE WORKFLOW AND NOT PART OF THE BUILD
+#   update_forked_submodules.sh used to be called from .github/actions/setup-ros2-macos,
+#   i.e. from every job of every build, where it could never work: it needs an `upstream`
+#   git remote, that remote lives in the uncommitted .git/modules/<path>/config, and CI
+#   clones submodules fresh with only `origin`. Every build logged
+#   "Skipped (648) -- no upstream remote".
+#   It must not go back there either. That action has 4 call sites and a kilted run has
+#   ~27 jobs, so a working updater would rebase and force-push each fork up to 27 times
+#   per run, concurrently, across three distros. Jobs early and late in one run would
+#   then build DIFFERENT fork commits, which makes a build failure impossible to
+#   attribute to a commit.
+#
+# SAFETY
+#   - max-parallel: 1 plus a single concurrency group: never two legs force-pushing the
+#     same fork branch at the same time.
+#   - ci/fork-no-autoupdate.txt lists the pins. add_upstream_remotes.sh withholds and
+#     actively removes their `upstream` remote, and update_forked_submodules.sh refuses
+#     them by name too. A pin exists to stop tracking upstream; rebasing one would bring
+#     back the failure it was created to avoid.
+#   - Manual runs default to dry_run=true (nothing is pushed). The schedule pushes.
+# ------------------------------------------------------------------
+name: Update forked submodules
+
+on:
+  schedule:
+    # Weekly, Sunday 04:00 UTC. Deliberately not daily: each real run rewrites fork
+    # branches, and a weekly cadence keeps that reviewable.
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Compute rebases but push nothing (leave on for a first look)"
+        type: boolean
+        default: true
+      distro:
+        description: "Which distro to process"
+        type: choice
+        default: all
+        options: [all, humble, jazzy, kilted]
+
+concurrency:
+  group: update-forked-submodules
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    # Plain git work; no macOS runner needed.
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        include:
+          - distro: humble
+            ref: humble-new
+          - distro: jazzy
+            ref: jazzy-new
+          - distro: kilted
+            ref: kilted-new
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.distro == 'all'
+      || inputs.distro == matrix.distro
+    steps:
+      - name: Checkout ${{ matrix.ref }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+
+      - name: Authenticate git for fork pushes
+        run: |
+          git config --global user.name  "ros2-macos-ci"
+          git config --global user.email "ros2-macos-ci@users.noreply.github.com"
+          git config --global url."https://${{ secrets.CATS_DEPLOY_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Check out submodules
+        run: |
+          git submodule sync --recursive
+          n=0
+          until git submodule update --init --recursive --jobs 8; do
+            n=$((n+1))
+            if [ "$n" -ge 6 ]; then echo "::error::submodule update failed after $n attempts"; exit 1; fi
+            echo "attempt $n failed (transient); retrying in $((n*20))s"
+            git submodule sync --recursive || true
+            sleep $((n*20))
+          done
+
+      - name: Put each submodule on its .gitmodules branch
+        run: |
+          chmod +x scripts/sync-submodules-branches.sh
+          ./scripts/sync-submodules-branches.sh
+
+      - name: Give forks their upstream remote
+        run: |
+          if [ ! -f scripts/add_upstream_remotes.sh ]; then
+            echo "::error::scripts/add_upstream_remotes.sh missing on ${{ matrix.ref }}"
+            exit 1
+          fi
+          chmod +x scripts/add_upstream_remotes.sh
+          ./scripts/add_upstream_remotes.sh
+
+      - name: Rebase forks onto upstream
+        env:
+          # Manual dispatch defaults to a dry run; the schedule (no inputs) pushes.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}
+        run: |
+          chmod +x scripts/update_forked_submodules.sh
+          ./scripts/update_forked_submodules.sh 2>&1 | tee /tmp/fork-update.log
+
+      - name: Summarize
+        if: always()
+        run: |
+          {
+            echo "### ${{ matrix.distro }} (${{ matrix.ref }})"
+            echo
+            echo "DRY_RUN=${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '0' }}"
+            echo
+            echo '```'
+            sed -n '/SUMMARY/,$p' /tmp/fork-update.log 2>/dev/null | head -300
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
