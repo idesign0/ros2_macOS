@@ -1,0 +1,120 @@
+# ci/fork-upstreams.tsv -- the real upstream of each idesign0 fork submodule.
+#
+# WHY THIS FILE EXISTS
+#   update_forked_submodules.sh only touches a submodule that has an `upstream` git
+#   remote. That remote lives in .git/modules/<path>/config, which is NEVER committed,
+#   so it exists only on a developer machine. In CI every submodule is a fresh clone
+#   with just `origin`, which is why the updater reported "Skipped (648) -- no upstream
+#   remote" on every run and had never updated anything there.
+#   sync-submodules-branches.sh cannot help: it reads the candidate upstream URL from
+#   .gitmodules, which is the very URL git cloned `origin` from, so its
+#   `origin_owner != upstream_owner` test is always false.
+#   This file is the missing record. scripts/add_upstream_remotes.sh reads it and adds
+#   the remote, so the updater can work off a checkout it did not create.
+#
+# PROVENANCE
+#   Generated from `gh api repos/idesign0/<repo> --jq .parent.clone_url`, i.e. GitHub's
+#   own record of what each fork was forked from. Not guessed from the name.
+#
+# FORMAT  <submodule path><TAB><upstream clone url>
+# Entries listed in ci/fork-no-autoupdate.txt are skipped regardless of what is here.
+aerial/mavros	https://github.com/mavlink/mavros.git
+aerial/webots_ros2	https://github.com/cyberbotics/webots_ros2.git
+ament/ros2_medkit	https://github.com/selfpatch/ros2_medkit.git
+autonomous_driving/autoware_core	https://github.com/autowarefoundation/autoware_core.git
+autonomous_driving/nebula	https://github.com/tier4/nebula.git
+eProsima/Fast-DDS	https://github.com/eProsima/Fast-DDS.git
+fleet/rmf_ros2	https://github.com/open-rmf/rmf_ros2.git
+fleet/rmf_traffic	https://github.com/open-rmf/rmf_traffic.git
+fleet/rmf_traffic_editor	https://github.com/open-rmf/rmf_traffic_editor.git
+gazebo-release/gz_dartsim_vendor	https://github.com/gazebo-release/gz_dartsim_vendor.git
+gazebo-release/gz_math_vendor	https://github.com/gazebo-release/gz_math_vendor.git
+gazebo-release/gz_ogre_next_vendor	https://github.com/gazebo-release/gz_ogre_next_vendor.git
+gzsim/fusioncore	https://github.com/manankharwar/fusioncore.git
+gzsim/gps_umd	https://github.com/ros-drivers/gps_umd.git
+gzsim/gz_ros2_control	https://github.com/ros-controls/gz_ros2_control.git
+gzsim/mujoco_vendor	https://github.com/pal-robotics/mujoco_vendor.git
+moveit/crane_plus	https://github.com/rt-net/crane_plus.git
+moveit/geometric_shapes	https://github.com/moveit/geometric_shapes.git
+moveit/moveit2	https://github.com/moveit/moveit2.git
+moveit/moveit_task_constructor	https://github.com/moveit/moveit_task_constructor.git
+moveit/pick_ik	https://github.com/PickNikRobotics/pick_ik.git
+ros-drivers/arm/turtlebot3_applications	https://github.com/ROBOTIS-GIT/turtlebot3_applications.git
+ros-drivers/arm/ur_client_library	https://github.com/UniversalRobots/Universal_Robots_Client_Library.git
+ros-drivers/clips_executive	https://github.com/carologistics/clips_executive.git
+ros-drivers/feetech_ros2_driver	https://github.com/ros-physical-ai/feetech_ros2_driver.git
+ros-drivers/imu_gnss/imu_pipeline	https://github.com/ros-perception/imu_pipeline.git
+ros-drivers/imu_gnss/rt_usb_9axisimu_driver	https://github.com/rt-net/rt_usb_9axisimu_driver.git
+ros-drivers/imu_gnss/ublox	https://github.com/KumarRobotics/ublox.git
+ros-drivers/lidar/pointcloud_to_laserscan	https://github.com/ros-perception/pointcloud_to_laserscan.git
+ros-drivers/lidar/sick_safetyscanners_base	https://github.com/SICKAG/sick_safetyscanners_base.git
+ros-drivers/lidar/sick_scan_xd	https://github.com/SICKAG/sick_scan_xd.git
+ros-drivers/mobile_base/husarion_ugv_ros	https://github.com/husarion/husarion_ugv_ros.git
+ros-drivers/mobile_base/leo_robot	https://github.com/LeoRover/leo_robot-ros2.git
+ros-drivers/naoqi_libqi	https://github.com/ros-naoqi/libqi.git
+ros-drivers/off_highway_sensor_drivers	https://github.com/bosch-engineering/off_highway_sensor_drivers.git
+ros-drivers/transport_drivers	https://github.com/ros-drivers/transport_drivers.git
+ros-perception/vision/aruco_markers	https://github.com/namo-robotics/aruco_markers.git
+ros-perception/vision/event_camera_tools	https://github.com/ros-event-camera/event_camera_tools.git
+ros-perception/vision/event_image_reconstruction_fibar	https://github.com/ros-event-camera/event_image_reconstruction_fibar.git
+ros-perception/vision/rc_dynamics_api	https://github.com/roboception/rc_dynamics_api.git
+ros-perception/vision/rcdiscover	https://github.com/roboception/rcdiscover.git
+ros-planning/beluga	https://github.com/Ekumen-OS/beluga.git
+ros-planning/cartographer_ros	https://github.com/ros2/cartographer_ros.git
+ros-planning/control_box_rst	https://github.com/rst-tu-dortmund/control_box_rst.git
+ros-planning/dependencies/BehaviorTree.ROS2	https://github.com/BehaviorTree/BehaviorTree.ROS2.git
+ros-planning/dependencies/PickNickRobotics/generate_parameter_library	https://github.com/PickNikRobotics/generate_parameter_library.git
+ros-planning/dependencies/ceres-solver	https://github.com/ceres-solver/ceres-solver.git
+ros-planning/dependencies/vision_opencv	https://github.com/ros-perception/vision_opencv.git
+ros-planning/grid_map	https://github.com/ANYbotics/grid_map.git
+ros-planning/mola	https://github.com/MOLAorg/mola.git
+ros-planning/mola_academic_datasets	https://github.com/MOLAorg/mola_academic_datasets.git
+ros-planning/mola_imu_preintegration	https://github.com/MOLAorg/mola_imu_preintegration.git
+ros-planning/mola_input_ouster	https://github.com/MOLAorg/mola_input_ouster.git
+ros-planning/mola_lidar_odometry	https://github.com/MOLAorg/mola_lidar_odometry.git
+ros-planning/mola_state_estimation	https://github.com/MOLAorg/mola_state_estimation.git
+ros-planning/mp2p_icp	https://github.com/MOLAorg/mp2p_icp.git
+ros-planning/mrpt3	https://github.com/MRPT/mrpt.git
+ros-planning/mrpt_navigation	https://github.com/mrpt-ros-pkg/mrpt_navigation.git
+ros-planning/mrpt_path_planning	https://github.com/MRPT/mrpt_path_planning.git
+ros-planning/mrpt_ros	https://github.com/MRPT/mrpt_ros.git
+ros-planning/mrpt_ros_bridge	https://github.com/MRPT/mrpt_ros_bridge.git
+ros-planning/mrpt_sensors	https://github.com/mrpt-ros-pkg/mrpt_sensors.git
+ros-planning/mvsim	https://github.com/MRPT/mvsim.git
+ros-planning/navigation2	https://github.com/ros-navigation/navigation2.git
+ros-planning/pose_cov_ops	https://github.com/mrpt-ros-pkg/pose_cov_ops.git
+ros-planning/python_mrpt_ros	https://github.com/MRPT/python_mrpt_ros.git
+ros-planning/rtabmap_ros	https://github.com/introlab/rtabmap_ros.git
+ros-planning/slam_toolbox	https://github.com/SteveMacenski/slam_toolbox.git
+ros-planning/smacc2	https://github.com/robosoft-ai/SMACC2.git
+ros-planning/spatio_temporal_voxel_layer	https://github.com/SteveMacenski/spatio_temporal_voxel_layer.git
+ros-visualization/etsi_its_messages	https://github.com/ika-rwth-aachen/etsi_its_messages.git
+ros-visualization/foxglove-sdk	https://github.com/foxglove/foxglove-sdk.git
+ros-visualization/play_motion_builder	https://github.com/pal-robotics/play_motion_builder.git
+ros-visualization/plotjuggler_ros	https://github.com/PlotJuggler/plotjuggler-ros-plugins.git
+ros-visualization/python_qt_binding	https://github.com/ros-visualization/python_qt_binding.git
+ros/backward_ros	https://github.com/ros2-gbp/backward_ros-release.git
+ros2/geometry2	https://github.com/ros2/geometry2.git
+ros2/interfaces/autoapms	https://github.com/AutoAPMS/auto-apms.git
+ros2/interfaces/camera_aravis2	https://github.com/FraunhoferIOSB/camera_aravis2.git
+ros2/interfaces/motion_capture_tracking	https://github.com/IMRCLab/motion_capture_tracking.git
+ros2/interfaces/ros2_eventdispatch	https://github.com/cyan-at/ros2_eventdispatch.git
+ros2/interfaces/ros_babel_fish	https://github.com/LOEWE-emergenCITY/ros_babel_fish.git
+ros2/rosbag2	https://github.com/ros2/rosbag2.git
+ros2/rviz	https://github.com/ros2/rviz.git
+ros2/yaml_cpp_vendor	https://github.com/ros2/yaml_cpp_vendor.git
+ros2_control/easynav	https://github.com/EasyNavigation/EasyNavigation.git
+ros2_control/husarion_controllers	https://github.com/husarion/husarion_controllers.git
+ros2_control/kuka_drivers	https://github.com/kroshu/kuka_drivers.git
+ros2_control/mujoco_ros2_control	https://github.com/ros-controls/mujoco_ros2_control.git
+ros2_control/ros2_control	https://github.com/ros-controls/ros2_control.git
+ros2_control/ros2_control_cmake	https://github.com/ros-controls/ros2_control_cmake.git
+
+# NOT RECORDED -- GitHub reports no parent for these (created with
+# `gh repo create` + push rather than forked), so the true upstream is not
+# discoverable. Left out deliberately: the updater skips them exactly as it
+# does today. Add a line by hand only if you are certain of the upstream.
+#   ros-planning/cartographer                    (id_cartographer)
+#   ros-planning/dependencies/lua                (id_lua)
+#   ros-planning/mola_sm_loop_closure            (id_mola_sm_loop_closure)
+#   ros2/rmw                                     (id_rmw)
