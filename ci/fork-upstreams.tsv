@@ -100,7 +100,13 @@ ros2_control/ros2_control_cmake	https://github.com/ros-controls/ros2_control_cma
 # `gh repo create` + push rather than forked), so the true upstream is not
 # discoverable. Left out deliberately: the updater skips them exactly as it
 # does today. Add a line by hand only if you are certain of the upstream.
-#   ros-planning/cartographer                    (id_cartographer)
 #   ros-planning/dependencies/lua                (id_lua)
 #   ros-planning/mola_sm_loop_closure            (id_mola_sm_loop_closure)
-#   ros2/rmw                                     (id_rmw)
+
+# Recovered by hand: GitHub reports no parent for these forks (created with
+# `gh repo create` + push), so the upstream was confirmed by finding a commit
+# shared between our branch and the candidate upstream, not by guessing names.
+# verified: shares commit 1489fc93 with ros2/cartographer on branch ros2
+ros-planning/cartographer	https://github.com/ros2/cartographer.git
+# verified: shares commit f8b2cca2 with ros2/rmw on branch kilted
+ros2/rmw	https://github.com/ros2/rmw.git
