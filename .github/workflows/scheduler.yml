@@ -1,31 +1,131 @@
-name: Nightly dispatch (all distros)
-
-# Scheduled workflows only run from the default branch (jazzy), and they only
-# run the workflow file as it exists there. To build all three distros on a
-# timer we therefore dispatch each branch's own CI workflow with its own ref:
-# each dispatched run executes on that branch, so GITHUB_REF_NAME (and the
-# DISTRO it derives) is correct without changing the build workflows at all.
+# ------------------------------------------------------------------
+# Nightly: refresh the forks, then dispatch the builds
 #
-# Requirement: each macos-<distro>-ci.yml must also exist on this default
-# branch to be dispatchable (their push: filters keep them from running here).
+# Replaces the previous version, which had been failing every night since the
+# non-layered workflows were disabled:
+#   could not create workflow dispatch event: HTTP 422:
+#   Cannot trigger a 'workflow_dispatch' on a disabled workflow
+# It dispatched macos-<distro>-ci.yml on the humble/jazzy/kilted branches; those three
+# workflows are disabled_manually. The live ones are macos-<distro>-layered.yml on the
+# <distro>-new branches, which is what this dispatches now.
+#
+# ORDER: forks first, builds second, in one workflow, so a build always starts from
+# forks that were just refreshed -- "a bit ahead of the runners" with no cron drift.
+#
+# TWO GATES, both necessary:
+#
+#  1. Nothing runs while a layered build is active. A full run takes 20-33h, so a daily
+#     cron would otherwise stack two or three generations per distro on the macOS
+#     runners. More importantly, rewriting fork branches mid-build would make that
+#     build's late shards clone different fork commits than its early shards -- the
+#     builds would stop being reproducible and a failure could not be pinned to a
+#     commit. So if any layered run is in progress or queued, this whole workflow
+#     stands down and tries again tomorrow.
+#
+#     That also makes the daily cron self-pacing: a new build starts the first night
+#     after the previous one finished, always with fresh forks, and never piles up.
+#
+#  2. Pins are never rebased. ci/fork-no-autoupdate.txt is enforced twice inside
+#     update-forks.yml (see that file).
+# ------------------------------------------------------------------
+name: Nightly dispatch (all distros)
 
 on:
   schedule:
-    - cron: "0 3 * * *"     # every day at 03:00 UTC
-  workflow_dispatch:         # manual trigger for testing
+    - cron: "0 1 * * *"      # 01:00 UTC; the gate below decides whether it acts
+  workflow_dispatch:
+    inputs:
+      dry_run_forks:
+        description: "Refresh forks in dry-run mode (push nothing)"
+        type: boolean
+        default: false
+      dispatch_builds:
+        description: "Dispatch the layered builds after refreshing forks"
+        type: boolean
+        default: true
+      force:
+        description: "Act even if a layered build is already running (not recommended)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+      active: ${{ steps.check.outputs.active }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          total=0
+          for d in humble jazzy kilted; do
+            for st in in_progress queued; do
+              n=$(gh run list --repo idesign0/ros2_macOS \
+                    --workflow "macos-${d}-layered.yml" --status "$st" \
+                    --json databaseId --jq 'length' 2>/dev/null || echo 0)
+              echo "  macos-${d}-layered.yml $st: $n"
+              total=$((total + n))
+            done
+          done
+          echo "active=$total" >> "$GITHUB_OUTPUT"
+          if [ "$total" -gt 0 ] && [ "$FORCE" != "true" ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$total layered run(s) active -- standing down so the running build keeps a consistent set of fork commits"
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  forks:
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true'
+    uses: ./.github/workflows/update-forks.yml
+    with:
+      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run_forks || false }}
+      distro: all
+    secrets: inherit
+
   dispatch:
-    runs-on: ubuntu-latest   # cheap runner — the macOS builds run as their own dispatched runs
+    needs: [gate, forks]
+    # always(): a partial fork refresh should not stop the build -- that is the state we
+    # had before, and a build is more useful than no build. The fork job's own result is
+    # visible in the run, and its summary says what was pushed.
+    if: >-
+      always()
+      && needs.gate.outputs.proceed == 'true'
+      && (github.event_name != 'workflow_dispatch' || inputs.dispatch_builds)
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        branch: [humble, jazzy, kilted]
+        distro: [humble, jazzy, kilted]
     steps:
-      - name: Trigger ${{ matrix.branch }} build
+      - name: Dispatch macos-${{ matrix.distro }}-layered.yml on ${{ matrix.distro }}-new
         env:
           GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
         run: |
-          gh workflow run "macos-${{ matrix.branch }}-ci.yml" \
+          echo "fork refresh result: ${{ needs.forks.result }}"
+          gh workflow run "macos-${{ matrix.distro }}-layered.yml" \
             --repo idesign0/ros2_macOS \
-            --ref "${{ matrix.branch }}"
+            --ref "${{ matrix.distro }}-new"
+          echo "dispatched ${{ matrix.distro }}"
+
+  report:
+    needs: [gate, forks, dispatch]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          {
+            echo "### Nightly"
+            echo
+            echo "- layered runs active at start: ${{ needs.gate.outputs.active }}"
+            echo "- proceeded: ${{ needs.gate.outputs.proceed }}"
+            echo "- fork refresh: ${{ needs.forks.result }}"
+            echo "- build dispatch: ${{ needs.dispatch.result }}"
+          } >> "$GITHUB_STEP_SUMMARY"
