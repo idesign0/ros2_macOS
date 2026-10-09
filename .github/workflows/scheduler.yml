@@ -66,11 +66,13 @@ jobs:
           total=0
           for d in humble jazzy kilted; do
             for st in in_progress queued; do
-              n=$(gh run list --repo idesign0/ros2_macOS \
-                    --workflow "macos-${d}-layered.yml" --status "$st" \
-                    --json databaseId --jq 'length' 2>/dev/null || echo 0)
-              echo "  macos-${d}-layered.yml $st: $n"
-              total=$((total + n))
+              for wf in "macos-${d}-ci.yml" "macos-${d}-layered.yml"; do
+                n=$(gh run list --repo idesign0/ros2_macOS \
+                      --workflow "$wf" --status "$st" \
+                      --json databaseId --jq 'length' 2>/dev/null || echo 0)
+                echo "  $wf $st: $n"
+                total=$((total + n))
+              done
             done
           done
           echo "active=$total" >> "$GITHUB_OUTPUT"
@@ -105,15 +107,19 @@ jobs:
       matrix:
         distro: [humble, jazzy, kilted]
     steps:
-      - name: Dispatch macos-${{ matrix.distro }}-layered.yml on ${{ matrix.distro }}-new
+      # MAIN branches only, on purpose. The -new branches are the active development
+      # branches and their layered builds stay manual for now; that will be wired up
+      # separately. The fork refresh above still covers BOTH main and -new, so whenever
+      # a -new build is dispatched by hand it also starts from fresh forks.
+      - name: Dispatch macos-${{ matrix.distro }}-ci.yml on ${{ matrix.distro }}
         env:
           GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
         run: |
           echo "fork refresh result: ${{ needs.forks.result }}"
-          gh workflow run "macos-${{ matrix.distro }}-layered.yml" \
+          gh workflow run "macos-${{ matrix.distro }}-ci.yml" \
             --repo idesign0/ros2_macOS \
-            --ref "${{ matrix.distro }}-new"
-          echo "dispatched ${{ matrix.distro }}"
+            --ref "${{ matrix.distro }}"
+          echo "dispatched macos-${{ matrix.distro }}-ci.yml on ${{ matrix.distro }}"
 
   report:
     needs: [gate, forks, dispatch]
