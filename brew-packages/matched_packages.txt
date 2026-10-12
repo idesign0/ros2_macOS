@@ -232,7 +232,7 @@ onnx 1.17.0_10 1.17.0_11
 open-scene-graph 3.6.5_2
 openblas 0.3.30
 opencore-amr 0.1.6
-opencv 4.12.0_18
+opencv@4 4.12.0_18
 openexr 3.4.4
 openjpeg 2.5.4
 openjph 0.25.3
