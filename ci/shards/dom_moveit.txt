@@ -11,6 +11,7 @@ crane_plus_examples
 crane_plus_gazebo
 crane_plus_moveit_config
 data_tamer_cpp
+data_tamer_msgs
 ewellix_lift_common
 ewellix_moveit_config
 ewellix_sim
