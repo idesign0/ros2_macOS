@@ -592,3 +592,13 @@ cl_px4_mr
 # is not in this workspace at all. Cascade of that skip.
 sm_cl_px4_mr_test_1
 sm_cl_px4_mr_test_2
+
+# sm_husky_barrel_search_1: find_package(gazebo) and find_package(gazebo_dev) -- Gazebo
+# *classic*, which is not built on macOS ARM (same class as turtlebot3_gazebo and
+# rmf_building_sim_gz_classic_plugins above):
+#   Could not find a package configuration file provided by "gazebo"
+#   CMake Error at CMakeLists.txt:32 (find_package): ... "gazebo_dev" ...
+# Unsatisfiable here. The other five sm_dance_bot* in the same shard failed for an
+# unrelated reason (missing find_package(rosidl_default_generators)) and are fixed in the
+# id_smacc2 fork instead, not skipped.
+sm_husky_barrel_search_1

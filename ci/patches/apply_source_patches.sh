@@ -1505,6 +1505,39 @@ if [ -n "$d" ] && [ -f "$f" ] && grep -qF '${DRACO_LIBRARIES}' "$f"; then
   echo "  cloudini_lib: pcd_benchmark links draco::draco (imported target) instead of the never-set \${DRACO_LIBRARIES} — fixes undefined draco symbols at link"
 fi
 
+# --- data_tamer_cpp (all 3): its gtest tests link against the wrong gtest ---------------------
+#     The library builds; only tests/datatamer_test fails, with undefined symbols whose
+#     parameters are std::basic_string_view:
+#       "testing::internal::AssertHelper::AssertHelper(TestPartResult::Type,
+#          std::__1::basic_string_view<char,...>, int, std::__1::basic_string_view<...>)"
+#       "testing::internal::PrintStringTo(std::__1::basic_string_view<char,...>, ostream*)"
+#     i.e. it compiled against brew googletest (1.18.0, which moved those internals to
+#     string_view) and linked against the older gtest_vendor library. We do not run tests in
+#     this CI, so flip the package's own option off rather than trying to reconcile two gtests.
+#     Idempotent (the ON spelling is gone afterwards). ---
+_f="$(_pkg_cml data_tamer_cpp)"
+if [ -n "$_f" ] && grep -q 'option(DATA_TAMER_BUILD_TESTS "Build tests" ON)' "$_f"; then
+  perl -pi -e 's{option\(DATA_TAMER_BUILD_TESTS "Build tests" ON\)}{option(DATA_TAMER_BUILD_TESTS "Build tests" OFF)  # ci-datatamer-no-tests: gtest header/lib skew}' "$_f"
+  echo "  data_tamer_cpp: DATA_TAMER_BUILD_TESTS ON -> OFF in ${_f#$ROOT/}"
+fi
+
+# --- mrpt_libbase (all 3): MRPT's tinyxml2 path does not compile here -------------------------
+#     mrpt_libbase builds upstream MRPT as an ExternalProject. Its tinyxml2 detection finds a
+#     system tinyxml2 and sets MRPT_HAS_TINYXML2, but the include directory never reaches the
+#     mrpt_obs compile line, so the guarded block compiles without a usable header:
+#       VelodyneCalibration.cpp:41:7: error: use of undeclared identifier 'tinyxml2'  (x30)
+#     MRPT exposes DISABLE_TINYXML2 (modules/mrpt_obs/cmake/script_tinyxml2.cmake returns early
+#     and leaves CMAKE_MRPT_HAS_TINYXML2 at 0), which compiles the block out. Same lever as the
+#     -DDISABLE_JSONCPP=ON already passed there.
+#     TRADE-OFF: this drops MRPT's Velodyne calibration-from-XML support. Nothing in this
+#     workspace is known to use it; revisit if a Velodyne consumer needs it.
+#     Idempotent (guarded on the flag being absent). ---
+_f="$(_pkg_cml mrpt_libbase)"
+if [ -n "$_f" ] && grep -q 'DISABLE_JSONCPP=ON' "$_f" && ! grep -q 'DISABLE_TINYXML2' "$_f"; then
+  perl -pi -e 's{(^\s*)-DDISABLE_JSONCPP=ON}{$1-DDISABLE_JSONCPP=ON\n$1-DDISABLE_TINYXML2=ON   # ci-mrpt-no-tinyxml2}m' "$_f"
+  echo "  mrpt_libbase: +-DDISABLE_TINYXML2=ON in ${_f#$ROOT/}"
+fi
+
 echo "source patches applied."
 # --- cartographer: declares <depend>libceres-dev</depend> (Linux rosdep key), NOT the
 #     vendored `ceres-solver` colcon package, so colcon does not order it after
