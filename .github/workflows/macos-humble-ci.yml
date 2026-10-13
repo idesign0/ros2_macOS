@@ -1,10 +1,29 @@
 name: macOS ROS 2 Humble CI (Apple Silicon)
 
 on:
+  # humble-new is deliberately NOT a push trigger here.
+  #
+  # This is the monolithic build: the entire workspace in ONE job. The layered workflow
+  # (macos-humble-layered.yml) is what builds the -new branches, and the two compete for the
+  # same capacity -- GitHub runs only 5 macOS jobs at a time for this account, so on
+  # 2026-10-12 seven push-triggered monolithic builds queued alongside three layered runs
+  # (45 jobs waiting behind 5 slots) and then died on their own timeouts:
+  #   jazzy      ran 4h01m -> hit timeout-minutes: 240
+  #   kilted-new ran 6h02m -> hit timeout-minutes: 360
+  # GitHub reports a timed-out job as "cancelled", which made it look like a quota problem.
+  # Pushing a fix batch to a -new branch should not start a build that cannot finish and
+  # that starves the layered run of the same commit.
   push:
-    branches: [humble, humble-new]
+    branches: [humble]
   pull_request:
   workflow_dispatch:
+
+# One build per ref. Two commits pushed back-to-back previously produced two full runs of
+# the same branch (the OpenCV fix landed as two commits and started two builds per branch);
+# supersede instead of queueing both.
+concurrency:
+  group: monolithic-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
