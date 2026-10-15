@@ -1515,10 +1515,16 @@ fi
 #     string_view) and linked against the older gtest_vendor library. We do not run tests in
 #     this CI, so flip the package's own option off rather than trying to reconcile two gtests.
 #     Idempotent (the ON spelling is gone afterwards). ---
+#     Upstream has spelled the default three ways now (ON, then ${PROJECT_IS_TOP_LEVEL}),
+#     and under colcon every package IS the top-level project, so match whatever default is
+#     there rather than one literal -- the old 'ON)' matcher silently stopped firing when
+#     upstream moved to ${PROJECT_IS_TOP_LEVEL} and the tests came back. The
+#     ci-datatamer-no-tests marker keeps this idempotent. ---
 _f="$(_pkg_cml data_tamer_cpp)"
-if [ -n "$_f" ] && grep -q 'option(DATA_TAMER_BUILD_TESTS "Build tests" ON)' "$_f"; then
-  perl -pi -e 's{option\(DATA_TAMER_BUILD_TESTS "Build tests" ON\)}{option(DATA_TAMER_BUILD_TESTS "Build tests" OFF)  # ci-datatamer-no-tests: gtest header/lib skew}' "$_f"
-  echo "  data_tamer_cpp: DATA_TAMER_BUILD_TESTS ON -> OFF in ${_f#$ROOT/}"
+if [ -n "$_f" ] && grep -qE 'option\(DATA_TAMER_BUILD_TESTS "Build tests" ' "$_f" \
+   && ! grep -q 'ci-datatamer-no-tests' "$_f"; then
+  perl -pi -e 's{option\(DATA_TAMER_BUILD_TESTS "Build tests" [^)]*\)}{option(DATA_TAMER_BUILD_TESTS "Build tests" OFF)  # ci-datatamer-no-tests: gtest header/lib skew}' "$_f"
+  echo "  data_tamer_cpp: DATA_TAMER_BUILD_TESTS -> OFF in ${_f#$ROOT/}"
 fi
 
 # --- mrpt_libbase (all 3): MRPT's tinyxml2 path does not compile here -------------------------
@@ -2276,17 +2282,9 @@ for _f in $(find "$ROOT" -path '*as2_motion_controller/plugins/pid_speed_control
   echo "  as2_motion_controller: force-vendor RPS98 pid_controller (find_package name collision) in ${_f#$ROOT/}"
 done
 
-# --- data_tamer_cpp (all 3): under colcon CMAKE_PROJECT_NAME==PROJECT_NAME so the
-#     standalone branch turns DATA_TAMER_BUILD_TESTS ON; its tests link ament gtest_vendor
-#     but hit a googletest ABI mismatch (undefined testing::internal::MakeAndRegisterTestInfo
-#     (std::string,...) — newer-gtest signature vs the vendored lib). The library itself
-#     builds fine; only the test exe fails to link. Flip the standalone test default to OFF
-#     so the package builds green (tests aren't shipped). Idempotent. ---
-_f="$(_pkg_dir data_tamer_cpp)/CMakeLists.txt"
-if [ -f "$_f" ] && grep -qF 'option(DATA_TAMER_BUILD_TESTS "Build tests" ON)' "$_f"; then
-  perl -pi -e 's{option\(DATA_TAMER_BUILD_TESTS "Build tests" ON\)}{option(DATA_TAMER_BUILD_TESTS "Build tests" OFF)}g;' "$_f"
-  echo "  data_tamer_cpp: DATA_TAMER_BUILD_TESTS ON -> OFF (gtest ABI mismatch in tests) in ${_f#$ROOT/}"
-fi
+# data_tamer_cpp disable-gtest-tests (googletest ABI skew) handled by the single
+# DATA_TAMER_BUILD_TESTS block above; this duplicate matched the same file with the same
+# stale 'ON)' literal and is removed.
 
 # pose_cov_ops disable-gtest-test (googletest ABI skew) MIGRATED to id_pose_cov_ops fork.
 
