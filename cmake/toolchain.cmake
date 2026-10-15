@@ -76,8 +76,26 @@ set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/inclu
 if("${CMAKE_PROJECT_NAME}" MATCHES "^(kinematics_interface_pinocchio|linear_feedback_controller|libfranka|franka_example_controllers)$")
     message(STATUS "Stitching Boost and Boost-Python (brew python314) for ${CMAKE_PROJECT_NAME}")
     set(Boost_INCLUDE_DIR "/opt/homebrew/opt/boost/include" CACHE PATH "" FORCE)
-    set(Boost_PYTHON314_LIBRARY_RELEASE "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
-    set(Boost_PYTHON314_LIBRARY_DEBUG "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
+    # ci-boost-python-glob: brew bumps its python3 (3.11 -> 3.14 -> 3.15 -> ...) and rebuilds
+    # boost-python3 against it, so a hardcoded libboost_python314 goes stale on the next
+    # runner image. eigenpy's SEARCH_FOR_BOOST_PYTHON derives the component name from the
+    # Python it found (boost.cmake:114 "python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
+    # and then reads Boost_PYTHON<NNN>_LIBRARY_RELEASE, so a stale pin surfaces as
+    #   Could NOT find Boost (missing: python315) (found version "1.92.0")
+    # from eigenpyConfig.cmake -> boost.cmake:146. Register every versioned boost_python and
+    # boost_numpy brew actually ships, under the exact variable name FindBoost derives.
+    file(GLOB _ci_bp_libs
+      "/opt/homebrew/opt/boost-python3/lib/libboost_python3*.dylib"
+      "/opt/homebrew/opt/boost-python3/lib/libboost_numpy3*.dylib")
+    foreach(_ci_bp IN LISTS _ci_bp_libs)
+      if(_ci_bp MATCHES "libboost_(python|numpy)([0-9]+)\\.dylib$")
+        string(TOUPPER "${CMAKE_MATCH_1}" _ci_bp_comp)
+        set(Boost_${_ci_bp_comp}${CMAKE_MATCH_2}_LIBRARY_RELEASE "${_ci_bp}" CACHE FILEPATH "" FORCE)
+        set(Boost_${_ci_bp_comp}${CMAKE_MATCH_2}_LIBRARY_DEBUG   "${_ci_bp}" CACHE FILEPATH "" FORCE)
+        message(STATUS "ci-boost-python-glob: Boost_${_ci_bp_comp}${CMAKE_MATCH_2} -> ${_ci_bp}")
+      endif()
+    endforeach()
+    unset(_ci_bp_libs)
     set(Boost_NO_SYSTEM_PATHS OFF CACHE BOOL "" FORCE)
     # Point CONFIG-mode find_package(Boost) (realtime_tools/hardware_interface extras that
     # do find_package(Boost) with no components) at brew boost's BoostConfig.cmake, else those

@@ -57,6 +57,7 @@ flir_ptu_driver
 flir_ptu_viz
 franka_bringup
 franka_description
+franka_desk_api
 franka_example_controllers
 franka_fr3_moveit_config
 franka_gazebo_bringup

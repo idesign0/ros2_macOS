@@ -693,3 +693,41 @@ cl_px4_mr
 # is not in this workspace at all. Cascade of that skip.
 sm_cl_px4_mr_test_1
 sm_cl_px4_mr_test_2
+
+# --- mvsim + mrpt_path_planning_apps 2026-10-15 -------------------------------------------
+# mvsim's GUI is not optional: modules/simulator/include/mvsim/World.h declares
+#   const mrpt::gui::CDisplayWindowGUI::Ptr& gui_window() const
+# and uses nanogui types directly, with no MRPT_HAS_NANOGUI guard anywhere in the package
+# and no CMake switch to build headless. It therefore fails to compile here:
+#   World.h:268:19: error: no member named 'CDisplayWindowGUI' in namespace 'mrpt::gui'
+#   World.h:840:3:  error: use of undeclared identifier 'nanogui'          (x many)
+#
+# The cause is upstream MRPT, not mvsim and not this workspace. In
+# cmakemodules/script_nanogui.cmake (MRPT 2.15.21):
+#     if (APPLE)
+#       set(def_ OFF)         # <-- MRPT_WITH_NANOGUI defaults OFF on macOS
+#     else()
+#       set(def_ ON)
+#     endif()
+#     set(MRPT_WITH_NANOGUI ${def_} CACHE BOOL "...")
+#     ...
+#     if (NOT MRPT_WITH_NANOGUI)
+#     return()                # <-- leaves CMAKE_MRPT_HAS_NANOGUI at 0
+#     endif()
+# and the whole of mrpt/gui/CDisplayWindowGUI.h (lines 22-380) sits inside
+# "#if MRPT_HAS_NANOGUI", so CDisplayWindowGUI simply does not exist on macOS. Note the
+# early return happens BEFORE MRPT_BUILD_nanogui is consulted, so mrpt_libgui already
+# passing -DMRPT_BUILD_nanogui=ON has no effect.
+#
+# Fixing this properly means turning MRPT's embedded nanogui (plus its bundled glfw and
+# nanovg) into something that builds on macOS ARM and then passing -DMRPT_WITH_NANOGUI=ON
+# to mrpt_libgui, and -DMRPT_WITH_NANOGUI=ON -DMRPT_BUILD_nanogui=OFF to mrpt_libbase so
+# the installed mrpt/config.h reports MRPT_HAS_NANOGUI 1 (only mrpt_libbase sets
+# MRPT_INSTALL_CONFIG_HEADERS=ON). That is a piece of work in its own right, and getting
+# it wrong fails mrpt_libgui or mrpt_libbase, which would cascade across the ~30 mrpt
+# packages in this shard. Not attempted blind; skipped until it can be built and verified.
+mvsim
+# mrpt_path_planning_apps: find_package(mvsim) -- the only package depending on mvsim.
+# It was already never built (colcon silently drops dependents of a failed package), so
+# skip-listing it is bookkeeping, not a loss.
+mrpt_path_planning_apps
