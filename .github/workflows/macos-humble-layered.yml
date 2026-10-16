@@ -207,7 +207,7 @@ jobs:
               --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
               -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_base1.log
           fi
-          echo "== summary =="; grep -E 'Summary:|packages failed' build_base1.log || true
+          echo "== summary =="; grep -E 'Summary:|packages? failed' build_base1.log || true
       - name: Relax recorded brew dependency version pins
         run: |
           # ceres-solver bakes the EXACT brew SuiteSparse/METIS version it was configured against
@@ -258,7 +258,7 @@ jobs:
         run: |
           mkdir -p summaries
           { echo "## base1"
-            grep -E 'Summary:|packages failed' build_base1.log 2>/dev/null || true
+            grep -E 'Summary:|packages? failed' build_base1.log 2>/dev/null || true
             # Drop packages that failed in the main pass but were recovered by the
             # transient-failure retry pass, so the summary reports REAL failures only.
             grep -E 'Failed +<<<' build_base1.log 2>/dev/null | sort -u | while read -r _l; do
@@ -374,7 +374,7 @@ jobs:
               --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
               -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_base2a.log
           fi
-          echo "== summary =="; grep -E 'Summary:|packages failed' build_base2a.log || true
+          echo "== summary =="; grep -E 'Summary:|packages? failed' build_base2a.log || true
       - name: Relax recorded brew dependency version pins
         run: |
           # ceres-solver bakes the EXACT brew SuiteSparse/METIS version it was configured against
@@ -425,7 +425,7 @@ jobs:
         run: |
           mkdir -p summaries
           { echo "## base2a"
-            grep -E 'Summary:|packages failed' build_base2a.log 2>/dev/null || true
+            grep -E 'Summary:|packages? failed' build_base2a.log 2>/dev/null || true
             # Drop packages that failed in the main pass but were recovered by the
             # transient-failure retry pass, so the summary reports REAL failures only.
             grep -E 'Failed +<<<' build_base2a.log 2>/dev/null | sort -u | while read -r _l; do
@@ -542,7 +542,7 @@ jobs:
               --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
               -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_base2b.log
           fi
-          echo "== summary =="; grep -E 'Summary:|packages failed' build_base2b.log || true
+          echo "== summary =="; grep -E 'Summary:|packages? failed' build_base2b.log || true
       - name: Relax recorded brew dependency version pins
         run: |
           # ceres-solver bakes the EXACT brew SuiteSparse/METIS version it was configured against
@@ -593,7 +593,7 @@ jobs:
         run: |
           mkdir -p summaries
           { echo "## base2b"
-            grep -E 'Summary:|packages failed' build_base2b.log 2>/dev/null || true
+            grep -E 'Summary:|packages? failed' build_base2b.log 2>/dev/null || true
             # Drop packages that failed in the main pass but were recovered by the
             # transient-failure retry pass, so the summary reports REAL failures only.
             grep -E 'Failed +<<<' build_base2b.log 2>/dev/null | sort -u | while read -r _l; do
@@ -741,7 +741,7 @@ jobs:
         run: |
           mkdir -p summaries
           { echo "## shard: ${{ matrix.shard }}"
-            grep -E 'Summary:|packages failed' "build_${{ matrix.shard }}.log" 2>/dev/null || true
+            grep -E 'Summary:|packages? failed' "build_${{ matrix.shard }}.log" 2>/dev/null || true
             # Drop packages that failed in the main pass but were recovered by the
             # transient-failure retry pass, so the summary reports REAL failures only.
             grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sort -u | while read -r _l; do

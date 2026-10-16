@@ -47,7 +47,6 @@ mavlink
 mavros
 mavros_examples
 mavros_extras
-mavros_tools_cpp
 webots_ros2
 webots_ros2_control
 webots_ros2_crazyflie
