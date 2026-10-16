@@ -559,6 +559,26 @@ if(EXISTS "${_FASTDDS_ASIO_INC}/asio.hpp")
 endif()
 link_directories(/opt/homebrew/lib)
 include_directories(SYSTEM /opt/homebrew/include)
+
+# --- openssl@3 must win over openssl@4's /opt/homebrew/include symlinks -------------------
+#     Homebrew's new `openssl@4` (4.0.3) is NOT keg-only, so it links its headers into
+#     /opt/homebrew/include/openssl, which the `include_directories(SYSTEM /opt/homebrew/include)`
+#     above puts on EVERY compile as a directory-scope -isystem -- ahead of the target-scope
+#     -isystem that OpenSSL::SSL carries from find_package(OpenSSL) (OPENSSL_ROOT_DIR=openssl@3).
+#     Result: the whole workspace compiled OpenSSL 4 headers while linking OpenSSL 3 libs.
+#     OpenSSL 4 removed `struct asn1_string_st` from the public ABI and made the X509
+#     getters return const, so any pre-4.0 direct member access hard-errors:
+#       fastrtps      -- thirdparty/asio 1.34.2 ssl/impl/rfc2818_verification.ipp:65 ff.
+#                        "member access into incomplete type 'ASN1_IA5STRING'"
+#       librealsense2 -- third-party/libcurl lib/vtls/openssl.c:457 ff. (same, on ASN1_INTEGER)
+#     and eclipse-cyclonedds' auth plugin compiled with -Wincompatible-pointer-types-
+#     discards-qualifiers warnings -- i.e. a silent 3-vs-4 header/lib skew even where it built.
+#     Prepend openssl@3's include dir so headers and libs are the same OpenSSL again.
+#     NOTE the argument order: it is include_directories([AFTER|BEFORE] [SYSTEM] dirs) --
+#     `SYSTEM BEFORE` makes CMake treat "BEFORE" as a DIRECTORY NAME and silently APPENDS.
+if(EXISTS "/opt/homebrew/opt/openssl@3/include/openssl/ssl.h")
+  include_directories(BEFORE SYSTEM "/opt/homebrew/opt/openssl@3/include")
+endif()
 foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
   set(${_lf} "${${_lf}} -L/opt/homebrew/lib" CACHE STRING "" FORCE)
 endforeach()
