@@ -727,7 +727,19 @@ sm_cl_px4_mr_test_2
 # it wrong fails mrpt_libgui or mrpt_libbase, which would cascade across the ~30 mrpt
 # packages in this shard. Not attempted blind; skipped until it can be built and verified.
 mvsim
-# mrpt_path_planning_apps: find_package(mvsim) -- the only package depending on mvsim.
-# It was already never built (colcon silently drops dependents of a failed package), so
-# skip-listing it is bookkeeping, not a loss.
-mrpt_path_planning_apps
+# mrpt_path_planning_apps: UN-SKIPPED 2026-10-18. The 2026-10-15 skip said
+# "find_package(mvsim) -- the only package depending on mvsim", but mvsim is OPTIONAL here:
+#   mrpt_path_planning_apps/CMakeLists.txt  find_package(mvsim-simulator QUIET)
+#                                           find_package(mvsim-comms QUIET)
+#   selfdriving-simulator-gui/CMakeLists.txt:3  if (NOT mvsim-simulator_FOUND OR
+#       NOT mvsim-comms_FOUND) -> message("mvsim not found, skipping ...") + return()
+# Only that one subdirectory needs mvsim, and it is also the only place nanogui /
+# CDisplayWindowGUI appear. The other two subdirs are clean:
+#   mrpt_path_planning_viz  links mrpt::gui + mpp::mrpt_path_planning; its sources include
+#                           only mrpt/gui/CDisplayWindow3D.h (OpenGL, works on macOS)
+#   path-planner-cli        mrpt::gui + mrpt::nav + mrpt::tclap + mrpt_path_planning_viz
+# The skip cost real packages: mpp/algos/viz.h is installed by mrpt_path_planning_viz, which
+# lives INSIDE mrpt_path_planning_apps (not a package of its own -- no package.xml), so with
+# the apps package skipped, mrpt_tps_astar_planner failed on all three distros with
+#   mrpt_tps_astar_planner_node.cpp:16:10: fatal error: 'mpp/algos/viz.h' file not found
+# and mrpt_navigation was then never built. (runs 38888909284 / 38796452721 / 38796471382)
