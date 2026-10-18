@@ -87,6 +87,27 @@ jobs:
           path: ~/.cache/ccache
           key: ccache-humble-gz-${{ github.run_id }}
           restore-keys: ccache-humble-gz-
+      - name: Verify colcon is usable (infra guard)
+        run: |
+          # The Build steps below run under `continue-on-error: true`, so a broken
+          # colcon silently produces an EMPTY install prefix and the job only dies
+          # much later in "Pack install-*" with a misleading
+          #   tar: lseek(SEEK_HOLE) failed: Illegal byte sequence
+          # humble run 39120061470 lost a 6h base-1 exactly that way: 187 `colcon list`
+          # calls had just succeeded in "Apply skip-list", then 15s later `colcon build`
+          # died with `ModuleNotFoundError: No module named 'colcon_core.command'`.
+          # jazzy run 39120063171 had the identical brew/tap warnings on the same image
+          # and built 240 packages, so this is a per-runner pip/site-packages flake.
+          # Test the interpreter the colcon shim itself uses, not whatever python3 is
+          # first on PATH, and fail HERE with the cause named.
+          COLCON=$(command -v colcon) || { echo "::error::colcon not on PATH"; exit 1; }
+          PY=$(head -1 "$COLCON" | sed 's|^#!||; s| .*||')
+          [ -x "$PY" ] || PY=python3
+          "$PY" -c 'import colcon_core.command' || {
+            echo "::error::colcon is broken on this runner ($COLCON via $PY cannot import colcon_core.command) - infra flake, re-run the job"
+            exit 1
+          }
+          echo "colcon OK: $COLCON ($PY)"
       - name: Build External Gazebo (protobuf + gz)
         if: steps.gzcache.outputs.cache-hit != 'true'
         run: |
@@ -180,6 +201,27 @@ jobs:
           path: ~/.cache/ccache
           key: ccache-humble-base1-${{ github.run_id }}
           restore-keys: ccache-humble-base1-
+      - name: Verify colcon is usable (infra guard)
+        run: |
+          # The Build steps below run under `continue-on-error: true`, so a broken
+          # colcon silently produces an EMPTY install prefix and the job only dies
+          # much later in "Pack install-*" with a misleading
+          #   tar: lseek(SEEK_HOLE) failed: Illegal byte sequence
+          # humble run 39120061470 lost a 6h base-1 exactly that way: 187 `colcon list`
+          # calls had just succeeded in "Apply skip-list", then 15s later `colcon build`
+          # died with `ModuleNotFoundError: No module named 'colcon_core.command'`.
+          # jazzy run 39120063171 had the identical brew/tap warnings on the same image
+          # and built 240 packages, so this is a per-runner pip/site-packages flake.
+          # Test the interpreter the colcon shim itself uses, not whatever python3 is
+          # first on PATH, and fail HERE with the cause named.
+          COLCON=$(command -v colcon) || { echo "::error::colcon not on PATH"; exit 1; }
+          PY=$(head -1 "$COLCON" | sed 's|^#!||; s| .*||')
+          [ -x "$PY" ] || PY=python3
+          "$PY" -c 'import colcon_core.command' || {
+            echo "::error::colcon is broken on this runner ($COLCON via $PY cannot import colcon_core.command) - infra flake, re-run the job"
+            exit 1
+          }
+          echo "colcon OK: $COLCON ($PY)"
       - name: Build base-1 (foundation)
         continue-on-error: true
         run: |
@@ -346,6 +388,27 @@ jobs:
           path: ~/.cache/ccache
           key: ccache-humble-base2a-${{ github.run_id }}
           restore-keys: ccache-humble-base2a-
+      - name: Verify colcon is usable (infra guard)
+        run: |
+          # The Build steps below run under `continue-on-error: true`, so a broken
+          # colcon silently produces an EMPTY install prefix and the job only dies
+          # much later in "Pack install-*" with a misleading
+          #   tar: lseek(SEEK_HOLE) failed: Illegal byte sequence
+          # humble run 39120061470 lost a 6h base-1 exactly that way: 187 `colcon list`
+          # calls had just succeeded in "Apply skip-list", then 15s later `colcon build`
+          # died with `ModuleNotFoundError: No module named 'colcon_core.command'`.
+          # jazzy run 39120063171 had the identical brew/tap warnings on the same image
+          # and built 240 packages, so this is a per-runner pip/site-packages flake.
+          # Test the interpreter the colcon shim itself uses, not whatever python3 is
+          # first on PATH, and fail HERE with the cause named.
+          COLCON=$(command -v colcon) || { echo "::error::colcon not on PATH"; exit 1; }
+          PY=$(head -1 "$COLCON" | sed 's|^#!||; s| .*||')
+          [ -x "$PY" ] || PY=python3
+          "$PY" -c 'import colcon_core.command' || {
+            echo "::error::colcon is broken on this runner ($COLCON via $PY cannot import colcon_core.command) - infra flake, re-run the job"
+            exit 1
+          }
+          echo "colcon OK: $COLCON ($PY)"
       - name: Build base-2a (dependency-ordered first half)
         continue-on-error: true
         run: |
@@ -514,6 +577,27 @@ jobs:
           path: ~/.cache/ccache
           key: ccache-humble-base2b-${{ github.run_id }}
           restore-keys: ccache-humble-base2b-
+      - name: Verify colcon is usable (infra guard)
+        run: |
+          # The Build steps below run under `continue-on-error: true`, so a broken
+          # colcon silently produces an EMPTY install prefix and the job only dies
+          # much later in "Pack install-*" with a misleading
+          #   tar: lseek(SEEK_HOLE) failed: Illegal byte sequence
+          # humble run 39120061470 lost a 6h base-1 exactly that way: 187 `colcon list`
+          # calls had just succeeded in "Apply skip-list", then 15s later `colcon build`
+          # died with `ModuleNotFoundError: No module named 'colcon_core.command'`.
+          # jazzy run 39120063171 had the identical brew/tap warnings on the same image
+          # and built 240 packages, so this is a per-runner pip/site-packages flake.
+          # Test the interpreter the colcon shim itself uses, not whatever python3 is
+          # first on PATH, and fail HERE with the cause named.
+          COLCON=$(command -v colcon) || { echo "::error::colcon not on PATH"; exit 1; }
+          PY=$(head -1 "$COLCON" | sed 's|^#!||; s| .*||')
+          [ -x "$PY" ] || PY=python3
+          "$PY" -c 'import colcon_core.command' || {
+            echo "::error::colcon is broken on this runner ($COLCON via $PY cannot import colcon_core.command) - infra flake, re-run the job"
+            exit 1
+          }
+          echo "colcon OK: $COLCON ($PY)"
       - name: Build base-2b (dependency-ordered second half)
         continue-on-error: true
         run: |
@@ -687,6 +771,27 @@ jobs:
           path: ~/.cache/ccache
           key: ccache-humble-${{ matrix.shard }}-${{ github.run_id }}
           restore-keys: ccache-humble-${{ matrix.shard }}-
+      - name: Verify colcon is usable (infra guard)
+        run: |
+          # The Build steps below run under `continue-on-error: true`, so a broken
+          # colcon silently produces an EMPTY install prefix and the job only dies
+          # much later in "Pack install-*" with a misleading
+          #   tar: lseek(SEEK_HOLE) failed: Illegal byte sequence
+          # humble run 39120061470 lost a 6h base-1 exactly that way: 187 `colcon list`
+          # calls had just succeeded in "Apply skip-list", then 15s later `colcon build`
+          # died with `ModuleNotFoundError: No module named 'colcon_core.command'`.
+          # jazzy run 39120063171 had the identical brew/tap warnings on the same image
+          # and built 240 packages, so this is a per-runner pip/site-packages flake.
+          # Test the interpreter the colcon shim itself uses, not whatever python3 is
+          # first on PATH, and fail HERE with the cause named.
+          COLCON=$(command -v colcon) || { echo "::error::colcon not on PATH"; exit 1; }
+          PY=$(head -1 "$COLCON" | sed 's|^#!||; s| .*||')
+          [ -x "$PY" ] || PY=python3
+          "$PY" -c 'import colcon_core.command' || {
+            echo "::error::colcon is broken on this runner ($COLCON via $PY cannot import colcon_core.command) - infra flake, re-run the job"
+            exit 1
+          }
+          echo "colcon OK: $COLCON ($PY)"
       - name: Build shard ${{ matrix.shard }}
         continue-on-error: true
         run: |
