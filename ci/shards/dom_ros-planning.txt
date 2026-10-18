@@ -87,8 +87,6 @@ mola_state_estimation_simple
 mola_state_estimation_smoother
 mola_test_datasets
 mola_traj_tools
-mola_viz
-mola_viz_imgui
 mola_yaml
 moveit2z_client
 mp2p_icp
