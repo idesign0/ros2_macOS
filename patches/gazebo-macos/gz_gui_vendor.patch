@@ -1,0 +1,47 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 94fd645..a633c81 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -51,6 +51,8 @@ ament_vendor(${LIB_NAME_UNDERSCORE}_vendor
+   VCS_VERSION ${GITHUB_NAME}${LIB_VER_MAJOR}_${LIB_VER}${LIB_VER_SUFFIX}
+   CMAKE_ARGS
+     -DBUILD_DOCS:BOOL=OFF
++  PATCHES
++    patches/protobuf36-string-view.patch  
+   GLOBAL_HOOK
+ )
+ 
+diff --git a/patches/protobuf36-string-view.patch b/patches/protobuf36-string-view.patch
+new file mode 100644
+index 0000000..4c0466f
+--- /dev/null
++++ b/patches/protobuf36-string-view.patch
+@@ -0,0 +1,28 @@
++diff --git a/src/plugins/topic_viewer/TopicViewer.cc b/src/plugins/topic_viewer/TopicViewer.cc
++index 2082ca5..6440b77 100644
++--- a/src/plugins/topic_viewer/TopicViewer.cc
+++++ b/src/plugins/topic_viewer/TopicViewer.cc
++@@ -256,12 +256,19 @@ void TopicViewerPrivate::AddField(QStandardItem *_parentItem,
++     auto messageType = msgField->message_type();
++ 
++     if (messageType)
++-      this->AddField(msgItem, msgField->name(), messageType->full_name());
++-
+++    {
+++        this->AddField(
+++            msgItem,
+++            std::string(msgField->name()),
+++            std::string(messageType->full_name()));
+++    }
++     else
++     {
++-      auto msgFieldItem = this->FactoryItem(msgField->name(),
++-                                            msgField->type_name());
+++      auto msgFieldItem = this->FactoryItem(
+++        std::string(msgField->name()), 
+++        std::string(msgField->type_name())
+++      );
+++
++       msgItem->appendRow(msgFieldItem);
++ 
++       this->SetItemPath(msgFieldItem);
