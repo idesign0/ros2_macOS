@@ -31,9 +31,14 @@
 name: Update forked submodules
 
 on:
-  # No schedule of its own: scheduler.yml runs this and THEN dispatches the builds, so
-  # the builds always start from forks that were just updated. One cron, one ordering,
-  # nothing to drift.
+  # Weekly, Sunday 03:00 UTC. The build days are staggered one distro per day during the
+  # week, which leaves the weekend clear: a layered run started Friday is finished by
+  # Saturday, so Sunday is the one window where nothing is reading the fork branches.
+  #   scheduler.yml ALSO calls this (forks first, dispatch second) so a scheduled build
+  #   still starts from forks that were just refreshed. Both entry points go through the
+  #   `gate` job below, so neither can rebase a fork while a build is in flight.
+  schedule:
+    - cron: "0 3 * * 0"
   workflow_call:
     inputs:
       dry_run:
@@ -42,6 +47,9 @@ on:
       distro:
         type: string
         default: all
+      force:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       dry_run:
@@ -53,6 +61,10 @@ on:
         type: choice
         default: all
         options: [all, humble, jazzy, kilted]
+      force:
+        description: "Run even while a build is active (normally it stands down)"
+        type: boolean
+        default: false
 
 concurrency:
   group: update-forked-submodules
@@ -62,11 +74,49 @@ permissions:
   contents: read
 
 jobs:
+  # Never rewrite a fork branch while a build is reading it. A layered run takes 20-33h
+  # and clones submodules fresh in every one of its ~27 jobs, so a rebase mid-run makes
+  # the late shards build different fork commits than the early ones and a failure can no
+  # longer be pinned to a commit. scheduler.yml carries the same check before it calls
+  # this workflow; that path simply passes this one too.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+      active: ${{ steps.check.outputs.active }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          total=0
+          for d in humble jazzy kilted; do
+            for st in in_progress queued; do
+              for wf in "macos-${d}-ci.yml" "macos-${d}-layered.yml"; do
+                n=$(gh run list --repo idesign0/ros2_macOS \
+                      --workflow "$wf" --status "$st" \
+                      --json databaseId --jq 'length' 2>/dev/null || echo 0)
+                echo "  $wf $st: $n"
+                total=$((total + n))
+              done
+            done
+          done
+          echo "active=$total" >> "$GITHUB_OUTPUT"
+          if [ "$total" -gt 0 ] && [ "$FORCE" != "true" ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$total build(s) in progress or queued -- standing down so the running build keeps a consistent set of fork commits. Re-run with force=true to override."
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
   # The matrix is built here because `matrix` is NOT available in a job-level `if`
   # (that expression is evaluated before the matrix expands, and GitHub rejects the
   # whole file with "Unrecognized named-value: 'matrix'"). Filtering the matrix itself
   # is the supported way to run a subset.
   plan:
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.pick.outputs.matrix }}
