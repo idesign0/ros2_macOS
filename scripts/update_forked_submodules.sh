@@ -161,18 +161,12 @@ print_table() {
     done < "$file"
 }
 
-if [ "$UPDATED_N" -gt 0 ]; then
-    echo ""
-    echo "✅  Updated & pushed ($UPDATED_N):"
-    print_table "$UPDATED"
-fi
-
-if [ "$SKIPPED_N" -gt 0 ]; then
-    echo ""
-    echo "➡️   Skipped ($SKIPPED_N):"
-    print_table "$SKIPPED"
-fi
-
+# MANUAL FIRST, deliberately. There are ~636 submodules and only ~93 forks, so the
+# overwhelming majority land in SKIPPED as "no upstream remote" -- by design, they are
+# not forks. Printing SKIPPED first buried the one bucket that needs a human under ~540
+# rows of expected noise, and the workflow's `head -300` then cut it off entirely, so the
+# conflict list never reached the job summary at all. Order is now: what needs a human,
+# what changed, then the noise.
 if [ "$MANUAL_N" -gt 0 ]; then
     echo ""
     echo "⚠️   NEEDS MANUAL ATTENTION ($MANUAL_N):"
@@ -186,6 +180,55 @@ if [ "$MANUAL_N" -gt 0 ]; then
     echo "    git rebase --continue"
     echo "    git fetch origin <branch>"
     echo "    git push --force-with-lease origin <branch>"
+fi
+
+if [ "$UPDATED_N" -gt 0 ]; then
+    echo ""
+    echo "✅  Updated & pushed ($UPDATED_N):"
+    print_table "$UPDATED"
+fi
+
+# Split SKIPPED by reason. "would push" is the interesting half of a dry run and must be
+# listed in full; "no upstream remote" is ~540 rows of not-a-fork and is reported as a
+# count with a handful of examples, so it can never crowd out anything above it.
+if [ "$SKIPPED_N" -gt 0 ]; then
+    WOULD=$(mktemp); PINNED=$(mktemp); NOUP=$(mktemp)
+    grep -F 'dry run, not pushed'  "$SKIPPED" > "$WOULD"  2>/dev/null || true
+    grep -F 'pinned ('             "$SKIPPED" > "$PINNED" 2>/dev/null || true
+    grep -F 'no upstream remote'   "$SKIPPED" > "$NOUP"   2>/dev/null || true
+    WOULD_N=$(count_lines "$WOULD"); PINNED_N=$(count_lines "$PINNED"); NOUP_N=$(count_lines "$NOUP")
+
+    if [ "$WOULD_N" -gt 0 ]; then
+        echo ""
+        echo "🔎  DRY RUN -- would rebase and push ($WOULD_N):"
+        print_table "$WOULD"
+    fi
+
+    if [ "$PINNED_N" -gt 0 ]; then
+        echo ""
+        echo "📌  Pinned, refused on purpose ($PINNED_N):"
+        print_table "$PINNED"
+    fi
+
+    if [ "$NOUP_N" -gt 0 ]; then
+        echo ""
+        echo "➡️   No upstream remote ($NOUP_N) -- not forks, nothing to do. First 5:"
+        head -5 "$NOUP" | while IFS='|' read -r sub _ branch reason; do
+            printf "      %-48s %s\n" "${sub# }" "${reason# }"
+        done
+        [ "$NOUP_N" -gt 5 ] && echo "      ... and $((NOUP_N - 5)) more"
+    fi
+
+    OTHER_N=$(( SKIPPED_N - WOULD_N - PINNED_N - NOUP_N ))
+    if [ "$OTHER_N" -gt 0 ]; then
+        echo ""
+        echo "➡️   Skipped for other reasons ($OTHER_N):"
+        grep -vF -e 'dry run, not pushed' -e 'pinned (' -e 'no upstream remote' "$SKIPPED" \
+          | while IFS='|' read -r sub _ branch reason; do
+                printf "      %-48s %-15s %s\n" "${sub# }" "[${branch# }]" "${reason# }"
+            done
+    fi
+    rm -f "$WOULD" "$PINNED" "$NOUP"
 fi
 
 echo ""
