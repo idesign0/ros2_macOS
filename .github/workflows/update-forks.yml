@@ -208,7 +208,21 @@ jobs:
             echo
             echo "DRY_RUN=${{ inputs.dry_run && '1' || '0' }}"
             echo
+            # Lead with the verdict so a run needing a human is obvious from the job list
+            # without opening the log.
+            if grep -q 'NEEDS MANUAL ATTENTION' /tmp/fork-update.log 2>/dev/null; then
+              echo "**$(grep -c 'needs manual' /tmp/fork-update.log 2>/dev/null || echo '?') submodule(s) need manual attention** -- see the block below."
+            else
+              echo "No submodule needed manual attention."
+            fi
+            echo
             echo '```'
-            sed -n '/SUMMARY/,$p' /tmp/fork-update.log 2>/dev/null | head -300
+            # 1000, not 300: the summary used to run ~657 lines because the ~540
+            # "no upstream remote" rows (submodules that are not forks at all) were
+            # printed in full, and NEEDS MANUAL ATTENTION came last, at line 644 -- so
+            # head -300 silently dropped the one section a human has to act on. The
+            # script now prints MANUAL first and collapses that noise to a count, which
+            # brings a realistic dry run to ~126 lines; the wider cap is headroom.
+            sed -n '/SUMMARY/,$p' /tmp/fork-update.log 2>/dev/null | head -1000
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
