@@ -39,14 +39,65 @@ runs:
       run: |
         git submodule sync --recursive
         # Always a cold clone now (see the note above); retry+backoff for transient flakes.
-        n=0
-        until git submodule update --init --recursive --jobs 8; do
-          n=$((n+1))
-          if [ "$n" -ge 6 ]; then echo "submodule update failed after $n attempts"; exit 1; fi
+        ok=0
+        for n in 1 2 3 4 5 6; do
+          if git submodule update --init --recursive --jobs 8; then ok=1; break; fi
           echo "submodule update attempt $n failed (transient); retrying in $((n*20))s…"
           git submodule sync --recursive || true
           sleep $((n*20))
         done
+
+        if [ "$ok" = 1 ]; then exit 0; fi
+
+        # --- forge.etsi.org tolerance -------------------------------------------------
+        # etsi_its_messages nests its ASN.1 sources as submodules on forge.etsi.org, which
+        # returns 502/403 for minutes at a time. This step runs in EVERY job and fetches the
+        # whole tree recursively, so an ETSI outage used to `exit 1` and kill whichever shard
+        # happened to be running -- regardless of whether it builds anything ETSI. Run
+        # 39120065125 lost `domains (eclipse-iceoryx)` (1 package, no ETSI content) that way
+        # while 1548 packages elsewhere in the same run were fine, and `ros-visualization`,
+        # which DOES hold all 38 etsi_its_* packages, passed because the forge was back up by
+        # the time it started.
+        #   So: after the retries are exhausted, tolerate the failure only if every submodule
+        # still missing is hosted on forge.etsi.org. Keyed on the URL host, not the path, so a
+        # GitHub-hosted nested submodule under the same subtree (doc/doxygen-awesome-css,
+        # asn1/raw/uulm_mcm_etsi) still fails the job as it should.
+        decl=$(mktemp)
+        while IFS= read -r gm; do
+          base=$(dirname "${gm#./}"); [ "$base" = "." ] && base=""
+          git config --file "$gm" --get-regexp '^submodule\..*\.path$' 2>/dev/null |
+            while read -r key val; do
+              name=${key#submodule.}; name=${name%.path}
+              url=$(git config --file "$gm" --get "submodule.${name}.url" 2>/dev/null)
+              if [ -n "$base" ]; then printf '%s/%s\t%s\n' "$base" "$val" "$url"
+              else printf '%s\t%s\n' "$val" "$url"; fi
+            done
+        done < <(find . -name .gitmodules -not -path './.git/*') > "$decl"
+
+        missing=$(git submodule status --recursive 2>/dev/null | awk '/^-/{print $2}')
+        blocking=""
+        tolerated=""
+        for p in $missing; do
+          u=$(awk -F'\t' -v p="$p" '$1==p{print $2; exit}' "$decl")
+          case "$u" in
+            *forge.etsi.org*) tolerated="$tolerated $p" ;;
+            *)                blocking="$blocking $p" ;;
+          esac
+        done
+
+        if [ -n "$blocking" ]; then
+          echo "::error::submodule update failed after 6 attempts; missing submodules not attributable to forge.etsi.org:"
+          for p in $blocking; do echo "    $p"; done
+          exit 1
+        fi
+
+        if [ -z "$tolerated" ]; then
+          echo "::error::submodule update failed after 6 attempts and no submodule is reported missing -- not a forge.etsi.org outage, failing."
+          exit 1
+        fi
+
+        echo "::warning::forge.etsi.org is unreachable; continuing without its ASN.1 submodules. Consequence: the etsi_its_* packages in the ros-visualization shard will fail to build in THIS run. That is this outage, not a code regression. Every other shard is unaffected."
+        for p in $tolerated; do echo "    missing (tolerated): $p"; done
 
     - name: Sync submodule branches
       shell: bash
