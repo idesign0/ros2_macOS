@@ -10,6 +10,12 @@ crane_plus_examples
 crane_plus_examples_py
 crane_plus_gazebo
 crane_plus_moveit_config
+cyclo_control
+cyclo_motion_controller_core
+cyclo_motion_controller_models
+cyclo_motion_controller_ros
+cyclo_motion_controller_ros_py
+cyclo_teleoperation
 data_tamer_cpp
 data_tamer_msgs
 dual_arm_panda_moveit_config
@@ -73,12 +79,14 @@ open_manipulator_gui
 open_manipulator_moveit_config
 open_manipulator_playground
 open_manipulator_teleop
+osqp_eigen_vendor
 pick_ik
 py_binding_tools
 pymoveit2
 robotiq_controllers
 robotiq_driver
 robotiq_hardware_tests
+robotis_interfaces
 rosbot
 rosbot_bringup
 rosbot_controller

@@ -1798,11 +1798,21 @@ fi
 
 # --- ffw_joint_trajectory_command_broadcaster (jazzy only): -Wsign-conversion promoted to
 #     -Werror. int32_t delay_ns implicitly narrows to the uint32_t nanoseconds param of
-#     rclcpp::Duration(int32_t, uint32_t). Explicit cast, no behavior change. ---
+#     rclcpp::Duration(int32_t, uint32_t). Explicit cast, no behavior change.
+#     Keyed on the SHAPE across every file in src/, not on one filename. Upstream
+#     (ai_worker@jazzy 25fbfc26, PR #136) copied this broadcaster into new leader_/a1_/a2_
+#     variants, carrying the same line into leader_joint_trajectory_command_broadcaster.cpp
+#     -- which the old single-filename guard did not cover, so the package failed on the
+#     new file while the patch reported success on the old one. Globbing src/*.cpp also
+#     covers the next variant they add. Idempotent: the already-cast form does not match. ---
 d="$(_pkg_dir ffw_joint_trajectory_command_broadcaster)"
-if [ -n "$d" ] && [ -f "$d/src/joint_trajectory_command_broadcaster.cpp" ] && grep -q 'rclcpp::Duration(0, delay_ns)' "$d/src/joint_trajectory_command_broadcaster.cpp"; then
-  sed "${SEDI[@]}" 's/rclcpp::Duration(0, delay_ns)/rclcpp::Duration(0, static_cast<uint32_t>(delay_ns))/' "$d/src/joint_trajectory_command_broadcaster.cpp"
-  echo "  ffw_joint_trajectory_command_broadcaster: explicit cast delay_ns -> uint32_t"
+if [ -n "$d" ] && [ -d "$d/src" ]; then
+  for _f in "$d"/src/*.cpp; do
+    [ -f "$_f" ] || continue
+    grep -q 'rclcpp::Duration(0, delay_ns)' "$_f" || continue
+    sed "${SEDI[@]}" 's/rclcpp::Duration(0, delay_ns)/rclcpp::Duration(0, static_cast<uint32_t>(delay_ns))/g' "$_f"
+    echo "  ffw_joint_trajectory_command_broadcaster: explicit cast delay_ns -> uint32_t in $(basename "$_f")"
+  done
 fi
 
 # --- husarion_ugv_lights (humble+jazzy, different per-distro commits but identical

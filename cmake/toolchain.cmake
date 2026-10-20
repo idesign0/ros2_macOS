@@ -78,7 +78,13 @@ set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpy
 set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
 
 # Check the package/project name
-if("${CMAKE_PROJECT_NAME}" MATCHES "^(kinematics_interface_pinocchio|linear_feedback_controller|libfranka|franka_example_controllers)$")
+# This list is every project that links pinocchio/eigenpy, which derive their Boost
+# python component from the Python they find and therefore need brew boost-python3
+# rather than the vendored boost-1.89 (which ships only python311/313). A new
+# pinocchio consumer that is NOT listed here falls into the else() branch and fails
+# with "Could NOT find Boost (missing: python3NN)" out of eigenpy's boost.cmake --
+# which is exactly how cyclo_motion_controller_core first failed.
+if("${CMAKE_PROJECT_NAME}" MATCHES "^(kinematics_interface_pinocchio|linear_feedback_controller|libfranka|franka_example_controllers|cyclo_motion_controller_core|cyclo_motion_controller_ros|cyclo_teleoperation|ffw_joint_trajectory_command_broadcaster)$")
     message(STATUS "Stitching Boost and Boost-Python for ${CMAKE_PROJECT_NAME}")
     set(Boost_INCLUDE_DIR "/opt/homebrew/opt/boost/include" CACHE PATH "" FORCE)
     # ci-boost-python-glob: brew bumps its python3 (3.11 -> 3.14 -> 3.15 -> ...) and rebuilds

@@ -2533,3 +2533,11 @@
 	path = ros-planning/dependencies/BehaviorTree.ROS2
 	url = https://github.com/idesign0/id_BehaviorTree.ROS2.git
 	branch = humble
+[submodule "moveit/robotis_interfaces"]
+	path = moveit/robotis_interfaces
+	url = https://github.com/ROBOTIS-GIT/robotis_interfaces.git
+	branch = jazzy
+[submodule "moveit/cyclo_control"]
+	path = moveit/cyclo_control
+	url = https://github.com/ROBOTIS-GIT/cyclo_control.git
+	branch = jazzy
