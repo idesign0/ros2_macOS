@@ -161,10 +161,31 @@ jobs:
           token: ${{ secrets.CATS_DEPLOY_TOKEN }}
 
       - name: Authenticate git for fork pushes
+        env:
+          GH_PUSH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
         run: |
           git config --global user.name  "ros2-macos-ci"
           git config --global user.email "ros2-macos-ci@users.noreply.github.com"
-          git config --global url."https://${{ secrets.CATS_DEPLOY_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+          # Was: url."https://$TOKEN@github.com/".insteadOf "https://github.com/".
+          # That puts the token in the URL's userinfo as a *username* with no password,
+          # and git discards userinfo when it follows a redirect. GitHub answers
+          # .../info/refs?service=git-receive-pack with a 301 to the canonical URL, so
+          # every commit-carrying push lost its credential on the hop and fell back to
+          # prompting:
+          #     warning: redirecting to https://github.com/idesign0/id_beluga.git/
+          #     fatal: could not read Username for 'https://github.com'
+          # Anonymous fetches were unaffected, which is why run 39429097901 looked
+          # healthy -- it rebased all 93 forks and then failed 34 of 53 real pushes.
+          #
+          # extraheader is keyed on the host prefix rather than carried in the URL, so it
+          # is re-applied to the redirect target. This is what actions/checkout does for
+          # the same reason. x-access-token as the user with the token as the password is
+          # the documented form and works for classic PATs, fine-grained PATs and App
+          # tokens alike.
+          auth=$(printf 'x-access-token:%s' "$GH_PUSH_TOKEN" | base64 | tr -d '\n')
+          git config --global --unset-all url."https://github.com/".insteadOf 2>/dev/null || true
+          git config --global http."https://github.com/".extraheader "AUTHORIZATION: basic $auth"
 
       - name: Check out submodules
         run: |
@@ -197,6 +218,11 @@ jobs:
           # Manual dispatch defaults to a dry run; the schedule (no inputs) pushes.
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
         run: |
+          # pipefail matters here: the script now exits non-zero when a push was
+          # rejected, and without it `| tee` would report tee's 0 and the job would go
+          # green on a run that pushed nothing. GitHub's default shell is `bash -e {0}`,
+          # which does NOT set pipefail.
+          set -o pipefail
           chmod +x scripts/update_forked_submodules.sh
           ./scripts/update_forked_submodules.sh 2>&1 | tee /tmp/fork-update.log
 
