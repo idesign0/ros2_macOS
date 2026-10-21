@@ -15,7 +15,12 @@ ulimit -u unlimited 2>/dev/null || ulimit -u 4096 2>/dev/null || true
 UPDATED=$(mktemp)
 SKIPPED=$(mktemp)
 MANUAL=$(mktemp)
-trap 'rm -f "$UPDATED" "$SKIPPED" "$MANUAL"' EXIT
+# Pushes that succeeded but sent nothing, kept apart from UPDATED. Conflating the two
+# made a run that changed almost nothing look like a run that refreshed 185 forks: on
+# 2026-10-20, run 39429097901 reported 185 "pushed" of which 179 were "Everything
+# up-to-date" and only 6 carried commits.
+NOOP=$(mktemp)
+trap 'rm -f "$UPDATED" "$SKIPPED" "$MANUAL" "$NOOP"' EXIT
 
 # Forks that must never be rebased (pins). Belt-and-braces: add_upstream_remotes.sh
 # already withholds/removes their `upstream` remote, which alone keeps them out of this
@@ -130,12 +135,38 @@ git submodule foreach --recursive "
         exit 0
     fi
 
-    if git push --force-with-lease origin \"\$LOCAL_BRANCH\"; then
-        echo \"✅ \$name [\$LOCAL_BRANCH]: pushed\"
-        echo \"\$name||\$LOCAL_BRANCH|\" >> \"$UPDATED\"
+    # Captured rather than streamed, because the outcome has to be classified:
+    # \"Everything up-to-date\" is the difference between a fork that was refreshed and
+    # one that was already current. The output is echoed back verbatim, so the log reads
+    # exactly as before.
+    PUSH_OUT=\$(git push --force-with-lease origin \"\$LOCAL_BRANCH\" 2>&1)
+    PUSH_RC=\$?
+    printf '%s\\n' \"\$PUSH_OUT\"
+    if [ \"\$PUSH_RC\" = 0 ]; then
+        case \"\$PUSH_OUT\" in
+          *'Everything up-to-date'*)
+            echo \"➡️  \$name [\$LOCAL_BRANCH]: already current, nothing sent\"
+            echo \"\$name||\$LOCAL_BRANCH|already up to date\" >> \"$NOOP\"
+            ;;
+          *)
+            echo \"✅ \$name [\$LOCAL_BRANCH]: pushed\"
+            echo \"\$name||\$LOCAL_BRANCH|\" >> \"$UPDATED\"
+            ;;
+        esac
     else
-        echo \"⚠️  \$name [\$LOCAL_BRANCH]: push failed — needs manual fix\"
-        echo \"\$name||\$LOCAL_BRANCH|push failed\" >> \"$MANUAL\"
+        # Name the cause. The 47 rejected pushes of run 39429097901 split 34/13 between
+        # the first two buckets, and each needs a different remedy -- a bare
+        # \"push failed\" sent us hunting a redirect bug when 13 were a token-scope problem.
+        why='push failed'
+        case \"\$PUSH_OUT\" in
+          *'could not read Username'*) why='push failed: credential lost after redirect';;
+          *workflow*scope*)            why='push failed: token lacks workflow scope';;
+          *'stale info'*|*'fetch first'*|*'non-fast-forward'*) why='push failed: stale lease, rerun';;
+          *'remote rejected'*)         why='push failed: remote rejected';;
+          *'Permission'*denied*)       why='push failed: no write permission';;
+        esac
+        echo \"⚠️  \$name [\$LOCAL_BRANCH]: \$why — needs manual fix\"
+        echo \"\$name||\$LOCAL_BRANCH|\$why\" >> \"$MANUAL\"
     fi
 "
 
@@ -153,6 +184,7 @@ count_lines() { if [ -s "$1" ]; then grep -c '' "$1"; else echo 0; fi; }
 UPDATED_N=$(count_lines "$UPDATED")
 SKIPPED_N=$(count_lines "$SKIPPED")
 MANUAL_N=$(count_lines "$MANUAL")
+NOOP_N=$(count_lines "$NOOP")
 
 print_table() {
     local file="$1"
@@ -184,8 +216,16 @@ fi
 
 if [ "$UPDATED_N" -gt 0 ]; then
     echo ""
-    echo "✅  Updated & pushed ($UPDATED_N):"
+    echo "✅  Updated & pushed -- carried commits ($UPDATED_N):"
     print_table "$UPDATED"
+fi
+
+# A bare count on purpose. A fork that already matches upstream is the healthy steady
+# state; listing every one of them in full is what pushed the real signal off the
+# bottom of the job summary.
+if [ "$NOOP_N" -gt 0 ]; then
+    echo ""
+    echo "➡️   Already current, nothing sent ($NOOP_N)."
 fi
 
 # Split SKIPPED by reason. "would push" is the interesting half of a dry run and must be
@@ -233,8 +273,21 @@ fi
 
 echo ""
 echo "════════════════════════════════════════════════════════"
+echo "    pushed with commits: $UPDATED_N    already current: $NOOP_N    needs a human: $MANUAL_N"
 if [ "$MANUAL_N" -gt 0 ]; then
     echo "⚠️   Done — $MANUAL_N submodule(s) need manual attention (see above)."
 else
     echo "✅  Done — all submodules processed."
+fi
+
+# A rejected push is an infrastructure fault, not a fork that needs thought, and it has
+# to turn the job red. Run 39429097901 ended `success` with 47 of its 53
+# commit-carrying pushes rejected, so the weekly cron could have no-opped indefinitely
+# with nothing to show for it. Merge conflicts deliberately stay exit 0: those are
+# expected, and want a human rather than an alarm.
+if [ -s "$MANUAL" ] && grep -qF 'push failed' "$MANUAL"; then
+    PUSHFAIL_N=$(grep -cF 'push failed' "$MANUAL")
+    echo ""
+    echo "::error::$PUSHFAIL_N fork push(es) rejected -- no commits reached those forks."
+    exit 1
 fi
