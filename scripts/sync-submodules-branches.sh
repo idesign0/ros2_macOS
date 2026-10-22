@@ -78,6 +78,29 @@ while read -r key path; do
         MISSING_BRANCHES+=("$path ($branch)")
     fi
 
+    # --- Nested submodules ---
+    # Step 1's `submodule update --init --recursive` ran against the gitlink the
+    # superproject records, so it only materialised the nested submodules that existed
+    # at THAT commit. The checkout above may have moved this submodule to a branch tip
+    # whose .gitmodules adds, removes or repoints nested submodules, and git does not
+    # touch a submodule's own submodules on checkout -- so those land empty or stale.
+    #
+    # Measured, not theorised: kroshu restructured kuka_drivers into a thin wrapper
+    # whose sources moved into the nested `upstream/kuka_drivers`, while the
+    # superproject gitlink still pinned the pre-restructure flat commit. After the
+    # checkout above, upstream/kuka_drivers was an empty directory (0 files) and every
+    # kuka package lost its sources entirely.
+    #
+    # Run from INSIDE the submodule. A `git submodule update` at $MAIN_ROOT would reset
+    # every submodule back to the superproject's recorded gitlink and undo this script's
+    # entire purpose.
+    if [ -f .gitmodules ]; then
+        echo "   └─ refreshing nested submodules for the checked-out tip"
+        git submodule sync --recursive >/dev/null 2>&1 || true
+        git submodule update --init --recursive \
+            || echo "⚠️ Could not update nested submodules in '$path'"
+    fi
+
     popd > /dev/null
 
 # Safe process substitution to loop over submodules
