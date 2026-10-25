@@ -25,3 +25,14 @@ ros-planning/mrpt_ros_bridge
 ros-planning/mrpt_sensors
 ros-planning/rtabmap_ros
 ros-planning/easynav_plugins
+# mola / mp2p_icp: PINNED 2026-10-25. Upstream MOLA migrated off the MRPT 2.x umbrella
+# package onto the mrpt3 v3.x underscore modules (find_package(mrpt_containers) etc.),
+# which are the very set skip-listed for the v2/v3 duplicate-header split -- so they can
+# never resolve here. That cost mola_yaml, mola_pose_list, mola_traj_tools and
+# mp2p_icp_core on ALL THREE distros in runs 39798399501 / 39798427519 / 39798432515;
+# all four built green at the pinned commits in 39120063171 on 10-18. Branch trees were
+# set back to the gitlinks this superproject records (mola c0d293c4, mp2p_icp a58aa943),
+# both of which carry our own macOS patches. The five sibling mola_* repos above were
+# already pinned for this same split; these two had been missed, which is why they drifted.
+ros-planning/mola
+ros-planning/mp2p_icp
