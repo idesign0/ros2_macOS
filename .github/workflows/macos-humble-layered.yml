@@ -189,6 +189,16 @@ jobs:
           brew unlink xdm || true
           brew unlink xtl || true
           brew unlink qt || true
+          # qtbase too, since Homebrew MODULARISED Qt6 at 6.12.0 and moved the QtCore
+          # forwarding headers out of `qt` into `qtbase`, which is also not keg-only.
+          # At 6.11.2 qtbase kept QtCore in Frameworks/ only, so /opt/homebrew/include/QtCore
+          # did not exist and the `qt` unlink above sufficed. At 6.12.0 it does exist, and its
+          # qtcoreglobal.h line 4 re-includes <QtCore/qtcoreglobal.h>, resolving back to itself
+          # via -I/opt/homebrew/include -> "error: #include nested too deeply". That shadowed
+          # keg-only qt@5 and failed plotjuggler + rviz_satellite (humble 39798399501) and
+          # open_manipulator_gui (jazzy 39798427519); all three built clean on 10-18 under
+          # Qt6 6.11.2. Same shadowing class as openssl@4.
+          brew unlink qtbase || true
           brew unlink asio || true
           brew unlink orocos-kdl || true
           brew unlink protobuf || true   # gz stack builds+links pinned protobuf v32.0 (gz-macOS); brew 35.1 removed PROTOBUF_CONSTEXPR -> ros_gz_sim .pb.h mismatch
@@ -376,6 +386,16 @@ jobs:
           brew unlink xdm || true
           brew unlink xtl || true
           brew unlink qt || true
+          # qtbase too, since Homebrew MODULARISED Qt6 at 6.12.0 and moved the QtCore
+          # forwarding headers out of `qt` into `qtbase`, which is also not keg-only.
+          # At 6.11.2 qtbase kept QtCore in Frameworks/ only, so /opt/homebrew/include/QtCore
+          # did not exist and the `qt` unlink above sufficed. At 6.12.0 it does exist, and its
+          # qtcoreglobal.h line 4 re-includes <QtCore/qtcoreglobal.h>, resolving back to itself
+          # via -I/opt/homebrew/include -> "error: #include nested too deeply". That shadowed
+          # keg-only qt@5 and failed plotjuggler + rviz_satellite (humble 39798399501) and
+          # open_manipulator_gui (jazzy 39798427519); all three built clean on 10-18 under
+          # Qt6 6.11.2. Same shadowing class as openssl@4.
+          brew unlink qtbase || true
           brew unlink asio || true
           brew unlink orocos-kdl || true
           brew unlink protobuf || true   # gz stack builds+links pinned protobuf v32.0 (gz-macOS); brew 35.1 removed PROTOBUF_CONSTEXPR -> ros_gz_sim .pb.h mismatch
@@ -565,6 +585,16 @@ jobs:
           brew unlink xdm || true
           brew unlink xtl || true
           brew unlink qt || true
+          # qtbase too, since Homebrew MODULARISED Qt6 at 6.12.0 and moved the QtCore
+          # forwarding headers out of `qt` into `qtbase`, which is also not keg-only.
+          # At 6.11.2 qtbase kept QtCore in Frameworks/ only, so /opt/homebrew/include/QtCore
+          # did not exist and the `qt` unlink above sufficed. At 6.12.0 it does exist, and its
+          # qtcoreglobal.h line 4 re-includes <QtCore/qtcoreglobal.h>, resolving back to itself
+          # via -I/opt/homebrew/include -> "error: #include nested too deeply". That shadowed
+          # keg-only qt@5 and failed plotjuggler + rviz_satellite (humble 39798399501) and
+          # open_manipulator_gui (jazzy 39798427519); all three built clean on 10-18 under
+          # Qt6 6.11.2. Same shadowing class as openssl@4.
+          brew unlink qtbase || true
           brew unlink asio || true
           brew unlink orocos-kdl || true
           brew unlink protobuf || true   # gz stack builds+links pinned protobuf v32.0 (gz-macOS); brew 35.1 removed PROTOBUF_CONSTEXPR -> ros_gz_sim .pb.h mismatch
@@ -759,6 +789,16 @@ jobs:
           brew unlink xdm || true
           brew unlink xtl || true
           brew unlink qt || true
+          # qtbase too, since Homebrew MODULARISED Qt6 at 6.12.0 and moved the QtCore
+          # forwarding headers out of `qt` into `qtbase`, which is also not keg-only.
+          # At 6.11.2 qtbase kept QtCore in Frameworks/ only, so /opt/homebrew/include/QtCore
+          # did not exist and the `qt` unlink above sufficed. At 6.12.0 it does exist, and its
+          # qtcoreglobal.h line 4 re-includes <QtCore/qtcoreglobal.h>, resolving back to itself
+          # via -I/opt/homebrew/include -> "error: #include nested too deeply". That shadowed
+          # keg-only qt@5 and failed plotjuggler + rviz_satellite (humble 39798399501) and
+          # open_manipulator_gui (jazzy 39798427519); all three built clean on 10-18 under
+          # Qt6 6.11.2. Same shadowing class as openssl@4.
+          brew unlink qtbase || true
           brew unlink asio || true
           brew unlink orocos-kdl || true
           brew unlink protobuf || true   # gz stack builds+links pinned protobuf v32.0 (gz-macOS); brew 35.1 removed PROTOBUF_CONSTEXPR -> ros_gz_sim .pb.h mismatch
