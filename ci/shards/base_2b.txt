@@ -198,6 +198,13 @@ warehouse_ros_sqlite
 ackermann_steering_controller
 autoware_lanelet2_utils
 autoware_motion_utils
+# autoware_point_types: dep of autoware_object_recognition_utils, but it lived only in
+# dom_autonomous_driving.txt, which runs AFTER base. colcon --packages-select does not
+# build deps, so base2b died with "Failed to find install/share/autoware_point_types/
+# package.sh", took autoware_motion_velocity_planner_common with it as "not processed",
+# and that in turn failed autoware_motion_velocity_obstacle_stop_module in the domain job.
+# Run 39798399501. It builds clean on its own (36.3s in dom_autonomous_driving).
+autoware_point_types
 autoware_object_recognition_utils
 autoware_utils_pcl
 bicycle_steering_controller
