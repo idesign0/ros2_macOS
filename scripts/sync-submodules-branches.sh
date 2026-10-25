@@ -68,6 +68,24 @@ while read -r key path; do
         echo "ℹ️ Repository is not a fork → skipping upstream remote"
     fi
 
+    # --- Record nested submodules BEFORE the checkout (ci-dereg-submodule) ---
+    # The checkout below can move this submodule to a tip that no longer declares a nested
+    # submodule it used to have. git leaves that directory on disk -- it logs
+    # "warning: unable to rmdir '<path>': Directory not empty" and carries on -- and a stale
+    # vendored tree left lying there can SHADOW the system copy the new tip expects.
+    #
+    # Measured: moveit_task_constructor dropped core/python/pybind11 and switched to
+    # `find_package(pybind11 3.0 REQUIRED)`, whose source uses pybind11::classh. The leftover
+    # 2.x tree stayed on the include path, so the compiler resolved pybind11::class_ out of
+    # core/python/pybind11/include/pybind11/pybind11.h and reported "no template named 'classh'
+    # in namespace 'pybind11'" -- failing moveit_task_constructor_core on kilted (39798432515)
+    # and jazzy (39798427519).
+    _pre_subs=""
+    if [ -f .gitmodules ]; then
+        _pre_subs=$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null \
+                    | awk '{print $2}')
+    fi
+
     # --- Branch Exists Check and Checkout ---
     branch_exists() { git ls-remote --exit-code "$1" "$branch" &>/dev/null; }
 
@@ -105,6 +123,25 @@ while read -r key path; do
         git submodule update --init --recursive \
             || echo "⚠️ Could not update nested submodules in '$path'"
     fi
+
+    # --- Remove directories that STOPPED being submodules at this tip (ci-dereg-submodule) ---
+    # Deliberately NOT `git clean -ffd`: that would also delete legitimate untracked files.
+    # Only a path that (a) was a declared submodule before the checkout, (b) is no longer
+    # declared now, and (c) has nothing tracked at it in the new tree, is removed.
+    for _ps in $_pre_subs; do
+        case "$_ps" in ""|/*|*..*) continue ;; esac
+        [ -d "$_ps" ] || continue
+        if [ -f .gitmodules ] && git config -f .gitmodules --get-regexp '^submodule\..*\.path$' \
+             2>/dev/null | awk '{print $2}' | grep -qxF "$_ps"; then
+            continue   # still a submodule at this tip
+        fi
+        if [ -n "$(git ls-tree HEAD -- "$_ps" 2>/dev/null)" ]; then
+            continue   # the new tip tracks real content here -- never touch it
+        fi
+        echo "   └─ removing de-registered submodule dir '$_ps' (stale; would shadow the system copy)"
+        git submodule deinit -f -- "$_ps" >/dev/null 2>&1 || true
+        rm -rf -- "$_ps"
+    done
 
     popd > /dev/null
 
