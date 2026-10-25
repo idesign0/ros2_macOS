@@ -36,3 +36,12 @@ ros-planning/easynav_plugins
 # already pinned for this same split; these two had been missed, which is why they drifted.
 ros-planning/mola
 ros-planning/mp2p_icp
+# aerial/mavros: PINNED 2026-10-25. mavros upstream keeps adopting MAVLink fields that the
+# vendored MAVLink (mavlink-gbp-release, release/rolling/mavlink) does not define yet, and
+# that branch's tip == our gitlink, so there is no newer MAVLink to take. opaque_id on
+# MISSION_COUNT/MISSION_ACK broke mavros on kilted+jazzy in 39798432515 / 39798427519; it
+# came in with the 10-22 updater run (786e4194) and is absent from a08f681e, which built
+# green on 10-18. The fork already carried FOUR patches of this exact shape (FLIX,
+# SIM_STATE, open_drone_id, MANUAL_CONTROL aux1-6) -- pinning stops the treadmill instead
+# of adding a fifth. Tree set back to a08f681e in id_mavros 0f69a153.
+aerial/mavros
