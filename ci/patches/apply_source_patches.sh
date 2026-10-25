@@ -328,14 +328,31 @@ for _f in $(grep -rlE 'pcl/registration/transforms\.h' "$ROOT" --include='*.h' -
   sed "${SEDI[@]}" -e 's#pcl/registration/transforms\.h#pcl/common/transforms.h#g' "$_f"
   echo "  adi_3dtof_image_stitching: pcl/registration/transforms.h -> pcl/common/transforms.h in ${_f#$ROOT/}"
 done
-# ros2_medkit_gateway/default_script_provider.cpp uses pipe2(fds, O_CLOEXEC) -- a Linux/glibc
-# extension with no macOS equivalent -> "use of undeclared identifier 'pipe2'". Emulate it with
-# pipe() + fcntl(FD_CLOEXEC / O_NONBLOCK) on Apple, inserted after <unistd.h> (<fcntl.h> precedes
-# it, so the flag macros are already visible). Idempotent (ci-medkit-pipe2).
-for f in $(grep -rlE '\bpipe2\(' "$ROOT" --include='*.cpp' --include='*.cc' --include='*.hpp' 2>/dev/null | grep ros2_medkit); do
-  grep -q 'ci-medkit-pipe2' "$f" && continue
-  perl -0pi -e 's~(#include <unistd\.h>)~$1\n#if defined(__APPLE__)  // ci-medkit-pipe2: macOS has no pipe2(); emulate via pipe()+fcntl\nstatic inline int pipe2(int _ci_fds[2], int _ci_flags) {\n  if (pipe(_ci_fds) != 0) return -1;\n  if (_ci_flags & O_CLOEXEC) { fcntl(_ci_fds[0], F_SETFD, FD_CLOEXEC); fcntl(_ci_fds[1], F_SETFD, FD_CLOEXEC); }\n  if (_ci_flags & O_NONBLOCK) { fcntl(_ci_fds[0], F_SETFL, fcntl(_ci_fds[0], F_GETFL) | O_NONBLOCK); fcntl(_ci_fds[1], F_SETFL, fcntl(_ci_fds[1], F_GETFL) | O_NONBLOCK); }\n  return 0;\n}\n#endif~' "$f"
-  echo "  ros2_medkit_gateway: pipe2() macOS shim in ${f#$ROOT/}"
+# pipe2(fds, flags) is a Linux/glibc extension. macOS SDKs BEFORE 27.0 do not declare it ->
+# "use of undeclared identifier 'pipe2'". Emulate with pipe() + fcntl(FD_CLOEXEC / O_NONBLOCK),
+# inserted after <unistd.h> (<fcntl.h> precedes it in every current hit, so the flag macros are
+# already visible).
+#
+# Matched on the CALL, not on a package name. This block used to end in `| grep ros2_medkit`,
+# because ros2_medkit_gateway was the first hit. That name filter silently skipped
+# plansys2_core/src/plansys2_core/PlanSolverBase.cpp:123, which then failed on ALL THREE distros
+# in runs 39798399501 / 39798427519 / 39798432515 with the identical error. A package-name filter
+# on a platform-portability shim is always wrong; the next repo to call pipe2 is not knowable.
+#
+# The shim is named ci_pipe2 and the CALL SITES are rewritten, rather than defining a function
+# called `pipe2`. That matters: macOS SDK 27.0 DOES declare pipe2, so a `static inline int pipe2`
+# would fail there with "static declaration of 'pipe2' follows non-static declaration". The CI
+# image currently ships SDK 26.5, so the old form happened to work -- and would have broken
+# silently on the next runner-image bump. Verified both ways locally (see commit message).
+#
+# The <unistd.h> anchor is checked explicitly and warns when absent, so a future file that calls
+# pipe2() without it is loud rather than quietly unpatched. Idempotent (ci-pipe2).
+for f in $(grep -rlE '\bpipe2\(' "$ROOT" --include='*.cpp' --include='*.cc' --include='*.hpp' 2>/dev/null | grep -v '/build/'); do
+  grep -q 'ci-pipe2' "$f" && continue
+  grep -q '#include <unistd\.h>' "$f" || { echo "  ::warning::pipe2() call without an <unistd.h> anchor, NOT patched: ${f#$ROOT/}"; continue; }
+  perl -0pi -e 's~\bpipe2\(~ci_pipe2(~g' "$f"
+  perl -0pi -e 's~(#include <unistd\.h>)~$1\n#if defined(__APPLE__)  // ci-pipe2: macOS SDKs before 27.0 have no pipe2(); emulate via pipe()+fcntl\nstatic inline int ci_pipe2(int _ci_fds[2], int _ci_flags) {\n  if (pipe(_ci_fds) != 0) return -1;\n  if (_ci_flags & O_CLOEXEC) { fcntl(_ci_fds[0], F_SETFD, FD_CLOEXEC); fcntl(_ci_fds[1], F_SETFD, FD_CLOEXEC); }\n  if (_ci_flags & O_NONBLOCK) { fcntl(_ci_fds[0], F_SETFL, fcntl(_ci_fds[0], F_GETFL) | O_NONBLOCK); fcntl(_ci_fds[1], F_SETFL, fcntl(_ci_fds[1], F_GETFL) | O_NONBLOCK); }\n  return 0;\n}\n#else\nstatic inline int ci_pipe2(int _ci_fds[2], int _ci_flags) { return pipe2(_ci_fds, _ci_flags); }\n#endif~' "$f"
+  echo "  pipe2() -> ci_pipe2() macOS shim in ${f#$ROOT/}"
 done
 # cx_cdb_{loader,saver}_plugin (clips_executive) use brew libpqxx, whose headers reference
 # std::source_location (C++20). The plugins intend C++20 but guard it `if(NOT CMAKE_CXX_STANDARD)
