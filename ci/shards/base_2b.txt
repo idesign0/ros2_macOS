@@ -148,6 +148,7 @@ velocity_controllers
 zed_description
 clearpath_sensors_description
 dwb_core
+easynav_recovery
 easynav_system
 moveit_core
 nav2_behaviors
