@@ -44,3 +44,12 @@ ros-planning/mp2p_icp
 # SIM_STATE, open_drone_id, MANUAL_CONTROL aux1-6) -- pinning stops the treadmill instead
 # of adding a fifth. Tree set back to a08f681e in id_mavros 0f69a153.
 aerial/mavros
+
+# MRPT v2 vs mrpt3 v3.x. Upstream develop moved to the v3 module names and the
+# updater rebased our macOS patch onto it, producing a commit with the SAME subject
+# line but v3 content (b38541a1 find_package(mrpt-obs)/mrpt::obs ->
+# 574cf453 find_package(mrpt_obs)/mrpt::mrpt_obs). This workspace distributes MRPT v2
+# via mrpt_ros and skip-lists the v3 module packages, so the v3 form cannot resolve.
+# Repaired forward to the v2 tree in id_mola_input_ouster cdb723e; pinned so the
+# Sunday cron cannot redo it. Same class as the mola / mp2p_icp pins above.
+ros-planning/mola_input_ouster
