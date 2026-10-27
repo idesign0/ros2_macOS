@@ -75,6 +75,7 @@ easynav_localizer
 easynav_maps_manager
 easynav_planner
 easynav_sensors
+easynav_recovery
 easynav_system
 effort_controllers
 event_camera_msgs
