@@ -354,6 +354,29 @@ for f in $(grep -rlE '\bpipe2\(' "$ROOT" --include='*.cpp' --include='*.cc' --in
   perl -0pi -e 's~(#include <unistd\.h>)~$1\n#if defined(__APPLE__)  // ci-pipe2: macOS SDKs before 27.0 have no pipe2(); emulate via pipe()+fcntl\nstatic inline int ci_pipe2(int _ci_fds[2], int _ci_flags) {\n  if (pipe(_ci_fds) != 0) return -1;\n  if (_ci_flags & O_CLOEXEC) { fcntl(_ci_fds[0], F_SETFD, FD_CLOEXEC); fcntl(_ci_fds[1], F_SETFD, FD_CLOEXEC); }\n  if (_ci_flags & O_NONBLOCK) { fcntl(_ci_fds[0], F_SETFL, fcntl(_ci_fds[0], F_GETFL) | O_NONBLOCK); fcntl(_ci_fds[1], F_SETFL, fcntl(_ci_fds[1], F_GETFL) | O_NONBLOCK); }\n  return 0;\n}\n#else\nstatic inline int ci_pipe2(int _ci_fds[2], int _ci_flags) { return pipe2(_ci_fds, _ci_flags); }\n#endif~' "$f"
   echo "  pipe2() -> ci_pipe2() macOS shim in ${f#$ROOT/}"
 done
+
+# mkdtemp() is declared in <unistd.h> by POSIX. glibc ALSO declares it in <stdlib.h>, so a file
+# that includes only <cstdlib>/<stdlib.h> compiles on Linux and fails on macOS with
+# "error: use of undeclared identifier 'mkdtemp'". That is plansys2_popf_plan_solver's
+# popf_plan_solver.cpp:105 (humble 40189605776, jazzy 40189607431, kilted 40189609299): it has
+# `#include <cstdlib>` at line 18 and no <unistd.h>, on all three distro branches.
+# Shape-matched rather than keyed on that one path, since the next file to do this is not
+# knowable, and idempotent via the ci-mkdtemp marker. Only files that actually CALL mkdtemp and
+# genuinely lack the header are touched; the <cstdlib>/<stdlib.h> include is the anchor, and a
+# caller with no anchor at all warns instead of being silently skipped.
+for f in $(grep -rlE '\bmkdtemp\(' "$ROOT" --include='*.cpp' --include='*.cc' --include='*.cxx' --include='*.hpp' 2>/dev/null | grep -v '/build/'); do
+  grep -q 'ci-mkdtemp' "$f" && continue
+  grep -qE '#include <unistd\.h>' "$f" && continue   # already correct
+  if grep -qE '#include <cstdlib>' "$f"; then
+    perl -0pi -e 's~(#include <cstdlib>)~$1\n#include <unistd.h>  // ci-mkdtemp: mkdtemp() is in <unistd.h> on macOS; glibc also exposes it via <stdlib.h>~' "$f"
+  elif grep -qE '#include <stdlib\.h>' "$f"; then
+    perl -0pi -e 's~(#include <stdlib\.h>)~$1\n#include <unistd.h>  /* ci-mkdtemp: mkdtemp() is in <unistd.h> on macOS; glibc also exposes it via <stdlib.h> */~' "$f"
+  else
+    echo "  ::warning::mkdtemp() call with no <cstdlib>/<stdlib.h> anchor, NOT patched: ${f#$ROOT/}"
+    continue
+  fi
+  echo "  mkdtemp() -> added <unistd.h> in ${f#$ROOT/}"
+done
 # cx_cdb_{loader,saver}_plugin (clips_executive) use brew libpqxx, whose headers reference
 # std::source_location (C++20). The plugins intend C++20 but guard it `if(NOT CMAKE_CXX_STANDARD)
 # set(20)`; our toolchain.cmake sets CMAKE_CXX_STANDARD 17 globally, so the guard never fires and
