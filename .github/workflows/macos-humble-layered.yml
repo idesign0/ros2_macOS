@@ -113,6 +113,14 @@ jobs:
         run: |
           mkdir -p "$GZ_DIR"
           git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b "$GZ_VERSION" "$GZ_DIR"
+          # ci-qt6-keg: brew links qtbase (pulled in as a vtk dependency) and from 6.12.0 that
+          # puts a top-level include/QtNetwork on -I/opt/homebrew/include whose forwarding
+          # header re-includes itself -> "#include nested too deeply" in gz-sim8's
+          # EntityContextMenuPlugin.cc. gz-sim8 then failed, the step's `|| true` hid it, and
+          # the gz-sim8-less install tree was cached (humble 40189605776, jazzy 40189607431).
+          # Safe because cmake/toolchain.cmake now resolves Qt6 from the kegs, which survive
+          # the unlink. The gz stack DOES need Qt6, so do NOT also unlink `qt`/qtdeclarative.
+          brew unlink qtbase || true
           brew unlink protobuf || true
           colcon build --packages-select protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
             --merge-install --continue-on-error --cmake-args -DBUILD_SHARED_LIBS=ON -Dprotobuf_BUILD_TESTS=OFF \
@@ -121,7 +129,18 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
           colcon build --base-paths "$GZ_DIR/" --packages-ignore protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
             --merge-install --continue-on-error --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_gz.log || true
+          # ci-gz-nopartial: this whole step runs under `|| true` + --continue-on-error, so
+          # without this guard a failed gz package is packed into gz-install.tar.zst and SAVED
+          # to the cache; the next run restores the hole and skips this step entirely
+          # (`if: steps.gzcache.outputs.cache-hit != 'true'`), making the failure permanent and
+          # invisible. humble 40189605776 lost gz-sim8 that way and 19 of its 24 package
+          # failures were the cascade. Fail HERE, in the job that actually broke.
+          if grep -qE '^ +[0-9]+ packages? failed:' build_gz.log 2>/dev/null; then
+            echo "::error::gz build had failures; refusing to pack a partial install tree"
+            grep -E 'Failed +<<< ' build_gz.log || true
+            exit 1
+          fi
           touch "$GZ_DIR/COLCON_IGNORE"
           # abseil-compat: snapshot the brew abseil dylibs the workspace protoc links (see base note
           # below) into the install/ tree so they travel with the gz artifact and match this protoc.
