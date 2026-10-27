@@ -2141,3 +2141,7 @@
 [submodule "ros-visualization/color_util"]
 	path = ros-visualization/color_util
 	url = https://github.com/MetroRobots/color_util.git
+[submodule "ros-planning/kairos"]
+	path = ros-planning/kairos
+	url = https://github.com/PlanSys2/kairos.git
+	branch = main
