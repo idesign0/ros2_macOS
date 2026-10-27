@@ -2541,3 +2541,7 @@
 	path = moveit/cyclo_control
 	url = https://github.com/ROBOTIS-GIT/cyclo_control.git
 	branch = jazzy
+[submodule "ros-planning/kairos"]
+	path = ros-planning/kairos
+	url = https://github.com/PlanSys2/kairos.git
+	branch = main

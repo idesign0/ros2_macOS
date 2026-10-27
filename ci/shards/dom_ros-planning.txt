@@ -196,6 +196,7 @@ openvdb_vendor
 plansys2_bringup
 plansys2_bt_actions
 plansys2_core
+kairos
 plansys2_domain_expert
 plansys2_executor
 plansys2_lifecycle_manager
