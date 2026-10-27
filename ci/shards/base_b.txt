@@ -265,6 +265,7 @@ easynav_maps_manager
 easynav_planner
 moveit_ros_move_group
 rosbag2
+easynav_recovery
 easynav_system
 moveit_resources_prbt_moveit_config
 moveit_ros_planning_interface
