@@ -380,6 +380,49 @@ set(QT5_PREFIX "/opt/homebrew/opt/qt@5" CACHE PATH "Qt5 prefix path")
 set(Qt6_DIR "/opt/homebrew/opt/qt/lib/cmake/Qt6" CACHE PATH "Qt6 CMake path")
 set(QT6_PREFIX "/opt/homebrew/opt/qt" CACHE PATH "Qt6 prefix path")
 
+# ci-qt6-keg: Homebrew MODULARISED Qt6 at 6.12.0, with two consequences.
+#  1. The Qt6 configs reached through the `qt` paths above are symlinks into the *linked*
+#     prefix (/opt/homebrew/opt/qt/lib/cmake/Qt6 -> /opt/homebrew/lib/cmake/Qt6, whose
+#     Qt6Core/Qt6Network/Qt6Widgets entries point into Cellar/qtbase). So `brew unlink
+#     qtbase` -- which base-1/base-2a/base-2b/domains already run -- silently deletes them
+#     and breaks every explicit find_package(Qt6). The promise in the comment below that
+#     "Qt6 stays reachable via the Qt6_DIR cache var" stopped holding when that unlink landed.
+#  2. qtbase now links a top-level include/QtCore, include/QtNetwork, ... whose forwarding
+#     headers redirect with `#include <QtNetwork/qformdatabuilder.h>`. Under the ubiquitous
+#     -I/opt/homebrew/include that resolves back to ITSELF -> "#include nested too deeply",
+#     which killed gz-sim8 (humble run 40189605776, jazzy 40189607431) and with it
+#     ros_gz_sim, gz_ros2_control and 17 cascaded packages. The cure is `brew unlink qtbase`
+#     in the gz job; THIS block is what makes that unlink survivable.
+# Point Qt6 at the KEGS (/opt/homebrew/opt/...), which survive `brew unlink`.
+# QT_ADDITIONAL_PACKAGES_PREFIX_PATH is Qt's own split-install variable and is NOT consulted
+# by find_package(QT NAMES Qt6 Qt5), so the Qt5-first contract below is untouched.
+# Compile-tested locally on this macOS 27 box against brew qtbase 6.11.2 + qt@5 5.15.19 with
+# cmake probe projects (scratchpad/qt2), /opt/homebrew excluded to simulate the unlink:
+#   find_package(QT NAMES Qt6 Qt5 COMPONENTS Core)              -> Qt5 5.15.19   (unchanged)
+#   find_package(Qt6 COMPONENTS Core Network Quick Qml Widgets) -> FOUND 6.11.2, Quick=1
+#   find_package(Qt5 COMPONENTS Core Widgets)                   -> FOUND 5.15.19
+#   Qt6::Network INTERFACE_INCLUDE_DIRECTORIES
+#        -> /opt/homebrew/opt/qtbase/lib/QtNetwork.framework/Headers   (the real headers,
+#           NOT /opt/homebrew/include -> the self-include loop cannot form)
+# Pinning Qt6_DIR to the qtbase keg ALONE gives Qt6_FOUND=0 because Quick/Qml live in
+# qtdeclarative; hence the sibling-keg list. EXISTS-guarded throughout, so a pre-6.12 layout
+# simply keeps the `qt` paths set above.
+if(EXISTS "/opt/homebrew/opt/qtbase/lib/cmake/Qt6")
+  set(QT6_PREFIX "/opt/homebrew/opt/qtbase" CACHE PATH "Qt6 prefix path" FORCE)
+  set(Qt6_DIR "/opt/homebrew/opt/qtbase/lib/cmake/Qt6" CACHE PATH "Qt6 CMake path" FORCE)
+  set(_ci_qt6_kegs "")
+  foreach(_ci_qt6_mod qtdeclarative qtsvg qtshadertools qttools qt5compat
+                      qtmultimedia qtwebengine qtwebsockets qtwebchannel
+                      qtserialport qtpositioning qtcharts qtimageformats)
+    if(EXISTS "/opt/homebrew/opt/${_ci_qt6_mod}/lib/cmake")
+      list(APPEND _ci_qt6_kegs "/opt/homebrew/opt/${_ci_qt6_mod}")
+    endif()
+  endforeach()
+  set(QT_ADDITIONAL_PACKAGES_PREFIX_PATH "${_ci_qt6_kegs}"
+      CACHE STRING "Qt6 sibling module kegs (Homebrew modularised Qt6 at 6.12.0)" FORCE)
+  unset(_ci_qt6_kegs)
+endif()
+
 # navmap_rviz_plugin / rtabmap_rviz_plugins force Qt5 themselves, but a transitive
 # dependency Config does find_dependency(Qt6) -> loads Qt6Gui/Qt6OpenGL -> poisons
 # QT_MAJOR_VERSION=6, so their own Qt5::Core then mismatches. Disable Qt6 discovery
