@@ -204,7 +204,32 @@ runs:
         # and killed gz, which skipped base-a/base-b and the whole domain matrix.
         # Refreshing formula definitions mid-run is also how formulae drift between jobs of one
         # run, so there is nothing to gain by insisting it succeed.
-        brew update || echo "::warning::brew update failed (non-fatal); continuing with the formulae already installed"
+        # `brew update` used to run here and has been REMOVED.
+        #
+        # It ran AFTER every formula was installed, so it never made this job's own
+        # packages any newer -- it only moved formula definitions for LATER jobs in the
+        # same run. That is precisely how formulae drift between jobs of one run, as the
+        # comment above already said. Each macOS job is a separate runner (24 of them on
+        # kilted: gz + 2 base + 21 domain shards), so with this gone every job resolves
+        # against the tap baked into its runner image and a run stays self-consistent.
+        #
+        # Nothing about package freshness is lost: the versions a job installs come from
+        # that tap either way, and HOMEBREW_NO_AUTO_UPDATE=1 is set regardless. Freshness
+        # now tracks the runner image, which GitHub refreshes on its own cadence, and the
+        # weekly .github/workflows/update-brew.yml refreshes the recorded list on the
+        # default branch so a version bump is visible as a reviewable diff.
+        #
+        # What makes the caches follow along is brew-state.txt, written by
+        # install_brew_packages.sh from `brew list --formula --versions` AFTER the
+        # installs: the gz-install cache key hashes it, so a cached gz tree can never be
+        # restored into a job that installed different Homebrew versions. That is the bug
+        # this whole chain exists to stop -- gz and protobuf stayed linked to abseil 2601
+        # after abseil deleted libabsl_crc_cpu_detect, leaving 236 dylibs and 5
+        # executables in the shipped keg that cannot be dlopen'd.
+        #
+        # It has also killed jobs outright: on kilted 37460304339 a github.com DNS outage
+        # made it report "Error: Fetching /opt/homebrew failed!" and took down gz, which
+        # skipped base-a/base-b and the entire domain matrix.
 
     - name: Re-apply source patches for brew-installed headers (post-brew)
       shell: bash
