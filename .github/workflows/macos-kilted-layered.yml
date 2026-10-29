@@ -816,6 +816,66 @@ jobs:
           path: install-full-kilted.tar.zst
           retention-days: 5
 
+  # Runs ci/deploy/package_tree.py over the assembled tree: vendors every Homebrew dylib in
+  # its transitive closure into vendor/lib, rewrites the references to @rpath, adds the
+  # absolute rpaths (including the in-tree opt/*/lib ones Hardened Runtime needs for
+  # dlopen'd plugins), re-signs and verifies. The output is what a release should ship.
+  #
+  # A SEPARATE job, not a step in assemble: assemble deliberately has no actions/checkout
+  # and no brew install (its own comment says so), and package_tree.py needs both -- the
+  # script itself, and an installed Homebrew for the closure to resolve against.
+  #
+  # It runs WITHOUT --allow-missing, so a Homebrew dylib the tree references but that does
+  # not exist fails the job. That is the abseil 2601 case: gz and protobuf were cached
+  # having been built against abseil 20260107.1, abseil then DELETED
+  # libabsl_crc_cpu_detect and libabsl_borrowed_fixup_buffer, and the shipped ros2-kilted
+  # keg ended up with 236 dylibs and 5 executables that cannot be dlopen'd at all.
+  #
+  # Validate changes here with .github/workflows/package-smoke-kilted.yml, which does the
+  # same thing against an already-built artifact in ~40 minutes instead of ~30 hours.
+  package:
+    needs: assemble
+    runs-on: macos-26
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false }
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+      - name: Fetch the assembled tree
+        run: |
+          set -euo pipefail
+          ok=0
+          for n in 1 2 3; do
+            rm -rf install install-full-kilted.tar.zst
+            if gh run download "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" -n install-full-kilted -D . \
+               && tar --zstd -xf install-full-kilted.tar.zst; then ok=1; break; fi
+            echo "::warning::fetch/extract attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          [ "$ok" = 1 ] || { echo "::error::could not fetch install-full-kilted"; exit 1; }
+          chmod -R +x install/bin 2>/dev/null || true
+          echo "packages: $(ls install/share | wc -l | tr -d ' ')"
+      - name: Vendor Homebrew dylibs and fix rpaths
+        run: |
+          python3 -I ci/deploy/package_tree.py install \
+            --install-prefix "/opt/homebrew/opt/ros2-kilted"
+          echo "vendored: $(ls install/vendor/lib | wc -l | tr -d ' ') dylibs, $(du -sh install/vendor/lib | awk '{print $1}')"
+      - name: Pack the release tree
+        run: |
+          tar --zstd -cf install-release-kilted.tar.zst install
+          echo "packed $(du -h install-release-kilted.tar.zst | cut -f1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: install-release-kilted
+          path: install-release-kilted.tar.zst
+          retention-days: 7
+
   report:
     needs: [base-b, domains]
     if: always()
