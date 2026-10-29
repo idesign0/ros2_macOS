@@ -101,34 +101,74 @@ Fixed by adding brew-packages/matched_packages.txt to the gz cache key and by
 Vendoring = ship our own copy of each brew dylib inside the keg and point the binaries at
 it with @rpath, so the user's brew state is irrelevant. This REPLACES post_install's
 stale-reference repair rather than notifying about it: there are no external references
-left to repair.
+left to repair. `package_tree.py` implements it and has been run end to end on the base
+tree.
 
 Simplest arrangement: ONE vendor dir in base, every binary in every domain rpath'd into
 it. base links 47 formulae, the whole set links 92, and 10 of the 21 domains need nothing
-beyond base -- so per-domain vendor dirs would be twelve mechanisms for no gain.
+beyond base, so per-domain vendor dirs would be twelve mechanisms for no gain.
 
-Cost: ~687 MB, taking base from 1.6 GB to ~2.3 GB (+43%). Keep `depends_on` anyway --
-vendoring fixes runtime; anyone compiling against the keg still needs headers and CMake
-configs from /opt/homebrew/opt/<f>/include.
+MEASURED on the base tree (2239 mach-o files):
 
-Detection needs BOTH passes, and that is measurable rather than theoretical:
+    vendored                478 dylibs, 743 MB   (base keg 1.6 GB -> ~2.3 GB)
+    dylibs loading before   102 / 120 sampled
+    dylibs loading after    106 / 120            <- MORE: some were already broken
+    real regressions        0
 
-  1. static  -- brewclosure.py. Catches everything linked, and everything dlopen'd from
-     INSIDE the keg: the 699 gz engine-plugins and 208 pluginlib plugins ship as files, so
-     otool sees them.
-  2. runtime -- `DYLD_PRINT_LIBRARIES=1`, filtered to /opt/homebrew. Note dyld prints
-     **Cellar** paths, not opt, because it resolves the symlink -- match both forms.
+Keep `depends_on` anyway: vendoring fixes runtime; anyone compiling against the keg still
+needs headers and CMake configs from /opt/homebrew/opt/<f>/include.
 
-Loading one library (librviz_common) under DYLD showed 20 brew formulae, of which **llvm
-and md4c appear in neither the static closure nor the curated list** (mesa dlopens llvm
-for software GL). So runtime finds what static cannot see, and static finds what a given
-run did not exercise. Union them.
+### The trap: brew dylibs hide dependencies behind @rpath
 
-Runtime coverage equals what you actually run: no Qt plugin appeared in a headless test,
-because plugins load only when a GUI initialises. `QT_QPA_PLATFORM=offscreen` makes Qt
-load a platform plugin headlessly, and `gz sim -s` exercises the server path -- use those
-so the smoke job reaches the plugin loaders. The keg currently ships no libqcocoa, so a
-GUI tool today loads Qt's platform plugin out of brew.
+**187 of 406 brew dylibs reference their SIBLINGS via @rpath/@loader_path**, resolved
+against their own LC_RPATH (typically `@loader_path/../lib`, i.e. their own keg's lib dir):
+
+    libgeos_c.1.dylib -> @rpath/libgeos.3.15.0.dylib,  LC_RPATH @loader_path/../lib
+
+An absolute-path-only closure misses every one of them. Copy such a dylib into a flat
+vendor dir and @loader_path now points somewhere that has none of them. The first
+implementation did exactly this and **broke 20 of 102 dylibs that had loaded before**,
+while reporting "0 remaining /opt/homebrew/opt references" -- a check that was true and
+useless simultaneously. Fixing the closure to resolve @rpath siblings took the vendor set
+from 362 dylibs/486 MB to 478/743 MB and the regressions from 20 to 0.
+
+Second trap, same run: never rewrite a reference you could not vendor. Doing so converts a
+working absolute path into a dangling @rpath -- actively worse than leaving it.
+
+### Vendoring must be COMPLETE or it can be worse than none
+
+Libraries with process-global state -- gflags, glog, protobuf, abseil -- abort or
+misbehave when two instances coexist in one process:
+
+    ERROR: something wrong with flag 'flagfile' ... being linked both statically and
+    dynamically into this executable
+
+That happens whenever a process holds both the vendored copy and the brew copy. Real
+routes to it: a user's app links brew gflags and also loads this keg; or a brew-RESIDENT
+plugin is dlopen'd and drags brew's copies of shared deps in alongside ours. The keg ships
+no libqcocoa, so a GUI tool loads Qt's platform plugin from brew today -- exactly that
+situation.
+
+### Detection needs BOTH passes, and the gate must be LOAD SUCCESS
+
+  1. static  -- brewclosure.py / package_tree.py's closure. Catches everything linked and
+     everything dlopen'd from INSIDE the keg: the 699 gz engine-plugins and 208 pluginlib
+     plugins ship as files, so otool sees them. Must resolve @rpath siblings (see above).
+  2. runtime -- `DYLD_PRINT_LIBRARIES=1`, filtered to /opt/homebrew. dyld prints **Cellar**
+     paths, not opt, because it resolves the symlink -- match both forms.
+
+Loading ONE library (librviz_common) under DYLD showed 20 brew formulae, of which **llvm
+and md4c appear in neither the static closure nor the curated list** (mesa dlopens llvm for
+software GL). So runtime finds what static cannot see, and static finds what a given run
+did not exercise. Union them.
+
+Runtime coverage equals what you actually run: no Qt plugin appeared headless, because
+plugins load only when a GUI initialises. `QT_QPA_PLATFORM=offscreen` makes Qt load a
+platform plugin headlessly and `gz sim -s` exercises the server path -- use those so the
+smoke job reaches the plugin loaders.
+
+**Do not gate on "zero brew references".** It passed on a tree with 20 broken libraries.
+Gate on dlopen success, measured before and after.
 
 ## post_install is deprecated -- move it into CI packaging
 
@@ -155,7 +195,7 @@ failing the package step.
 
 ## Open items
 
-* decide vendoring yes/no with the ~687 MB number in hand
+* decide vendoring yes/no: measured 743 MB, 0 regressions on the base tree
 * wire brewclosure.py into packaging with `missing` non-empty = fail
 * fix the under-declared depends_on (ros2-kilted.rb has 57; direct refs are ~89)
 * the DYLD smoke job (QT_QPA_PLATFORM=offscreen, gz sim -s)
