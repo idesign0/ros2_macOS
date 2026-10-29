@@ -1,0 +1,198 @@
+name: Package smoke humble (vendor + load test)
+
+# Dispatch-only. Takes an ALREADY BUILT install-full-<distro> artifact from a previous run
+# and puts it through ci/deploy/package_tree.py on a real macOS runner with real Homebrew,
+# then checks the result still loads. ~40 minutes instead of waiting ~30 hours for a full
+# layered build.
+#
+# This is the only way to answer the question local testing cannot: whether the Homebrew
+# dylib closure is COMPLETE on the build's own brew. Locally 61 references do not resolve
+# (opencv@4 414 vs 413, dartsim 6.20 vs 6.19), so packaging has to run with
+# --allow-missing. Here it runs WITHOUT it, so a missing reference fails the job -- which
+# is exactly the abseil 2601 case that shipped 236 non-loadable dylibs.
+#
+# The gate is LOAD SUCCESS, not "zero /opt/homebrew references". That weaker check passed
+# on a tree with 20 broken libraries: brew dylibs reach their siblings through @rpath
+# resolved against their own LC_RPATH (187 of 406 do), so an absolute-path-only closure
+# misses them and copying such a dylib into a flat vendor dir silently breaks it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run ID holding the install-full-humble artifact"
+        required: true
+      ref:
+        description: "Branch to take ci/deploy/package_tree.py and the setup action from"
+        required: true
+        default: humble-new
+      sample:
+        description: "How many dylibs to load-test before and after"
+        default: "150"
+
+permissions:
+  contents: read
+
+# Lifted verbatim from macos-humble-layered.yml. The setup action REQUIRES gz-version and
+# brew-base-formulae, and BREW_BASE differs per distro (kilted is ionic; humble has no
+# `eigen`), so a single shared smoke workflow taking distro as an input would silently pass
+# the wrong formula set. One file per distro, each on its own -new ref, cannot mismatch.
+env:
+  CI_BUILD: "TRUE"
+  # ExternalProject vendors (e.g. clips_vendor) run `git apply` inside their build dir.
+  # When build/ is under the workspace git checkout, git apply finds the PARENT repo and
+  # silently SKIPS the vendor patch -> the source ends up without its generated
+  # CMakeLists.txt ("does not appear to contain CMakeLists.txt"). Stop git traversing
+  # above build/ so vendor git-applies behave as if outside a repo.
+  GIT_CEILING_DIRECTORIES: ${{ github.workspace }}/build
+  HOMEBREW_NO_INSTALL_FROM_API: "1"
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+  GZ_VERSION: harmonic
+  GZ_DIR: gz-harmonic
+  BREW_BASE: "graphviz eigen@3 geographiclib vtk opencv@4 zbar png++ sophus serial vrpn draco aravis zeromq cppzmq glfw libusb rtabmap libpqxx leveldb libmodbus readline openvdb"
+
+jobs:
+  package:
+    runs-on: macos-26
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+    steps:
+      # This workflow is registered on the DEFAULT branch so it can be dispatched at all
+      # (a workflow absent from the default branch gives HTTP 404: "not found on the
+      # default branch"). ci/deploy/package_tree.py and the setup action live on the -new
+      # refs, so check that ref out explicitly instead of the dispatch ref.
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          ref: ${{ inputs.ref }}
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+
+      - name: Fetch the prebuilt tree
+        run: |
+          set -euo pipefail
+          ok=0
+          for n in 1 2 3; do
+            rm -rf install "install-full-humble.tar.zst"
+            if gh run download "${{ inputs.run_id }}" -R "$GITHUB_REPOSITORY" \
+                 -n "install-full-humble" -D . \
+               && tar --zstd -xf "install-full-humble.tar.zst"; then
+              ok=1; break
+            fi
+            echo "::warning::fetch/extract attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          [ "$ok" = 1 ] || { echo "::error::could not fetch install-full-humble from run ${{ inputs.run_id }}"; exit 1; }
+          chmod -R +x install/bin 2>/dev/null || true
+          echo "packages: $(ls install/share | wc -l | tr -d ' ')"
+          du -sh install
+
+      - name: Load-test a sample BEFORE packaging
+        run: |
+          set -uo pipefail
+          cat > /tmp/loadone.py <<'PY'
+          import ctypes, sys
+          try:
+              ctypes.CDLL(sys.argv[1])
+          except Exception:
+              sys.exit(1)
+          sys.exit(0)
+          PY
+          # A dylib's own @rpath siblings must resolve, so test them where they live.
+          find install/lib -name '*.dylib' ! -type l | sort > /tmp/all_dylibs.txt
+          total=$(wc -l < /tmp/all_dylibs.txt | tr -d ' ')
+          echo "candidate dylibs: $total"
+          # deterministic sample: every Nth entry
+          N=$(( total / ${{ inputs.sample }} ))
+          [ "$N" -lt 1 ] && N=1
+          awk -v n="$N" 'NR % n == 1' /tmp/all_dylibs.txt | head -${{ inputs.sample }} > /tmp/sample.txt
+          echo "sampled: $(wc -l < /tmp/sample.txt | tr -d ' ')"
+          ok=0; fail=0
+          while read -r f; do
+            if python3 -I /tmp/loadone.py "$f"; then ok=$((ok+1)); else fail=$((fail+1)); echo "$f" >> /tmp/failed_before.txt; fi
+          done < /tmp/sample.txt
+          echo "BEFORE: loaded=$ok failed=$fail"
+          echo "before_ok=$ok" >> "$GITHUB_ENV"
+          touch /tmp/failed_before.txt
+
+      - name: Package (vendor + rpaths) -- no --allow-missing
+        run: |
+          set -uo pipefail
+          # The prefix the tree will occupy once installed. The current tap ships one monolithic
+          # keg per distro, so that is ros2-<distro>; a split layout would use ros2-<distro>-base.
+          python3 -I ci/deploy/package_tree.py install \
+            --install-prefix "/opt/homebrew/opt/ros2-humble"
+          rc=$?
+          echo "package_tree exit=$rc"
+          if [ -d install/vendor/lib ]; then
+            echo "vendored: $(ls install/vendor/lib | wc -l | tr -d ' ') dylibs, $(du -sh install/vendor/lib | awk '{print $1}')"
+          fi
+          exit $rc
+
+      - name: Load-test the SAME sample AFTER packaging
+        run: |
+          set -uo pipefail
+          # The tree now expects its vendor dir at the INSTALLED path, so make that path exist.
+          sudo mkdir -p "/opt/homebrew/opt/ros2-humble"
+          sudo ln -sfn "$PWD/install/vendor" "/opt/homebrew/opt/ros2-humble/vendor"
+          ok=0; fail=0
+          : > /tmp/failed_after.txt
+          while read -r f; do
+            if python3 -I /tmp/loadone.py "$f"; then ok=$((ok+1)); else fail=$((fail+1)); echo "$f" >> /tmp/failed_after.txt; fi
+          done < /tmp/sample.txt
+          echo "AFTER:  loaded=$ok failed=$fail   (BEFORE loaded=${before_ok:-?})"
+          # A regression is a dylib that loaded BEFORE and does not load now. That is the gate:
+          # "zero /opt/homebrew references" is not, because it passed on a tree with 20 broken libs.
+          comm -13 <(sort -u /tmp/failed_before.txt) <(sort -u /tmp/failed_after.txt) > /tmp/regressions.txt
+          n=$(wc -l < /tmp/regressions.txt | tr -d ' ')
+          echo "REGRESSIONS: $n"
+          if [ "$n" -gt 0 ]; then
+            sed 's/^/  /' /tmp/regressions.txt
+            for f in $(head -3 /tmp/regressions.txt); do
+              echo "--- why: $f"
+              python3 -I -c "
+          import ctypes,sys
+          try: ctypes.CDLL(sys.argv[1])
+          except OSError as e: print('   ', str(e).split(chr(10))[0][:220])
+          " "$f"
+            done
+            echo "::error::$n dylib(s) loaded before packaging and do not load after"
+            exit 1
+          fi
+          echo "no regressions"
+
+      - name: What still loads from Homebrew at runtime (the dlopen gap)
+        if: always()
+        run: |
+          set -uo pipefail
+          # otool cannot see a plugin that lives in a brew keg and is dlopen'd by path. The keg
+          # ships no libqcocoa, so a GUI tool loads Qt's platform plugin out of brew. dyld prints
+          # CELLAR paths, not opt, because it resolves the symlink -- match both.
+          S=$(head -40 /tmp/sample.txt)
+          : > /tmp/dyld_brew.txt
+          for f in $S; do
+            DYLD_PRINT_LIBRARIES=1 QT_QPA_PLATFORM=offscreen python3 -I /tmp/loadone.py "$f" 2>&1 \
+              | grep -oE '/opt/homebrew/(opt|Cellar)/[^/]+' | sed -E 's|.*/(opt\|Cellar)/||' >> /tmp/dyld_brew.txt || true
+          done
+          sort -u /tmp/dyld_brew.txt | grep -v "^ros2-" > /tmp/dyld_formulae.txt || true
+          echo "Homebrew formulae still loading at runtime after vendoring: $(wc -l < /tmp/dyld_formulae.txt | tr -d ' ')"
+          sed 's/^/  /' /tmp/dyld_formulae.txt
+          echo "(non-empty means the vendor set is incomplete -- those are the dlopen'd ones)"
+
+      - name: Upload the packaged tree and the report
+        if: always()
+        run: |
+          mkdir -p report
+          cp /tmp/sample.txt /tmp/failed_before.txt /tmp/failed_after.txt /tmp/regressions.txt \
+             /tmp/dyld_formulae.txt report/ 2>/dev/null || true
+          ls -la report | sed 's/^/  /'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: package-smoke-humble
+          path: report
+          retention-days: 7
