@@ -24,7 +24,16 @@ ros-planning/mrpt_path_planning
 ros-planning/mrpt_ros_bridge
 ros-planning/mrpt_sensors
 ros-planning/rtabmap_ros
-ros-planning/easynav_plugins
+# ros-planning/easynav_plugins was pinned here from this file's first commit (4fe39eb0,
+# 2026-10-09) with no recorded reason, and that pin is what broke the build: the plugins
+# fork froze at upstream's 2026-07-26 tree while ros2_control/easynav (the core repo) is
+# NOT pinned and tracked upstream through "Robot geometry centralized" / "Remove collision
+# checker from controllers", which deleted the protected members the frozen plugins still
+# referenced. easynav_mpc_controller and easynav_regulated_pp_controller then failed to
+# compile (jazzy 40491410462, kilted 40491414514). Pinning one half of a two-repo pair
+# guards content but not the interface it compiles against, so a one-sided pin here is
+# worse than no pin. The fork now carries ZERO local patches -- upstream absorbed all of
+# them -- so a rebase is a plain fast-forward and the two repos move together again.
 # mola / mp2p_icp: PINNED 2026-10-25. Upstream MOLA migrated off the MRPT 2.x umbrella
 # package onto the mrpt3 v3.x underscore modules (find_package(mrpt_containers) etc.),
 # which are the very set skip-listed for the v2/v3 duplicate-header split -- so they can
