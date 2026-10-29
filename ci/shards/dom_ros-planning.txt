@@ -241,6 +241,7 @@ plansys2_core
 kairos
 plansys2_domain_expert
 plansys2_executor
+plansys2_kairos_plan_solver
 plansys2_lifecycle_manager
 plansys2_msgs
 plansys2_pddl_parser
