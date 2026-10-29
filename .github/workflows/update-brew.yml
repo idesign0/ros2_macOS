@@ -1,0 +1,184 @@
+name: Update Homebrew package pins
+
+# Refreshes brew-packages/matched_packages.txt on all three -new refs.
+#
+# That file already feeds the bottle cache key
+#   macOS-brewbottles-v1-${{ hashFiles('brew-packages/matched_packages.txt') }}
+# and, with the companion change, the gz-install key too. So refreshing it is what
+# invalidates every brew-sensitive cache -- the same self-maintaining trick that
+# hashFiles('cmake/toolchain.cmake') already gives the gz job. No -v2 bumps by hand.
+#
+# Why it exists: the file was generated once on a dev machine by
+# brew-packages/get_ros2_brew_packages.zsh (hardcoded $HOME/kilted-ros2 paths) and never
+# refreshed. It said `abseil 20260107.1` -- soname 2601 -- while CI installed 20260817.0
+# (2608). The gz job's output was cached under a key that tracked brew not at all, so gz
+# and protobuf stayed linked against 2601 while the rest of the workspace used 2608.
+# abseil had DELETED libabsl_crc_cpu_detect and libabsl_borrowed_fixup_buffer, so in the
+# shipped ros2-jazzy keg 236 dylibs and 5 executables cannot be dlopen'd at all:
+#   dlopen(libgz-sim8.8.14.0.dylib): Library not loaded:
+#     /opt/homebrew/opt/abseil/lib/libabsl_crc_cpu_detect.2601.0.0.dylib
+#
+# One job resolves versions ONCE and writes them to every ref, so the three distros cannot
+# disagree about a formula version. They have: in run 40491414514 kilted built against
+# qt 6.11.2 while humble and jazzy had 6.12.0, because the bottle cache hit for two and
+# missed for the third.
+#
+# Modelled on update-forks.yml, gate included: moving the pins while a build reads them
+# would hand late shards a different brew set than early ones, which is this exact bug.
+
+on:
+  schedule:
+    # Sunday 02:00 UTC, an hour before update-forks.yml, so a run dispatched afterwards
+    # picks up new fork tips and new brew pins together.
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      force:
+        type: boolean
+        default: false
+        description: "Run even while a build is active (normally it stands down)"
+      dry_run:
+        type: boolean
+        default: false
+        description: "Resolve and diff, but do not commit"
+
+permissions:
+  contents: write
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+      active: ${{ steps.check.outputs.active }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          total=0
+          for d in humble jazzy kilted; do
+            for st in in_progress queued; do
+              for wf in "macos-${d}-ci.yml" "macos-${d}-layered.yml"; do
+                n=$(gh run list --repo idesign0/ros2_macOS \
+                      --workflow "$wf" --status "$st" \
+                      --json databaseId --jq 'length' 2>/dev/null || echo 0)
+                echo "  $wf $st: $n"
+                total=$((total + n))
+              done
+            done
+          done
+          echo "active=$total" >> "$GITHUB_OUTPUT"
+          if [ "$total" -gt 0 ] && [ "$FORCE" != "true" ]; then
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$total build(s) running or queued -- standing down so the running build keeps one consistent brew set. Re-run with force=true to override."
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  update:
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true'
+    runs-on: macos-26
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_FROM_API: "1"
+      GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - name: Refresh formula definitions
+        run: |
+          # The ONLY brew update in the system. Doing it in a job that builds nothing is the
+          # point: the build jobs then never move their formula definitions mid-run, which the
+          # setup action's own comment calls out as how formulae drift between jobs of one run.
+          # Retried because a github.com DNS blip has killed jobs twice.
+          n=0
+          until brew update; do
+            n=$((n+1))
+            if [ "$n" -ge 3 ]; then echo "::error::brew update failed after $n attempts"; exit 1; fi
+            echo "attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          echo "homebrew-core: $(git -C "$(brew --repo homebrew/core)" rev-parse --short HEAD)"
+
+      - name: Resolve current versions for every formula on every ref
+        run: |
+          set -euo pipefail
+          # Collect the union of formula names across all three refs, resolve each ONCE, then write
+          # each ref's file back with the shared versions. Resolving per-ref would let the refs
+          # disagree, which is the bug being closed.
+          for ref in humble-new jazzy-new kilted-new; do
+            gh api "repos/idesign0/ros2_macOS/contents/brew-packages/matched_packages.txt?ref=$ref" \
+              --jq .content | base64 -d > "cur-$ref.txt"
+            echo "$ref: $(wc -l < "cur-$ref.txt" | tr -d ' ') formulae"
+          done
+          awk '{print $1}' cur-*.txt | sort -u > names.txt
+          echo "union: $(wc -l < names.txt | tr -d ' ') distinct formulae"
+
+          : > resolved.txt
+          split -l 80 names.txt batch_
+          for b in batch_*; do
+            brew info --json=v2 $(cat "$b") 2>/dev/null \
+              | jq -r '.formulae[] | "\(.name) \(.versions.stable)" + (if (.revision // 0) > 0 then "_\(.revision)" else "" end)' \
+              >> resolved.txt || echo "::warning::brew info failed for batch $b"
+          done
+          echo "resolved: $(wc -l < resolved.txt | tr -d ' ')"
+
+          comm -23 names.txt <(awk '{print $1}' resolved.txt | sort -u) > unresolved.txt || true
+          if [ -s unresolved.txt ]; then
+            echo "::warning::$(wc -l < unresolved.txt | tr -d ' ') formula(e) no longer in core; keeping the recorded version rather than dropping the line:"
+            sed 's/^/    /' unresolved.txt
+          fi
+
+          for ref in humble-new jazzy-new kilted-new; do
+            # resolved.txt wins where it has the formula; otherwise the recorded line is kept
+            # verbatim, so a formula that vanished from core is never silently dropped -- losing
+            # one from BREW_BASE has hard-failed a whole base job before.
+            awk 'NR==FNR{v[$1]=$2; next} NF{ if ($1 in v) print $1, v[$1]; else print }' \
+              resolved.txt "cur-$ref.txt" > "next-$ref.txt"
+            if diff -q "cur-$ref.txt" "next-$ref.txt" >/dev/null; then
+              echo "::notice::$ref unchanged"
+            else
+              echo "### $ref changes ($(diff "cur-$ref.txt" "next-$ref.txt" | grep -cE '^>' || true) lines):"
+              diff "cur-$ref.txt" "next-$ref.txt" | grep -E '^[<>]' | head -40 || true
+            fi
+          done
+
+      - name: Commit refreshed pins
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          set -euo pipefail
+          CORE=$(git -C "$(brew --repo homebrew/core)" rev-parse --short HEAD)
+          for ref in humble-new jazzy-new kilted-new; do
+            if diff -q "cur-$ref.txt" "next-$ref.txt" >/dev/null; then
+              echo "  $ref unchanged, nothing to commit"
+              continue
+            fi
+            : > msg.txt
+            echo "ci(brew): refresh matched_packages.txt pins" >> msg.txt
+            echo "" >> msg.txt
+            echo "homebrew-core $CORE, resolved $(date -u +%Y-%m-%d)." >> msg.txt
+            echo "" >> msg.txt
+            echo "This file feeds the bottle cache key and the gz-install cache key, so refreshing" >> msg.txt
+            echo "it is what forces every brew-sensitive cache to rebuild. It had not been" >> msg.txt
+            echo "regenerated since it was first produced on a dev machine, which is how the gz job" >> msg.txt
+            echo "kept serving a tree linked against abseil 20260107.1 (soname 2601) while the rest" >> msg.txt
+            echo "of the workspace built against 20260817.0 (2608). abseil had deleted" >> msg.txt
+            echo "libabsl_crc_cpu_detect and libabsl_borrowed_fixup_buffer, so 236 dylibs and 5" >> msg.txt
+            echo "executables in the shipped tree could not be dlopen'd at all." >> msg.txt
+            echo "" >> msg.txt
+            echo "Versions were resolved once, in one job, and written to all three -new refs" >> msg.txt
+            echo "together, so the distros cannot disagree about a formula version the way they did" >> msg.txt
+            echo "in run 40491414514 (kilted qt 6.11.2 vs humble/jazzy 6.12.0)." >> msg.txt
+            echo "" >> msg.txt
+            echo "Generated by .github/workflows/update-brew.yml; no compile test applies." >> msg.txt
+            echo "" >> msg.txt
+            echo "Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>" >> msg.txt
+            SHA=$(gh api "repos/idesign0/ros2_macOS/contents/brew-packages/matched_packages.txt?ref=$ref" --jq .sha)
+            gh api --method PUT "repos/idesign0/ros2_macOS/contents/brew-packages/matched_packages.txt" \
+              -F message=@msg.txt \
+              -f content="$(base64 -i "next-$ref.txt" | tr -d '\n')" \
+              -f sha="$SHA" -f branch="$ref" --jq '.commit.sha[0:8]' \
+              | sed "s|^|  $ref committed |"
+          done
