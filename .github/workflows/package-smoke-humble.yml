@@ -20,8 +20,12 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: "Run ID holding the install-full-<distro> artifact"
+        description: "Run ID holding the install-full-humble artifact"
         required: true
+      ref:
+        description: "Branch to take ci/deploy/package_tree.py and the setup action from"
+        required: true
+        default: humble-new
       sample:
         description: "How many dylibs to load-test before and after"
         default: "150"
@@ -54,8 +58,14 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
     steps:
+      # This workflow is registered on the DEFAULT branch so it can be dispatched at all
+      # (a workflow absent from the default branch gives HTTP 404: "not found on the
+      # default branch"). ci/deploy/package_tree.py and the setup action live on the -new
+      # refs, so check that ref out explicitly instead of the dispatch ref.
       - uses: actions/checkout@v4
-        with: { submodules: false }
+        with:
+          submodules: false
+          ref: ${{ inputs.ref }}
       - uses: ./.github/actions/setup-ros2-macos
         with:
           deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
