@@ -136,4 +136,37 @@ if [ ${#FAILED_PKGS[@]:-0} -gt 0 ]; then
 fi
 
 
+# ---------------------------------------------------------------------------------------
+# Record the Homebrew versions this job ACTUALLY installed.
+#
+# matched_packages.txt supplies the formula NAMES; `brew install "$pkg"` above passes no
+# version, so what lands is whatever homebrew-core currently says -- the versions written
+# beside the names in that file are a record, not a constraint. A record can be stale: it
+# said abseil 20260107.1 (soname 2601) while jobs were installing 20260817.0 (2608).
+#
+# The gz-install cache key hashes this file, so the key reflects what the job really has
+# rather than what some earlier commit claimed. Without it, a cached gz tree built against
+# an older brew is restored into a job that installed a newer one, and nothing notices.
+# That is how gz and protobuf ended up linked to abseil 2601 after abseil DELETED
+# libabsl_crc_cpu_detect and libabsl_borrowed_fixup_buffer: 236 dylibs and 5 executables in
+# the shipped ros2-jazzy keg cannot be dlopen'd at all.
+#
+# Narrowed to the formulae this workspace names. Hashing all of `brew list --versions`
+# would also cover the runner image's preinstalls, whose churn would rebuild gz on every
+# image bump for no reason.
+ROOT="${GITHUB_WORKSPACE:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+awk '{print $1}' "$INPUT_FILE" | sort -u > /tmp/brew_want.txt
+brew list --formula --versions \
+  | awk 'NR==FNR{w[$1];next} ($1 in w)' /tmp/brew_want.txt - \
+  | sort > "$ROOT/brew-state.txt"
+BREW_STATE_N=$(wc -l < "$ROOT/brew-state.txt" | tr -d ' ')
+echo "brew-state.txt: $BREW_STATE_N formulae (feeds the gz cache key)"
+# An empty or near-empty file hashes to a constant, which would silently validate ANY
+# cached gz tree -- the same shape of trap as packing a partial install tree.
+if [ "${BREW_STATE_N:-0}" -lt 50 ]; then
+    echo "::error::brew-state.txt has only ${BREW_STATE_N:-0} entries; refusing to let the gz cache key be keyed on it"
+    exit 1
+fi
+grep -E '^(abseil|protobuf|qt@5|qtbase|boost|openssl@3|opencv@4|dartsim) ' "$ROOT/brew-state.txt" || true
+
 echo "✅ Done"
