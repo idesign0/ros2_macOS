@@ -28,9 +28,12 @@ name: Update Homebrew package pins
 
 on:
   schedule:
-    # Sunday 02:00 UTC, an hour before update-forks.yml, so a run dispatched afterwards
-    # picks up new fork tips and new brew pins together.
-    - cron: "0 2 * * 0"
+    # Sunday 00:00 UTC, three hours before update-forks.yml (0 3 * * 0), so the brew
+    # pins are already settled and committed before the fork updater starts. A run
+    # dispatched after both then picks up new pins and new fork tips together, and the
+    # two updaters cannot overlap -- each one's stand-down gate only watches the build
+    # workflows, not the other updater, so the spacing is what keeps them apart.
+    - cron: "0 0 * * 0"
   workflow_dispatch:
     inputs:
       force:
