@@ -79,7 +79,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: gz-install.tar.zst
-          key: gz-install-jazzy-${{ env.GZ_VERSION }}-${{ hashFiles('cmake/toolchain.cmake') }}-v1
+          key: gz-install-jazzy-${{ env.GZ_VERSION }}-${{ hashFiles('cmake/toolchain.cmake', 'brew-packages/matched_packages.txt') }}-v1
       - name: Restore ccache (gz)
         if: steps.gzcache.outputs.cache-hit != 'true'
         uses: actions/cache@v4
