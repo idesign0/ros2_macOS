@@ -74,6 +74,7 @@ jobs:
           deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-state-publish: "true"
       - name: Restore gz-install cache
         id: gzcache
         uses: actions/cache@v4
