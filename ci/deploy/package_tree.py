@@ -27,7 +27,9 @@ Run it in the `assemble` job between "Merge shard deltas" and "Pack full workspa
 install".
 
 Usage:
-  package_tree.py <tree> --install-prefix /opt/homebrew/opt/ros2-kilted [--allow-missing]
+  package_tree.py <tree> --install-prefix /opt/homebrew/opt/ros2-kilted
+  package_tree.py <tree> --install-prefix ... --tolerate-stale-input   # smoke only
+  package_tree.py <tree> --install-prefix ... --allow-missing          # local only
   package_tree.py <tree> --install-prefix ... --verify-only
 """
 import argparse, collections, os, re, shutil, subprocess, sys
@@ -141,9 +143,15 @@ def main():
                     help="where the tree will live once installed, e.g. "
                          "/opt/homebrew/opt/ros2-kilted")
     ap.add_argument("--vendor-subdir", default="vendor/lib")
+    ap.add_argument("--tolerate-stale-input", action="store_true",
+                    help="tolerate ONLY the stale-input class of missing ref: the formula "
+                         "is installed but at a version that no longer ships that soname, "
+                         "i.e. Homebrew moved after the tree was built. A ref whose "
+                         "formula is not installed at all still fails. For the package "
+                         "smoke job, whose subject is the packager and not the tree.")
     ap.add_argument("--allow-missing", action="store_true",
-                    help="do not fail on closure refs that do not exist (LOCAL TESTING "
-                         "ONLY -- in CI a missing ref means the tree cannot load)")
+                    help="tolerate every missing ref, including an absent formula "
+                         "(LOCAL EXPERIMENTS ONLY -- implies --tolerate-stale-input)")
     ap.add_argument("--verify-only", action="store_true")
     a = ap.parse_args()
 
@@ -167,19 +175,64 @@ def main():
     print(f"  closure              : {len(cl)} dylibs "
           f"({len(present)} present, {len(missing)} missing)", flush=True)
 
+    # Two very different things make a closure ref missing, and only one of them is a
+    # bug in this script or in the dependency set:
+    #
+    #   DRIFTED -- the formula is installed, but at a version that no longer ships that
+    #              soname. Homebrew moved between the build and now. Nothing is wrong
+    #              with the closure walk; the INPUT TREE is stale. Measured 2026-10-29:
+    #              a kilted tree two days old already wanted libdraco.9 and
+    #              librealsense2.2.58, and core had moved to draco 1.5.9 / librealsense
+    #              2.59.1. This is the abseil-2601 failure mode and the reason the tree
+    #              gets vendored at all.
+    #   ABSENT  -- the formula is not installed. /opt/homebrew/opt/<formula> is kept even
+    #              by `brew unlink`, so an absent dir means it was never installed here:
+    #              an undeclared dependency, or a closure walk that invented a path.
+    #              Always fatal -- no flag tolerates it.
+    tolerated = set()
     if missing:
         byf = collections.Counter(p.split("/")[4] for p in missing)
+        drifted, absent = [], []
+        for p in missing:
+            keg = os.path.join(HB, p.split("/")[4])
+            (drifted if os.path.isdir(keg) else absent).append(p)
         for p in missing[:12]:
             print(f"     MISSING {p}")
         print(f"     ... across {len(byf)} formulae: "
               f"{', '.join(f'{k}({v})' for k, v in byf.most_common(6))}")
-        if not a.allow_missing:
+
+        if drifted:
+            vers = {}
+            for p in drifted:
+                f = p.split("/")[4]
+                vers.setdefault(f, os.path.basename(
+                    os.path.realpath(os.path.join(HB, f))))
+            print(f"  stale-input refs     : {len(drifted)} across "
+                  f"{len(vers)} formulae -- Homebrew moved after the build")
+            for f, v in sorted(vers.items()):
+                print(f"     {f}: installed {v}, tree was built against an older soname")
+        if absent:
+            af = sorted(set(p.split("/")[4] for p in absent))
+            print(f"  absent formulae      : {len(absent)} refs across "
+                  f"{len(af)} formulae not installed at all: {', '.join(af)}")
+
+        if absent and not a.allow_missing:
+            print("::error::the closure references formulae that are not installed on "
+                  "this machine at all. That is not Homebrew drift -- it is an "
+                  "undeclared dependency or a bad closure walk. Refusing to package.")
+            sys.exit(1)
+
+        if drifted and not (a.tolerate_stale_input or a.allow_missing):
             print("::error::the tree references Homebrew dylibs that do not exist. It "
                   "cannot load as built -- this is the abseil 2601 failure. Refusing to "
-                  "package. Rebuild against the current brew, or pass --allow-missing "
-                  "only for local experiments.")
+                  "package. Rebuild against the current brew.")
             sys.exit(1)
-        print("::warning::--allow-missing: packaging an incomplete vendor dir")
+
+        tolerated = set(drifted) | (set(absent) if a.allow_missing else set())
+        print(f"::warning::packaging over {len(tolerated)} missing reference(s): the "
+              f"vendor dir will be incomplete and anything that needed them could not "
+              f"load before packaging either. Load-test results stay comparable; the "
+              f"shipped tarball must come from a tree built against the current brew.")
 
     # ---- 1. vendor
     os.makedirs(vendor_abs, exist_ok=True)
@@ -274,7 +327,14 @@ def main():
     print(f"  re-signed            : {len(targets)} files", flush=True)
 
     # ---- 6. verify
-    left = {p: s for p, s in refs_of(targets).items() if s}
+    # Step 2 deliberately does not rewrite a reference it could not vendor, because that
+    # would turn a resolvable absolute path into a dangling @rpath. Those survivors are
+    # exactly `tolerated`, so they are not verify failures -- anything else is.
+    left = {p: (s - tolerated) for p, s in refs_of(targets).items()}
+    left = {p: s for p, s in left.items() if s}
+    if tolerated:
+        print(f"  left in place        : refs to {len(tolerated)} un-vendorable dylib(s), "
+              f"un-rewritten on purpose")
     if left:
         print(f"::error::{len(left)} files still reference {HB} after packaging")
         for p, s in list(left.items())[:10]:
