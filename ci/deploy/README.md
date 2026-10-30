@@ -191,8 +191,36 @@ vendoring, and it is also why the input to a packaging run has to be fresh.
 
 | class | test | meaning | flag that tolerates it |
 |---|---|---|---|
-| DRIFTED | `/opt/homebrew/opt/<formula>` exists, the file does not | the formula is installed at a version that dropped that soname -- Homebrew moved after the build. The INPUT is stale; the closure walk is fine | `--tolerate-stale-input` |
-| ABSENT | `/opt/homebrew/opt/<formula>` does not exist | never installed here -- an undeclared dependency, or a closure walk that invented a path. `brew unlink` keeps the `opt` symlink, so an absent dir is conclusive | `--allow-missing` only (local experiments) |
+| DRIFTED | `/opt/homebrew/opt/<formula>` exists, the file does not | installed at a version that dropped that soname -- Homebrew moved after the build. The INPUT is stale; the closure walk is fine | `--tolerate-stale-input` |
+| RETIRED | keg absent, and `brew info` says `disabled`, or brew does not know the name | Homebrew has withdrawn the formula. Still drift, just terminal: it WAS installable at build time and never will be again | `--tolerate-stale-input` |
+| ABSENT | keg absent, formula still installable | never installed here -- an undeclared dependency, or a closure walk that invented a path. `brew unlink` keeps the `opt` symlink, so an absent dir is conclusive | `--allow-missing` only (local experiments) |
+
+RETIRED is not a hypothetical third case, it is how the second smoke run (41046526636)
+died -- not in packaging but in `setup-ros2-macos`, 65 minutes in:
+
+```
+icu4c@77 has been disabled because it is a versioned formula!
+::error::brew: 1 formula(e) failed to install and are not in allow_install_failures.txt: icu4c@77
+```
+
+`disable_date: 2026-10-30`, the morning of that run. Homebrew writes `disable!` into the
+formula with a FUTURE date, so the trap is committed to core months ahead and springs on
+a calendar day with no change on our side. Nothing depended on `icu4c@77` (checked every
+`dependencies` list in `matched_packages.txt`) and `icu4c@78` was already being installed
+as a `boost@1.85` dependency, so the line was simply dropped.
+
+Auditing the whole list the same way, `brew info --json=v2 $(awk '{print $1}' matched_packages.txt)`:
+
+| state | formulae |
+|---|---|
+| disabled | `boost@1.85` (2026-04-05), `icu4c@77` (2026-10-30), `tinyxml1` (2026-10-26, tapped as `osrf/simulation/tinyxml1`, already in `allow_install_failures.txt`), `websocketpp` (2026-04-10) |
+| deprecated, still installable | `qt@5` and `pyqt@5`/`qwt-qt5` (2026-05-19), `opencv@4` (2026-10-09), `python@3.10` (2026-10-01), `lua@5.4`, `assimp@5`, `freeimage`, `postgresql@14`, `icu4c@78` (2026-10-30), `llvm@14`, `pcre` |
+
+`boost@1.85` and `websocketpp` read as disabled here yet still install on the runner, so
+they are left alone until a run actually rejects them -- `allow_install_failures.txt` is
+evidence-driven by design and this is not evidence. The deprecation list is the one worth
+watching: Homebrew disables roughly a year after deprecating, which puts **`qt@5` around
+2027-05-19**, and the whole base stack is Qt5.
 
 Who passes what:
 
