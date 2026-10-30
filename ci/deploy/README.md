@@ -170,6 +170,42 @@ smoke job reaches the plugin loaders.
 **Do not gate on "zero brew references".** It passed on a tree with 20 broken libraries.
 Gate on dlopen success, measured before and after.
 
+### A missing closure reference has two causes, and only one is a bug
+
+Measured 2026-10-29 by the first `package-smoke-kilted` run, against an `install-full-kilted`
+artifact built **two days earlier** on `kilted-new`:
+
+| | |
+|---|---|
+| closure | 739 dylibs, 737 present, **2 missing** |
+| missing | `draco/libdraco.9.dylib`, `librealsense/librealsense2.2.58.dylib` |
+| why | core moved to `draco 1.5.9` / `librealsense 2.59.1` in those two days |
+| sample load test, before packaging | 123 of 150 loaded |
+
+So abseil-2601 was not an unlucky one-off. Two sonames moved under a tree in 48 hours;
+every tarball decays from the hour it is built, and `matched_packages.txt` never protected
+against this because it is an install LIST, not a constraint. That is the argument for
+vendoring, and it is also why the input to a packaging run has to be fresh.
+
+`package_tree.py` therefore classifies each missing reference:
+
+| class | test | meaning | flag that tolerates it |
+|---|---|---|---|
+| DRIFTED | `/opt/homebrew/opt/<formula>` exists, the file does not | the formula is installed at a version that dropped that soname -- Homebrew moved after the build. The INPUT is stale; the closure walk is fine | `--tolerate-stale-input` |
+| ABSENT | `/opt/homebrew/opt/<formula>` does not exist | never installed here -- an undeclared dependency, or a closure walk that invented a path. `brew unlink` keeps the `opt` symlink, so an absent dir is conclusive | `--allow-missing` only (local experiments) |
+
+Who passes what:
+
+| caller | flags | rationale |
+|---|---|---|
+| `package` job in `macos-<distro>-layered.yml` | none | runs in the same run as the build, so a stale input is a real failure worth stopping on |
+| `package-smoke-<distro>.yml` | `--tolerate-stale-input` | its subject is the PACKAGER, not the tree. A stale artifact must not stop it from answering whether anything regressed. Consumers of an un-vendorable lib could not load before packaging either, so before/after stays comparable |
+| local | `--allow-missing` | a dev box legitimately lacks formulae (no `rtabmap` -> no `librealsense`) |
+
+A tolerated reference is deliberately **not rewritten** -- rewriting a path that cannot be
+vendored turns a resolvable absolute path into a dangling `@rpath` -- so the final verify
+subtracts exactly that set and fails on anything else.
+
 ## post_install is deprecated -- move it into CI packaging
 
 Homebrew 7 raises `odeprecated "post_install", "post_install_steps"`, and
@@ -196,7 +232,7 @@ failing the package step.
 ## Open items
 
 * decide vendoring yes/no: measured 743 MB, 0 regressions on the base tree
-* wire brewclosure.py into packaging with `missing` non-empty = fail
+* have `base` upload its `brew-state.txt` and every later job diff against it: `package` is a separate job on a fresh runner hours after `assemble`, so core can move mid-run and the strict gate would then reject a tree that was correct when built
 * fix the under-declared depends_on (ros2-kilted.rb has 57; direct refs are ~89)
 * the DYLD smoke job (QT_QPA_PLATFORM=offscreen, gz sim -s)
 * `data_tamer_msgs` is in two shards (dom_moveit + dom_ros-visualization), so two kegs
