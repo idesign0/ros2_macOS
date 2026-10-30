@@ -14,6 +14,14 @@ inputs:
   brew-base-formulae:
     description: Space-separated base Homebrew formulae for this distro.
     required: true
+  brew-state-publish:
+    description: >
+      "true" in the FIRST job of a run that installs Homebrew (gz). That job's
+      brew-state.txt becomes the run's baseline and is uploaded as the `brew-state-run`
+      artifact; every other job downloads it and diffs its own Homebrew against it.
+      Leave unset elsewhere -- a job with no baseline to fetch just skips the check.
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -230,6 +238,108 @@ runs:
         # It has also killed jobs outright: on kilted 37460304339 a github.com DNS outage
         # made it report "Error: Fetching /opt/homebrew failed!" and took down gz, which
         # skipped base-a/base-b and the entire domain matrix.
+
+    # ---- intra-run Homebrew skew -------------------------------------------------
+    # Each macOS job is its own runner and provisions Homebrew itself from the tap baked
+    # into its runner image, and GitHub rotates those images. So a formula's version is
+    # not even monotonic across one run: two package-smoke-kilted runs 75 minutes apart
+    # on 2026-10-30 installed draco 1.5.9 and then draco 1.5.7, which is why one of them
+    # could not find libdraco.9.dylib and the other could.
+    #
+    # That skew has twice cost a whole run, and each time it surfaced far from its cause:
+    #   * suite-sparse 7.14.1 in base-1 vs 7.14.0 in base-2a -> CeresConfig
+    #     find_dependency(SuiteSparse 7.14.1) "Found unsuitable version" -> 16 of jazzy's
+    #     27 failures (run 35777229974)
+    #   * abseil moving under gz/protobuf -> 236 dylibs in the shipped keg that cannot be
+    #     dlopen'd, discovered only when someone tried to load them
+    # Neither looked like a Homebrew problem in the log. This makes it say so, in the job
+    # where it happens, instead of being inferred from a missing dylib hours later.
+    - name: Publish this job's Homebrew state as the run baseline
+      if: inputs.brew-state-publish == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: brew-state-run
+        path: brew-state.txt
+        retention-days: 7
+
+    - name: Fetch the run's Homebrew baseline
+      id: brew-baseline
+      if: inputs.brew-state-publish != 'true'
+      continue-on-error: true
+      uses: actions/download-artifact@v4
+      with:
+        name: brew-state-run
+        path: /tmp/brew-baseline
+
+    - name: Diff this job's Homebrew against the run baseline
+      if: inputs.brew-state-publish != 'true'
+      shell: bash
+      run: |
+        set -uo pipefail
+        BASE=/tmp/brew-baseline/brew-state.txt
+        if [ ! -f "$BASE" ]; then
+          echo "no baseline artifact in this run -- skipping the skew check"
+          echo "(expected when the job that publishes it has not run, or when this"
+          echo " workflow does not publish one at all, e.g. the package smoke job)"
+          exit 0
+        fi
+        cat > /tmp/brewdiff.py <<'PY'
+        import os, sys
+
+        # Evidence-driven, and deliberately the same set install_brew_packages.sh already
+        # echoes after installing, plus suite-sparse for the documented ceres break. A
+        # version change in one of these has actually broken a run; everything else gets
+        # reported but does not stop the build, because losing five hours to a graphviz
+        # patch bump is its own kind of failure.
+        LOAD_BEARING = {
+            "abseil", "protobuf", "qt@5", "qtbase", "boost", "openssl@3",
+            "opencv@4", "dartsim", "suite-sparse",
+        }
+
+        def read(path):
+            out = {}
+            with open(path) as fh:
+                for line in fh:
+                    f = line.split()
+                    if f:
+                        out[f[0]] = " ".join(f[1:])
+            return out
+
+        base, cur = read(sys.argv[1]), read(sys.argv[2])
+        changed = sorted((n, base[n], cur[n]) for n in base.keys() & cur.keys()
+                         if base[n] != cur[n])
+        gone = sorted(base.keys() - cur.keys())
+        added = sorted(cur.keys() - base.keys())
+
+        print(f"  baseline : {len(base)} formulae")
+        print(f"  this job : {len(cur)} formulae")
+        if not (changed or gone or added):
+            print("  IDENTICAL -- no Homebrew skew in this run so far")
+            sys.exit(0)
+
+        if changed:
+            print(f"  CHANGED VERSION ({len(changed)}):")
+            for n, b, c in changed:
+                mark = "  <-- load-bearing" if n in LOAD_BEARING else ""
+                print(f"     {n}: baseline {b} -> this job {c}{mark}")
+        if gone:
+            print(f"  IN BASELINE, NOT HERE ({len(gone)}): {', '.join(gone)}")
+        if added:
+            print(f"  HERE, NOT IN BASELINE ({len(added)}): {', '.join(added)}")
+
+        hot = [n for n, _, _ in changed if n in LOAD_BEARING]
+        if hot:
+            print(f"::error::Homebrew moved under this run: {', '.join(hot)} changed "
+                  f"version since the baseline job. Anything already built links the "
+                  f"baseline version by absolute path, so this job's output cannot be "
+                  f"combined with it. Re-run the workflow -- a fresh run is self-"
+                  f"consistent. This is not a code failure.")
+            sys.exit(1)
+        print("::warning::Homebrew differs from the run baseline, but no load-bearing "
+              "formula changed version. Continuing; see the table above if something "
+              "downstream fails to find a library.")
+        PY
+        python3 -I /tmp/brewdiff.py "$BASE" brew-state.txt
 
     - name: Re-apply source patches for brew-installed headers (post-brew)
       shell: bash
