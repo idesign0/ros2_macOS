@@ -120,11 +120,22 @@ jobs:
           echo "union: $(wc -l < names.txt | tr -d ' ') distinct formulae"
 
           : > resolved.txt
+          : > status.tsv
           split -l 80 names.txt batch_
           for b in batch_*; do
-            brew info --json=v2 $(cat "$b") 2>/dev/null \
-              | jq -r '.formulae[] | "\(.name) \(.versions.stable)" + (if (.revision // 0) > 0 then "_\(.revision)" else "" end)' \
-              >> resolved.txt || echo "::warning::brew info failed for batch $b"
+            if ! brew info --json=v2 $(cat "$b") > "json_$b" 2>/dev/null; then
+              echo "::warning::brew info failed for batch $b"
+              continue
+            fi
+            jq -r '.formulae[] | "\(.name) \(.versions.stable)" + (if (.revision // 0) > 0 then "_\(.revision)" else "" end)' \
+              "json_$b" >> resolved.txt
+            # Same JSON, second reading: Homebrew's own retirement clock. Kept here rather
+            # than in a step of its own so it cannot drift out of sync with the versions,
+            # and so it costs no extra brew info calls.
+            jq -r '.formulae[] | [.name, (.disabled | tostring), (.disable_date // ""),
+                                  (.deprecated | tostring), (.deprecation_date // ""),
+                                  (.disable_reason // .deprecation_reason // "")] | @tsv' \
+              "json_$b" >> status.tsv
           done
           echo "resolved: $(wc -l < resolved.txt | tr -d ' ')"
 
@@ -147,6 +158,98 @@ jobs:
               diff "cur-$ref.txt" "next-$ref.txt" | grep -E '^[<>]' | head -40 || true
             fi
           done
+
+      - name: Audit what Homebrew has retired or put on a clock
+        if: always()
+        run: |
+          set -uo pipefail
+          # Homebrew writes `disable!` into a formula with a FUTURE date, so the trap is
+          # committed to core months ahead and springs on a calendar day with nothing
+          # changing on our side. icu4c@77 carried disable_date 2026-10-30 and on that
+          # morning every job on all three distros started failing in setup-ros2-macos:
+          #
+          #   icu4c@77 has been disabled because it is a versioned formula!
+          #   ::error::brew: 1 formula(e) failed to install and are not in
+          #            allow_install_failures.txt: icu4c@77
+          #
+          # The date was readable for months. This step reads it, weekly, so the next one
+          # is a scheduled chore instead of a dead run. It does not fail the workflow:
+          # boost@1.85 and websocketpp have read as disabled for months and still install
+          # on the runner, so a hard gate here would cry wolf every week and get muted.
+          [ -s status.tsv ] || { echo "no status.tsv -- the resolve step did not run"; exit 0; }
+
+          for ref in humble-new jazzy-new kilted-new; do
+            gh api "repos/idesign0/ros2_macOS/contents/brew-packages/allow_install_failures.txt?ref=$ref" \
+              --jq .content 2>/dev/null | base64 -d > "allow-$ref.txt" || : > "allow-$ref.txt"
+          done
+          cat allow-*.txt | grep -vE '^\s*(#|$)' | sort -u > allowed.txt || : > allowed.txt
+
+          python3 -I - status.tsv allowed.txt <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import csv, sys, datetime
+
+          rows = list(csv.reader(open(sys.argv[1]), delimiter="\t"))
+          allowed = {l.strip() for l in open(sys.argv[2]) if l.strip()}
+          today = datetime.date.today()
+
+          def days(d):
+              try:
+                  return (datetime.date.fromisoformat(d) - today).days
+              except ValueError:
+                  return None
+
+          dis, dep = [], []
+          for r in rows:
+              name, disabled, ddate, deprecated, pdate, reason = (r + [""] * 6)[:6]
+              if disabled == "true":
+                  dis.append((name, ddate, reason))
+              elif deprecated == "true":
+                  dep.append((name, pdate, reason))
+
+          print("## Homebrew retirement audit")
+          print()
+          print(f"{len(rows)} formulae resolved, {len(dis)} disabled, {len(dep)} deprecated.")
+          print()
+          if dis:
+              print("### Disabled -- `brew install` refuses these")
+              print()
+              print("| formula | disabled | already in allow_install_failures.txt | reason |")
+              print("|---|---|---|---|")
+              for n, d, why in sorted(dis, key=lambda x: x[1]):
+                  ok = "yes" if n in allowed or any(a.endswith("/" + n) for a in allowed) else "**no**"
+                  print(f"| `{n}` | {d or '?'} | {ok} | {why} |")
+              print()
+          if dep:
+              print("### Deprecated -- still install, but Homebrew disables roughly a year later")
+              print()
+              print("| formula | deprecated | ~days until the 1-year mark | reason |")
+              print("|---|---|---|---|")
+              for n, d, why in sorted(dep, key=lambda x: x[1] or "9999"):
+                  n_days = days(d)
+                  eta = "?" if n_days is None else str(n_days + 365)
+                  print(f"| `{n}` | {d or '?'} | {eta} | {why} |")
+              print()
+
+          # A disabled formula nobody has allow-listed is the icu4c@77 shape exactly.
+          hot = [n for n, _, _ in dis
+                 if not (n in allowed or any(a.endswith("/" + n) for a in allowed))]
+          if hot:
+              print(f"::warning::{len(hot)} disabled formula(e) are in matched_packages.txt "
+                    f"and not in allow_install_failures.txt: {', '.join(sorted(hot))}. "
+                    f"If a job starts failing in setup with \"has been disabled\", this is "
+                    f"why -- drop the line if nothing needs it, or allow-list it.")
+          # NOT `days(d) or -9999`: a formula deprecated TODAY has days(d) == 0, which is
+          # falsy, and a formula with no date at all has None. Both would read as -9999 and
+          # be reported as imminent. icu4c@78 (deprecated 2026-10-30) and the dateless
+          # llvm@14/pcre each hit that in testing.
+          soon = []
+          for n, d, _ in dep:
+              nd = days(d)
+              if nd is not None and nd + 365 < 120:
+                  soon.append((n, d))
+          if soon:
+              print(f"::warning::within ~120 days of their 1-year disable mark: "
+                    f"{', '.join(n for n, _ in sorted(soon, key=lambda x: x[1]))}")
+          PY
 
       - name: Commit refreshed pins
         if: ${{ inputs.dry_run != true }}
