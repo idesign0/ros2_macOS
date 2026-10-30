@@ -32,7 +32,7 @@ Usage:
   package_tree.py <tree> --install-prefix ... --allow-missing          # local only
   package_tree.py <tree> --install-prefix ... --verify-only
 """
-import argparse, collections, os, re, shutil, subprocess, sys
+import argparse, collections, json, os, re, shutil, subprocess, sys
 
 HB = "/opt/homebrew/opt"
 REF = re.compile(rf"{re.escape(HB)}/([^/]+)/(\S+\.(?:dylib|so))")
@@ -114,6 +114,45 @@ def rpath_refs(path):
     return out
 
 
+_GONE = {}
+
+
+def formula_retired(name):
+    """Reason string if Homebrew has DISABLED this formula or dropped it from core,
+    else None.
+
+    Such a reference can never resolve again on any machine, so it is the terminal form
+    of stale input -- NOT an undeclared dependency. Treating the two alike was wrong:
+    icu4c@77 was disabled on 2026-10-30 ("versioned_formula"), and from that morning on
+    every job asking for it failed in setup, which is how run 41046526636 died before it
+    reached packaging at all. The formula was installed when the tree was built and is
+    now uninstallable, which is drift, not a missing declaration.
+
+    Reads the local homebrew-core tap (the jobs set HOMEBREW_NO_INSTALL_FROM_API=1), so
+    no network. If brew itself is unavailable we return None and stay conservative: the
+    ref keeps its fatal classification rather than being waved through.
+    """
+    if name in _GONE:
+        return _GONE[name]
+    try:
+        r = run(["brew", "info", "--json=v2", name])
+    except OSError:
+        _GONE[name] = None
+        return None
+    if r.returncode != 0:
+        # No such formula in core. Either Homebrew removed it, or it came from a tap
+        # that is not tapped here -- distinguishable only by a human, so say which.
+        _GONE[name] = "unknown to brew (removed from core, or an untapped tap)"
+    else:
+        try:
+            f = json.loads(r.stdout)["formulae"][0]
+            _GONE[name] = (f"disabled: {f.get('disable_reason') or 'no reason given'}"
+                           if f.get("disabled") else None)
+        except (ValueError, KeyError, IndexError):
+            _GONE[name] = None
+    return _GONE[name]
+
+
 def closure(tree_files):
     seen, frontier = set(), set()
     for s in refs_of(tree_files).values():
@@ -185,17 +224,27 @@ def main():
     #              librealsense2.2.58, and core had moved to draco 1.5.9 / librealsense
     #              2.59.1. This is the abseil-2601 failure mode and the reason the tree
     #              gets vendored at all.
-    #   ABSENT  -- the formula is not installed. /opt/homebrew/opt/<formula> is kept even
-    #              by `brew unlink`, so an absent dir means it was never installed here:
-    #              an undeclared dependency, or a closure walk that invented a path.
-    #              Always fatal -- no flag tolerates it.
+    #   GONE    -- the formula is not installed AND Homebrew has disabled it or dropped
+    #              it from core, so it can never be installed again. Still drift, just
+    #              the terminal kind: it WAS there at build time. icu4c@77, disabled
+    #              2026-10-30.
+    #   ABSENT  -- the formula is not installed and is still perfectly installable.
+    #              /opt/homebrew/opt/<formula> is kept even by `brew unlink`, so an
+    #              absent dir here means it was never installed on this machine: an
+    #              undeclared dependency, or a closure walk that invented a path.
+    #              Always fatal -- only --allow-missing waves it through.
     tolerated = set()
     if missing:
         byf = collections.Counter(p.split("/")[4] for p in missing)
-        drifted, absent = [], []
+        drifted, gone, absent = [], [], []
         for p in missing:
-            keg = os.path.join(HB, p.split("/")[4])
-            (drifted if os.path.isdir(keg) else absent).append(p)
+            f = p.split("/")[4]
+            if os.path.isdir(os.path.join(HB, f)):
+                drifted.append(p)
+            elif formula_retired(f):
+                gone.append(p)
+            else:
+                absent.append(p)
         for p in missing[:12]:
             print(f"     MISSING {p}")
         print(f"     ... across {len(byf)} formulae: "
@@ -211,24 +260,33 @@ def main():
                   f"{len(vers)} formulae -- Homebrew moved after the build")
             for f, v in sorted(vers.items()):
                 print(f"     {f}: installed {v}, tree was built against an older soname")
+        if gone:
+            gf = sorted(set(p.split("/")[4] for p in gone))
+            print(f"  retired formulae     : {len(gone)} refs across {len(gf)} formulae "
+                  f"Homebrew has disabled or removed")
+            for f in gf:
+                print(f"     {f}: {formula_retired(f)}")
+            print(f"     these can never resolve again on any machine -- the tree MUST "
+                  f"be rebuilt before it is shipped")
         if absent:
             af = sorted(set(p.split("/")[4] for p in absent))
-            print(f"  absent formulae      : {len(absent)} refs across "
-                  f"{len(af)} formulae not installed at all: {', '.join(af)}")
+            print(f"  absent formulae      : {len(absent)} refs across {len(af)} "
+                  f"formulae not installed here but still installable: {', '.join(af)}")
 
         if absent and not a.allow_missing:
             print("::error::the closure references formulae that are not installed on "
-                  "this machine at all. That is not Homebrew drift -- it is an "
-                  "undeclared dependency or a bad closure walk. Refusing to package.")
+                  "this machine yet are still installable. That is not Homebrew drift "
+                  "-- it is an undeclared dependency or a bad closure walk. Refusing to "
+                  "package.")
             sys.exit(1)
 
-        if drifted and not (a.tolerate_stale_input or a.allow_missing):
+        if (drifted or gone) and not (a.tolerate_stale_input or a.allow_missing):
             print("::error::the tree references Homebrew dylibs that do not exist. It "
                   "cannot load as built -- this is the abseil 2601 failure. Refusing to "
                   "package. Rebuild against the current brew.")
             sys.exit(1)
 
-        tolerated = set(drifted) | (set(absent) if a.allow_missing else set())
+        tolerated = set(drifted) | set(gone) | (set(absent) if a.allow_missing else set())
         print(f"::warning::packaging over {len(tolerated)} missing reference(s): the "
               f"vendor dir will be incomplete and anything that needed them could not "
               f"load before packaging either. Load-test results stay comparable; the "
