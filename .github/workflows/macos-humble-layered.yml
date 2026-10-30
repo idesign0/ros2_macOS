@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       domains: ${{ steps.set.outputs.domains }}
+      brewcore: ${{ steps.brewcore.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with: { submodules: false }
@@ -53,6 +54,26 @@ jobs:
           else
             echo "domains=$(jq -R -s -c 'split("\n") | map(select(length>0))' ci/shards/_domains.txt)" >> "$GITHUB_OUTPUT"
           fi
+
+      # Resolve ONE homebrew-core commit for the whole run; every macOS job pins its tap to it.
+      # ls-remote rather than the REST API: no token, no rate limit, and it is the same ref brew
+      # itself tracks. A failure here is a warning, not an error -- the jobs then run unpinned
+      # exactly as they did before, and the skew check still gates them.
+      - id: brewcore
+        run: |
+          sha=""
+          for n in 1 2 3; do
+            sha=$(git ls-remote https://github.com/Homebrew/homebrew-core.git refs/heads/main \
+                  | awk '{print $1}')
+            [ -n "$sha" ] && break
+            echo "ls-remote attempt $n failed; retrying in $((n*10))s"; sleep $((n*10))
+          done
+          if [ -z "$sha" ]; then
+            echo "::warning::could not resolve homebrew-core HEAD; every job will fall back to its runner image tap"
+          else
+            echo "homebrew-core pinned for this run: $sha"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
   # The gz stack (protobuf v32 + the whole gz-macOS tree, built from source) is the single most
   # expensive thing in the pipeline (~2h cold). It used to run inside base-1, which -- together with
@@ -75,6 +96,7 @@ jobs:
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
           brew-state-publish: "true"
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
       - name: Restore gz-install cache
         id: gzcache
         uses: actions/cache@v4
@@ -162,7 +184,7 @@ jobs:
           retention-days: 2
 
   base-1:
-    needs: gz
+    needs: [plan, gz]
     runs-on: macos-26
     timeout-minutes: 360
     steps:
@@ -173,6 +195,7 @@ jobs:
           deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
       - name: Shard coverage diagnostics (non-fatal)
         run: |
           set +e
@@ -347,7 +370,7 @@ jobs:
           path: summaries
           retention-days: 5
   base-2a:
-    needs: base-1
+    needs: [plan, base-1]
     runs-on: macos-26
     timeout-minutes: 360
     steps:
@@ -358,6 +381,7 @@ jobs:
           deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
       - name: Fetch and extract install-base1
         env:
           GH_TOKEN: ${{ github.token }}
@@ -546,7 +570,7 @@ jobs:
           retention-days: 5
 
   base-2b:
-    needs: base-2a
+    needs: [plan, base-2a]
     runs-on: macos-26
     timeout-minutes: 360
     steps:
@@ -557,6 +581,7 @@ jobs:
           deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
       - name: Fetch and extract install-base2a
         env:
           GH_TOKEN: ${{ github.token }}
@@ -761,6 +786,7 @@ jobs:
           deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
       - name: Fetch and extract install-base
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1027,7 +1053,7 @@ jobs:
   # Validate changes here with .github/workflows/package-smoke-humble.yml, which does the
   # same thing against an already-built artifact in ~40 minutes instead of ~30 hours.
   package:
-    needs: assemble
+    needs: [plan, assemble]
     runs-on: macos-26
     timeout-minutes: 180
     env:
@@ -1040,6 +1066,7 @@ jobs:
           deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
       - name: Fetch the assembled tree
         run: |
           set -euo pipefail

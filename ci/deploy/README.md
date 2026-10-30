@@ -187,6 +187,36 @@ every tarball decays from the hour it is built, and `matched_packages.txt` never
 against this because it is an install LIST, not a constraint. That is the argument for
 vendoring, and it is also why the input to a packaging run has to be fresh.
 
+The drift is not only between a build and a later packaging run -- it happens WITHIN one
+run, between its own jobs. Measured 2026-10-30 on humble run 41083360164: `gz` and `base-1`
+disagreed on **91 of 379** formulae, including qtbase 6.12.0_2 vs 6.11.2_1 (plus 35 other
+`qt*`), dartsim 6.20.3 vs 6.20.0 and boost 1.92.0_1 vs 1.92.0. Jazzy run 41083372266 showed
+77. Both runs died in `base-1` at ~75 minutes.
+
+Two facts from that measurement decide the fix:
+
+* The pool is **heterogeneous at a single instant.** The `gz` jobs of the humble and jazzy
+  runs were launched in the same second and still disagreed on 12 of those formulae, so this
+  is not a rotation that can be waited out and a plain re-run is not reliably self-consistent.
+* **70 of the 91** drifted formulae were poured by the job itself (tap resolution), but **21
+  were not** -- openssl@3, harfbuzz, freetype, sqlite, python@3.14, ca-certificates and
+  friends ship pre-installed in the runner image, and `install_brew_packages.sh` skips
+  anything already present regardless of version.
+
+So prevention is two-part, both in `setup-ros2-macos`:
+
+| mechanism | covers | on failure |
+|---|---|---|
+| `brew-core-sha` -- `plan` resolves one homebrew-core commit per run via `git ls-remote`; every macOS job fetches that SHA (depth 1) and detaches its tap onto it | the 70 the job installs | warns, runs unpinned |
+| reconcile -- after pinning, any of `abseil protobuf qt@5 qtbase boost openssl@3 opencv@4 dartsim suite-sparse` already installed at a version the pinned tap disagrees with is reinstalled from it | the 21 image preinstalls, incl. openssl@3 | warns, leaves the image version |
+
+Downgrading is safe: every superseded bottle revision is retained in ghcr (checked
+2026-10-30 -- qtbase 6.11.2_1/6.12.0_2, openssl@3 3.5.9/3.6.5, dartsim 6.20.0/6.20.3 and
+boost 1.92.0/1.92.0_1 all return HTTP 200). The reconcile list is deliberately just the
+load-bearing set the skew check gates on; a full reconcile would reinstall ~300 formulae in
+each of 24 jobs. Pinning is prevention and the `brew-state-run` diff is detection -- keep
+both, because the pin is best-effort by design and must never kill a five-hour run.
+
 `package_tree.py` therefore classifies each missing reference:
 
 | class | test | meaning | flag that tolerates it |
