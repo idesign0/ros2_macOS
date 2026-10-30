@@ -105,7 +105,6 @@ hdf5 1.14.6
 highway 1.3.0
 hunspell 1.7.2
 hwloc 2.12.2_1
-icu4c@77 77.1
 icu4c@78 78.1
 imath 3.2.2
 ipopt 3.14.19
