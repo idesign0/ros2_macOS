@@ -6,10 +6,24 @@ name: Package smoke kilted (vendor + load test)
 # layered build.
 #
 # This is the only way to answer the question local testing cannot: whether the Homebrew
-# dylib closure is COMPLETE on the build's own brew. Locally 61 references do not resolve
-# (opencv@4 414 vs 413, dartsim 6.20 vs 6.19), so packaging has to run with
-# --allow-missing. Here it runs WITHOUT it, so a missing reference fails the job -- which
-# is exactly the abseil 2601 case that shipped 236 non-loadable dylibs.
+# dylib closure is COMPLETE on the build's own brew.
+#
+# It runs with --tolerate-stale-input, NOT --allow-missing. The subject of this job is the
+# PACKAGER, not the tree, and the two reasons a closure reference can be missing are not
+# equally interesting:
+#
+#   * the formula is installed at a newer version that dropped that soname -- Homebrew
+#     moved after the tree was built. The input artifact is stale. First run, 2026-10-29:
+#     a two-day-old kilted tree already wanted libdraco.9 and librealsense2.2.58 while
+#     core had draco 1.5.9 / librealsense 2.59.1, so the job failed before it could
+#     answer anything. Reported loudly here, then packaging continues: the consumers of
+#     those libs could not load BEFORE packaging either, so the before/after comparison
+#     stays honest.
+#   * the formula is not installed at all -- an undeclared dependency or a bad closure
+#     walk. Still fatal. No flag in this job tolerates it.
+#
+# The `package` job in macos-<distro>-layered.yml stays strict, with neither flag. It runs
+# in the same run as the build, so a stale input there is a real failure worth stopping on.
 #
 # The gate is LOAD SUCCESS, not "zero /opt/homebrew references". That weaker check passed
 # on a tree with 20 broken libraries: brew dylibs reach their siblings through @rpath
@@ -94,11 +108,18 @@ jobs:
       - name: Load-test a sample BEFORE packaging
         run: |
           set -uo pipefail
+          # Prints the reason on stdout when LOADONE_WHY=1, so a failure is attributable:
+          # a missing Homebrew dylib and a plugin that merely needs its host process
+          # already loaded are both "failed to load" and mean completely different things.
+          # The dyld step below deliberately does NOT set it -- an error string containing
+          # a brew path would otherwise be counted as a runtime load.
           cat > /tmp/loadone.py <<'PY'
-          import ctypes, sys
+          import ctypes, os, sys
           try:
               ctypes.CDLL(sys.argv[1])
-          except Exception:
+          except Exception as e:
+              if os.environ.get("LOADONE_WHY") == "1":
+                  print(str(e).replace("\n", " ")[:300])
               sys.exit(1)
           sys.exit(0)
           PY
@@ -112,20 +133,39 @@ jobs:
           awk -v n="$N" 'NR % n == 1' /tmp/all_dylibs.txt | head -${{ inputs.sample }} > /tmp/sample.txt
           echo "sampled: $(wc -l < /tmp/sample.txt | tr -d ' ')"
           ok=0; fail=0
+          : > /tmp/why_before.txt
           while read -r f; do
-            if python3 -I /tmp/loadone.py "$f"; then ok=$((ok+1)); else fail=$((fail+1)); echo "$f" >> /tmp/failed_before.txt; fi
+            if why=$(LOADONE_WHY=1 python3 -I /tmp/loadone.py "$f"); then
+              ok=$((ok+1))
+            else
+              fail=$((fail+1))
+              echo "$f" >> /tmp/failed_before.txt
+              printf '%s\t%s\n' "$f" "$why" >> /tmp/why_before.txt
+            fi
           done < /tmp/sample.txt
           echo "BEFORE: loaded=$ok failed=$fail"
           echo "before_ok=$ok" >> "$GITHUB_ENV"
           touch /tmp/failed_before.txt
+          # Why they failed. A pre-existing failure is only alarming if it is the first kind.
+          brewmiss=$(grep -c 'Library not loaded: /opt/homebrew' /tmp/why_before.txt || true)
+          symmiss=$(grep -c 'symbol not found' /tmp/why_before.txt || true)
+          echo "  of those, missing a Homebrew dylib      : $brewmiss  (brew drift -- real)"
+          echo "  of those, unresolved symbol             : $symmiss  (needs its host process -- expected in isolation)"
+          echo "  of those, other                         : $(( fail - brewmiss - symmiss ))"
+          if [ "$brewmiss" -gt 0 ]; then
+            echo "  Homebrew dylibs the tree wants but cannot load:"
+            grep -o 'Library not loaded: /opt/homebrew/opt/[^ ]*' /tmp/why_before.txt \
+              | sed -E 's|.*/opt/homebrew/opt/||' | sort -u | sed 's/^/    /'
+          fi
 
-      - name: Package (vendor + rpaths) -- no --allow-missing
+      - name: Package (vendor + rpaths) -- strict except for a stale input tree
         run: |
           set -uo pipefail
           # The prefix the tree will occupy once installed. The current tap ships one monolithic
           # keg per distro, so that is ros2-<distro>; a split layout would use ros2-<distro>-base.
           python3 -I ci/deploy/package_tree.py install \
-            --install-prefix "/opt/homebrew/opt/ros2-kilted"
+            --install-prefix "/opt/homebrew/opt/ros2-kilted" \
+            --tolerate-stale-input
           rc=$?
           echo "package_tree exit=$rc"
           if [ -d install/vendor/lib ]; then
@@ -141,8 +181,15 @@ jobs:
           sudo ln -sfn "$PWD/install/vendor" "/opt/homebrew/opt/ros2-kilted/vendor"
           ok=0; fail=0
           : > /tmp/failed_after.txt
+          : > /tmp/why_after.txt
           while read -r f; do
-            if python3 -I /tmp/loadone.py "$f"; then ok=$((ok+1)); else fail=$((fail+1)); echo "$f" >> /tmp/failed_after.txt; fi
+            if why=$(LOADONE_WHY=1 python3 -I /tmp/loadone.py "$f"); then
+              ok=$((ok+1))
+            else
+              fail=$((fail+1))
+              echo "$f" >> /tmp/failed_after.txt
+              printf '%s\t%s\n' "$f" "$why" >> /tmp/why_after.txt
+            fi
           done < /tmp/sample.txt
           echo "AFTER:  loaded=$ok failed=$fail   (BEFORE loaded=${before_ok:-?})"
           # A regression is a dylib that loaded BEFORE and does not load now. That is the gate:
@@ -152,14 +199,10 @@ jobs:
           echo "REGRESSIONS: $n"
           if [ "$n" -gt 0 ]; then
             sed 's/^/  /' /tmp/regressions.txt
-            for f in $(head -3 /tmp/regressions.txt); do
+            while read -r f; do
               echo "--- why: $f"
-              python3 -I -c "
-          import ctypes,sys
-          try: ctypes.CDLL(sys.argv[1])
-          except OSError as e: print('   ', str(e).split(chr(10))[0][:220])
-          " "$f"
-            done
+              grep -F "$f" /tmp/why_after.txt | cut -f2- | sed 's/^/    /' || true
+            done < <(head -5 /tmp/regressions.txt)
             echo "::error::$n dylib(s) loaded before packaging and do not load after"
             exit 1
           fi
@@ -188,6 +231,7 @@ jobs:
         run: |
           mkdir -p report
           cp /tmp/sample.txt /tmp/failed_before.txt /tmp/failed_after.txt /tmp/regressions.txt \
+             /tmp/why_before.txt /tmp/why_after.txt \
              /tmp/dyld_formulae.txt report/ 2>/dev/null || true
           ls -la report | sed 's/^/  /'
       - uses: actions/upload-artifact@v4
