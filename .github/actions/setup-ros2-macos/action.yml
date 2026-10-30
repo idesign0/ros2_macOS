@@ -14,6 +14,14 @@ inputs:
   brew-base-formulae:
     description: Space-separated base Homebrew formulae for this distro.
     required: true
+  brew-core-sha:
+    description: >
+      The single homebrew-core commit every job of this run pins its tap to, supplied by the
+      plan job. Empty means no pin: each job then resolves formulae against the tap baked into
+      its own runner image, which is exactly how they drifted apart. Best-effort -- if the pin
+      cannot be applied the job continues unpinned and the skew check below still catches it.
+    required: false
+    default: ""
   brew-state-publish:
     description: >
       "true" in the FIRST job of a run that installs Homebrew (gz). That job's
@@ -178,6 +186,81 @@ runs:
         echo "HOMEBREW_MAKE_JOBS=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
         echo "HOMEBREW_CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
 
+    # Pin homebrew-core so all 24 macOS jobs of a run resolve formulae from ONE snapshot.
+    #
+    # Measured 2026-10-30. gz vs base-1 of humble run 41083360164 disagreed on 91 of 379
+    # formulae -- qtbase 6.12.0_2 vs 6.11.2_1 (and 35 other qt*), dartsim 6.20.3 vs 6.20.0,
+    # boost 1.92.0_1 vs 1.92.0. Worse, the gz jobs of the humble and jazzy runs were launched
+    # in the SAME SECOND and still disagreed on 12 of those formulae, so this is not a rotation
+    # you can wait out: the image pool holds several homebrew-core generations at once and which
+    # one a job draws is luck. That is the mechanism behind the 236 non-dlopen-able abseil dylibs
+    # and jazzy's 16 suite-sparse failures.
+    #
+    # Best-effort on purpose: a DNS blip here must not kill a 5-hour run, and the skew check
+    # further down is the hard gate. Pin = prevention, gate = detection; keep both.
+    - name: Pin homebrew-core to this run's commit
+      if: inputs.brew-core-sha != ''
+      shell: bash
+      run: |
+        set -uo pipefail
+        SHA='${{ inputs.brew-core-sha }}'
+        core="$(brew --repo homebrew/core 2>/dev/null || true)"
+        [ -n "$core" ] || core=/opt/homebrew/Library/Taps/homebrew/homebrew-core
+        if [ ! -d "$core/.git" ]; then
+          echo "::warning::homebrew-core is not a git tap at $core -- continuing unpinned"
+          exit 0
+        fi
+        before="$(git -C "$core" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+        ok=0
+        for n in 1 2 3; do
+          if git -C "$core" fetch --depth=1 --no-tags origin "$SHA"; then ok=1; break; fi
+          echo "fetch attempt $n failed (transient?); retrying in $((n*15))s"
+          sleep $((n*15))
+        done
+        if [ "$ok" != 1 ]; then
+          echo "::warning::could not fetch homebrew-core $SHA -- continuing on the image tap ($before)"
+          exit 0
+        fi
+        git -C "$core" checkout -q --detach FETCH_HEAD \
+          || git -C "$core" reset --hard -q FETCH_HEAD
+        echo "homebrew-core: $before -> $(git -C "$core" rev-parse --short HEAD) (pinned for this run)"
+
+    # Pinning the tap only governs what this job INSTALLS, and that is not everything.
+    # Of the 91 formulae that drifted on humble run 41083360164, 21 were never poured by the
+    # job at all -- openssl@3, harfbuzz, freetype, sqlite, python@3.14, ca-certificates and
+    # friends ship pre-installed in the runner image, and install_brew_packages.sh skips
+    # anything already present REGARDLESS of version ("already installed"). The image's copy
+    # would therefore survive the pin and keep drifting; openssl@3 (3.5.9 vs 3.6.5) is one of
+    # the four load-bearing hits that failed humble and jazzy.
+    #
+    # So reconcile exactly the formulae whose mismatch is FATAL -- the same set the skew check
+    # gates on. brew downgrades happily here because the bottle for a superseded revision stays
+    # in ghcr: checked 2026-10-30, every one of qtbase 6.11.2_1/6.12.0_2, openssl@3 3.5.9/3.6.5,
+    # dartsim 6.20.0/6.20.3 and boost 1.92.0/1.92.0_1 returns HTTP 200. Everything else only
+    # warns, so leaving it on the image's version matches the existing policy and keeps this
+    # step short -- a full reconcile would reinstall ~300 formulae in every one of 24 jobs.
+    - name: Reconcile load-bearing formulae with the pinned tap
+      if: inputs.brew-core-sha != ''
+      shell: bash
+      run: |
+        set -uo pipefail
+        for f in abseil protobuf qt@5 qtbase boost openssl@3 opencv@4 dartsim suite-sparse; do
+          have="$(brew list --formula --versions "$f" 2>/dev/null || true)"
+          # Not installed: the install steps below will resolve it from the pinned tap anyway.
+          [ -n "$have" ] || continue
+          want="$(brew info --json=v2 "$f" 2>/dev/null \
+            | jq -r '.formulae[0] | (.versions.stable // "") as $v
+                     | if (.revision // 0) > 0 then "\($v)_\(.revision)" else $v end' \
+            || true)"
+          [ -n "$want" ] && [ "$want" != "null" ] || continue
+          # `brew list --versions` can list SEVERAL versions on one line (suite-sparse does).
+          # Treat the pin as satisfied if the wanted version is among them.
+          case " $have " in *" $want "*) continue ;; esac
+          echo "reconciling $f: installed [$have] -> pinned $want"
+          brew reinstall --formula "$f" \
+            || echo "::warning::could not reconcile $f to the pinned $want"
+        done
+
     - name: Update Homebrew and install base packages
       shell: bash
       run: |
@@ -219,7 +302,13 @@ runs:
         # same run. That is precisely how formulae drift between jobs of one run, as the
         # comment above already said. Each macOS job is a separate runner (24 of them on
         # kilted: gz + 2 base + 21 domain shards), so with this gone every job resolves
-        # against the tap baked into its runner image and a run stays self-consistent.
+        # against the tap baked into its runner image.
+        #
+        # That is NOT by itself enough to make a run self-consistent, as this comment used to
+        # claim. The runner images are not uniform: humble run 41083360164 had gz and base-1
+        # disagree on 91 of 379 formulae, and two gz jobs launched in the same second disagreed
+        # on 12. Removing `brew update` stops US from moving the tap mid-run; the
+        # `brew-core-sha` pin above is what makes the jobs agree with EACH OTHER.
         #
         # Nothing about package freshness is lost: the versions a job installs come from
         # that tap either way, and HOMEBREW_NO_AUTO_UPDATE=1 is set regardless. Freshness
@@ -329,11 +418,16 @@ runs:
 
         hot = [n for n, _, _ in changed if n in LOAD_BEARING]
         if hot:
+            # Deliberately NOT "just re-run": two gz jobs launched in the same second
+            # disagreed on 12 formulae (2026-10-30), so a fresh run is not reliably
+            # self-consistent. If brew-core-sha was supplied, the pin is what failed or was
+            # skipped -- look for the "Pin homebrew-core" warning in this job's log first.
             print(f"::error::Homebrew moved under this run: {', '.join(hot)} changed "
                   f"version since the baseline job. Anything already built links the "
                   f"baseline version by absolute path, so this job's output cannot be "
-                  f"combined with it. Re-run the workflow -- a fresh run is self-"
-                  f"consistent. This is not a code failure.")
+                  f"combined with it. Check whether the homebrew-core pin applied in this "
+                  f"job and in the baseline job; a plain re-run is NOT guaranteed to be "
+                  f"self-consistent. This is not a code failure.")
             sys.exit(1)
         print("::warning::Homebrew differs from the run baseline, but no load-bearing "
               "formula changed version. Continuing; see the table above if something "
