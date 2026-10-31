@@ -224,6 +224,10 @@ runs:
         git -C "$core" checkout -q --detach FETCH_HEAD \
           || git -C "$core" reset --hard -q FETCH_HEAD
         echo "homebrew-core: $before -> $(git -C "$core" rev-parse --short HEAD) (pinned for this run)"
+        # Tells the skew check below it may be STRICT. Without this marker the check falls
+        # back to the 9 load-bearing names, because unpinned wide drift is expected and
+        # failing on all of it would block every run.
+        echo "BREW_PINNED=$SHA" >> "$GITHUB_ENV"
 
     # Pinning the tap only governs what this job INSTALLS, and that is not everything.
     # Of the 91 formulae that drifted on humble run 41083360164, 21 were never poured by the
@@ -239,27 +243,110 @@ runs:
     # dartsim 6.20.0/6.20.3 and boost 1.92.0/1.92.0_1 returns HTTP 200. Everything else only
     # warns, so leaving it on the image's version matches the existing policy and keeps this
     # step short -- a full reconcile would reinstall ~300 formulae in every one of 24 jobs.
-    - name: Reconcile load-bearing formulae with the pinned tap
+    # Converge this job's Homebrew onto the pinned tap, for EVERY formula the workspace
+    # names -- not just the load-bearing few.
+    #
+    # Why the whole list. Pinning the tap only governs what a job INSTALLS. 21 of the 91
+    # formulae that drifted on humble run 41083360164 were never poured by the job at all:
+    # they ship pre-installed in the runner image, and install_brew_packages.sh skips
+    # anything already present REGARDLESS of version. The pinned runs on 2026-10-31 proved
+    # the residue is real -- humble gz and jazzy gz, both pinned to 4076b8a4, still ended up
+    # with icu4c@78 78.3 vs 78.3_1 and python@3.14 3.14.8_2 vs 3.14.10, purely from their
+    # images. Reconciling only 9 names leaves that in place.
+    #
+    # Why it matters even though the reference carries no version. A Mach-O records
+    # /opt/homebrew/opt/<formula>/lib/<soname> -- 452 of 468 references in a sample, with no
+    # version in the path. So a shard built against harfbuzz 14.6.0 and one built against
+    # 15.0.0_1 record the SAME string, assemble merges them, and both bind to whichever copy
+    # the packaging machine has. Nothing errors. The ABI mismatch is already compiled into
+    # the object code, so vendoring cannot fix it either -- only building every shard against
+    # the same versions can. Demonstrated locally: a caller built against a struct of
+    # {width,height} and run against {depth,width,height} under the same soname returned 0
+    # instead of 12, exit code 0, no diagnostic. abseil is only LOUDER than that because its
+    # soname carries the version (2601 vs 2608), which is why it surfaced as the missing
+    # symbol in homebrew-ros2 issue 3 instead of silently wrong numbers.
+    #
+    # Batched brew info: one call per 80 names, not 379 separate processes.
+    # Downgrades are safe -- every superseded bottle revision stays in ghcr (checked
+    # 2026-10-30: qtbase 6.11.2_1/6.12.0_2, openssl@3 3.5.9/3.6.5, dartsim 6.20.0/6.20.3,
+    # boost 1.92.0/1.92.0_1 all return HTTP 200).
+    - name: Converge Homebrew onto the pinned tap
       if: inputs.brew-core-sha != ''
       shell: bash
       run: |
         set -uo pipefail
-        for f in abseil protobuf qt@5 qtbase boost openssl@3 opencv@4 dartsim suite-sparse; do
-          have="$(brew list --formula --versions "$f" 2>/dev/null || true)"
-          # Not installed: the install steps below will resolve it from the pinned tap anyway.
-          [ -n "$have" ] || continue
-          want="$(brew info --json=v2 "$f" 2>/dev/null \
-            | jq -r '.formulae[0] | (.versions.stable // "") as $v
-                     | if (.revision // 0) > 0 then "\($v)_\(.revision)" else $v end' \
-            || true)"
-          [ -n "$want" ] && [ "$want" != "null" ] || continue
-          # `brew list --versions` can list SEVERAL versions on one line (suite-sparse does).
-          # Treat the pin as satisfied if the wanted version is among them.
-          case " $have " in *" $want "*) continue ;; esac
-          echo "reconciling $f: installed [$have] -> pinned $want"
-          brew reinstall --formula "$f" \
-            || echo "::warning::could not reconcile $f to the pinned $want"
+        LIST=brew-packages/matched_packages.txt
+        if [ ! -f "$LIST" ]; then
+          echo "::warning::$LIST missing -- skipping convergence"
+          exit 0
+        fi
+        awk '{print $1}' "$LIST" | sort -u > /tmp/want_names.txt
+        : > /tmp/want_versions.tsv
+        split -l 80 /tmp/want_names.txt /tmp/wbatch_
+        for b in /tmp/wbatch_*; do
+          brew info --json=v2 $(cat "$b") 2>/dev/null \
+            | jq -r '.formulae[] | [.name,
+                       (.versions.stable // "") +
+                       (if (.revision // 0) > 0 then "_" + ((.revision)|tostring) else "" end)]
+                     | @tsv' >> /tmp/want_versions.tsv || true
         done
+        brew list --formula --versions 2>/dev/null > /tmp/have_versions.txt || true
+        echo "  pinned tap knows $(wc -l < /tmp/want_versions.tsv | tr -d ' ') of the "\
+             "$(wc -l < /tmp/want_names.txt | tr -d ' ') named formulae"
+
+        # Decide what to reinstall. A formula is fine if the pinned version is among the
+        # versions already installed; absent formulae are left to the install steps below.
+        python3 -I - <<'PY' > /tmp/to_reconcile.txt
+        want = {}
+        for line in open("/tmp/want_versions.tsv"):
+            p = line.rstrip("\n").split("\t")
+            if len(p) == 2 and p[1]:
+                want[p[0]] = p[1]
+        for line in open("/tmp/have_versions.txt"):
+            f = line.split()
+            if not f:
+                continue
+            name, have = f[0], set(f[1:])
+            w = want.get(name)
+            if w and w not in have:
+                print("%s\t%s\t%s" % (name, " ".join(sorted(have)), w))
+        PY
+
+        n=$(wc -l < /tmp/to_reconcile.txt | tr -d ' ')
+        echo "  $n installed formula(e) disagree with the pinned tap"
+        while IFS=$'\t' read -r f have w; do
+          [ -n "$f" ] || continue
+          echo "  reconciling $f: installed [$have] -> pinned $w"
+          brew reinstall --formula "$f" \
+            || echo "::warning::could not reconcile $f to the pinned $w"
+        done < /tmp/to_reconcile.txt
+
+        # Prune superseded kegs so each formula reports ONE version. Two reasons:
+        # the state file is compared as text, so "1.1.0 1.1.1" here vs "1.1.1" in the
+        # baseline would read as skew forever; and rpath_refs() in package_tree.py calls
+        # realpath, which turns an opt/ path into Cellar/<version>/ -- the one route by
+        # which a stale keg can enter the vendored closure.
+        # `brew cleanup <f>` is not usable here: it SKIPS a formula whose newest tap version
+        # is not installed ("Skipping libssh2: most recent version 1.11.1_7 not installed"),
+        # which is exactly our case when the pin is behind tip. Remove the non-linked kegs
+        # directly, which is what cleanup does internally, and only ever the ones that
+        # /opt/homebrew/opt/<f> does NOT point at.
+        pruned=0
+        while read -r f rest; do
+          case "$rest" in *" "*) ;; *) continue ;; esac   # only multi-version formulae
+          link="/opt/homebrew/opt/$f"
+          [ -L "$link" ] || continue
+          keep="$(basename "$(readlink "$link")")"
+          [ -n "$keep" ] || continue
+          [ -d "/opt/homebrew/Cellar/$f/$keep" ] || continue
+          for d in /opt/homebrew/Cellar/"$f"/*/; do
+            v="$(basename "$d")"
+            [ "$v" = "$keep" ] && continue
+            echo "  pruning superseded keg $f/$v (keeping $keep)"
+            rm -rf "$d" && pruned=$((pruned+1))
+          done
+        done < <(brew list --formula --versions 2>/dev/null)
+        echo "  pruned $pruned superseded keg(s)"
 
     - name: Update Homebrew and install base packages
       shell: bash
@@ -385,6 +472,23 @@ runs:
             "opencv@4", "dartsim", "suite-sparse",
         }
 
+        # Formulae the build does not LINK: command-line tools and trust stores. A version
+        # change in these cannot produce an ABI mismatch in the merged tree, so they stay
+        # advisory even in strict mode. Everything else the workspace names is treated as
+        # linkable, because a reference records no version (452 of 468 sampled references are
+        # the version-free /opt/homebrew/opt/<f>/lib/<soname> form) and a mismatch between two
+        # shards is therefore silent at merge time.
+        NOT_LINKED = {
+            "gh", "git-lfs", "pre-commit", "nmap", "clang-format", "gnupg",
+            "ca-certificates", "certifi", "coreutils",
+        }
+
+        # STRICT only when the pin actually applied in this job. Unpinned, wide drift is the
+        # norm (91 of 379 on humble 41083360164), and failing on all of it would block every
+        # run; pinned, the convergence step should leave nothing, so anything that remains is
+        # a real anomaly worth stopping for.
+        PINNED = bool(os.environ.get("BREW_PINNED"))
+
         def read(path):
             out = {}
             with open(path) as fh:
@@ -416,7 +520,14 @@ runs:
         if added:
             print(f"  HERE, NOT IN BASELINE ({len(added)}): {', '.join(added)}")
 
-        hot = [n for n, _, _ in changed if n in LOAD_BEARING]
+        if PINNED:
+            hot = [n for n, _, _ in changed if n not in NOT_LINKED]
+            mode = ("strict (homebrew-core pinned to %s)"
+                    % os.environ.get("BREW_PINNED", "")[:11])
+        else:
+            hot = [n for n, _, _ in changed if n in LOAD_BEARING]
+            mode = "advisory (no homebrew-core pin in this job)"
+        print(f"  gate mode: {mode}")
         if hot:
             # Deliberately NOT "just re-run": two gz jobs launched in the same second
             # disagreed on 12 formulae (2026-10-30), so a fresh run is not reliably
@@ -429,8 +540,8 @@ runs:
                   f"job and in the baseline job; a plain re-run is NOT guaranteed to be "
                   f"self-consistent. This is not a code failure.")
             sys.exit(1)
-        print("::warning::Homebrew differs from the run baseline, but no load-bearing "
-              "formula changed version. Continuing; see the table above if something "
+        print("::warning::Homebrew differs from the run baseline, but nothing the build "
+              "links changed version. Continuing; see the table above if something "
               "downstream fails to find a library.")
         PY
         python3 -I /tmp/brewdiff.py "$BASE" brew-state.txt
