@@ -20,8 +20,12 @@ makes the stale-reference repair unnecessary:
 ABSOLUTE rpaths, not @loader_path: that is what the existing post_install settled on for
 exactly the dlopen reason above, and the files here sit at many different depths.
 
-Flat vendor dir is safe: measured across base + all 21 kilted domains, the 478-dylib
-closure has 478 distinct basenames, zero collisions.
+Flat vendor dir: measured across base + all 21 kilted domains, the 478-dylib closure had
+478 distinct basenames. That is NOT guaranteed -- a formula whose soname omits the version
+(libcrypto.3.dylib, libdart.6.19.dylib) would put two versions on one filename, unlike
+abseil whose soname carries it (libabsl_hash.2608.0.0.dylib). Step 1 now refuses to package
+when two DIFFERENT dylibs claim one basename, and reports same-file duplicates (the
+opt/ vs realpath'd Cellar/ routes) as collapsed instead.
 
 Run it in the `assemble` job between "Merge shard deltas" and "Pack full workspace
 install".
@@ -295,14 +299,43 @@ def main():
     # ---- 1. vendor
     os.makedirs(vendor_abs, exist_ok=True)
     base_of = {}
+    claimed = {}          # basename -> the source path that produced the vendored copy
+    collisions = []       # (basename, first src, second src) with DIFFERENT contents
     for src in present:
         b = os.path.basename(src)
         dst = os.path.join(vendor_abs, b)
+        if b in claimed:
+            # The vendor dir is FLAT, so two sources with one basename are one file. That is
+            # fine when they are the same physical dylib reached by two routes -- refs_of()
+            # yields /opt/homebrew/opt/... while rpath_refs() realpaths to
+            # /opt/homebrew/Cellar/... -- and a silent ABI swap when they are not.
+            # Soname decides which: libabsl_hash.2608.0.0.dylib carries its version, so two
+            # abseils coexist as two files; libcrypto.3.dylib and libdart.6.19.dylib do not,
+            # so two versions would land on one name and every consumer would be rewritten to
+            # whichever arrived first. Proven locally with two installed libssh2 kegs: both
+            # ship libssh2.1.dylib with different md5s. Refuse rather than ship that.
+            if os.path.realpath(claimed[b]) != os.path.realpath(src):
+                collisions.append((b, claimed[b], src))
+            continue
+        claimed[b] = src
         if not os.path.exists(dst):
             shutil.copy2(src, dst)
             os.chmod(dst, 0o755)
         base_of[src] = b
-    print(f"  vendored             : {len(base_of)} dylibs into {a.vendor_subdir}", flush=True)
+
+    if collisions:
+        print(f"::error::{len(collisions)} basename collision(s) in the flat vendor dir: two "
+              f"DIFFERENT dylibs share one filename, so vendoring would bind every consumer "
+              f"of that name to whichever was copied first -- a silent ABI swap. Refusing to "
+              f"package.")
+        for b, first, second in collisions[:20]:
+            print(f"     {b}\n        kept    {first}\n        dropped {second}")
+        sys.exit(1)
+
+    dupes = len(present) - len(claimed)
+    print(f"  vendored             : {len(claimed)} dylibs into {a.vendor_subdir}"
+          + (f" ({dupes} duplicate path(s) of the same file collapsed)" if dupes else ""),
+          flush=True)
 
     vendored = [os.path.join(vendor_abs, b) for b in sorted(set(base_of.values()))]
 
