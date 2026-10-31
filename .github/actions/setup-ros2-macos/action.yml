@@ -280,7 +280,13 @@ runs:
           echo "::warning::$LIST missing -- skipping convergence"
           exit 0
         fi
-        awk '{print $1}' "$LIST" | sort -u > /tmp/want_names.txt
+        # Same union the state file uses: formulae we install, plus ones we only LINK
+        # (simdjson, openssl@4). Convergence skips anything not installed, so naming a
+        # link-only formula here can never cause it to be installed.
+        { awk '{print $1}' "$LIST"
+          [ -f brew-packages/also_linked.txt ] \
+            && grep -vE '^\s*(#|$)' brew-packages/also_linked.txt | awk '{print $1}'
+        } | sort -u > /tmp/want_names.txt
         : > /tmp/want_versions.tsv
         split -l 80 /tmp/want_names.txt /tmp/wbatch_
         for b in /tmp/wbatch_*; do

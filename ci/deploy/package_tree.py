@@ -7,7 +7,7 @@ Does, at BUILD time, the two jobs the formula's post_install used to do at INSTA
 set of built-in actions, so custom Ruby there has no future), plus the vendoring that
 makes the stale-reference repair unnecessary:
 
-  1. VENDOR  -- copy every Homebrew dylib in the tree's transitive closure into
+  1. VENDOR  -- copy every Homebrew dylib AND framework bundle in the tree's closure into
                 <tree>/vendor/lib, rewrite each reference to @rpath/<basename>, and give
                 every mach-o an absolute rpath to that directory. After this the tree
                 references no /opt/homebrew/opt path at all, so it cannot be broken by the
@@ -39,8 +39,35 @@ Usage:
 import argparse, collections, json, os, re, shutil, subprocess, sys
 
 HB = "/opt/homebrew/opt"
-REF = re.compile(rf"{re.escape(HB)}/([^/]+)/(\S+\.(?:dylib|so))")
+# A reference is either a plain dylib/so, or a binary INSIDE a .framework bundle. Qt is
+# the reason the second alternative exists: qt@5 ships 72 frameworks and ZERO dylibs, so a
+# dylib-only pattern never matched Qt at all, nothing Qt-related was ever vendored, and the
+# shipped tree kept pointing at /opt/homebrew/opt/qt@5/.... That is why qt@5 was still
+# loading from Homebrew after packaging in smoke run 41055576065, and it means RViz, rqt and
+# gz-gui stayed exposed to the user's Qt version exactly as gz-sim was to abseil.
+REF = re.compile(
+    rf"{re.escape(HB)}/([^/]+)/(\S+\.(?:dylib|so)|\S*?[^/]+\.framework/\S+)")
 MACHO_EXT = (".dylib", ".so", ".bundle")
+
+# .../QtCore.framework/Versions/5/QtCore -> (framework dir, "QtCore", "Versions/5/QtCore")
+FW = re.compile(r"^(?P<fwdir>.*?/(?P<name>[^/]+)\.framework)/(?P<rest>.+)$")
+
+
+def fw_parts(p):
+    m = FW.match(p)
+    return (m.group("fwdir"), m.group("name"), m.group("rest")) if m else None
+
+
+def rpath_name(p):
+    """What this reference becomes under @rpath. A framework keeps its bundle-relative
+    path, because dyld resolves @rpath/QtCore.framework/Versions/5/QtCore against the
+    rpath -- flattening it to the bare basename would break the bundle layout and the
+    Resources/Info.plist lookups that come with it."""
+    f = fw_parts(p)
+    if f:
+        _, name, rest = f
+        return f"{name}.framework/{rest}"
+    return os.path.basename(p)
 
 
 def run(cmd):
@@ -301,7 +328,25 @@ def main():
     base_of = {}
     claimed = {}          # basename -> the source path that produced the vendored copy
     collisions = []       # (basename, first src, second src) with DIFFERENT contents
+    claimed_fw = {}      # "QtCore.framework" -> the source bundle dir it came from
     for src in present:
+        fp = fw_parts(src)
+        if fp:
+            # Copy the ENTIRE bundle once (symlinks preserved: Versions/Current is one,
+            # and Qt's own dylib-style aliases depend on it), then treat the binary inside
+            # it as the vendored file for every later step.
+            fwdir, name, rest = fp
+            key = f"{name}.framework"
+            if key in claimed_fw:
+                if os.path.realpath(claimed_fw[key]) != os.path.realpath(fwdir):
+                    collisions.append((key, claimed_fw[key], fwdir))
+            else:
+                claimed_fw[key] = fwdir
+                dstdir = os.path.join(vendor_abs, key)
+                if not os.path.exists(dstdir):
+                    shutil.copytree(fwdir, dstdir, symlinks=True)
+            base_of[src] = f"{key}/{rest}"
+            continue
         b = os.path.basename(src)
         dst = os.path.join(vendor_abs, b)
         if b in claimed:
@@ -332,8 +377,11 @@ def main():
             print(f"     {b}\n        kept    {first}\n        dropped {second}")
         sys.exit(1)
 
-    dupes = len(present) - len(claimed)
-    print(f"  vendored             : {len(claimed)} dylibs into {a.vendor_subdir}"
+    dupes = len(present) - len(claimed) - sum(
+        1 for p in present if fw_parts(p))
+    print(f"  vendored             : {len(claimed)} dylibs"
+          + (f" + {len(claimed_fw)} framework bundle(s)" if claimed_fw else "")
+          + f" into {a.vendor_subdir}"
           + (f" ({dupes} duplicate path(s) of the same file collapsed)" if dupes else ""),
           flush=True)
 
@@ -341,7 +389,10 @@ def main():
 
     # vendored copies: own install_name -> @rpath, and their refs rewritten too
     for v in vendored:
-        run(["install_name_tool", "-id", f"@rpath/{os.path.basename(v)}", v])
+        # relpath, not basename: a framework binary's id must stay bundle-relative
+        # (@rpath/QtCore.framework/Versions/5/QtCore). For a plain dylib the two are equal.
+        run(["install_name_tool", "-id",
+             f"@rpath/{os.path.relpath(v, vendor_abs)}", v])
 
     # ---- 1b. in-tree COPIES of brew dylibs carry the brew path as their OWN
     # install_name (LC_ID_DYLIB). The tree ships such copies deliberately -- the
@@ -355,7 +406,7 @@ def main():
         own = out[1].strip() if len(out) >= 2 else ""
         if own.startswith(HB):
             if run(["install_name_tool", "-id",
-                    f"@rpath/{os.path.basename(p)}", p]).returncode == 0:
+                    f"@rpath/{rpath_name(p)}", p]).returncode == 0:
                 reid += 1
     print(f"  re-identified         : {reid} in-tree copies of brew dylibs", flush=True)
 
@@ -372,7 +423,7 @@ def main():
                 # never rewrite a reference we could not vendor -- that converts a
                 # resolvable absolute path into a dangling @rpath
                 continue
-            cmd += ["-change", r, f"@rpath/{os.path.basename(r)}"]
+            cmd += ["-change", r, f"@rpath/{rpath_name(r)}"]
         if len(cmd) == 1:
             continue
         cmd.append(p)
