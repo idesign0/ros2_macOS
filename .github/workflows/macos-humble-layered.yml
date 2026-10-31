@@ -62,16 +62,30 @@ jobs:
       - id: brewcore
         run: |
           sha=""
-          for n in 1 2 3; do
-            sha=$(git ls-remote https://github.com/Homebrew/homebrew-core.git refs/heads/main \
-                  | awk '{print $1}')
-            [ -n "$sha" ] && break
-            echo "ls-remote attempt $n failed; retrying in $((n*10))s"; sleep $((n*10))
-          done
-          if [ -z "$sha" ]; then
-            echo "::warning::could not resolve homebrew-core HEAD; every job will fall back to its runner image tap"
+          PINFILE=ci/homebrew-core.sha
+          if [ -f "$PINFILE" ]; then
+            sha=$(grep -oE '^[0-9a-f]{40}' "$PINFILE" | head -1 || true)
+          fi
+          if [ -n "$sha" ]; then
+            echo "homebrew-core pinned from $PINFILE: $sha"
           else
-            echo "homebrew-core pinned for this run: $sha"
+            # Falling back to tip is CORRECT but costly: brew-state.txt feeds the gz-install
+            # cache key, and homebrew-core moves many times a day, so a tip-derived pin makes
+            # that key change every run and gz rebuilds cold (~2.5h) every time. The committed
+            # file is what keeps the pin -- and therefore the cache -- stable between the
+            # weekly update-brew.yml refreshes.
+            echo "::warning::no 40-hex SHA in $PINFILE -- falling back to homebrew-core tip; expect a cold gz rebuild this run"
+            for n in 1 2 3; do
+              sha=$(git ls-remote https://github.com/Homebrew/homebrew-core.git refs/heads/main \
+                    | awk '{print $1}')
+              [ -n "$sha" ] && break
+              echo "ls-remote attempt $n failed; retrying in $((n*10))s"; sleep $((n*10))
+            done
+            if [ -z "$sha" ]; then
+              echo "::warning::could not resolve homebrew-core HEAD either; every job falls back to its runner image tap"
+            else
+              echo "homebrew-core pinned for this run (from tip): $sha"
+            fi
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
@@ -97,12 +111,45 @@ jobs:
           brew-base-formulae: ${{ env.BREW_BASE }}
           brew-state-publish: "true"
           brew-core-sha: ${{ needs.plan.outputs.brewcore }}
+      # Resolve the gz-macOS revision BEFORE the cache lookup, so it can go into the key.
+      #
+      # The key used to carry only GZ_VERSION, which is the BRANCH NAME ("ionic"/"harmonic")
+      # and does not change when the branch advances. The build step is skipped on a cache
+      # hit, so every gz-macOS commit after a cached build was silently absent from the
+      # tree, and the only guard was remembering to bump the trailing -vN by hand. Until now
+      # that was masked: brew-state.txt moved constantly, so the key changed every run and gz
+      # always rebuilt. Pinning homebrew-core to a committed SHA restores cache hits and would
+      # have turned that masking off, so the revision has to be in the key for real.
+      #
+      # ls-remote, not the checkout: the clone happens in the build step further down, i.e.
+      # AFTER this cache lookup, so there is nothing on disk here to hash.
+      - name: Resolve the gz-macOS revision
+        id: gzsrc
+        run: |
+          sha=""
+          for n in 1 2 3; do
+            sha=$(git ls-remote https://github.com/idesign0/gz-macOS.git \
+                  "refs/heads/$GZ_VERSION" | awk '{print $1}')
+            [ -n "$sha" ] && break
+            echo "ls-remote attempt $n failed; retrying in $((n*10))s"; sleep $((n*10))
+          done
+          if [ -z "$sha" ]; then
+            # Deliberately poison the key with the run id rather than leave it empty: an empty
+            # component is STABLE and would happily restore a cache entry built from an unknown
+            # revision. Failing towards a rebuild is the safe direction.
+            echo "::warning::could not resolve gz-macOS $GZ_VERSION; forcing a cold gz build"
+            sha="unresolved-${{ github.run_id }}"
+          else
+            echo "gz-macOS $GZ_VERSION is at $sha"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
       - name: Restore gz-install cache
         id: gzcache
         uses: actions/cache@v4
         with:
           path: gz-install.tar.zst
-          key: gz-install-humble-${{ env.GZ_VERSION }}-${{ hashFiles('cmake/toolchain.cmake', 'brew-packages/matched_packages.txt') }}-${{ hashFiles('brew-state.txt') }}-v1
+          key: gz-install-humble-${{ env.GZ_VERSION }}-${{ hashFiles('cmake/toolchain.cmake', 'brew-packages/matched_packages.txt') }}-${{ hashFiles('brew-state.txt') }}-${{ steps.gzsrc.outputs.sha }}-v1
       - name: Restore ccache (gz)
         if: steps.gzcache.outputs.cache-hit != 'true'
         uses: actions/cache@v4
@@ -135,7 +182,17 @@ jobs:
         if: steps.gzcache.outputs.cache-hit != 'true'
         run: |
           mkdir -p "$GZ_DIR"
-          git clone --recurse-submodules https://github.com/idesign0/gz-macOS.git -b "$GZ_VERSION" "$GZ_DIR"
+          # Check out the EXACT revision the cache key was computed from. Cloning the
+          # branch again would re-resolve its tip, which can have moved since the lookup
+          # above -- the build would then not match the key it is about to be stored under.
+          GZ_SRC_SHA='${{ steps.gzsrc.outputs.sha }}'
+          git clone --no-checkout https://github.com/idesign0/gz-macOS.git "$GZ_DIR"
+          if ! git -C "$GZ_DIR" checkout -q --detach "$GZ_SRC_SHA"; then
+            echo "::warning::gz-macOS $GZ_SRC_SHA not checkoutable; falling back to the $GZ_VERSION branch tip"
+            git -C "$GZ_DIR" checkout -q "$GZ_VERSION"
+          fi
+          git -C "$GZ_DIR" submodule update --init --recursive --jobs 8
+          echo "gz-macOS built from $(git -C "$GZ_DIR" rev-parse HEAD)"
           # ci-qt6-keg: brew links qtbase (pulled in as a vtk dependency) and from 6.12.0 that
           # puts a top-level include/QtNetwork on -I/opt/homebrew/include whose forwarding
           # header re-includes itself -> "#include nested too deeply" in gz-sim8's

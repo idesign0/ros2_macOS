@@ -1,0 +1,14 @@
+# The homebrew-core commit EVERY macOS job of a run pins its tap to.
+#
+# Why a committed file rather than resolving the tip per run: brew-state.txt feeds the
+# gz-install cache key, and homebrew-core moves many times a day, so a tip-derived pin
+# changes that key on every run and gz rebuilds cold (~2.5h) every time. Pinning here keeps
+# the resolved formula versions -- and therefore the cache -- stable between refreshes, and
+# makes a build reproducible: this SHA plus matched_packages.txt determines the versions.
+#
+# Refreshed weekly by .github/workflows/update-brew.yml alongside matched_packages.txt, so a
+# version bump arrives as one reviewable diff instead of silently mid-run.
+#
+# This value is the snapshot humble run 41134091515 and jazzy 41134094776 both pinned to and
+# built gz green from on 2026-10-31.
+4076b8a422854fb7ad80941ef3de5f42ba7cc5d3

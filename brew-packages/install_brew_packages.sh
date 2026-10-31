@@ -155,7 +155,18 @@ fi
 # would also cover the runner image's preinstalls, whose churn would rebuild gz on every
 # image bump for no reason.
 ROOT="${GITHUB_WORKSPACE:-$(cd "$SCRIPT_DIR/.." && pwd)}"
-awk '{print $1}' "$INPUT_FILE" | sort -u > /tmp/brew_want.txt
+# The state file drives BOTH the gz cache key and the inter-job skew gate, so it has to
+# cover every formula the build LINKS -- not just the ones we install. Two formulae are
+# linked but deliberately absent from matched_packages.txt: simdjson (never named) and
+# openssl@4 (named would mean installed, and openssl@4 is NOT keg-only -- it links into
+# /opt/homebrew/include, shadows openssl@3 and makes ASN1_STRING opaque, which hard-fails
+# fastrtps and librealsense2). Both showed up still loading from brew after packaging in
+# smoke run 41055576065, so a version change in either is invisible to the gate today.
+# also_linked.txt names them for the state file WITHOUT putting them on the install list.
+ALSO_LINKED="$SCRIPT_DIR/also_linked.txt"
+{ awk '{print $1}' "$INPUT_FILE"
+  [ -f "$ALSO_LINKED" ] && grep -vE '^\s*(#|$)' "$ALSO_LINKED" | awk '{print $1}'
+} | sort -u > /tmp/brew_want.txt
 brew list --formula --versions \
   | awk 'NR==FNR{w[$1];next} ($1 in w)' /tmp/brew_want.txt - \
   | sort > "$ROOT/brew-state.txt"

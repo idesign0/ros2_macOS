@@ -210,6 +210,39 @@ So prevention is two-part, both in `setup-ros2-macos`:
 | `brew-core-sha` -- `plan` resolves one homebrew-core commit per run via `git ls-remote`; every macOS job fetches that SHA (depth 1) and detaches its tap onto it | the 70 the job installs | warns, runs unpinned |
 | reconcile -- after pinning, any of `abseil protobuf qt@5 qtbase boost openssl@3 opencv@4 dartsim suite-sparse` already installed at a version the pinned tap disagrees with is reinstalled from it | the 21 image preinstalls, incl. openssl@3 | warns, leaves the image version |
 
+Two things the pin alone does not reach, both now handled:
+
+* **Frameworks.** `qt@5` ships **72 frameworks and zero dylibs**, and the reference pattern
+  only matched `.dylib`/`.so`, so nothing Qt-related was ever vendored and the shipped tree
+  kept pointing at `/opt/homebrew/opt/qt@5/...`. That is why `qt@5` was still loading from
+  Homebrew after packaging in smoke run 41055576065 -- not a `dlopen`'d plugin, as first
+  assumed, but a reference class the walker could not see. Step 1 now copies the whole
+  bundle (symlinks preserved, `Versions/Current` is one) and rewrites refs to
+  `@rpath/<Name>.framework/<rest>` rather than flattening to a basename, which would break
+  the bundle layout. Verified end to end: a dylib linking `QtCore` was packaged and
+  `DYLD_PRINT_LIBRARIES` confirmed dyld loading the vendored copy, not the keg.
+* **Linked but not installed.** `brew-state.txt` was filtered to `matched_packages.txt`, so
+  a formula the tree links but we never install was invisible to the gate. `simdjson` and
+  `openssl@4` are both in that position. They cannot simply be added to the install list --
+  `openssl@4` is not keg-only, it shadows `openssl@3` and hard-fails fastrtps and
+  librealsense2 -- so `brew-packages/also_linked.txt` names them for the state file and the
+  convergence step *without* putting them on the install list.
+
+**The pin is a committed file, `ci/homebrew-core.sha`, not the tip of the day.** `brew-state.txt`
+is part of the gz-install cache key, and homebrew-core moves many times a day, so a
+tip-derived pin changes that key every run and rebuilds gz (~2.5h) every time. Pinning in the
+repo keeps the resolved versions, and the cache, stable between the weekly `update-brew.yml`
+refreshes -- which now rewrite the pin and `matched_packages.txt` in the same job, so the two
+cannot disagree.
+
+That restored caching exposed a second, older hole: the gz key carried `GZ_VERSION`, which is
+the BRANCH NAME, and the build step is skipped on a cache hit -- so every gz-macOS commit
+after a cached build was silently absent, guarded only by remembering to bump the trailing
+`-vN`. Constant brew churn had been masking it by making the key change every run. The key now
+also carries the gz-macOS revision, resolved with `git ls-remote` before the cache lookup
+(the clone happens after it, so there is nothing on disk to hash), and the build checks out
+that exact SHA instead of re-resolving the branch tip.
+
 Downgrading is safe: every superseded bottle revision is retained in ghcr (checked
 2026-10-30 -- qtbase 6.11.2_1/6.12.0_2, openssl@3 3.5.9/3.6.5, dartsim 6.20.0/6.20.3 and
 boost 1.92.0/1.92.0_1 all return HTTP 200). The reconcile list is deliberately just the
