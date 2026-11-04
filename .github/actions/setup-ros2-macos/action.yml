@@ -287,18 +287,81 @@ runs:
           [ -f brew-packages/also_linked.txt ] \
             && grep -vE '^\s*(#|$)' brew-packages/also_linked.txt | awk '{print $1}'
         } | sort -u > /tmp/want_names.txt
+        # Resolve wanted versions from the PINNED tap. Two traps here, both of which bit us
+        # in runs 41187642680 / 41187644695 / 41187646503 (2026-10-31):
+        #
+        # 1. `brew info --json=v2 a b c` prints NOTHING to stdout and exits non-zero if ANY
+        #    single argument is unresolvable, so one bad name silently voids the whole batch
+        #    and `|| true` hides it. matched_packages.txt carries six names that are not in
+        #    homebrew-core -- ogre1.9, ogre2.2, ogre2.3, sdformat14 and the fully
+        #    qualified osrf/simulation/tinyxml1
+        #    (untrusted tap osrf/simulation, which brew REFUSES to load) and ros2-jazzy
+        #    (idesign0/ros2). They landed in three of the five batches, so only two survived:
+        #    "pinned tap knows 160 of the 390" is exactly 2x80. 230 formulae were never
+        #    checked against the pin, including SIX of the nine load-bearing ones (protobuf,
+        #    qt@5, qtbase, openssl@3, opencv@4, suite-sparse). That is why openssl@3 stayed
+        #    3.6.5 in gz and 3.5.9 in base-1 and tripped the load-bearing gate.
+        # 2. Counting lines in an accumulated file looks like success. Assert the count.
+        #
+        # Prefilter against the tap's own Formula/ tree: exact, offline, and immune to the
+        # untrusted-tap refusal, which no amount of retrying would get past.
+        rm -f /tmp/wbatch_* /tmp/want_core.txt /tmp/want_noncore.txt
+        CORE_REPO="$(brew --repo homebrew/core 2>/dev/null || true)"
+        : > /tmp/core_names.txt
+        if [ -n "$CORE_REPO" ] && [ -d "$CORE_REPO/Formula" ]; then
+          # Aliases/ too: a name that is only an alias (python -> python@3.13) has no
+          # Formula/*.rb, and leaving it out would silently drop it from convergence.
+          { find "$CORE_REPO/Formula" -name '*.rb' -type f 2>/dev/null \
+              | sed 's#.*/##; s#\.rb$##'
+            ls -1 "$CORE_REPO/Aliases" 2>/dev/null
+          } | sort -u > /tmp/core_names.txt
+        fi
+        if [ -s /tmp/core_names.txt ]; then
+          comm -12 /tmp/want_names.txt /tmp/core_names.txt > /tmp/want_core.txt
+          comm -23 /tmp/want_names.txt /tmp/core_names.txt > /tmp/want_noncore.txt
+        else
+          echo "::warning::could not enumerate the core tap; querying every name unfiltered"
+          cp /tmp/want_names.txt /tmp/want_core.txt
+          : > /tmp/want_noncore.txt
+        fi
+        if [ -s /tmp/want_noncore.txt ]; then
+          echo "  skipping $(wc -l < /tmp/want_noncore.txt | tr -d ' ') name(s) absent from"\
+               "the pinned core tap: $(tr '\n' ' ' < /tmp/want_noncore.txt)"
+        fi
+
+        # name<TAB>version for one batch, or non-zero if brew refused the batch outright.
+        JQ_VER='.formulae[] | select(.tap == "homebrew/core") | [.name,
+                  (.versions.stable // "") +
+                  (if (.revision // 0) > 0 then "_" + ((.revision)|tostring) else "" end)]
+                | @tsv'
         : > /tmp/want_versions.tsv
-        split -l 80 /tmp/want_names.txt /tmp/wbatch_
+        split -l 80 /tmp/want_core.txt /tmp/wbatch_
         for b in /tmp/wbatch_*; do
-          brew info --json=v2 $(cat "$b") 2>/dev/null \
-            | jq -r '.formulae[] | [.name,
-                       (.versions.stable // "") +
-                       (if (.revision // 0) > 0 then "_" + ((.revision)|tostring) else "" end)]
-                     | @tsv' >> /tmp/want_versions.tsv || true
+          if out="$(brew info --json=v2 $(cat "$b") 2>/dev/null)" \
+             && printf '%s' "$out" | jq -e -r "$JQ_VER" >> /tmp/want_versions.tsv; then
+            continue
+          fi
+          # A batch died. Do NOT lose the other 79 -- fall back to one at a time so a single
+          # unresolvable name costs exactly itself.
+          echo "  a batch of $(wc -l < "$b" | tr -d ' ') did not resolve; retrying per name"
+          while read -r one; do
+            [ -n "$one" ] || continue
+            brew info --json=v2 "$one" 2>/dev/null | jq -r "$JQ_VER" \
+              >> /tmp/want_versions.tsv || echo "  unresolved in the pinned tap: $one"
+          done < "$b"
         done
+
         brew list --formula --versions 2>/dev/null > /tmp/have_versions.txt || true
-        echo "  pinned tap knows $(wc -l < /tmp/want_versions.tsv | tr -d ' ') of the "\
-             "$(wc -l < /tmp/want_names.txt | tr -d ' ') named formulae"
+        n_want=$(wc -l < /tmp/want_core.txt | tr -d ' ')
+        n_got=$(wc -l < /tmp/want_versions.tsv | tr -d ' ')
+        echo "  pinned tap resolved $n_got of the $n_want core formula name(s)"\
+             "($(wc -l < /tmp/want_names.txt | tr -d ' ') named in total)"
+        # Silence is the failure mode worth catching: a resolution hole means those formulae
+        # are never compared against the pin at all, and the gate only notices much later.
+        if [ "$n_want" -gt 0 ] && [ "$n_got" -lt $(( n_want * 9 / 10 )) ]; then
+          echo "::warning::only $n_got of $n_want core formulae resolved against the pinned"\
+               "tap; the rest keep whatever version this runner image shipped and may skew"
+        fi
 
         # Decide what to reinstall. A formula is fine if the pinned version is among the
         # versions already installed; absent formulae are left to the install steps below.
@@ -320,20 +383,36 @@ runs:
 
         n=$(wc -l < /tmp/to_reconcile.txt | tr -d ' ')
         echo "  $n installed formula(e) disagree with the pinned tap"
+        # `brew` is a Ruby process that READS STDIN, and stdin inside this loop is the
+        # redirected file -- so without </dev/null the first `brew reinstall` swallows every
+        # remaining line and the loop ends after ONE formula. That is not a theory: gz in run
+        # 41187642680 reported "20 installed formula(e) disagree" and then printed exactly one
+        # `reconciling` line (aws-c-auth) and no warnings, while the prune loop below printed
+        # all 14 of its lines because `rm -rf` does not read stdin. Reproduce with:
+        #   printf 'a\nb\nc\n' > t; while read -r x; do echo "$x"; cat >/dev/null; done < t
+        # Keep </dev/null on every stdin-reading command in a `while read` body.
+        reconciled=0
         while IFS=$'\t' read -r f have w; do
           [ -n "$f" ] || continue
           echo "  reconciling $f: installed [$have] -> pinned $w"
-          brew reinstall --formula "$f" \
-            || echo "::warning::could not reconcile $f to the pinned $w"
+          if brew reinstall --formula "$f" </dev/null; then
+            reconciled=$((reconciled+1))
+          else
+            echo "::warning::could not reconcile $f to the pinned $w"
+          fi
         done < /tmp/to_reconcile.txt
+        echo "  reconciled $reconciled of $n formula(e)"
+        if [ "$n" -gt 0 ] && [ "$reconciled" -eq 0 ]; then
+          echo "::warning::$n formula(e) disagreed with the pin and none were reconciled"
+        fi
 
-        # Prune superseded kegs so each formula reports ONE version. Two reasons:
-        # the state file is compared as text, so "1.1.0 1.1.1" here vs "1.1.1" in the
-        # baseline would read as skew forever; and rpath_refs() in package_tree.py calls
-        # realpath, which turns an opt/ path into Cellar/<version>/ -- the one route by
-        # which a stale keg can enter the vendored closure.
-        # `brew cleanup <f>` is not usable here: it SKIPS a formula whose newest tap version
-        # is not installed ("Skipping libssh2: most recent version 1.11.1_7 not installed"),
+        # Prune superseded kegs so each formula keeps ONE version. rpath_refs() in
+        # package_tree.py calls realpath, which turns an opt/ path into Cellar/<version>/ --
+        # the one route by which a stale keg can enter the vendored closure. (The state file
+        # no longer depends on this: it records the LINKED version, so a leftover keg cannot
+        # by itself read as skew.) `brew cleanup <f>` is not usable here: it SKIPS a formula
+        # whose newest tap version is not installed ("Skipping libssh2: most recent version
+        # 1.11.1_7 not installed"),
         # which is exactly our case when the pin is behind tip. Remove the non-linked kegs
         # directly, which is what cleanup does internally, and only ever the ones that
         # /opt/homebrew/opt/<f> does NOT point at.
