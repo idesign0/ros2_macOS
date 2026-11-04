@@ -167,9 +167,31 @@ ALSO_LINKED="$SCRIPT_DIR/also_linked.txt"
 { awk '{print $1}' "$INPUT_FILE"
   [ -f "$ALSO_LINKED" ] && grep -vE '^\s*(#|$)' "$ALSO_LINKED" | awk '{print $1}'
 } | sort -u > /tmp/brew_want.txt
-brew list --formula --versions \
-  | awk 'NR==FNR{w[$1];next} ($1 in w)' /tmp/brew_want.txt - \
-  | sort > "$ROOT/brew-state.txt"
+# Record the LINKED version, not the keg inventory. `brew list --versions` prints every
+# keg present, so a baseline job that still carries a superseded keg reads as skew against a
+# job that pruned to one -- `brotli: baseline "1.2.0 1.2.1" -> this job "1.2.1"`, same linked
+# version on both sides. That shape was 12 of humble's 16 gate diffs and ALL five kilted
+# domain failures on 2026-10-31 (brotli, harfbuzz, icu4c@78, libpq, python@3.14 -- none of
+# them load-bearing). What a build actually links is /opt/homebrew/opt/<f>, so that is what
+# the state file and therefore the gate and the gz cache key must track.
+HB_PREFIX="$(brew --prefix 2>/dev/null || echo /opt/homebrew)"
+while read -r _name; do
+  [ -n "$_name" ] || continue
+  _cellar="$HB_PREFIX/Cellar/$_name"
+  [ -d "$_cellar" ] || continue
+  _v=""
+  if [ -L "$HB_PREFIX/opt/$_name" ]; then
+    _v="$(basename "$(readlink "$HB_PREFIX/opt/$_name")")"
+  fi
+  if [ -n "$_v" ] && [ -d "$_cellar/$_v" ]; then
+    printf '%s %s\n' "$_name" "$_v"
+  else
+    # No usable opt/ link (never linked, or dangling). Fall back to the keg list so the
+    # formula still appears -- an absent line would read as "gone" in the skew gate.
+    printf '%s %s\n' "$_name" "$(ls -1 "$_cellar" 2>/dev/null | sort | tr '\n' ' ' \
+      | sed 's/ *$//')"
+  fi
+done < /tmp/brew_want.txt | sed 's/ *$//' | sort > "$ROOT/brew-state.txt"
 BREW_STATE_N=$(wc -l < "$ROOT/brew-state.txt" | tr -d ' ')
 echo "brew-state.txt: $BREW_STATE_N formulae (feeds the gz cache key)"
 # An empty or near-empty file hashes to a constant, which would silently validate ANY
