@@ -206,9 +206,28 @@ runs:
         SHA='${{ inputs.brew-core-sha }}'
         core="$(brew --repo homebrew/core 2>/dev/null || true)"
         [ -n "$core" ] || core=/opt/homebrew/Library/Taps/homebrew/homebrew-core
-        if [ ! -d "$core/.git" ]; then
-          echo "::warning::homebrew-core is not a git tap at $core -- continuing unpinned"
+        if [ ! -d "$core" ]; then
+          echo "::warning::homebrew-core tap directory does not exist at $core -- continuing unpinned"
           exit 0
+        fi
+        # Runner images have started shipping the taps as PLAIN DIRECTORIES with no .git, so
+        # there is nothing to check out. Image 20261102.0473.1 is such an image and image
+        # 20261026.0455.2 is not, and both are in the pool at once -- jazzy gz in run
+        # 42005147306 drew the former, warned "homebrew-core is not a git tap", and ran
+        # unpinned while humble's gz in the same dispatch pinned normally. Bailing out there
+        # silently discards the whole cross-job consistency guarantee, so initialise a repo in
+        # place instead and pin that. Verified working on a simulated plain layout across 15
+        # runner samples (probe runs 42019711276 / 42020114564 / 42020494616).
+        created=no
+        if [ ! -e "$core/.git" ]; then
+          echo "homebrew-core at $core has no .git (plain-directory image) -- initialising one"
+          if git -C "$core" init -q \
+             && git -C "$core" remote add origin https://github.com/Homebrew/homebrew-core.git; then
+            created=yes
+          else
+            echo "::warning::could not initialise a git repo in $core -- continuing unpinned"
+            exit 0
+          fi
         fi
         before="$(git -C "$core" rev-parse --short HEAD 2>/dev/null || echo unknown)"
         ok=0
@@ -221,8 +240,29 @@ runs:
           echo "::warning::could not fetch homebrew-core $SHA -- continuing on the image tap ($before)"
           exit 0
         fi
-        git -C "$core" checkout -q --detach FETCH_HEAD \
-          || git -C "$core" reset --hard -q FETCH_HEAD
+        # `checkout --detach` cannot be used on a tap we just initialised: the directory
+        # already holds ~8,700 untracked .rb files and checkout refuses to clobber them
+        # ("untracked working tree files would be overwritten"). Measured 5/5 runners in
+        # probe run 42020114564. `reset --hard` is the form that works, and it is also the
+        # existing fallback for a real tap, so prefer it outright when we created the repo.
+        if [ "$created" = yes ]; then
+          git -C "$core" reset --hard -q FETCH_HEAD || {
+            echo "::warning::could not reset the initialised tap to $SHA -- continuing unpinned"
+            exit 0
+          }
+        else
+          git -C "$core" checkout -q --detach FETCH_HEAD \
+            || git -C "$core" reset --hard -q FETCH_HEAD
+        fi
+        # `reset --hard` restores TRACKED files but leaves untracked ones in place, so every
+        # formula added upstream after $SHA survives and still resolves. Two jobs on different
+        # runner images would then keep different formula sets while both reporting "pinned".
+        # Measured: 4 such leftovers per runner, and cleaning Formula/ + Aliases/ takes the
+        # tree from 8691 to 8688 .rb files with `git status` reporting 0 dirty paths, after
+        # which brew still resolves formulae and `brew install` still succeeds (probe run
+        # 42020494616, 5/5). Scoped to those two directories so brew's own tracked tooling
+        # (cmd/, Abstract/, audit_exceptions/) is never touched.
+        git -C "$core" clean -fdq -- Formula Aliases 2>/dev/null || true
         echo "homebrew-core: $before -> $(git -C "$core" rev-parse --short HEAD) (pinned for this run)"
         # Tells the skew check below it may be STRICT. Without this marker the check falls
         # back to the 9 load-bearing names, because unpinned wide drift is expected and
