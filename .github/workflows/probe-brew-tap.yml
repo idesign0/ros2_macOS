@@ -1,23 +1,18 @@
 name: Probe brew tap layout (diagnostic)
 
-# Throwaway diagnostic. Answers, with evidence rather than inference:
-#   1. is homebrew-core a git checkout on this runner, or a plain directory?
-#   2. how is the pool split between the two layouts? (matrix of 5 = our macOS concurrency cap,
-#      so all five land on different runners at the same instant)
-#   3. can pinning be RESTORED in place on a plain-directory runner?
-#   4. why does formula resolution work there while cask resolution fails?
-#   5. is HOMEBREW_NO_INSTALL_FROM_API=1 still doing more good than harm?
-# Costs ~3 min per job and builds nothing.
+# Throwaway diagnostic for the tap-layout problem.
+#
+# Established so far: runner image 20261026.0455.2 ships homebrew-core AS A GIT CHECKOUT and
+# our pin works; image 20261102.0473.1 does not, and on it the pin step warns
+# "homebrew-core is not a git tap" and the run proceeds unpinned (jazzy gz, run 42019...).
+# A first 5-runner sample drew the old image 5/5, so the remedy was never exercised.
+#
+# This version does not wait for luck: it SIMULATES the new layout by moving .git aside on
+# whatever runner it gets, then tests the candidate remedies in that state. It also reports
+# the image version each time, so repeated runs measure the rollout.
 
 on:
   workflow_dispatch:
-    inputs:
-      samples:
-        description: "How many runners to sample (1-5)"
-        required: false
-        default: "5"
-        type: choice
-        options: ["1", "3", "5"]
 
 jobs:
   probe:
@@ -26,74 +21,84 @@ jobs:
       matrix:
         n: [1, 2, 3, 4, 5]
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Probe
         shell: bash
         run: |
           set -uo pipefail
           PIN=4392eb17026de31d12a17bdf6b17b753f767d198
-          CORE=/opt/homebrew/Library/Taps/homebrew/homebrew-core
-          CASK=/opt/homebrew/Library/Taps/homebrew/homebrew-cask
-          say() { echo "### $*"; }
+          CORE="$(brew --repo homebrew/core)"
+          CASK="$(brew --repo homebrew/cask)"
+          say() { echo; echo "### $*"; }
+          state() { echo "     .git=$([ -e "$1/.git" ] && echo yes || echo no) HEAD=$(git -C "$1" rev-parse --short HEAD 2>/dev/null || echo n/a) rb=$(find "$1" -name '*.rb' -maxdepth 3 2>/dev/null | wc -l | tr -d ' ')"; }
+          probe_resolve() {   # $1 = label
+            local f c s j
+            f=$(HOMEBREW_NO_INSTALL_FROM_API=1 brew info --formula graphviz >/dev/null 2>&1 && echo OK || echo FAIL)
+            c=$(HOMEBREW_NO_INSTALL_FROM_API=1 brew info --cask serial   >/dev/null 2>&1 && echo OK || echo FAIL)
+            s=$(HOMEBREW_NO_INSTALL_FROM_API=1 brew info serial          >/dev/null 2>&1 && echo OK || echo FAIL)
+            j=$(HOMEBREW_NO_INSTALL_FROM_API=1 brew info --json=v2 openssl@3 2>/dev/null | jq -r '.formulae[0].versions.stable' 2>/dev/null || echo FAIL)
+            echo "     $1: formula=$f cask=$c bare-serial=$s openssl@3=$j"
+          }
 
-          say "0. identity"
-          echo "  runner image : ${ImageVersion:-unknown} / ${ImageOS:-unknown}"
-          echo "  arch         : $(uname -m)   macOS $(sw_vers -productVersion)"
-          echo "  brew         : $(brew --version | head -1)"
-          echo "  brew prefix  : $(brew --prefix)"
+          say "0. identity  (IMAGE is the thing to collect across runs)"
+          echo "  IMAGE=${ImageVersion:-unknown}  OS=${ImageOS:-unknown}  macOS=$(sw_vers -productVersion)"
+          echo "  brew=$(brew --version | head -1)"
+          echo "  core=$CORE"
+          echo "  cask=$CASK"
 
-          say "1. tap layout"
-          for d in "$CORE" "$CASK"; do
-            if [ -d "$d" ]; then
-              echo "  $d"
-              echo "     .git            : $([ -e "$d/.git" ] && echo PRESENT || echo ABSENT)"
-              echo "     Formula/ or Casks/: $([ -d "$d/Formula" ] && echo "Formula ($(find "$d/Formula" -name '*.rb' 2>/dev/null | wc -l | tr -d ' ') rb)" || true)$([ -d "$d/Casks" ] && echo "Casks ($(find "$d/Casks" -name '*.rb' 2>/dev/null | wc -l | tr -d ' ') rb)" || true)"
-              echo "     entries         : $(ls -1 "$d" 2>/dev/null | head -6 | tr '\n' ' ')"
-              echo "     HEAD            : $(git -C "$d" rev-parse --short HEAD 2>/dev/null || echo 'n/a (not a git repo)')"
-            else
-              echo "  $d : DOES NOT EXIST"
-            fi
-          done
-          echo "  brew tap list: $(brew tap 2>/dev/null | tr '\n' ' ')"
-          echo "  HOMEBREW_NO_INSTALL_FROM_API in env: ${HOMEBREW_NO_INSTALL_FROM_API:-<unset>}"
-          echo "  json api cache: $(ls -1 ~/Library/Caches/Homebrew/api 2>/dev/null | tr '\n' ' ')"
+          say "1. layout as shipped"
+          echo "  core:"; state "$CORE"
+          echo "  cask:"; state "$CASK"
+          NATIVE=$([ -e "$CORE/.git" ] && echo git || echo plain)
+          echo "  NATIVE_LAYOUT=$NATIVE"
+          probe_resolve "as-shipped"
 
-          say "2. resolution: formula vs cask, API on vs off"
-          for mode in api-on api-off; do
-            if [ "$mode" = api-off ]; then export HOMEBREW_NO_INSTALL_FROM_API=1; else unset HOMEBREW_NO_INSTALL_FROM_API; fi
-            f=$(brew info --formula graphviz >/dev/null 2>&1 && echo OK || echo FAIL)
-            c=$(brew info --cask serial >/dev/null 2>&1 && echo OK || echo FAIL)
-            s=$(brew info serial >/dev/null 2>&1 && echo OK || echo FAIL)
-            j=$(brew info --json=v2 openssl@3 2>/dev/null | jq -r '.formulae[0].versions.stable' 2>/dev/null || echo FAIL)
-            echo "  $mode: formula=$f  cask(explicit)=$c  bare 'serial'=$s  json openssl@3=$j"
-          done
-          unset HOMEBREW_NO_INSTALL_FROM_API
-
-          say "3. CAN PINNING BE RESTORED IN PLACE?"
-          if [ -e "$CORE/.git" ]; then
-            echo "  already a git tap -- pin works as designed here"
-            echo "  current HEAD: $(git -C "$CORE" rev-parse --short HEAD)"
+          say "2. simulate the new layout (move .git aside)"
+          if [ "$NATIVE" = git ]; then
+            sudo mv "$CORE/.git" "$CORE/.git.bak" 2>/dev/null || mv "$CORE/.git" "$CORE/.git.bak"
+            [ -e "$CASK/.git" ] && { sudo mv "$CASK/.git" "$CASK/.git.bak" 2>/dev/null || mv "$CASK/.git" "$CASK/.git.bak"; }
+            echo "  moved .git aside on core and cask"
           else
-            echo "  attempt A: git init + remote + fetch + detach, in place"
-            (
-              set -x
-              git -C "$CORE" init -q 2>&1 | tail -2
-              git -C "$CORE" remote add origin https://github.com/Homebrew/homebrew-core.git 2>&1 | tail -2
-              git -C "$CORE" fetch --depth=1 --no-tags origin "$PIN" 2>&1 | tail -3
-              git -C "$CORE" checkout -q --detach FETCH_HEAD 2>&1 | tail -3
-            ) 2>&1 | sed 's/^/     /'
-            echo "  after attempt A: .git=$([ -e "$CORE/.git" ] && echo PRESENT || echo ABSENT) HEAD=$(git -C "$CORE" rev-parse --short HEAD 2>/dev/null || echo n/a)"
-            echo "  Formula count now: $(find "$CORE/Formula" -name '*.rb' 2>/dev/null | wc -l | tr -d ' ')"
-            echo "  does brew still work? $(HOMEBREW_NO_INSTALL_FROM_API=1 brew info --formula graphviz >/dev/null 2>&1 && echo YES || echo NO)"
-            echo "  is openssl@3 the pinned version? $(HOMEBREW_NO_INSTALL_FROM_API=1 brew info --json=v2 openssl@3 2>/dev/null | jq -r '.formulae[0].versions.stable' 2>/dev/null)"
+            echo "  runner is ALREADY plain -- testing the real thing, no simulation needed"
           fi
+          echo "  core:"; state "$CORE"
+          probe_resolve "plain-layout"
+          echo "  ^ compare with as-shipped: this is what jazzy gz actually faced"
 
-          say "4. what the image preinstalled"
-          echo "  installed formulae: $(brew list --formula 2>/dev/null | wc -l | tr -d ' ')"
-          echo "  openssl@3: $(brew list --versions openssl@3 2>/dev/null || echo absent)"
-          echo "  ca-certificates: $(brew list --versions ca-certificates 2>/dev/null || echo absent)"
-          echo "  multi-keg formulae: $(brew list --formula --versions 2>/dev/null | awk 'NF>2' | wc -l | tr -d ' ')"
+          say "3. REMEDY A: git init + fetch + reset --hard, in place"
+          (
+            git -C "$CORE" init -q
+            git -C "$CORE" remote remove origin 2>/dev/null || true
+            git -C "$CORE" remote add origin https://github.com/Homebrew/homebrew-core.git
+            if git -C "$CORE" fetch --depth=1 --no-tags origin "$PIN" 2>&1 | tail -2; then
+              echo "  fetch OK"
+            else
+              echo "  fetch FAILED"
+            fi
+            # checkout --detach refuses to clobber the 8679 untracked files already there;
+            # reset --hard is the form that can. Try the gentle one first and report.
+            if git -C "$CORE" checkout -q --detach FETCH_HEAD 2>&1 | tail -2; then
+              echo "  checkout --detach: OK"
+            else
+              echo "  checkout --detach: FAILED (expected: untracked files would be overwritten)"
+              if git -C "$CORE" reset --hard -q FETCH_HEAD 2>&1 | tail -2; then
+                echo "  reset --hard: OK"
+              else
+                echo "  reset --hard: FAILED"
+              fi
+            fi
+          ) 2>&1 | sed 's/^/   /'
+          echo "  core after remedy A:"; state "$CORE"
+          echo "  HEAD == PIN ? $([ "$(git -C "$CORE" rev-parse HEAD 2>/dev/null)" = "$PIN" ] && echo YES || echo NO)"
+          probe_resolve "after-remedy-A"
+          echo "  (openssl@3 should read 3.5.9 if the pin truly took effect)"
+
+          say "4. does a normal install still work after remedy A?"
+          HOMEBREW_NO_INSTALL_FROM_API=1 HOMEBREW_NO_AUTO_UPDATE=1 \
+            brew install --formula libmodbus > /tmp/inst.log 2>&1 \
+            && echo "  brew install libmodbus: OK" \
+            || { echo "  brew install libmodbus: FAILED"; tail -8 /tmp/inst.log | sed 's/^/     /'; }
 
           say "5. verdict"
-          echo "  LAYOUT=$([ -e "$CORE/.git" ] && echo git || echo plain)  IMAGE=${ImageVersion:-unknown}"
+          echo "  IMAGE=${ImageVersion:-unknown} NATIVE_LAYOUT=$NATIVE REMEDY_A_PINNED=$([ "$(git -C "$CORE" rev-parse HEAD 2>/dev/null)" = "$PIN" ] && echo YES || echo NO)"
