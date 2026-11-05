@@ -391,16 +391,41 @@ runs:
         # all 14 of its lines because `rm -rf` does not read stdin. Reproduce with:
         #   printf 'a\nb\nc\n' > t; while read -r x; do echo "$x"; cat >/dev/null; done < t
         # Keep </dev/null on every stdin-reading command in a `while read` body.
+        #
+        # And RE-CHECK each formula immediately before reinstalling it. /tmp/have_versions.txt
+        # is one snapshot taken before the loop, but `brew reinstall X` upgrades X's
+        # dependencies as a side effect -- so a formula listed here can already have moved by
+        # the time the loop reaches it. ca-certificates is the worst case because almost
+        # everything depends on it: in jazzy gz of run 41993571500 the aws-c-* reinstalls
+        # pulled it 2026-10-20 -> 2026-11-05, and the later `brew reinstall ca-certificates`
+        # then died on its stale keg --
+        #   ::error::ca-certificates: No such file or directory
+        #            - /opt/homebrew/Cellar/ca-certificates/2026-10-20
+        # which left brew unable to install ANYTHING, so the base install failed all 3
+        # attempts and took the whole job with it. Skipping an already-satisfied formula costs
+        # one `brew list` and removes that entire class of failure.
         reconciled=0
+        skipped=0
         while IFS=$'\t' read -r f have w; do
           [ -n "$f" ] || continue
-          echo "  reconciling $f: installed [$have] -> pinned $w"
+          now="$(brew list --versions "$f" 2>/dev/null </dev/null | cut -d' ' -f2- || true)"
+          case " $now " in
+            *" $w "*)
+              echo "  $f already at pinned $w (moved by an earlier reinstall) -- skipping"
+              skipped=$((skipped+1))
+              continue ;;
+          esac
+          echo "  reconciling $f: installed [${now:-$have}] -> pinned $w"
           if brew reinstall --formula "$f" </dev/null; then
             reconciled=$((reconciled+1))
           else
+            # Do not leave brew wedged: a failed reinstall can leave the formula unlinked,
+            # and every later `brew install` would then fail too.
             echo "::warning::could not reconcile $f to the pinned $w"
+            brew link --overwrite --force "$f" </dev/null >/dev/null 2>&1 || true
           fi
         done < /tmp/to_reconcile.txt
+        [ "$skipped" -gt 0 ] && echo "  skipped $skipped already-satisfied by side effects"
         echo "  reconciled $reconciled of $n formula(e)"
         if [ "$n" -gt 0 ] && [ "$reconciled" -eq 0 ]; then
           echo "::warning::$n formula(e) disagreed with the pin and none were reconciled"
