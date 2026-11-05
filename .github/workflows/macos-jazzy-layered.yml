@@ -266,8 +266,15 @@ jobs:
           exit 0
       - name: Apply skip-list (COLCON_IGNORE)
         run: |
+          # `colcon list` walks the whole 648-submodule tree and takes ~16s. Running it
+          # once per skip-list entry cost 67 min on humble base-1 of run 42025220816 (225
+          # entries), 48 min on jazzy and 35 min on kilted -- and this step runs in every
+          # base and domain job. That 67 min is what pushed humble base-1 past GitHub's
+          # unraisable 6h job cap. Snapshot the list once instead.
+          colcon list --base-paths . 2>/dev/null > /tmp/colcon_pkgs.tsv || true
+          echo "colcon list: $(wc -l < /tmp/colcon_pkgs.tsv | tr -d ' ') packages"
           grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
-            path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
+            path=$(awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}' /tmp/colcon_pkgs.tsv)
             [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
           done
       - name: Download gz-install (protobuf + gz, built in the gz job)
@@ -475,8 +482,15 @@ jobs:
         run: chmod -R +x install/bin 2>/dev/null || true
       - name: Apply skip-list (COLCON_IGNORE)
         run: |
+          # `colcon list` walks the whole 648-submodule tree and takes ~16s. Running it
+          # once per skip-list entry cost 67 min on humble base-1 of run 42025220816 (225
+          # entries), 48 min on jazzy and 35 min on kilted -- and this step runs in every
+          # base and domain job. That 67 min is what pushed humble base-1 past GitHub's
+          # unraisable 6h job cap. Snapshot the list once instead.
+          colcon list --base-paths . 2>/dev/null > /tmp/colcon_pkgs.tsv || true
+          echo "colcon list: $(wc -l < /tmp/colcon_pkgs.tsv | tr -d ' ') packages"
           grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
-            path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
+            path=$(awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}' /tmp/colcon_pkgs.tsv)
             [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
           done
       - name: Unlink conflicting Homebrew packages
@@ -675,8 +689,15 @@ jobs:
         run: chmod -R +x install/bin 2>/dev/null || true
       - name: Apply skip-list (COLCON_IGNORE)
         run: |
+          # `colcon list` walks the whole 648-submodule tree and takes ~16s. Running it
+          # once per skip-list entry cost 67 min on humble base-1 of run 42025220816 (225
+          # entries), 48 min on jazzy and 35 min on kilted -- and this step runs in every
+          # base and domain job. That 67 min is what pushed humble base-1 past GitHub's
+          # unraisable 6h job cap. Snapshot the list once instead.
+          colcon list --base-paths . 2>/dev/null > /tmp/colcon_pkgs.tsv || true
+          echo "colcon list: $(wc -l < /tmp/colcon_pkgs.tsv | tr -d ' ') packages"
           grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
-            path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
+            path=$(awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}' /tmp/colcon_pkgs.tsv)
             [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
           done
       - name: Unlink conflicting Homebrew packages
@@ -880,8 +901,15 @@ jobs:
         run: chmod -R +x install/bin 2>/dev/null || true
       - name: Apply skip-list (COLCON_IGNORE)
         run: |
+          # `colcon list` walks the whole 648-submodule tree and takes ~16s. Running it
+          # once per skip-list entry cost 67 min on humble base-1 of run 42025220816 (225
+          # entries), 48 min on jazzy and 35 min on kilted -- and this step runs in every
+          # base and domain job. That 67 min is what pushed humble base-1 past GitHub's
+          # unraisable 6h job cap. Snapshot the list once instead.
+          colcon list --base-paths . 2>/dev/null > /tmp/colcon_pkgs.tsv || true
+          echo "colcon list: $(wc -l < /tmp/colcon_pkgs.tsv | tr -d ' ') packages"
           grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
-            path=$(colcon list --base-paths . 2>/dev/null | awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}')
+            path=$(awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}' /tmp/colcon_pkgs.tsv)
             [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
           done
       - name: Unlink conflicting Homebrew packages (use vendored Boost 1.89, not brew 1.90)
