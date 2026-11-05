@@ -94,7 +94,23 @@ jobs:
           probe_resolve "after-remedy-A"
           echo "  (openssl@3 should read 3.5.9 if the pin truly took effect)"
 
-          say "4. does a normal install still work after remedy A?"
+          say "3b. does `git clean` make the tree EXACTLY the pin?"
+          # reset --hard restores tracked files but leaves untracked ones, so a formula added
+          # upstream AFTER the pin survives as a leftover and can still resolve -- which means
+          # two jobs with different images would not agree after all. Test whether cleaning
+          # Formula/ and Aliases/ closes that, and whether brew survives it.
+          before=$(find "$CORE/Formula" -name '*.rb' 2>/dev/null | wc -l | tr -d ' ')
+          untracked=$(git -C "$CORE" ls-files --others --exclude-standard -- Formula Aliases 2>/dev/null | wc -l | tr -d ' ')
+          echo "  Formula/*.rb before clean : $before"
+          echo "  untracked under Formula+Aliases: $untracked   <-- leftovers newer than the pin"
+          git -C "$CORE" clean -fdq -- Formula Aliases 2>&1 | tail -2 | sed 's/^/     /'
+          after=$(find "$CORE/Formula" -name '*.rb' 2>/dev/null | wc -l | tr -d ' ')
+          echo "  Formula/*.rb after clean  : $after"
+          echo "  still dirty? $(git -C "$CORE" status --porcelain -- Formula Aliases 2>/dev/null | wc -l | tr -d ' ') path(s)"
+          probe_resolve "after-clean"
+          echo "  does 'serial' still resolve after clean? (it is a cask, so Casks/ is untouched)"
+
+          say "4. does a normal install still work after remedy A + clean?"
           HOMEBREW_NO_INSTALL_FROM_API=1 HOMEBREW_NO_AUTO_UPDATE=1 \
             brew install --formula libmodbus > /tmp/inst.log 2>&1 \
             && echo "  brew install libmodbus: OK" \
