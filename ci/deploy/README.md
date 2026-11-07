@@ -108,6 +108,63 @@ Simplest arrangement: ONE vendor dir in base, every binary in every domain rpath
 it. base links 47 formulae, the whole set links 92, and 10 of the 21 domains need nothing
 beyond base, so per-domain vendor dirs would be twelve mechanisms for no gain.
 
+Flat inside that dir **where it can be, scoped where it cannot.** One filename can name two
+different libraries, and six do on every distro: brew's `vtk` bottle links Qt6 (`qtbase`,
+`qtsvg`, `qtdeclarative`) while rviz and the rqt stack link `qt@5`, so `QtCore`, `QtGui`,
+`QtOpenGL`, `QtWidgets`, `QtNetwork` and `QtSvg` each arrive twice from two incompatible
+majors. That is what killed `package` on jazzy run 42025234330 and kilted run 42025247785,
+with every build job green -- correctly, because no choice of winner is right: four names
+resolved to Qt6 and two to Qt5 purely by arrival order. `CMAKE_PREFIX_PATH` ordering cannot
+help either; the Qt6 half arrives transitively inside a prebuilt bottle, long after any
+configure decision.
+
+So a name claimed by two DIFFERENT libraries is not flattened -- each claimant goes to
+`vendor/lib/<keg>/<name>` and each reference is rewritten to the scoped path of the file it
+actually named:
+
+    vendor/lib/QtCore.framework              <- single claimant: flat, unchanged
+    vendor/lib/qt@5/QtCore.framework         <- two claimants: scoped per keg
+    vendor/lib/qtbase/QtCore.framework
+
+ONE rpath still serves the whole tree: what became unique is the *names* under it, so
+nothing has to be resolved per consumer. Two properties make this safe rather than merely
+workable. A scoped reference is always exactly 15 characters SHORTER than the
+`/opt/homebrew/opt/<keg>/lib/<name>` it replaces, so `install_name_tool` never needs header
+room it does not already have. And identity is decided on `realpath`, so the many brew
+ALIASES (`openssl@3`, `openssl@3.5`, `openssl@3.6` are one keg; so are `opencv` and
+`opencv@5`) collapse to one copy instead of scoping spuriously.
+
+Scoping preserves what each binary linked; it reconciles nothing. A single mach-o naming
+two kegs for one library was already broken before packaging -- two Qt majors cannot share a
+process -- so that is reported as a warning and left exactly as built.
+
+Verified end to end locally against both real kegs: two dylibs, one linked against
+`qt@5`'s `QtCore` and one against `qtbase`'s, packaged into one tree, then `dlopen`'d in
+separate processes under `DYLD_PRINT_LIBRARIES`:
+
+    libuses5 -> <tree>/vendor/lib/qt@5/QtCore.framework/Versions/5/QtCore
+    libuses6 -> <tree>/vendor/lib/qtbase/QtCore.framework/Versions/A/QtCore
+
+The pre-scoping script refuses the same tree with the exact CI error. A one-Qt tree still
+produces the old flat layout and `@rpath/QtCore.framework/Versions/5/QtCore`, unchanged.
+
+Two bugs found while validating that, both predating scoping:
+
+* **Nothing under `vendor/lib` ever got the vendor rpath.** The "do I already have it?"
+  test substring-matched the whole `otool -l` dump, which opens with the file's OWN path --
+  so every vendored copy matched its own vendor rpath and was skipped. It stayed invisible
+  because dyld resolves a nested `@rpath` against the LC_RPATHs of the loading chain, so the
+  in-tree consumer's rpath covered it; it would stop being true the moment anything
+  `dlopen`'d a vendored dylib directly. Now parsed from the LC_RPATH entries: 2 of 15 files
+  on the test tree before, 15 of 15 after.
+* **`VERIFIED: 0 remaining references` was not the claim it looks like.** The walker only
+  ever matched `/opt/homebrew/OPT` paths. A dylib can name a sibling by absolute **Cellar**
+  path instead, and those survive untouched -- vendored `libgthread` still loads
+  `/opt/homebrew/Cellar/glib/2.90.1/lib/libglib-2.0.0.dylib` and drags the user's `libintl`
+  and `libpcre2-8` in behind it. Step 6 now counts and names them. Widening the closure to
+  cover Cellar refs changes what gets vendored across 2000 packages, so it is deliberately
+  NOT bundled in with scoping -- measure it on a real run first.
+
 MEASURED on the base tree (2239 mach-o files):
 
     vendored                478 dylibs, 743 MB   (base keg 1.6 GB -> ~2.3 GB)
