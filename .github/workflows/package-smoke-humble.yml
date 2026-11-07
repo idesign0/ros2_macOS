@@ -181,7 +181,7 @@ jobs:
           rc=$?
           echo "package_tree exit=$rc"
           if [ -d install/vendor/lib ]; then
-            echo "vendored: $(ls install/vendor/lib | wc -l | tr -d ' ') dylibs, $(du -sh install/vendor/lib | awk '{print $1}')"
+            echo "vendored: $(find install/vendor/lib -maxdepth 2 \( -name '*.dylib' -o -name '*.framework' \) | wc -l | tr -d ' ') libs, $(du -sh install/vendor/lib | awk '{print $1}')"
           fi
           exit $rc
 
