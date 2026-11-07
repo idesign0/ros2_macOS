@@ -171,6 +171,7 @@ jobs:
           fi
 
       - name: Package (vendor + rpaths) -- strict except for a stale input tree
+        id: package
         run: |
           set -uo pipefail
           # The prefix the tree will occupy once installed. The current tap ships one monolithic
@@ -211,10 +212,35 @@ jobs:
           echo "REGRESSIONS: $n"
           if [ "$n" -gt 0 ]; then
             sed 's/^/  /' /tmp/regressions.txt
+            # An EMPTY why string is itself the finding, and the reason this block exists.
+            # loadone.py prints str(e) for a RAISED exception, so printing nothing means the
+            # probe process DIED instead -- a crashing initializer, not a missing library.
+            # kilted smoke 42368213363 hit exactly that on 9 of 9 gz plugins (every gz entry
+            # in the sample, 0 of which failed before), and a bare path said nothing about
+            # why. So capture what dyld actually did: the exit status, the last libraries it
+            # bound before stopping, and the file's own rpaths and @rpath deps.
             while read -r f; do
-              echo "--- why: $f"
-              grep -F "$f" /tmp/why_after.txt | cut -f2- | sed 's/^/    /' || true
-            done < <(head -5 /tmp/regressions.txt)
+              echo "================ regression: $f"
+              out=$(DYLD_PRINT_LIBRARIES=1 QT_QPA_PLATFORM=offscreen \
+                    python3 -I /tmp/loadone.py "$f" 2>&1); rc=$?
+              echo "  probe exit=$rc   (>128 is a signal: 134 abort, 139 segv)"
+              echo "  --- recorded why: [$(grep -F "$f" /tmp/why_after.txt | cut -f2- | head -1)]"
+              # Unfiltered, this is 25 lines of system-framework chatter. Keep the lines
+              # that can explain a crash: our own tree, brew, and any abort/symbol text.
+              echo "  --- dyld lines naming the tree or brew (last 20):"
+              printf '%s\n' "$out" \
+                | grep -aE "install/|/opt/homebrew|ros2-" | tail -20 | sed 's/^/      /'
+              echo "  --- any error/abort text:"
+              printf '%s\n' "$out" \
+                | grep -aiE "abort|assertion failed|symbol not found|library not loaded|incompatible|duplicate symbol" \
+                | tail -10 | sed 's/^/      /'
+              echo "  --- final 4 raw lines:"
+              printf '%s\n' "$out" | tail -4 | sed 's/^/      /'
+              echo "  --- its own LC_RPATHs:"
+              otool -l "$f" | awk '/LC_RPATH/{p=1} p && /path /{print "      "$2; p=0}'
+              echo "  --- its @rpath deps:"
+              otool -L "$f" | grep '@rpath' | awk '{print "      "$1}' | head -25
+            done < <(head -6 /tmp/regressions.txt)
             echo "::error::$n dylib(s) loaded before packaging and do not load after"
             exit 1
           fi
@@ -239,7 +265,11 @@ jobs:
           echo "(non-empty means the vendor set is incomplete -- those are the dlopen'd ones)"
 
       - name: Functional smoke -- physics, transport, bridge (headless)
-        if: ${{ inputs.functional != 'off' }}
+        # NOT a bare `inputs.functional != 'off'`: without always()/!cancelled() a failing
+        # load-test step skips this one, which is why these checks had still never run after
+        # being added. They are about the PACKAGED tree, so the thing they depend on is the
+        # packager succeeding -- not the load gate passing.
+        if: ${{ !cancelled() && inputs.functional != 'off' && steps.package.conclusion == 'success' }}
         continue-on-error: ${{ inputs.functional != 'strict' }}
         env:
           # Isolate gz transport from anything else on the runner.
