@@ -161,9 +161,22 @@ Two bugs found while validating that, both predating scoping:
   ever matched `/opt/homebrew/OPT` paths. A dylib can name a sibling by absolute **Cellar**
   path instead, and those survive untouched -- vendored `libgthread` still loads
   `/opt/homebrew/Cellar/glib/2.90.1/lib/libglib-2.0.0.dylib` and drags the user's `libintl`
-  and `libpcre2-8` in behind it. Step 6 now counts and names them. Widening the closure to
-  cover Cellar refs changes what gets vendored across 2000 packages, so it is deliberately
-  NOT bundled in with scoping -- measure it on a real run first.
+  and `libpcre2-8` in behind it.
+
+  **That gap is what aborted every gz plugin after packaging.** Brew's Qt5 frameworks name
+  each OTHER by Cellar path (`QtGui -> /opt/homebrew/Cellar/qt@5/5.15.19/lib/QtCore.framework/...`),
+  so the vendored QtGui kept loading the user's QtCore beside our vendored one. Two QtCores
+  in one process abort (exit 134); macOS said so outright --
+  `objc: Class QMacAutoReleasePoolTracker is implemented in both .../Cellar/qt@5/... and
+  .../vendor/lib/qt@5/...`. Smoke runs 42368213363 / 42368205286 / 42390651790: 9 of 9 gz
+  plugins in the sample on kilted, 8 of 8 (+ estop) on jazzy, none failing before packaging.
+
+  The reference pattern now covers both roots, so Cellar refs are walked, vendored and
+  rewritten like opt ones, and step 6 fails on either. Measured on the full kilted tree
+  (5059 mach-o files) packaged locally: `VERIFIED: 0 remaining Homebrew references (opt/ and
+  Cellar/)`; all 9 previously aborting plugins load with exit 0, QtCore bound exactly once,
+  from `vendor/lib/qt@5/`; and the 150-dylib CI sample loads 133, against 122 before
+  packaging and 113 after packaging with the opt-only pattern.
 
 MEASURED on the base tree (2239 mach-o files):
 

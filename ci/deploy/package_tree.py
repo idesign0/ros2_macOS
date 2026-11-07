@@ -56,8 +56,17 @@ HB = "/opt/homebrew/opt"
 # shipped tree kept pointing at /opt/homebrew/opt/qt@5/.... That is why qt@5 was still
 # loading from Homebrew after packaging in smoke run 41055576065, and it means RViz, rqt and
 # gz-gui stayed exposed to the user's Qt version exactly as gz-sim was to abseil.
+CELLAR = "/opt/homebrew/Cellar"
+# Both roots. Qt5's own frameworks name each OTHER by absolute Cellar path
+# (QtGui -> /opt/homebrew/Cellar/qt@5/5.15.19/lib/QtCore.framework/Versions/5/QtCore), and
+# so do glib, mesa, ffmpeg, apache-arrow and others. With an opt-only pattern those refs
+# were never rewritten: the vendored QtGui kept loading the user's brew QtCore beside our
+# vendored one, and two QtCores in one process abort (exit 134). That was every gz plugin
+# in the smoke sample, on both distros. vendor_unit() keys on realpath, so an opt route and
+# a Cellar route into one keg still collapse onto a single vendored copy.
 REF = re.compile(
-    rf"{re.escape(HB)}/([^/]+)/(\S+\.(?:dylib|so)|\S*?[^/]+\.framework/\S+)")
+    rf"(?:{re.escape(HB)}/[^/\s]+|{re.escape(CELLAR)}/[^/\s]+/[^/\s]+)/"
+    r"(?:\S+\.(?:dylib|so)|\S*?[^/]+\.framework/\S+)")
 MACHO_EXT = (".dylib", ".so", ".bundle")
 
 # .../QtCore.framework/Versions/5/QtCore -> (framework dir, "QtCore", "Versions/5/QtCore")
@@ -153,11 +162,10 @@ def refs_of(paths):
             elif cur is not None:
                 m = REF.search(line)
                 if m:
-                    out[cur].add(f"{HB}/{m.group(1)}/{m.group(2)}")
+                    out[cur].add(m.group(0))
         # single-file batches print no header line
         if len(batch) == 1 and batch[0] not in out:
-            out[batch[0]] = {f"{HB}/{m.group(1)}/{m.group(2)}"
-                             for m in REF.finditer(r.stdout)}
+            out[batch[0]] = {m.group(0) for m in REF.finditer(r.stdout)}
     return out
 
 
@@ -514,7 +522,7 @@ def main():
     for p in files:
         out = run(["otool", "-D", p]).stdout.splitlines()
         own = out[1].strip() if len(out) >= 2 else ""
-        if own.startswith(HB):
+        if own.startswith(HB) or own.startswith(CELLAR):
             if run(["install_name_tool", "-id",
                     f"@rpath/{rpath_name(p)}", p]).returncode == 0:
                 reid += 1
@@ -643,34 +651,12 @@ def main():
         print(f"  left in place        : refs to {len(tolerated)} un-vendorable dylib(s), "
               f"un-rewritten on purpose")
     if left:
-        print(f"::error::{len(left)} files still reference {HB} after packaging")
+        print(f"::error::{len(left)} files still reference Homebrew (opt/ or Cellar/) "
+              f"after packaging")
         for p, s in list(left.items())[:10]:
             print(f"     {p[len(tree)+1:]} -> {sorted(s)[:2]}")
         sys.exit(1)
-    print(f"  VERIFIED             : 0 remaining {HB} references")
-
-    # The check above, and the whole rewrite, only ever looked at /opt/homebrew/OPT paths.
-    # A dylib can also name a sibling by its absolute CELLAR path, and those survive
-    # untouched: measured here, vendored libgthread still loads
-    # /opt/homebrew/Cellar/glib/2.90.1/lib/libglib-2.0.0.dylib, which then drags the
-    # user's libintl and libpcre2-8 in with it. So "0 remaining opt references" is not
-    # the same as "independent of the user's Homebrew". Count them rather than widening
-    # the closure here: that changes what gets vendored across 2000 packages and belongs
-    # in its own run, not smuggled into this one.
-    cellar = {}
-    for p in targets:
-        hits = {m.group(0) for m in re.finditer(
-            r"/opt/homebrew/Cellar/\S+?\.(?:dylib|so)\b",
-            run(["otool", "-L", p]).stdout)}
-        if hits:
-            cellar[p] = hits
-    if cellar:
-        kegs = sorted({h.split("/")[4] for hs in cellar.values() for h in hs})
-        print(f"::warning::{len(cellar)} file(s) still name {len(kegs)} Homebrew keg(s) by "
-              f"absolute Cellar path, which this packager does not rewrite: "
-              f"{', '.join(kegs[:12])}. The tree still binds the user's brew for those.")
-        for p, hs in list(cellar.items())[:10]:
-            print(f"     {p[len(tree)+1:]} -> {sorted(hs)[0]}")
+    print(f"  VERIFIED             : 0 remaining Homebrew references (opt/ and Cellar/)")
 
 
 if __name__ == "__main__":
