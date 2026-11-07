@@ -334,9 +334,22 @@ jobs:
           bad()  { echo "::warning::functional check FAILED: $1"; fails=$((fails+1)); }
 
           # Test the PACKAGED tree, from where it lies -- that is what ships.
-          set +u
-          . install/setup.bash 2>/dev/null || { echo "::error::install/setup.bash did not source"; exit 1; }
-          set -u
+          # Source TOLERANTLY and SHOW what breaks. This line used to be
+          #   . install/setup.bash 2>/dev/null || { ...; exit 1; }
+          # and on jazzy smoke 42409015421 it ended the step in 6 seconds with exit 127 and
+          # no output at all -- a broken package env hook (husarion_ugv_gazebo's
+          # setup_envs.sh calls ament_prepend_unique_value, which colcon's sourcing context
+          # does not define) aborted the source under -e, and 2>/dev/null hid the reason.
+          # Advisory mode then reported the whole step as a pass having checked nothing.
+          # An interactive user shell survives such a hook, so the checks below should too.
+          set +eu
+          . install/setup.bash 2> "$L/source_err.txt"
+          src_rc=$?
+          set -eu
+          if [ -s "$L/source_err.txt" ]; then
+            echo "::warning::sourcing install/setup.bash printed errors (rc=$src_rc) -- broken package env hooks:"
+            sed 's/^/    /' "$L/source_err.txt" | head -25
+          fi
           command -v gz >/dev/null 2>&1 || { echo "::error::no gz binary on PATH after sourcing"; exit 1; }
           note "gz: $(command -v gz)"
 
