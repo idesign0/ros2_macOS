@@ -80,7 +80,10 @@ env:
 jobs:
   package:
     runs-on: macos-26
-    timeout-minutes: 180
+    # 180 was too tight once a slower runner turned up: run 42378019095 spent 74 min in
+    # setup and 75 min packaging, leaving 31 of 180. Same shape as the 6h cap that killed
+    # humble base-1 -- give it room rather than lose a 2.5h run to arithmetic.
+    timeout-minutes: 300
     env:
       GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
     steps:
@@ -221,8 +224,13 @@ jobs:
             # bound before stopping, and the file's own rpaths and @rpath deps.
             while read -r f; do
               echo "================ regression: $f"
+              # `|| rc=$?`, NOT `; rc=$?`: GitHub runs `run:` under `bash -e`, where a bare
+              # assignment from a failing command substitution exits the whole script. The
+              # first attempt at this block used `;` and died at the FIRST regression with
+              # the probe's own 134 as the step's exit code (run 42378019095).
+              rc=0
               out=$(DYLD_PRINT_LIBRARIES=1 QT_QPA_PLATFORM=offscreen \
-                    python3 -I /tmp/loadone.py "$f" 2>&1); rc=$?
+                    python3 -I /tmp/loadone.py "$f" 2>&1) || rc=$?
               echo "  probe exit=$rc   (>128 is a signal: 134 abort, 139 segv)"
               echo "  --- recorded why: [$(grep -F "$f" /tmp/why_after.txt | cut -f2- | head -1)]"
               # Unfiltered, this is 25 lines of system-framework chatter. Keep the lines
@@ -240,6 +248,25 @@ jobs:
               otool -l "$f" | awk '/LC_RPATH/{p=1} p && /path /{print "      "$2; p=0}'
               echo "  --- its @rpath deps:"
               otool -L "$f" | grep '@rpath' | awk '{print "      "$1}' | head -25
+              # THE test for an abort. 134 is what protobuf and abseil do when one process
+              # registers the same descriptor or flag twice -- i.e. when TWO copies of one
+              # library get loaded from two different paths. The tree ships 96 in-tree
+              # copies of brew dylibs and vendors ~540 more, so that is reachable. If a
+              # basename appears at two paths here, that is the cause; if nothing is listed,
+              # it is not, and the abort is something the plugin does on its own.
+              printf '%s\n' "$out" \
+                | grep -aoE '/[^ ]*\.framework/[^ ]+|/[^ ]*\.dylib' \
+                | grep -aE 'install/|/opt/homebrew|ros2-' | sort -u \
+                | awk -F/ '{print $NF"\t"$0}' \
+                | awk -F'\t' '{c[$1]++; p[$1]=p[$1]"\n          "$2}
+                               END{for (k in c) if (c[k]>1) print "      "k":"p[k]}' \
+                | head -40 > /tmp/dup_$$.txt
+              if [ -s /tmp/dup_$$.txt ]; then
+                echo "  --- LOADED TWICE from different paths (abort cause):"
+                cat /tmp/dup_$$.txt
+              else
+                echo "  --- no library loaded twice -- the abort is not a double-load"
+              fi
             done < <(head -6 /tmp/regressions.txt)
             echo "::error::$n dylib(s) loaded before packaging and do not load after"
             exit 1
