@@ -43,6 +43,18 @@ on:
       sample:
         description: "How many dylibs to load-test before and after"
         default: "150"
+      functional:
+        description: >
+          Headless functional checks on the PACKAGED tree (gz physics steps, gz transport
+          clock/poses, ros_gz_bridge relay). advisory = run and report, never fail the job;
+          strict = a failed check fails the job; off = skip. Requested in
+          idesign0/homebrew-ros2#3 after a user hit an incomplete DART closure that loaded
+          fine but could not step physics. The GUI / Ogre2 / Metal render from that report
+          is NOT covered: runners have no display or GPU.
+        required: false
+        default: advisory
+        type: choice
+        options: ["advisory", "strict", "off"]
 
 permissions:
   contents: read
@@ -63,7 +75,7 @@ env:
   HOMEBREW_NO_AUTO_UPDATE: "1"
   GZ_VERSION: harmonic
   GZ_DIR: gz-harmonic
-  BREW_BASE: "graphviz eigen@3 eigen geographiclib vtk opencv@4 zbar png++ sophus serial vrpn draco aravis zeromq cppzmq glfw libusb rtabmap libpqxx leveldb libmodbus readline msgpack-cxx openvdb"
+  BREW_BASE: "graphviz eigen@3 eigen geographiclib vtk opencv@4 zbar png++ sophus vrpn draco aravis zeromq cppzmq glfw libusb rtabmap libpqxx leveldb libmodbus readline msgpack-cxx openvdb"
 
 jobs:
   package:
@@ -169,7 +181,7 @@ jobs:
           rc=$?
           echo "package_tree exit=$rc"
           if [ -d install/vendor/lib ]; then
-            echo "vendored: $(ls install/vendor/lib | wc -l | tr -d ' ') dylibs, $(du -sh install/vendor/lib | awk '{print $1}')"
+            echo "vendored: $(find install/vendor/lib -maxdepth 2 \( -name '*.dylib' -o -name '*.framework' \) | wc -l | tr -d ' ') libs, $(du -sh install/vendor/lib | awk '{print $1}')"
           fi
           exit $rc
 
@@ -226,6 +238,154 @@ jobs:
           sed 's/^/  /' /tmp/dyld_formulae.txt
           echo "(non-empty means the vendor set is incomplete -- those are the dlopen'd ones)"
 
+      - name: Functional smoke -- physics, transport, bridge (headless)
+        if: ${{ inputs.functional != 'off' }}
+        continue-on-error: ${{ inputs.functional != 'strict' }}
+        env:
+          # Isolate gz transport from anything else on the runner.
+          GZ_PARTITION: smoke-${{ github.run_id }}
+          GZ_IP: 127.0.0.1
+        run: |
+          set -uo pipefail
+          # Everything here runs HEADLESS. The GUI / Ogre2 / Metal render that joaaosc verified by
+          # hand (homebrew-ros2#3) is deliberately NOT attempted: GitHub's macOS runners have no
+          # display and no GPU, so a Metal render cannot be exercised in CI at all.
+          #
+          # What this adds over the dlopen sample above, which the closure check in package_tree.py
+          # already covers statically:
+          #   - gz loads system plugins through its OWN loader, not ctypes.CDLL, so a plugin that
+          #     dlopen's a dependency is invisible to both otool and the sample.
+          #   - a SILENT ABI break -- same soname, changed struct layout -- loads fine and then
+          #     computes the wrong answer with exit code 0. Only running physics catches it.
+          #   - ros_gz_bridge is where two independently-built ABI worlds actually meet.
+
+          # macOS ships no GNU `timeout`; brew coreutils installs it as gtimeout. And `gz topic -e`
+          # blocks forever when no message ever arrives, so every call here must be bounded.
+          TO=""
+          for c in timeout gtimeout; do command -v "$c" >/dev/null 2>&1 && { TO="$c"; break; }; done
+          bounded() {
+            local s=$1; shift
+            if [ -n "$TO" ]; then "$TO" -k 5 "$s" "$@"; return $?; fi
+            "$@" & local p=$!
+            ( sleep "$s"; kill -9 "$p" 2>/dev/null ) & local w=$!
+            wait "$p" 2>/dev/null; local rc=$?
+            kill -9 "$w" 2>/dev/null
+            return $rc
+          }
+          L=/tmp/fsmoke; mkdir -p "$L"; fails=0
+          note() { echo "  $1"; }
+          bad()  { echo "::warning::functional check FAILED: $1"; fails=$((fails+1)); }
+
+          # Test the PACKAGED tree, from where it lies -- that is what ships.
+          set +u
+          . install/setup.bash 2>/dev/null || { echo "::error::install/setup.bash did not source"; exit 1; }
+          set -u
+          command -v gz >/dev/null 2>&1 || { echo "::error::no gz binary on PATH after sourcing"; exit 1; }
+          note "gz: $(command -v gz)"
+
+          WORLD="$(find install/share -name shapes.sdf -path '*worlds*' 2>/dev/null | head -1)"
+          [ -n "$WORLD" ] || { echo "::error::no worlds/shapes.sdf in the tree"; exit 1; }
+          note "world: $WORLD"
+
+          # ---------------------------------------------------------------- server
+          # Unbounded in SIM time, bounded in wall time, so the topic checks below have something
+          # live to query. Killed explicitly at the end.
+          ( bounded 240 gz sim -s -r -v 2 "$WORLD" > "$L/server.log" 2>&1 ) &
+          SRV=$!
+          up=0
+          for _ in $(seq 1 30); do
+            sleep 2
+            if bounded 10 gz topic -l 2>/dev/null | grep -q '/stats'; then up=1; break; fi
+            kill -0 "$SRV" 2>/dev/null || break
+          done
+          if [ "$up" != 1 ]; then
+            echo "::warning::gz server never advertised /stats; see server.log"
+            sed -n '1,60p' "$L/server.log" | sed 's/^/    /'
+            fails=$((fails+1))
+          fi
+          bounded 15 gz topic -l > "$L/topics.txt" 2>/dev/null || true
+          note "topics advertised: $(wc -l < "$L/topics.txt" | tr -d ' ')"
+
+          # ---------------------------------------------------------------- 1. physics steps
+          # If the DART physics plugin fails to load -- joaaosc's incomplete-DART-closure case --
+          # the server either aborts or never steps, so iterations stay put.
+          if [ "$up" = 1 ]; then
+            bounded 45 gz topic -e -t /stats -n 2 > "$L/stats.txt" 2>&1 || true
+            if python3 -I - "$L/stats.txt" <<'PY'
+          import re, sys
+          vals = [int(m) for m in re.findall(r"^\s*iterations:\s*(\d+)", open(sys.argv[1]).read(), re.M)]
+          print(f"    iterations seen: {vals[:4]}")
+          sys.exit(0 if len(vals) >= 2 and vals[1] > vals[0] else 1)
+          PY
+            then note "physics IS stepping (iterations increase)"
+            else bad "iterations did not increase -- physics is not stepping"
+            fi
+
+            # Bodies exist and are being updated.
+            POSE_T="$(grep -m1 'dynamic_pose/info' "$L/topics.txt" || true)"
+            if [ -n "$POSE_T" ]; then
+              bounded 45 gz topic -e -t "$POSE_T" -n 1 > "$L/pose.txt" 2>&1 || true
+              if [ -s "$L/pose.txt" ] && grep -q 'position\|pose' "$L/pose.txt"; then
+                note "poses exposed on $POSE_T"
+              else bad "no pose message on $POSE_T"; fi
+            else bad "no dynamic_pose/info topic advertised"; fi
+
+            # 2. clock, the check joaaosc ran: two messages with advancing sim time.
+            bounded 45 gz topic -e -t /clock -n 2 > "$L/clock.txt" 2>&1 || true
+            if python3 -I - "$L/clock.txt" <<'PY'
+          import re, sys
+
+          def field(block, key):
+              m = re.search(r"\b" + key + r":\s*(\d+)", block)
+              return int(m.group(1)) if m else 0
+
+          # \bsim\s*\{ matches the Clock message's `sim {` and deliberately NOT `sim_time {`.
+          blocks = re.findall(r"\bsim\s*\{([^}]*)\}", open(sys.argv[1]).read())
+          times = [field(b, "sec") * 10**9 + field(b, "nsec") for b in blocks]
+          print(f"    sim times (ns): {times[:4]}")
+          sys.exit(0 if len(times) >= 2 and times[1] > times[0] else 1)
+          PY
+            then note "gz clock advances"
+            else bad "gz clock did not advance over two messages"; fi
+          fi
+
+          # ---------------------------------------------------------------- 3. ros_gz_bridge
+          if ros2 pkg prefix ros_gz_bridge >/dev/null 2>&1 && [ "$up" = 1 ]; then
+            ros2 run ros_gz_bridge parameter_bridge \
+              '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock' > "$L/bridge.log" 2>&1 &
+            BR=$!
+            sleep 8
+            bounded 45 ros2 topic echo /clock rosgraph_msgs/msg/Clock --once > "$L/ros_clock.txt" 2>&1 || true
+            kill "$BR" 2>/dev/null || true
+            if grep -qE 'sec:' "$L/ros_clock.txt" 2>/dev/null; then
+              note "ros_gz_bridge delivered a ROS clock message"
+            else
+              bad "ros_gz_bridge produced no ROS clock message"
+              sed -n '1,30p' "$L/bridge.log" 2>/dev/null | sed 's/^/    /'
+            fi
+          else
+            note "ros_gz_bridge not in this tree (or server down) -- bridge check skipped"
+          fi
+
+          # ---------------------------------------------------------------- plugin loader errors
+          kill "$SRV" 2>/dev/null || true
+          pkill -f 'gz sim' 2>/dev/null || true
+          if [ -s "$L/server.log" ]; then
+            if grep -nE 'Unable to load|Failed to load (system )?plugin|dlopen|image not found|Library not loaded|Symbol not found' \
+                 "$L/server.log" > "$L/loaderr.txt"; then
+              bad "gz reported plugin/library load errors"
+              sed -n '1,25p' "$L/loaderr.txt" | sed 's/^/    /'
+            else
+              note "no plugin/library load errors in the gz server log"
+            fi
+          fi
+
+          echo "functional checks failed: $fails"
+          # The report step below does `mkdir -p report` too, so this is order-independent;
+          # step 9 uploads report/ with if: always(), so these survive a failed check.
+          mkdir -p report/functional
+          cp -p "$L"/*.txt "$L"/*.log report/functional/ 2>/dev/null || true
+          exit "$fails"
       - name: Upload the packaged tree and the report
         if: always()
         run: |
