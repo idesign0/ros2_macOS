@@ -23,6 +23,8 @@ etsi_its_messages
 etsi_its_msgs
 etsi_its_msgs_utils
 etsi_its_primitives_conversion
+etsi_its_rtcmem_ts_coding
+etsi_its_rtcmem_ts_conversion
 etsi_its_rviz_plugins
 etsi_its_spatem_ts_coding
 etsi_its_spatem_ts_conversion

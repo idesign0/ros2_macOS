@@ -229,6 +229,7 @@ etsi_its_denm_ts_msgs
 etsi_its_ivim_ts_msgs
 etsi_its_mapem_ts_msgs
 etsi_its_mcm_uulm_msgs
+etsi_its_rtcmem_ts_msgs
 etsi_its_spatem_ts_msgs
 etsi_its_vam_ts_msgs
 event_camera_msgs
