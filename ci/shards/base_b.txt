@@ -249,6 +249,7 @@ easynav_sensors
 moveit_planners_chomp
 moveit_ros_planning
 navmap_ros
+navmap_tools
 octomap_server
 perception_pcl
 ros2bag

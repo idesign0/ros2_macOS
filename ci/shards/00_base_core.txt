@@ -236,6 +236,7 @@ mrt_cmake_modules
 nav_msgs
 navmap_core
 navmap_ros
+navmap_tools
 navmap_ros_interfaces
 nmea_msgs
 object_recognition_msgs

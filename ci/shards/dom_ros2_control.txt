@@ -17,6 +17,7 @@ easynav_tools
 game_controller_spl
 game_controller_spl_interfaces
 joint_state_topic_hardware_interface
+joint_command_topic_hardware_interface
 kinematics_interface_pinocchio
 lely_core_libraries
 linear_feedback_controller
