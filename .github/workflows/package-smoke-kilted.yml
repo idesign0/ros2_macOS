@@ -387,8 +387,8 @@ jobs:
           print(f"    iterations seen: {vals[:4]}")
           sys.exit(0 if len(vals) >= 2 and vals[1] > vals[0] else 1)
           PY
-            then note "physics IS stepping (iterations increase)"
-            else bad "iterations did not increase -- physics is not stepping"
+            then note "sim loop is running (iterations increase) -- NOT proof of physics, see the drop test"
+            else bad "iterations did not increase -- the sim loop is not running"
             fi
 
             # Bodies exist and are being updated.
@@ -419,6 +419,59 @@ jobs:
             else bad "gz clock did not advance over two messages"; fi
           fi
 
+          # ---------------------------------------------------------------- 1b. a dropped ball falls
+          # The iteration count above advances with NO physics loaded at all. Measured on a
+          # relocated jazzy tree: gz sim ran with physics, user-commands and scene-broadcaster
+          # ALL failing to load, and iterations still went 1613 -> 1614. So drop a ball from
+          # 5 m under gz's default engine (DART -- what a user gets) and require it to have
+          # fallen. Nothing short of a working physics engine can pass this.
+          cat > "$L/drop.sdf" <<'SDF'
+          <?xml version="1.0"?>
+          <sdf version="1.9"><world name="drop">
+            <physics name="1ms" type="ignored"><max_step_size>0.001</max_step_size><real_time_factor>1.0</real_time_factor></physics>
+            <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+            <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+            <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+            <gravity>0 0 -9.8</gravity>
+            <model name="ground"><static>true</static><link name="l"><collision name="c"><geometry><plane><normal>0 0 1</normal></plane></geometry></collision></link></model>
+            <model name="ball"><pose>0 0 5 0 0 0</pose><link name="l">
+              <inertial><mass>1</mass><inertia><ixx>0.1</ixx><iyy>0.1</iyy><izz>0.1</izz></inertia></inertial>
+              <collision name="c"><geometry><sphere><radius>0.2</radius></sphere></geometry></collision></link></model>
+          </world></sdf>
+          SDF
+          ( bounded 90 gz sim -s -r -v 3 "$L/drop.sdf" > "$L/drop_server.log" 2>&1 ) &
+          DROP=$!
+          dup=0
+          for _ in $(seq 1 30); do
+            sleep 2
+            if bounded 10 gz topic -l 2>/dev/null | grep -q '/world/drop/dynamic_pose/info'; then dup=1; break; fi
+            kill -0 "$DROP" 2>/dev/null || break
+          done
+          if [ "$dup" = 1 ]; then
+            sleep 3
+            bounded 30 gz topic -e -t /world/drop/dynamic_pose/info -n 1 > "$L/drop_pose.txt" 2>&1 || true
+            if python3 -I - "$L/drop_pose.txt" <<'PY'
+          import re, sys
+          t = open(sys.argv[1]).read()
+          m = re.search(r'name:\s*"ball".*?position\s*\{([^}]*)\}', t, re.S)
+          z = None
+          if m:
+              zm = re.search(r"z:\s*([-0-9.e]+)", m.group(1))
+              z = float(zm.group(1)) if zm else 0.0
+          print(f"    ball z ~3 s after a 5 m drop: {z}")
+          sys.exit(0 if z is not None and z < 4.5 else 1)
+          PY
+            then note "physics WORKS: a dropped ball fell under the default engine"
+            else
+              bad "a ball dropped from 5 m did not fall -- no working physics engine"
+              grep -nE 'Error|Failed|not loaded' "$L/drop_server.log" | head -10 | sed 's/^/    /'
+            fi
+          else
+            bad "the drop-test world never published poses"
+            sed -n '1,30p' "$L/drop_server.log" | sed 's/^/    /'
+          fi
+          kill "$DROP" 2>/dev/null || true
+
           # ---------------------------------------------------------------- 3. ros_gz_bridge
           if ros2 pkg prefix ros_gz_bridge >/dev/null 2>&1 && [ "$up" = 1 ]; then
             ros2 run ros_gz_bridge parameter_bridge \
@@ -441,8 +494,9 @@ jobs:
           kill "$SRV" 2>/dev/null || true
           pkill -f 'gz sim' 2>/dev/null || true
           if [ -s "$L/server.log" ]; then
-            if grep -nE 'Unable to load|Failed to load (system )?plugin|dlopen|image not found|Library not loaded|Symbol not found' \
-                 "$L/server.log" > "$L/loaderr.txt"; then
+            if cat "$L/server.log" "$L/drop_server.log" 2>/dev/null \
+                 | grep -nE 'Unable to load|Failed to load (system )?plugin|dlopen|image not found|Library not loaded|Symbol not found' \
+                 > "$L/loaderr.txt"; then
               bad "gz reported plugin/library load errors"
               sed -n '1,25p' "$L/loaderr.txt" | sed 's/^/    /'
             else
