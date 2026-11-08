@@ -47,7 +47,7 @@ Usage:
   package_tree.py <tree> --install-prefix ... --allow-missing          # local only
   package_tree.py <tree> --install-prefix ... --verify-only
 """
-import argparse, collections, json, os, re, shutil, subprocess, sys
+import argparse, collections, io, json, os, re, shutil, subprocess, sys
 
 HB = "/opt/homebrew/opt"
 # A reference is either a plain dylib/so, or a binary INSIDE a .framework bundle. Qt is
@@ -68,6 +68,8 @@ REF = re.compile(
     rf"(?:{re.escape(HB)}/[^/\s]+|{re.escape(CELLAR)}/[^/\s]+/[^/\s]+)/"
     r"(?:\S+\.(?:dylib|so)|\S*?[^/]+\.framework/\S+)")
 MACHO_EXT = (".dylib", ".so", ".bundle")
+MACHO_MAGIC = {bytes.fromhex(h) for h in
+               ("feedface", "cefaedfe", "feedfacf", "cffaedfe", "cafebabe", "bebafeca")}
 
 # .../QtCore.framework/Versions/5/QtCore -> (framework dir, "QtCore", "Versions/5/QtCore")
 FW = re.compile(r"^(?P<fwdir>.*?/(?P<name>[^/]+)\.framework)/(?P<rest>.+)$")
@@ -282,6 +284,49 @@ def resign(path):
     run(["codesign", "--force", "--sign", "-", path])
 
 
+def build_prefixes(tree, extra):
+    """The absolute path(s) the tree was BUILT at. colcon and ament bake it into the
+    tree -- ament's generated local_setup.sh carries it as the fallback
+    `: ${AMENT_CURRENT_PREFIX:="<prefix>"}`, which makes that file the authoritative
+    record even when the tree is packaged somewhere else (a local test, a different
+    runner path). The tree's own current location is included too: in CI they are the
+    same path."""
+    out = {os.path.abspath(tree)}
+    out.update(os.path.abspath(e) for e in extra)
+    share = os.path.join(tree, "share")
+    pat = re.compile(r'AMENT_CURRENT_PREFIX:="([^"]+)"')
+    try:
+        for pkg in sorted(os.listdir(share))[:400]:
+            f = os.path.join(share, pkg, "local_setup.sh")
+            if os.path.isfile(f):
+                m = pat.search(io.open(f, encoding="utf-8", errors="replace").read())
+                if m:
+                    out.add(m.group(1).rstrip("/"))
+    except OSError:
+        pass
+    return sorted(out, key=len, reverse=True)   # longest first: never half-rewrite a nest
+
+
+LC_NAME = re.compile(r"^\s*cmd (LC_ID_DYLIB|LC_LOAD_DYLIB|LC_LOAD_WEAK_DYLIB|"
+                     r"LC_REEXPORT_DYLIB|LC_LAZY_LOAD_DYLIB|LC_RPATH)$")
+
+
+def load_paths(path):
+    """(command, path) for every dylib-naming and rpath load command of a mach-o."""
+    out, cur = [], None
+    for line in run(["otool", "-l", path]).stdout.splitlines():
+        m = LC_NAME.match(line)
+        if m:
+            cur = m.group(1)
+            continue
+        if cur:
+            m = re.match(r"^\s*(?:name|path) (.+?) \(offset \d+\)$", line)
+            if m:
+                out.append((cur, m.group(1)))
+                cur = None
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("tree")
@@ -299,6 +344,11 @@ def main():
                     help="tolerate every missing ref, including an absent formula "
                          "(LOCAL EXPERIMENTS ONLY -- implies --tolerate-stale-input)")
     ap.add_argument("--verify-only", action="store_true")
+    ap.add_argument("--build-prefix", action="append", default=[],
+                    help="an absolute path the tree was built at, to relocate to "
+                         "--install-prefix. Normally auto-detected from the tree's ament "
+                         "local_setup.sh; repeatable. For packaging a tree away from the "
+                         "machine that built it.")
     a = ap.parse_args()
 
     tree = a.tree.rstrip("/")
@@ -528,6 +578,81 @@ def main():
                 reid += 1
     print(f"  re-identified         : {reid} in-tree copies of brew dylibs", flush=True)
 
+    # ---- 1c. relocate the BUILD prefix to the INSTALL prefix.
+    # Everything above takes the tree off the user's Homebrew. This takes it off the
+    # machine that BUILT it. colcon, ament, CMake and autotools all write the build-time
+    # install prefix into what they install, and in CI that is
+    # /Users/runner/work/ros2_macOS/ros2_macOS/install. Measured on the jazzy tree of run
+    # 42025234330: 3855 text files (ament local_setup.sh, .cmake, .pc, .dsv hooks) and 39
+    # mach-o files carry it -- among them gz_ros2_control's GZ_SIM_SYSTEM_PLUGIN_PATH,
+    # python_orocos_kdl_vendor's PYTHONPATH (PyKDL) and lely, whose liblely-util loads
+    # liblely-libc by that absolute path. None of it is visible to a CI test, because on
+    # the runner the path exists; on a user's machine it does not.
+    # The install prefix is always the SHORTER string (/opt/homebrew/opt/ros2-<distro>,
+    # 28-29 chars, vs 45), so install_name_tool never needs header room it lacks.
+    olds = [b for b in build_prefixes(tree, a.build_prefix)
+            if os.path.normpath(b) != os.path.normpath(a.install_prefix)]
+    vendor_root = os.path.join(tree, a.vendor_subdir.split("/")[0])
+    text_fixed = 0
+    for root, dirs, names in os.walk(tree):
+        if os.path.abspath(root).startswith(os.path.abspath(vendor_root)):
+            dirs[:] = []
+            continue
+        for n in names:
+            f = os.path.join(root, n)
+            if os.path.islink(f) or n.endswith((".pyc", ".pyo")):
+                continue
+            try:
+                raw = open(f, "rb").read()
+            except OSError:
+                continue
+            # by MAGIC, not is_macho(): that one calls every extensionless executable a
+            # binary, which would skip bin/ entry-point scripts. A NUL byte also rules out
+            # every mach-o and every other binary format -- never length-change those.
+            if raw[:4] in MACHO_MAGIC or b"\0" in raw or not any(o.encode() in raw for o in olds):
+                continue
+            try:
+                txt = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                continue            # not text: never length-change binary data
+            for o in olds:
+                txt = txt.replace(o, a.install_prefix)
+            st = os.stat(f)
+            io.open(f, "w", encoding="utf-8", newline="").write(txt)
+            os.chmod(f, st.st_mode)
+            text_fixed += 1
+    macho_fixed, macho_failed = 0, []
+    for p in files:
+        cmd = ["install_name_tool"]
+        have_rp = {q for c, q in load_paths(p) if c == "LC_RPATH"}
+        for c, q in load_paths(p):
+            o = next((o for o in olds if q == o or q.startswith(o + "/")), None)
+            if not o:
+                continue
+            new = a.install_prefix + q[len(o):]
+            if c == "LC_ID_DYLIB":
+                cmd += ["-id", new]
+            elif c == "LC_RPATH":
+                cmd += (["-delete_rpath", q] if new in have_rp else ["-rpath", q, new])
+                have_rp.add(new)
+            else:
+                cmd += ["-change", q, new]
+        if len(cmd) == 1:
+            continue
+        if run(cmd + [p]).returncode == 0:
+            macho_fixed += 1
+        else:
+            macho_failed.append(p)
+    print(f"  relocated            : {' | '.join(olds) or '(none)'} -> {a.install_prefix}")
+    print(f"                         {text_fixed} text files, {macho_fixed} mach-o files",
+          flush=True)
+    if macho_failed:
+        print(f"::error::{len(macho_failed)} mach-o file(s) rejected the build->install "
+              f"relocation; they would load from the build machine's path:")
+        for p in macho_failed[:10]:
+            print(f"     {p[len(tree)+1:]}")
+        sys.exit(1)
+
     # ---- 2. rewrite every reference, in the tree AND in the vendored copies
     targets = files + vendored
     allrefs = refs_of(targets)
@@ -657,6 +782,39 @@ def main():
             print(f"     {p[len(tree)+1:]} -> {sorted(s)[:2]}")
         sys.exit(1)
     print(f"  VERIFIED             : 0 remaining Homebrew references (opt/ and Cellar/)")
+
+    # Anything still naming the build machine. A mach-o load command doing so is fatal --
+    # that is exactly lely's failure. Text that names OTHER workspace dirs (build/, a
+    # vendored source tree's include/) is reported, not rewritten: there is no installed
+    # equivalent to map it to, and it only matters when compiling against the keg.
+    ws = sorted({os.path.dirname(o) for o in olds}, key=len, reverse=True)
+    bad = [(p, q) for p in targets for c, q in load_paths(p)
+           if any(q.startswith(o + "/") or q == o for o in olds)]
+    if bad:
+        print(f"::error::{len(bad)} load command(s) still name the build prefix:")
+        for p, q in bad[:10]:
+            print(f"     {p[len(tree)+1:]} -> {q}")
+        sys.exit(1)
+    if ws:
+        left = collections.Counter()
+        for root, dirs, names in os.walk(tree):
+            if os.path.abspath(root).startswith(os.path.abspath(vendor_root)):
+                dirs[:] = []
+                continue
+            for n in names:
+                f = os.path.join(root, n)
+                if os.path.islink(f):
+                    continue
+                try:
+                    raw = open(f, "rb").read()
+                except OSError:
+                    continue
+                for w in ws:
+                    for m in re.finditer(re.escape(w.encode()) + rb"/([A-Za-z0-9_.@+-]+)", raw):
+                        left[m.group(1).decode("utf-8", "replace")] += 1
+        if left:
+            print(f"  build-machine paths left (outside the install prefix, not rewritten): "
+                  + ", ".join(f"{k}/ x{v}" for k, v in left.most_common(8)))
 
 
 if __name__ == "__main__":
