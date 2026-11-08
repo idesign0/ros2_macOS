@@ -1328,11 +1328,11 @@
 	branch = humble-devel
 [submodule "ros-drivers/mobile_base/husarion_components_description"]
 	path = ros-drivers/mobile_base/husarion_components_description
-	url = https://github.com/husarion/husarion_components_description.git
+	url = https://github.com/idesign0/id_husarion_components_description.git
 	branch = ros2
 [submodule "gzsim/husarion_gz_worlds"]
 	path = gzsim/husarion_gz_worlds
-	url = https://github.com/husarion/husarion_gz_worlds.git
+	url = https://github.com/idesign0/id_husarion_gz_worlds.git
 	branch = jazzy
 [submodule "ros2_control/husarion_controllers"]
 	path = ros2_control/husarion_controllers
@@ -2084,7 +2084,7 @@
 	branch = develop
 [submodule "moveit/rosbot_ros"]
 	path = moveit/rosbot_ros
-	url = https://github.com/husarion/rosbot_ros.git
+	url = https://github.com/idesign0/id_rosbot_ros.git
 	branch = jazzy
 [submodule "aerial/rosbot_mavlink_bridge"]
 	path = aerial/rosbot_mavlink_bridge
