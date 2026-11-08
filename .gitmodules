@@ -1620,7 +1620,7 @@
 	branch = humble
 [submodule "ros-drivers/mobile_base/husarion_components_description"]
 	path = ros-drivers/mobile_base/husarion_components_description
-	url = https://github.com/husarion/husarion_components_description.git
+	url = https://github.com/idesign0/id_husarion_components_description.git
 	branch = ros2
 [submodule "ros-drivers/mobile_base/husarion_ugv_ros"]
 	path = ros-drivers/mobile_base/husarion_ugv_ros
