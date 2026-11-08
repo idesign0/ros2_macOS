@@ -28,6 +28,7 @@ autoware_auto_vehicle_msgs
 autoware_behavior_velocity_planner_common
 autoware_common_msgs
 autoware_component_interface_specs
+autoware_component_interface_admission
 autoware_control_msgs
 autoware_internal_localization_msgs
 autoware_internal_metric_msgs
@@ -35,6 +36,7 @@ autoware_internal_msgs
 autoware_internal_perception_msgs
 autoware_internal_planning_msgs
 autoware_interpolation
+autoware_interface_spec_lint
 autoware_lanelet2_extension
 autoware_lanelet2_utils
 autoware_localization_msgs
@@ -210,6 +212,7 @@ kobuki_ros_interfaces
 kompass_interfaces
 kortex_description
 kuka_lbr_iisy_support
+kuka_lbr_iico_support
 kuka_lbr_iiwa_support
 laser_filters
 laser_geometry
@@ -434,6 +437,7 @@ rclc
 rclcpp
 rclcpp_action
 rclcpp_cascade_lifecycle
+rclpy_cascade_lifecycle
 rclcpp_components
 rclcpp_lifecycle
 rclpy

@@ -10,7 +10,7 @@ crane_plus_description
 crane_plus_examples
 crane_plus_gazebo
 crane_plus_moveit_config
-data_tamer_cpp
+data_tamer_v2
 data_tamer_msgs
 ewellix_lift_common
 ewellix_moveit_config
@@ -30,6 +30,7 @@ kuka_iontec_support
 kuka_kl_support
 kuka_kr_moveit_config
 kuka_lbr_iisy_moveit_config
+kuka_lbr_iico_moveit_config
 kuka_lbr_iiwa_moveit_config
 kuka_mock_hardware_interface
 kuka_quantec_support

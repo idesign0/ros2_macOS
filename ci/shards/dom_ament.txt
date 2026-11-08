@@ -21,6 +21,7 @@ ros2_medkit_fault_manager
 ros2_medkit_fault_reporter
 ros2_medkit_gateway
 ros2_medkit_graph_provider
+ros2_medkit_graph_watchdog
 ros2_medkit_integration_tests
 ros2_medkit_linux_introspection
 ros2_medkit_log_bridge

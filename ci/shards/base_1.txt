@@ -31,6 +31,7 @@ ament_cmake_pep257
 ament_cmake_pytest
 ament_cmake_python
 ament_cmake_ros
+ament_cmake_ros_core
 ament_cmake_target_dependencies
 ament_cmake_test
 ament_cmake_uncrustify
@@ -63,6 +64,7 @@ autoware_internal_debug_msgs
 autoware_lint_common
 autoware_pyplot
 autoware_utils_math
+autoware_utils_launch
 backward_ros
 behaviortree_cpp_v3
 builtin_interfaces

@@ -43,6 +43,7 @@ ament_cmake_pep257
 ament_cmake_pytest
 ament_cmake_python
 ament_cmake_ros
+ament_cmake_ros_core
 ament_cmake_target_dependencies
 ament_cmake_test
 ament_cmake_uncrustify
@@ -89,6 +90,7 @@ autoware_behavior_velocity_planner_common
 autoware_cmake
 autoware_common_msgs
 autoware_component_interface_specs
+autoware_component_interface_admission
 autoware_control_msgs
 autoware_internal_debug_msgs
 autoware_internal_localization_msgs
@@ -97,6 +99,7 @@ autoware_internal_msgs
 autoware_internal_perception_msgs
 autoware_internal_planning_msgs
 autoware_interpolation
+autoware_interface_spec_lint
 autoware_lanelet2_extension
 autoware_lanelet2_utils
 autoware_lint_common
@@ -125,6 +128,7 @@ autoware_utils_diagnostics
 autoware_utils_geometry
 autoware_utils_logging
 autoware_utils_math
+autoware_utils_launch
 autoware_utils_pcl
 autoware_utils_rclcpp
 autoware_utils_system
@@ -334,6 +338,7 @@ kortex_description
 kuka_driver_interfaces
 kuka_external_control_sdk
 kuka_lbr_iisy_support
+kuka_lbr_iico_support
 kuka_lbr_iiwa_support
 kuka_resources
 lanelet2_core
@@ -615,6 +620,7 @@ rclc
 rclcpp
 rclcpp_action
 rclcpp_cascade_lifecycle
+rclpy_cascade_lifecycle
 rclcpp_components
 rclcpp_lifecycle
 rclpy

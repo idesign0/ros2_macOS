@@ -264,6 +264,7 @@ rclpy
 adi_imu
 as2_msgs
 autoware_component_interface_specs
+autoware_component_interface_admission
 autoware_utils_rclcpp
 autoware_utils_system
 autoware_utils_visualization
@@ -330,6 +331,7 @@ pal_statistics
 parameter_traits
 rclc
 rclcpp_cascade_lifecycle
+rclpy_cascade_lifecycle
 realsense2_description
 realtime_tools
 rmf_visualization_schedule

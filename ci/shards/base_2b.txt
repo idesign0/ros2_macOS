@@ -144,6 +144,7 @@ velodyne
 warehouse_ros
 admittance_controller
 autoware_interpolation
+autoware_interface_spec_lint
 autoware_objects_of_interest_marker_interface
 autoware_test_utils
 autoware_utils_tf
@@ -251,6 +252,7 @@ autoware_route_handler
 dwb_core
 irobot_create_control
 kuka_lbr_iisy_support
+kuka_lbr_iico_support
 kuka_lbr_iiwa_support
 moveit_planners_chomp
 moveit_plugins

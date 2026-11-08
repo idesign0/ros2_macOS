@@ -49,10 +49,12 @@ autoware_msgs
 autoware_ndt_scan_matcher
 autoware_node
 autoware_overlay_rviz_plugin
+tier4_datetime_rviz_plugin
 autoware_path_generator
 autoware_perception_objects_converter
 autoware_perception_rviz_plugin
 autoware_planning_rviz_plugin
+autoware_polar_grid
 autoware_planning_topic_converter
 autoware_point_types
 autoware_pose_initializer

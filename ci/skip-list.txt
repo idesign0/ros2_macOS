@@ -743,3 +743,12 @@ mvsim
 # the apps package skipped, mrpt_tps_astar_planner failed on all three distros with
 #   mrpt_tps_astar_planner_node.cpp:16:10: fatal error: 'mpp/algos/viz.h' file not found
 # and mrpt_navigation was then never built. (runs 38888909284 / 38796452721 / 38796471382)
+
+# ---- shard-coverage audit 2026-11-08: colcon finds these, no shard built them, and they
+# must NOT build. Reasons on their own lines: the skip step reads each line whole.
+# kroshu_drivers: depends on skip-listed kuka_iiqka_eac_driver + kuka_sunrise_fri_driver
+kroshu_drivers
+# mrpt_imgui_vendor: mrpt3 module; mrpt3 is skipped (we keep mrpt_ros v2)
+mrpt_imgui_vendor
+# plansys2: metapackage; depends on skip-listed plansys2_tools
+plansys2

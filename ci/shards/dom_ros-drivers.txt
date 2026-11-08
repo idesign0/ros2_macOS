@@ -98,6 +98,10 @@ kdl_inverse_dynamics_solver
 kobuki_core
 kobuki_velocity_smoother
 kuka_external_control_sdk_examples
+kuka_external_control_sdk_kss
+kuka_external_control_sdk_iiqka2
+kuka_external_control_sdk_iiqka
+kuka_external_control_sdk_common
 ld08_driver
 leo_bringup
 leo_desktop
