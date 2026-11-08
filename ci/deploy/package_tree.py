@@ -327,6 +327,138 @@ def load_paths(path):
     return out
 
 
+ENV_PKG = "ros2_macos_install_env"
+
+
+def write_install_prefix_env(tree):
+    """Tell each gz library where it ACTUALLY lives, via the override gz built in for it.
+
+    gz libraries compile their install prefix in, and derive every plugin, engine,
+    world and GUI-config directory from it. Relocating text and load commands cannot
+    reach those strings, and on a user's machine they name the build machine: measured
+    on the jazzy tree, gz sim then starts and loads NONE of its default systems --
+    physics, user-commands, scene-broadcaster all "Could not find shared library" -- so
+    the server runs and simulates nothing. (No CI test can see it: on the runner the
+    compiled-in path exists.)
+
+    gz-cmake gives each project an override for exactly this: getInstallPrefix() honours
+    GZ_<PROJECT>_INSTALL_PREFIX before the compiled-in value. So read which of those
+    variables each library actually defines, from the binary itself, and set it to the
+    directory that library sits in. A library under opt/<pkg>/lib was built for prefix
+    opt/<pkg>; one under lib/ for the tree root. The ROS vendor copy (opt/) wins over
+    the top-level gz build where both define a variable, because that is the copy the
+    gz CLI loads (gz_*_vendor put their share/gz first on GZ_CONFIG_PATH).
+
+    Written as colcon `set` lines with RELATIVE values -- colcon resolves those against
+    the prefix at source time -- in a small package colcon discovers like any other, so
+    nothing absolute is baked in and the tree stays relocatable."""
+    pat = re.compile(rb"\x00(GZ_[A-Z0-9]+_INSTALL_PREFIX)\x00")
+    found = {}
+    dirs = [os.path.join(tree, "lib")] + sorted(
+        os.path.join(tree, "opt", d, "lib") for d in
+        (os.listdir(os.path.join(tree, "opt")) if os.path.isdir(os.path.join(tree, "opt")) else []))
+    for d in dirs:
+        if not os.path.isdir(d):
+            continue
+        rel = os.path.relpath(os.path.dirname(d), tree)
+        rel = "" if rel == "." else rel
+        for n in sorted(os.listdir(d)):
+            f = os.path.join(d, n)
+            if not n.endswith(".dylib") or os.path.islink(f) or not os.path.isfile(f):
+                continue
+            try:
+                raw = open(f, "rb").read()
+            except OSError:
+                continue
+            for m in pat.finditer(raw):
+                var = m.group(1).decode()
+                if var not in found or (rel and not found[var]):   # opt/ beats the root
+                    found[var] = rel
+    if not found:
+        return {}
+    meta = os.path.join(tree, "share", "colcon-core", "packages")
+    deps = sorted({v.split("/")[1] for v in found.values() if v.startswith("opt/")})
+    deps = [x for x in deps if os.path.exists(os.path.join(meta, x))]
+    os.makedirs(meta, exist_ok=True)
+    io.open(os.path.join(meta, ENV_PKG), "w").write(":".join(deps))
+    d = os.path.join(tree, "share", ENV_PKG)
+    os.makedirs(d, exist_ok=True)
+    io.open(os.path.join(d, "package.dsv"), "w").write(
+        "".join(f"set;{var};{rel}\n" for var, rel in sorted(found.items())))
+    return found
+
+
+def add_intree_rpaths(tree, install_prefix, targets):
+    """Make every in-tree @rpath dependency resolvable through rpaths ALONE.
+
+    Without this, a lot of the tree only loads when DYLD_LIBRARY_PATH is set -- and on
+    macOS that variable does not survive: dyld strips every DYLD_* variable from a
+    SIP-protected binary, and /usr/bin/env, /bin/sh and /usr/bin/ruby all are. So
+    `#!/usr/bin/env ruby` (bin/gz) loses it before any of our code runs. Measured on the
+    jazzy tree: opt/gz_sim_vendor/lib/libgz-sim8-gz needs @rpath/libgz-fuel_tools9.9,
+    and gz-transport-topic needs @rpath/libgz-utils2.2. Both live in the tree's TOP-LEVEL
+    lib/, which none of their @loader_path rpaths reach, and which the previous version of
+    this step never considered -- it only walked opt/*/lib.
+
+    For each file, resolve its @rpath/ deps against the rpaths it already has, and append
+    the installed directory of the first provider for any that do not resolve,
+    preferring the file's own opt/<pkg> and then the top-level lib/. Appending keeps the
+    existing rpaths first, so nothing that resolves today changes which copy it gets.
+
+    Also O(files): one otool per file. The old loop ran otool -L and otool -l once per
+    (directory x file) pair -- on the order of 10^5 process spawns per packaging run."""
+    dirs = set()
+    if os.path.isdir(os.path.join(tree, "lib")):
+        dirs.add(os.path.join(tree, "lib"))
+    for r, _, ns in os.walk(os.path.join(tree, "opt")):
+        if any(n.endswith(".dylib") for n in ns):
+            dirs.add(r)
+    provider = collections.defaultdict(list)          # leaf -> [tree dir, ...]
+    for d in sorted(dirs):
+        for n in os.listdir(d):
+            if n.endswith(".dylib"):
+                provider[n].append(d)
+
+    def to_tree(path_):
+        if path_ == install_prefix or path_.startswith(install_prefix + "/"):
+            return os.path.join(tree, os.path.relpath(path_, install_prefix))
+        return path_
+
+    added = 0
+    for p in targets:
+        lp = load_paths(p)
+        rps = [q for c, q in lp if c == "LC_RPATH"]
+        here = os.path.dirname(p)
+        rdirs = [to_tree(r.replace("@loader_path", here).replace("@executable_path", here))
+                 for r in rps]
+        want = []
+        own = os.path.relpath(p, tree).split(os.sep)
+        own_pkg = os.path.join(tree, "opt", own[1]) if own[0] == "opt" and len(own) > 1 else None
+        for c, q in lp:
+            if c == "LC_RPATH" or c == "LC_ID_DYLIB" or not q.startswith("@rpath/"):
+                continue
+            leaf = q[len("@rpath/"):]
+            if "/" in leaf or leaf not in provider:
+                continue          # frameworks / scoped vendor names, or not ours
+            if any(os.path.exists(os.path.join(d, leaf)) for d in rdirs):
+                continue
+            cands = provider[leaf]
+            pick = next((d for d in cands if own_pkg and d.startswith(own_pkg + os.sep)), None) \
+                or next((d for d in cands if d == os.path.join(tree, "lib")), None) or cands[0]
+            inst = os.path.join(install_prefix, os.path.relpath(pick, tree))
+            if inst not in rps and inst not in want:
+                want.append(inst)
+            rdirs.append(pick)
+        if not want:
+            continue
+        cmd = ["install_name_tool"]
+        for w in want:
+            cmd += ["-add_rpath", w]
+        if run(cmd + [p]).returncode == 0:
+            added += len(want)
+    return added
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("tree")
@@ -646,6 +778,10 @@ def main():
     print(f"  relocated            : {' | '.join(olds) or '(none)'} -> {a.install_prefix}")
     print(f"                         {text_fixed} text files, {macho_fixed} mach-o files",
           flush=True)
+    envs = write_install_prefix_env(tree)
+    if envs:
+        print(f"  gz install prefixes  : {len(envs)} via share/{ENV_PKG}: "
+              + ", ".join(f"{k}={v or '.'}" for k, v in sorted(envs.items())))
     if macho_failed:
         print(f"::error::{len(macho_failed)} mach-o file(s) rejected the build->install "
               f"relocation; they would load from the build machine's path:")
@@ -739,27 +875,9 @@ def main():
             added += 1
     print(f"  vendor rpath added   : {added} files", flush=True)
 
-    # ---- 4. the surviving post_install job: in-tree opt/*/lib vendor dirs.
-    # Hardened Runtime will not expand @loader_path for a dlopen'd plugin, so the
-    # absolute installed path has to be baked in.
-    inner = 0
-    for d in sorted(set(os.path.dirname(x) for x in
-                        (os.path.join(r, n)
-                         for r, _, ns in os.walk(os.path.join(tree, "opt"))
-                         for n in ns) if x.endswith(".dylib"))):
-        libs = {n for n in os.listdir(d) if n.endswith(".dylib")}
-        if not libs:
-            continue
-        installed_dir = os.path.join(a.install_prefix, os.path.relpath(d, tree))
-        for p, s in allrefs.items():
-            o = run(["otool", "-L", p]).stdout
-            if not any(f"@rpath/{l}" in o for l in libs):
-                continue
-            if has_rpath(p, installed_dir):
-                continue
-            if run(["install_name_tool", "-add_rpath", installed_dir, p]).returncode == 0:
-                inner += 1
-    print(f"  in-tree opt/ rpaths  : {inner} additions", flush=True)
+    # ---- 4. absolute rpaths for every in-tree lib dir a file actually needs.
+    inner = add_intree_rpaths(tree, a.install_prefix, targets)
+    print(f"  in-tree lib rpaths   : {inner} additions", flush=True)
 
     # ---- 5. re-sign everything we touched
     for p in targets:
