@@ -35,6 +35,7 @@ ament_cmake_pep257
 ament_cmake_pytest
 ament_cmake_python
 ament_cmake_ros
+ament_cmake_ros_core
 ament_cmake_target_dependencies
 ament_cmake_test
 ament_cmake_uncrustify

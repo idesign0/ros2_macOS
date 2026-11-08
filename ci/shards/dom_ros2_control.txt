@@ -13,6 +13,7 @@ game_controller_spl
 game_controller_spl_interfaces
 joint_group_impedance_controller
 joint_state_topic_hardware_interface
+joint_command_topic_hardware_interface
 kinematics_interface_pinocchio
 kuka_control_mode_handler
 kuka_controllers

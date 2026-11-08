@@ -212,6 +212,7 @@ plansys2_problem_expert
 plansys2_support_py
 plansys2_terminal
 plansys2_tests
+plansys2_tui_cli
 plansys2_tools
 pose_cov_ops
 pure_spinning_local_planner
@@ -257,6 +258,8 @@ sm_mode_state_behavior_1
 sm_multi_stage_1
 sm_multithread_test_1
 sm_nav2_gazebo_test_1
+sm_nav2_gazebo_test_3
+sm_nav2_gazebo_test_2
 sm_pack_ml
 sm_panda_cl_moveit2z_cb_inventory
 sm_panda_cl_moveit2z_cb_inventory_isaacsim

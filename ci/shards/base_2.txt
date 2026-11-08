@@ -130,6 +130,7 @@ kinematics_interface
 kinematics_interface_kdl
 kortex_description
 kuka_lbr_iisy_support
+kuka_lbr_iico_support
 kuka_lbr_iiwa_support
 laser_filters
 laser_geometry
@@ -226,6 +227,7 @@ nav_2d_utils
 navigation2
 navmap_core
 navmap_ros
+navmap_tools
 navmap_ros_interfaces
 nmea_msgs
 object_recognition_msgs
@@ -236,6 +238,7 @@ octomap_rviz_plugins
 octomap_server
 omni_wheel_drive_controller
 opennav_docking
+opennav_following
 opennav_docking_bt
 opennav_docking_core
 pal_statistics

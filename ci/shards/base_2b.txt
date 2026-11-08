@@ -69,6 +69,7 @@ nav2_minimal_tb4_sim
 nav2_velocity_smoother
 nav_2d_utils
 navmap_ros
+navmap_tools
 octomap_server
 opennav_docking_core
 perception_pcl
@@ -127,6 +128,7 @@ easynav_maps_manager
 easynav_planner
 effort_controllers
 kuka_lbr_iisy_support
+kuka_lbr_iico_support
 kuka_lbr_iiwa_support
 moveit_resources_fanuc_moveit_config
 moveit_resources_panda_moveit_config
@@ -193,6 +195,7 @@ moveit_plugins
 moveit_ros_planning
 nav2_dwb_controller
 opennav_docking
+opennav_following
 rosbag2_tests
 clearpath_description
 husarion_components_description

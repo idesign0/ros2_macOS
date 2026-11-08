@@ -16,7 +16,7 @@ cyclo_motion_controller_models
 cyclo_motion_controller_ros
 cyclo_motion_controller_ros_py
 cyclo_teleoperation
-data_tamer_cpp
+data_tamer_v2
 data_tamer_msgs
 dual_arm_panda_moveit_config
 ewellix_interfaces
@@ -51,6 +51,7 @@ kuka_iontec_support
 kuka_kl_support
 kuka_kr_moveit_config
 kuka_lbr_iisy_moveit_config
+kuka_lbr_iico_moveit_config
 kuka_lbr_iiwa_moveit_config
 kuka_mock_hardware_interface
 kuka_quantec_support

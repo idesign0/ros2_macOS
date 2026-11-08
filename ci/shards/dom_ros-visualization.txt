@@ -70,7 +70,7 @@ play_motion_builder
 play_motion_builder_msgs
 # data_tamer_cpp: plotjuggler build-depends on it but it lived only in dom_moveit
 # (a different shard/runner) -> "Failed to find data_tamer_cpp/package.sh". Build it here too.
-data_tamer_cpp
+data_tamer_v2
 plotjuggler
 plotjuggler_msgs
 plotjuggler_ros

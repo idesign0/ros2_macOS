@@ -30,6 +30,7 @@ autoware_cmake
 autoware_command_gate
 autoware_common_msgs
 autoware_component_interface_specs
+autoware_component_interface_admission
 autoware_component_interface_utils
 autoware_control_msgs
 autoware_core
@@ -58,6 +59,7 @@ autoware_internal_msgs
 autoware_internal_perception_msgs
 autoware_internal_planning_msgs
 autoware_interpolation
+autoware_interface_spec_lint
 autoware_kalman_filter
 autoware_lanelet2_extension
 autoware_lanelet2_extension_python
@@ -114,6 +116,7 @@ autoware_utils_diagnostics
 autoware_utils_geometry
 autoware_utils_logging
 autoware_utils_math
+autoware_utils_launch
 autoware_utils_pcl
 autoware_utils_rclcpp
 autoware_utils_system
