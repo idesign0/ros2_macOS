@@ -150,8 +150,21 @@ def walk_macho(tree):
     return out
 
 
+# The keg's OWN install prefix. When it lives under /opt/homebrew/opt (it always does:
+# /opt/homebrew/opt/ros2-<distro>), a reference the relocation step just pointed at the
+# keg's own libraries -- .../opt/ros2-kilted/lib/liblely-libc.2.dylib -- matches REF like
+# any brew keg would. It is not Homebrew: it is this tree, at the place it will be
+# installed. Smoke run 42504451826 failed its verify on exactly 21 such self-references
+# (lely, gtsam, the mola CLIs). Set once in main(); every caller of refs_of() skips them.
+SELF_PREFIXES = ()
+
+
+def _not_self(ref):
+    return not any(ref == p or ref.startswith(p + "/") for p in SELF_PREFIXES)
+
+
 def refs_of(paths):
-    """path -> set of /opt/homebrew/opt/... references."""
+    """path -> set of /opt/homebrew/{opt,Cellar}/... references, excluding the keg itself."""
     out = {}
     for i in range(0, len(paths), 150):
         batch = paths[i:i + 150]
@@ -163,11 +176,12 @@ def refs_of(paths):
                 out.setdefault(cur, set())
             elif cur is not None:
                 m = REF.search(line)
-                if m:
+                if m and _not_self(m.group(0)):
                     out[cur].add(m.group(0))
         # single-file batches print no header line
         if len(batch) == 1 and batch[0] not in out:
-            out[batch[0]] = {m.group(0) for m in REF.finditer(r.stdout)}
+            out[batch[0]] = {m.group(0) for m in REF.finditer(r.stdout)
+                             if _not_self(m.group(0))}
     return out
 
 
@@ -485,6 +499,8 @@ def main():
 
     tree = a.tree.rstrip("/")
     vendor_abs = os.path.join(tree, a.vendor_subdir)
+    global SELF_PREFIXES
+    SELF_PREFIXES = (os.path.normpath(a.install_prefix),)
     rpath_installed = os.path.join(a.install_prefix, a.vendor_subdir)
 
     files = walk_macho(tree)
