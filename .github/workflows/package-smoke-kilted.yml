@@ -192,9 +192,12 @@ jobs:
       - name: Load-test the SAME sample AFTER packaging
         run: |
           set -uo pipefail
-          # The tree now expects its vendor dir at the INSTALLED path, so make that path exist.
-          sudo mkdir -p "/opt/homebrew/opt/ros2-kilted"
-          sudo ln -sfn "$PWD/install/vendor" "/opt/homebrew/opt/ros2-kilted/vendor"
+          # The tree is now relocated to the INSTALLED path (vendor/, opt/gz_*_vendor, gz ruby
+          # cmd files, ...), so the whole tree must sit there -- linking vendor/ alone left
+          # `gz sim` unable to load opt/gz_sim_vendor/lib/ruby/gz/cmdsim*.
+          sudo mkdir -p /opt/homebrew/opt
+          sudo rm -rf "/opt/homebrew/opt/ros2-kilted"
+          sudo ln -sfn "$PWD/install" "/opt/homebrew/opt/ros2-kilted"
           ok=0; fail=0
           : > /tmp/failed_after.txt
           : > /tmp/why_after.txt
