@@ -193,8 +193,10 @@ jobs:
         run: |
           set -uo pipefail
           # The tree now expects its vendor dir at the INSTALLED path, so make that path exist.
-          sudo mkdir -p "/opt/homebrew/opt/ros2-humble"
-          sudo ln -sfn "$PWD/install/vendor" "/opt/homebrew/opt/ros2-humble/vendor"
+          # The whole relocated tree must sit at the install prefix (opt/gz_*_vendor, gz ruby cmd files).
+          sudo mkdir -p /opt/homebrew/opt
+          sudo rm -rf "/opt/homebrew/opt/ros2-humble"
+          sudo ln -sfn "$PWD/install" "/opt/homebrew/opt/ros2-humble"
           ok=0; fail=0
           : > /tmp/failed_after.txt
           : > /tmp/why_after.txt
