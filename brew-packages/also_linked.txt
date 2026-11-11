@@ -1,0 +1,14 @@
+# Formulae the build LINKS but must not be added to matched_packages.txt.
+#
+# matched_packages.txt is the install list, so naming a formula there means "install it".
+# These two must be visible to the Homebrew skew gate and to the convergence step -- a
+# version change in either is an ABI change in the shipped tree -- without being installed
+# on purpose. Both were observed still loading from Homebrew after packaging in smoke run
+# 41055576065.
+#
+# openssl@4: NOT keg-only. It links into /opt/homebrew/include, shadows openssl@3, and
+#            ASN1_STRING is opaque in 4.0, which hard-fails fastrtps and librealsense2.
+#            It arrives as somebody else's dependency; we never want to pull it in.
+# simdjson : simply never named, although the tree links it.
+openssl@4
+simdjson

@@ -1,0 +1,19 @@
+# Formulae that are allowed to fail to install.
+#
+# install_brew_packages.sh is non-fatal by design -- a few entries in
+# matched_packages.txt are simply not installable on this runner, and nothing in the
+# workspace needs them. Every OTHER install failure is treated as fatal, because a
+# missing formula is otherwise invisible until it resurfaces as somebody else's
+# find_package failure in a later job (a ghcr.io DNS blip dropped libzip from humble
+# base-2b on 2026-10-04 and silently cost 19 packages: gz-fuel_tools' find_package(ZIP)
+# -> gz_ros2_control + ros_gz_sim + ouster_ros -> 16 cascades).
+#
+# This list was taken from evidence, not guessed: these six -- and only these six --
+# fail in every job of all three distros (humble 37193719299, jazzy 37193720849,
+# kilted 37193722020). Add a name here only after confirming the same way.
+ogre1.9
+ogre2.2
+ogre2.3
+osrf/simulation/tinyxml1
+ros2-jazzy
+sdformat14

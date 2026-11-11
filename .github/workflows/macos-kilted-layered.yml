@@ -1,0 +1,997 @@
+name: macOS ROS 2 Kilted — Layered Matrix (experimental)
+
+# EXPERIMENTAL, dispatch-only. Runs alongside macos-kilted-ci.yml (unchanged).
+on:
+  workflow_dispatch:
+    inputs:
+      domains:
+        description: >-
+          Comma-separated subset of ci/shards/_domains.txt to build (e.g. "fleet,ros2,gzsim").
+          Leave empty to build all domains (default). base/gz still build in full either way --
+          this only narrows the domains matrix, reusing the gz-install/ccache/base caches.
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  CI_BUILD: "TRUE"
+  # ExternalProject vendors (e.g. clips_vendor) run `git apply` inside their build dir.
+  # When build/ is under the workspace git checkout, git apply finds the PARENT repo and
+  # silently SKIPS the vendor patch -> the source ends up without its generated
+  # CMakeLists.txt ("does not appear to contain CMakeLists.txt"). Stop git traversing
+  # above build/ so vendor git-applies behave as if outside a repo.
+  GIT_CEILING_DIRECTORIES: ${{ github.workspace }}/build
+  HOMEBREW_NO_INSTALL_FROM_API: "1"
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+  GZ_VERSION: ionic
+  GZ_DIR: gz-ionic
+  BREW_BASE: "graphviz eigen@3 eigen geographiclib vtk opencv@4 zbar png++ sophus vrpn draco aravis zeromq cppzmq glfw libusb rtabmap libpqxx leveldb libmodbus readline msgpack-cxx openvdb"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      domains: ${{ steps.set.outputs.domains }}
+      brewcore: ${{ steps.brewcore.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false }
+      - id: set
+        env:
+          REQUESTED_DOMAINS: ${{ inputs.domains }}
+        run: |
+          if [ -n "$REQUESTED_DOMAINS" ]; then
+            printf '%s' "$REQUESTED_DOMAINS" | tr ',' '\n' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' \
+              | grep -v '^$' | sort -u > /tmp/requested_domains.txt
+            comm -12 <(sort -u ci/shards/_domains.txt) <(sort -u /tmp/requested_domains.txt) > /tmp/filtered_domains.txt
+            if [ ! -s /tmp/filtered_domains.txt ]; then
+              echo "::error::None of the requested domains ($REQUESTED_DOMAINS) match an entry in ci/shards/_domains.txt"
+              exit 1
+            fi
+            echo "domains=$(jq -R -s -c 'split("\n") | map(select(length>0))' /tmp/filtered_domains.txt)" >> "$GITHUB_OUTPUT"
+          else
+            echo "domains=$(jq -R -s -c 'split("\n") | map(select(length>0))' ci/shards/_domains.txt)" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Resolve ONE homebrew-core commit for the whole run; every macOS job pins its tap to it.
+      # ls-remote rather than the REST API: no token, no rate limit, and it is the same ref brew
+      # itself tracks. A failure here is a warning, not an error -- the jobs then run unpinned
+      # exactly as they did before, and the skew check still gates them.
+      - id: brewcore
+        run: |
+          sha=""
+          PINFILE=ci/homebrew-core.sha
+          if [ -f "$PINFILE" ]; then
+            sha=$(grep -oE '^[0-9a-f]{40}' "$PINFILE" | head -1 || true)
+          fi
+          if [ -n "$sha" ]; then
+            echo "homebrew-core pinned from $PINFILE: $sha"
+          else
+            # Falling back to tip is CORRECT but costly: brew-state.txt feeds the gz-install
+            # cache key, and homebrew-core moves many times a day, so a tip-derived pin makes
+            # that key change every run and gz rebuilds cold (~2.5h) every time. The committed
+            # file is what keeps the pin -- and therefore the cache -- stable between the
+            # weekly update-brew.yml refreshes.
+            echo "::warning::no 40-hex SHA in $PINFILE -- falling back to homebrew-core tip; expect a cold gz rebuild this run"
+            for n in 1 2 3; do
+              sha=$(git ls-remote https://github.com/Homebrew/homebrew-core.git refs/heads/main \
+                    | awk '{print $1}')
+              [ -n "$sha" ] && break
+              echo "ls-remote attempt $n failed; retrying in $((n*10))s"; sleep $((n*10))
+            done
+            if [ -z "$sha" ]; then
+              echo "::warning::could not resolve homebrew-core HEAD either; every job falls back to its runner image tap"
+            else
+              echo "homebrew-core pinned for this run (from tip): $sha"
+            fi
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+  # The gz stack (protobuf v32 + the whole gz-macOS tree, built from source) is the single most
+  # expensive thing in the pipeline (~2h cold). It used to run inside base-1, which -- together with
+  # brew installs and the ~1000 base packages -- pushed base-1 past the hard 6h GitHub job limit, so
+  # base-1 was cancelled every run and never saved its ccache (cold-cache death spiral). Split it into
+  # its own job: it fits well under 6h on its own, and its output is cached by (GZ_VERSION + toolchain
+  # hash), so subsequent runs restore it in seconds instead of rebuilding. base-1 then only builds the
+  # base packages and comfortably fits in 6h. Bump the trailing -vN salt to force a gz rebuild when the
+  # gz-macOS branch advances without changing GZ_VERSION.
+  gz:
+    needs: plan
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false, fetch-depth: 0 }
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-state-publish: "true"
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
+      # Resolve the gz-macOS revision BEFORE the cache lookup, so it can go into the key.
+      #
+      # The key used to carry only GZ_VERSION, which is the BRANCH NAME ("ionic"/"harmonic")
+      # and does not change when the branch advances. The build step is skipped on a cache
+      # hit, so every gz-macOS commit after a cached build was silently absent from the
+      # tree, and the only guard was remembering to bump the trailing -vN by hand. Until now
+      # that was masked: brew-state.txt moved constantly, so the key changed every run and gz
+      # always rebuilt. Pinning homebrew-core to a committed SHA restores cache hits and would
+      # have turned that masking off, so the revision has to be in the key for real.
+      #
+      # ls-remote, not the checkout: the clone happens in the build step further down, i.e.
+      # AFTER this cache lookup, so there is nothing on disk here to hash.
+      - name: Resolve the gz-macOS revision
+        id: gzsrc
+        run: |
+          sha=""
+          for n in 1 2 3; do
+            sha=$(git ls-remote https://github.com/idesign0/gz-macOS.git \
+                  "refs/heads/$GZ_VERSION" | awk '{print $1}')
+            [ -n "$sha" ] && break
+            echo "ls-remote attempt $n failed; retrying in $((n*10))s"; sleep $((n*10))
+          done
+          if [ -z "$sha" ]; then
+            # Deliberately poison the key with the run id rather than leave it empty: an empty
+            # component is STABLE and would happily restore a cache entry built from an unknown
+            # revision. Failing towards a rebuild is the safe direction.
+            echo "::warning::could not resolve gz-macOS $GZ_VERSION; forcing a cold gz build"
+            sha="unresolved-${{ github.run_id }}"
+          else
+            echo "gz-macOS $GZ_VERSION is at $sha"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Restore gz-install cache
+        id: gzcache
+        uses: actions/cache@v4
+        with:
+          path: gz-install.tar.zst
+          key: gz-install-kilted-${{ env.GZ_VERSION }}-${{ hashFiles('cmake/toolchain.cmake', 'brew-packages/matched_packages.txt') }}-${{ hashFiles('brew-state.txt') }}-${{ steps.gzsrc.outputs.sha }}-v1
+      - name: Restore ccache (gz)
+        if: steps.gzcache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-kilted-gz-${{ github.run_id }}
+          restore-keys: ccache-kilted-gz-
+      - name: Verify colcon is usable (infra guard)
+        run: |
+          # The Build steps below run under `continue-on-error: true`, so a broken
+          # colcon silently produces an EMPTY install prefix and the job only dies
+          # much later in "Pack install-*" with a misleading
+          #   tar: lseek(SEEK_HOLE) failed: Illegal byte sequence
+          # humble run 39120061470 lost a 6h base-1 exactly that way: 187 `colcon list`
+          # calls had just succeeded in "Apply skip-list", then 15s later `colcon build`
+          # died with `ModuleNotFoundError: No module named 'colcon_core.command'`.
+          # jazzy run 39120063171 had the identical brew/tap warnings on the same image
+          # and built 240 packages, so this is a per-runner pip/site-packages flake.
+          # Test the interpreter the colcon shim itself uses, not whatever python3 is
+          # first on PATH, and fail HERE with the cause named.
+          COLCON=$(command -v colcon) || { echo "::error::colcon not on PATH"; exit 1; }
+          PY=$(head -1 "$COLCON" | sed 's|^#!||; s| .*||')
+          [ -x "$PY" ] || PY=python3
+          "$PY" -c 'import colcon_core.command' || {
+            echo "::error::colcon is broken on this runner ($COLCON via $PY cannot import colcon_core.command) - infra flake, re-run the job"
+            exit 1
+          }
+          echo "colcon OK: $COLCON ($PY)"
+      - name: Build External Gazebo (protobuf + gz)
+        if: steps.gzcache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$GZ_DIR"
+          # Check out the EXACT revision the cache key was computed from. Cloning the
+          # branch again would re-resolve its tip, which can have moved since the lookup
+          # above -- the build would then not match the key it is about to be stored under.
+          GZ_SRC_SHA='${{ steps.gzsrc.outputs.sha }}'
+          git clone --no-checkout https://github.com/idesign0/gz-macOS.git "$GZ_DIR"
+          if ! git -C "$GZ_DIR" checkout -q --detach "$GZ_SRC_SHA"; then
+            echo "::warning::gz-macOS $GZ_SRC_SHA not checkoutable; falling back to the $GZ_VERSION branch tip"
+            git -C "$GZ_DIR" checkout -q "$GZ_VERSION"
+          fi
+          git -C "$GZ_DIR" submodule update --init --recursive --jobs 8
+          echo "gz-macOS built from $(git -C "$GZ_DIR" rev-parse HEAD)"
+          # ci-qt6-keg: brew links qtbase (pulled in as a vtk dependency) and from 6.12.0 that
+          # puts a top-level include/QtNetwork on -I/opt/homebrew/include whose forwarding
+          # header re-includes itself -> "#include nested too deeply" in gz-sim8's
+          # EntityContextMenuPlugin.cc. gz-sim8 then failed, the step's `|| true` hid it, and
+          # the gz-sim8-less install tree was cached (humble 40189605776, jazzy 40189607431).
+          # Safe because cmake/toolchain.cmake now resolves Qt6 from the kegs, which survive
+          # the unlink. The gz stack DOES need Qt6, so do NOT also unlink `qt`/qtdeclarative.
+          brew unlink qtbase || true
+          brew unlink protobuf || true
+          colcon build --packages-select protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
+            --merge-install --continue-on-error --cmake-args -DBUILD_SHARED_LIBS=ON -Dprotobuf_BUILD_TESTS=OFF \
+            -Dprotobuf_BUILD_CONFORMANCE=OFF -Dprotobuf_BUILD_EXAMPLES=OFF \
+            -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
+          colcon build --base-paths "$GZ_DIR/" --packages-ignore protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
+            --merge-install --continue-on-error --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_gz.log || true
+          # ci-gz-nopartial: this whole step runs under `|| true` + --continue-on-error, so
+          # without this guard a failed gz package is packed into gz-install.tar.zst and SAVED
+          # to the cache; the next run restores the hole and skips this step entirely
+          # (`if: steps.gzcache.outputs.cache-hit != 'true'`), making the failure permanent and
+          # invisible. humble 40189605776 lost gz-sim8 that way and 19 of its 24 package
+          # failures were the cascade. Fail HERE, in the job that actually broke.
+          if grep -qE '^ +[0-9]+ packages? failed:' build_gz.log 2>/dev/null; then
+            echo "::error::gz build had failures; refusing to pack a partial install tree"
+            grep -E 'Failed +<<< ' build_gz.log || true
+            exit 1
+          fi
+          touch "$GZ_DIR/COLCON_IGNORE"
+          # abseil-compat: snapshot the brew abseil dylibs the workspace protoc links (see base note
+          # below) into the install/ tree so they travel with the gz artifact and match this protoc.
+          if [ -d /opt/homebrew/opt/abseil/lib ]; then
+            mkdir -p install/abseil-compat
+            cp -pP /opt/homebrew/opt/abseil/lib/libabsl_*.dylib install/abseil-compat/ 2>/dev/null || true
+            echo "abseil-compat: snapshotted $(ls install/abseil-compat 2>/dev/null | wc -l | tr -d ' ') abseil dylibs"
+          fi
+          # Pack the gz-only install (protobuf + gz + abseil-compat -- base packages are NOT built here)
+          # for base-1 to consume, and for actions/cache to persist across runs.
+          tar --zstd -cf gz-install.tar.zst install
+          echo "gz-install packed: $(du -h gz-install.tar.zst | cut -f1)"
+      - name: Upload gz-install artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gz-install
+          path: gz-install.tar.zst
+          retention-days: 2
+
+  base-a:
+    needs: [plan, gz]
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false, fetch-depth: 0 }
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
+      - name: Shard coverage diagnostics (non-fatal)
+        run: |
+          set +e
+          colcon list --names-only 2>/dev/null | sort -u > /tmp/all_names.txt
+          echo "unique package names: $(wc -l < /tmp/all_names.txt)"
+          cat ci/shards/00_base_core.txt ci/shards/01_base_vendors.txt ci/shards/dom_*.txt ci/skip-list.txt \
+            | grep -vE '^\s*#|^\s*$' | sort -u > /tmp/assigned.txt
+          comm -23 /tmp/all_names.txt /tmp/assigned.txt > /tmp/unassigned.txt
+          echo "not covered by any shard: $(wc -l < /tmp/unassigned.txt)"
+          head -40 /tmp/unassigned.txt
+          exit 0
+      - name: Apply skip-list (COLCON_IGNORE)
+        run: |
+          # `colcon list` walks the whole 648-submodule tree and takes ~16s. Running it
+          # once per skip-list entry cost 67 min on humble base-1 of run 42025220816 (225
+          # entries), 48 min on jazzy and 35 min on kilted -- and this step runs in every
+          # base and domain job. That 67 min is what pushed humble base-1 past GitHub's
+          # unraisable 6h job cap. Snapshot the list once instead.
+          colcon list --base-paths . 2>/dev/null > /tmp/colcon_pkgs.tsv || true
+          echo "colcon list: $(wc -l < /tmp/colcon_pkgs.tsv | tr -d ' ') packages"
+          grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
+            path=$(awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}' /tmp/colcon_pkgs.tsv)
+            [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
+          done
+      - name: Download gz-install (protobuf + gz, built in the gz job)
+        uses: actions/download-artifact@v4
+        with: { name: gz-install, path: . }
+      - name: Extract gz install
+        run: |
+          # Unpacks the gz-only install/ (protobuf + gz + abseil-compat) the gz job produced; base-1
+          # then builds the base packages on top of it into the same merged install/.
+          tar --zstd -xf gz-install.tar.zst
+          chmod -R +x install/bin 2>/dev/null || true
+          echo "gz install restored: $(ls install/opt 2>/dev/null | wc -l | tr -d ' ') vendor dirs, protoc $([ -x install/bin/protoc ] && echo present || echo MISSING)"
+      - name: Unlink conflicting Homebrew packages
+        run: |
+          set +e
+          brew unlink boost || true
+          brew unlink boost-python3 || true
+          brew unlink xtensor || true
+          brew unlink xdm || true
+          brew unlink xtl || true
+          brew unlink qt || true
+          # qtbase too, since Homebrew MODULARISED Qt6 at 6.12.0 and moved the QtCore
+          # forwarding headers out of `qt` into `qtbase`, which is also not keg-only.
+          # At 6.11.2 qtbase kept QtCore in Frameworks/ only, so /opt/homebrew/include/QtCore
+          # did not exist and the `qt` unlink above sufficed. At 6.12.0 it does exist, and its
+          # qtcoreglobal.h line 4 re-includes <QtCore/qtcoreglobal.h>, resolving back to itself
+          # via -I/opt/homebrew/include -> "error: #include nested too deeply". That shadowed
+          # keg-only qt@5 and failed plotjuggler + rviz_satellite (humble 39798399501) and
+          # open_manipulator_gui (jazzy 39798427519); all three built clean on 10-18 under
+          # Qt6 6.11.2. Same shadowing class as openssl@4.
+          brew unlink qtbase || true
+          brew unlink asio || true
+          brew unlink orocos-kdl || true
+          brew unlink protobuf || true
+          brew unlink ceres-solver || true
+          brew unlink osqp || true
+          echo "unlink done"
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-kilted-basea-${{ github.run_id }}
+          restore-keys: ccache-kilted-basea-
+      - name: Verify colcon is usable (infra guard)
+        run: |
+          # The Build steps below run under `continue-on-error: true`, so a broken
+          # colcon silently produces an EMPTY install prefix and the job only dies
+          # much later in "Pack install-*" with a misleading
+          #   tar: lseek(SEEK_HOLE) failed: Illegal byte sequence
+          # humble run 39120061470 lost a 6h base-1 exactly that way: 187 `colcon list`
+          # calls had just succeeded in "Apply skip-list", then 15s later `colcon build`
+          # died with `ModuleNotFoundError: No module named 'colcon_core.command'`.
+          # jazzy run 39120063171 had the identical brew/tap warnings on the same image
+          # and built 240 packages, so this is a per-runner pip/site-packages flake.
+          # Test the interpreter the colcon shim itself uses, not whatever python3 is
+          # first on PATH, and fail HERE with the cause named.
+          COLCON=$(command -v colcon) || { echo "::error::colcon not on PATH"; exit 1; }
+          PY=$(head -1 "$COLCON" | sed 's|^#!||; s| .*||')
+          [ -x "$PY" ] || PY=python3
+          "$PY" -c 'import colcon_core.command' || {
+            echo "::error::colcon is broken on this runner ($COLCON via $PY cannot import colcon_core.command) - infra flake, re-run the job"
+            exit 1
+          }
+          echo "colcon OK: $COLCON ($PY)"
+      - name: Build base-a (dependency-ordered first half)
+        continue-on-error: true
+        run: |
+          set +e
+          SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/base_a.txt | tr '\n' ' ')
+          colcon build --packages-select $SEL \
+            --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+            --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_basea.log
+          # --- transient-failure retry pass -------------------------------------------------
+          # A few packages per run die with "make: *** [...] Alarm clock: 14" (SIGALRM killing a
+          # make job, usually in rosidl typesupport generation under the parallel executor) --
+          # not a code defect: cx_rl_interfaces and play_motion_builder_msgs both build clean on
+          # a re-run. Re-run ONLY packages whose own stderr block carries a transient signature,
+          # so a genuine failure is never masked and never paid for twice. Deliberately NOT
+          # keyed on "jobserver tokens" alone: that line also trails real crashes (auto_apms).
+          RETRY=$(grep -E 'Failed +<<<' build_basea.log 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/\1/' | sort -u | while read -r _p; do
+            awk -v p="$_p" '$0=="--- stderr: "p{f=1} f{print} f&&/^(Failed|Finished) +<<< /{exit}' build_basea.log \
+              | grep -qE 'Alarm clock|Resource temporarily unavailable|Killed: 9' && echo "$_p"
+          done | tr '\n' ' ')
+          if [ -n "${RETRY// /}" ]; then
+            echo "::warning::retrying transient failures: $RETRY"
+            colcon build --packages-select $RETRY --merge-install \
+              --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+              --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_basea.log
+          fi
+          echo "== summary =="; grep -E 'Summary:|packages? failed' build_basea.log || true
+      - name: Relax recorded brew dependency version pins
+        run: |
+          # ceres-solver bakes the EXACT brew SuiteSparse/METIS version it was configured against
+          # into its installed CeresConfig.cmake (`find_dependency(SuiteSparse 7.12.2)`). Jobs in one
+          # run provision Homebrew independently and start hours apart, so a formula can roll forward
+          # mid-run and split the workspace: jazzy run 35777229974 built ceres in base-1 against
+          # suite-sparse 7.14.1, base-2a then got 7.14.0 -> "Found unsuitable version 7.14.0, but
+          # required is at least 7.14.1" -> 16 packages lost (beluga, cartographer + _ros + _rviz,
+          # nav2_constrained_smoother, slam_toolbox, robot_calibration, rmf_traffic_editor and 8
+          # cascades), while humble and kilted built every one of them from the same commit.
+          # Drop just the version argument: a SuiteSparse/METIS patch bump is ABI-compatible and the
+          # COMPONENTS check still runs.
+          for _c in $(find install -name CeresConfig.cmake 2>/dev/null); do
+            perl -pi -e 's{(find_dependency\(\s*(?:SuiteSparse|METIS))\s+[0-9][0-9.]*}{$1}g' "$_c"
+            echo "relaxed SuiteSparse/METIS version pins in $_c"
+          done
+          # ...and the same drift in its worse form: a VERSIONED Cellar path baked into an exported
+          # target. Relaxing the version CHECK was not enough -- humble run 35983456051 then died with
+          #   make: *** No rule to make target '/opt/homebrew/Cellar/suite-sparse/7.14.1/lib/libspqr.dylib'
+          # because base-1 recorded 7.14.1 and base-2a only had 7.14.0. Rewrite every versioned Cellar
+          # path in the installed CMake files to the equivalent /opt/homebrew/opt/<formula>/ symlink,
+          # which brew keeps pointing at whatever keg that job has. Only touches paths that carry an
+          # explicit version directory, so /opt/homebrew/opt/... paths are left alone.
+          _n=0
+          for _c in $(grep -rl "/opt/homebrew/Cellar/" install --include='*.cmake' 2>/dev/null); do
+            perl -pi -e 's{/opt/homebrew/Cellar/([A-Za-z0-9@+._-]+)/[0-9][^/"]*/}{/opt/homebrew/opt/$1/}g' "$_c"
+            _n=$((_n+1))
+          done
+          echo "de-versioned brew Cellar paths in $_n installed cmake file(s)"
+      - name: Pack install-base-a
+        run: |
+          # Ship the base prefix as ONE compressed file instead of ~50k loose files.
+          # Raw-directory artifacts are what made run 35511271212 lie: two shards' downloads
+          # stopped mid-stream, actions/download-artifact did NOT fail, and they built against
+          # a partial prefix (37 phantom failures). A single tar.zst cannot fail that way --
+          # a truncated transfer dies at extraction -- and it also preserves the +x bits that
+          # GitHub artifacts strip. Same format the gz job has used reliably all along.
+          tar --zstd -cf install-base-a.tar.zst install
+          echo "packed $(du -h install-base-a.tar.zst | cut -f1) from $(find install -type f | wc -l | tr -d ' ') files"
+      - name: Upload install-base-a
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-base-a
+          path: install-base-a.tar.zst
+          retention-days: 2
+      - name: Summary base-a
+        if: always()
+        run: |
+          mkdir -p summaries
+          { echo "## base-a"
+            grep -E 'Summary:|packages? failed' build_basea.log 2>/dev/null || true
+            # Drop packages that failed in the main pass but were recovered by the
+            # transient-failure retry pass, so the summary reports REAL failures only.
+            grep -E 'Failed +<<<' build_basea.log 2>/dev/null | sort -u | while read -r _l; do
+              _p=$(echo "$_l" | sed -E 's/.*<<< ([^ ]+).*/\1/')
+              grep -qE "Finished +<<< $_p " retry_basea.log 2>/dev/null || echo "$_l"
+            done
+            grep -E 'Finished +<<<' retry_basea.log 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/  recovered on retry: \1/' || true
+          } > summaries/_base-a.txt
+      - name: Upload summary base
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-_base-a
+          path: summaries
+          retention-days: 5
+
+  base-b:
+    needs: [plan, base-a]
+    runs-on: macos-26
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false, fetch-depth: 0 }
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
+      - name: Shard coverage diagnostics (non-fatal)
+        run: |
+          set +e
+          colcon list --names-only 2>/dev/null | sort -u > /tmp/all_names.txt
+          echo "unique package names: $(wc -l < /tmp/all_names.txt)"
+          cat ci/shards/00_base_core.txt ci/shards/01_base_vendors.txt ci/shards/dom_*.txt ci/skip-list.txt \
+            | grep -vE '^\s*#|^\s*$' | sort -u > /tmp/assigned.txt
+          comm -23 /tmp/all_names.txt /tmp/assigned.txt > /tmp/unassigned.txt
+          echo "not covered by any shard: $(wc -l < /tmp/unassigned.txt)"
+          head -40 /tmp/unassigned.txt
+          exit 0
+      - name: Apply skip-list (COLCON_IGNORE)
+        run: |
+          # `colcon list` walks the whole 648-submodule tree and takes ~16s. Running it
+          # once per skip-list entry cost 67 min on humble base-1 of run 42025220816 (225
+          # entries), 48 min on jazzy and 35 min on kilted -- and this step runs in every
+          # base and domain job. That 67 min is what pushed humble base-1 past GitHub's
+          # unraisable 6h job cap. Snapshot the list once instead.
+          colcon list --base-paths . 2>/dev/null > /tmp/colcon_pkgs.tsv || true
+          echo "colcon list: $(wc -l < /tmp/colcon_pkgs.tsv | tr -d ' ') packages"
+          grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
+            path=$(awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}' /tmp/colcon_pkgs.tsv)
+            [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
+          done
+      - name: Fetch and extract install-base-a
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Retry-capable replacement for actions/download-artifact, which has no retry and
+          # can end WITHOUT failing on a truncated download (run 35511271212: 37 phantom
+          # failures across two shards). Three layers of safety:
+          #   1. gh run download in a retry loop        -> a dropped transfer is retried
+          # -R is explicit because gh infers the repo from the git remote, and the assemble
+          # job has no actions/checkout -> "fatal: not a git repository" without it.
+          #   2. tar --zstd -xf                         -> a truncated/corrupt archive ERRORS
+          #   3. the package assertions below           -> last-resort sanity check
+          # NOTE the assertions name only base-a packages: rclcpp is built in base-b, so it
+          # must NOT be required here.
+          ok=0
+          for n in 1 2 3; do
+            rm -rf install install-base-a.tar.zst
+            if gh run download "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" -n install-base-a -D . && tar --zstd -xf install-base-a.tar.zst; then
+              ok=1; break
+            fi
+            echo "::warning::install-base-a fetch/extract attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          [ "$ok" = 1 ] || { echo "::error::could not fetch a complete install-base-a after 3 attempts"; exit 1; }
+          rm -f install-base-a.tar.zst
+          missing=0
+          for p in ament_cmake_core std_msgs; do
+            [ -d "install/share/$p" ] || { echo "::error::base prefix incomplete: install/share/$p is missing"; missing=1; }
+          done
+          n=$(ls install/share 2>/dev/null | wc -l | tr -d ' ')
+          [ "${n:-0}" -ge 100 ] || { echo "::error::base prefix has only $n packages (expected >= 100)"; missing=1; }
+          [ "$missing" = 0 ] || exit 1
+          echo "install-base-a OK: $n packages in install/share"
+      - name: Restore executable bits (GitHub artifacts drop +x)
+        run: chmod -R +x install/bin 2>/dev/null || true
+      - name: Unlink conflicting Homebrew packages
+        run: |
+          set +e
+          brew unlink boost || true
+          brew unlink boost-python3 || true
+          brew unlink xtensor || true
+          brew unlink xdm || true
+          brew unlink xtl || true
+          brew unlink qt || true
+          # qtbase too, since Homebrew MODULARISED Qt6 at 6.12.0 and moved the QtCore
+          # forwarding headers out of `qt` into `qtbase`, which is also not keg-only.
+          # At 6.11.2 qtbase kept QtCore in Frameworks/ only, so /opt/homebrew/include/QtCore
+          # did not exist and the `qt` unlink above sufficed. At 6.12.0 it does exist, and its
+          # qtcoreglobal.h line 4 re-includes <QtCore/qtcoreglobal.h>, resolving back to itself
+          # via -I/opt/homebrew/include -> "error: #include nested too deeply". That shadowed
+          # keg-only qt@5 and failed plotjuggler + rviz_satellite (humble 39798399501) and
+          # open_manipulator_gui (jazzy 39798427519); all three built clean on 10-18 under
+          # Qt6 6.11.2. Same shadowing class as openssl@4.
+          brew unlink qtbase || true
+          brew unlink asio || true
+          brew unlink orocos-kdl || true
+          brew unlink protobuf || true
+          brew unlink ceres-solver || true
+          brew unlink osqp || true
+          echo "unlink done"
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-kilted-baseb-${{ github.run_id }}
+          restore-keys: ccache-kilted-baseb-
+      - name: Verify colcon is usable (infra guard)
+        run: |
+          # The Build steps below run under `continue-on-error: true`, so a broken
+          # colcon silently produces an EMPTY install prefix and the job only dies
+          # much later in "Pack install-*" with a misleading
+          #   tar: lseek(SEEK_HOLE) failed: Illegal byte sequence
+          # humble run 39120061470 lost a 6h base-1 exactly that way: 187 `colcon list`
+          # calls had just succeeded in "Apply skip-list", then 15s later `colcon build`
+          # died with `ModuleNotFoundError: No module named 'colcon_core.command'`.
+          # jazzy run 39120063171 had the identical brew/tap warnings on the same image
+          # and built 240 packages, so this is a per-runner pip/site-packages flake.
+          # Test the interpreter the colcon shim itself uses, not whatever python3 is
+          # first on PATH, and fail HERE with the cause named.
+          COLCON=$(command -v colcon) || { echo "::error::colcon not on PATH"; exit 1; }
+          PY=$(head -1 "$COLCON" | sed 's|^#!||; s| .*||')
+          [ -x "$PY" ] || PY=python3
+          "$PY" -c 'import colcon_core.command' || {
+            echo "::error::colcon is broken on this runner ($COLCON via $PY cannot import colcon_core.command) - infra flake, re-run the job"
+            exit 1
+          }
+          echo "colcon OK: $COLCON ($PY)"
+      - name: Build base-b (dependency-ordered second half)
+        continue-on-error: true
+        run: |
+          set +e
+          source install/setup.sh
+          SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/base_b.txt | tr '\n' ' ')
+          colcon build --packages-select $SEL \
+            --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+            --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_baseb.log
+          # --- transient-failure retry pass -------------------------------------------------
+          # A few packages per run die with "make: *** [...] Alarm clock: 14" (SIGALRM killing a
+          # make job, usually in rosidl typesupport generation under the parallel executor) --
+          # not a code defect: cx_rl_interfaces and play_motion_builder_msgs both build clean on
+          # a re-run. Re-run ONLY packages whose own stderr block carries a transient signature,
+          # so a genuine failure is never masked and never paid for twice. Deliberately NOT
+          # keyed on "jobserver tokens" alone: that line also trails real crashes (auto_apms).
+          RETRY=$(grep -E 'Failed +<<<' build_baseb.log 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/\1/' | sort -u | while read -r _p; do
+            awk -v p="$_p" '$0=="--- stderr: "p{f=1} f{print} f&&/^(Failed|Finished) +<<< /{exit}' build_baseb.log \
+              | grep -qE 'Alarm clock|Resource temporarily unavailable|Killed: 9' && echo "$_p"
+          done | tr '\n' ' ')
+          if [ -n "${RETRY// /}" ]; then
+            echo "::warning::retrying transient failures: $RETRY"
+            colcon build --packages-select $RETRY --merge-install \
+              --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+              --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_baseb.log
+          fi
+          echo "== summary =="; grep -E 'Summary:|packages? failed' build_baseb.log || true
+      - name: Relax recorded brew dependency version pins
+        run: |
+          # ceres-solver bakes the EXACT brew SuiteSparse/METIS version it was configured against
+          # into its installed CeresConfig.cmake (`find_dependency(SuiteSparse 7.12.2)`). Jobs in one
+          # run provision Homebrew independently and start hours apart, so a formula can roll forward
+          # mid-run and split the workspace: jazzy run 35777229974 built ceres in base-1 against
+          # suite-sparse 7.14.1, base-2a then got 7.14.0 -> "Found unsuitable version 7.14.0, but
+          # required is at least 7.14.1" -> 16 packages lost (beluga, cartographer + _ros + _rviz,
+          # nav2_constrained_smoother, slam_toolbox, robot_calibration, rmf_traffic_editor and 8
+          # cascades), while humble and kilted built every one of them from the same commit.
+          # Drop just the version argument: a SuiteSparse/METIS patch bump is ABI-compatible and the
+          # COMPONENTS check still runs.
+          for _c in $(find install -name CeresConfig.cmake 2>/dev/null); do
+            perl -pi -e 's{(find_dependency\(\s*(?:SuiteSparse|METIS))\s+[0-9][0-9.]*}{$1}g' "$_c"
+            echo "relaxed SuiteSparse/METIS version pins in $_c"
+          done
+          # ...and the same drift in its worse form: a VERSIONED Cellar path baked into an exported
+          # target. Relaxing the version CHECK was not enough -- humble run 35983456051 then died with
+          #   make: *** No rule to make target '/opt/homebrew/Cellar/suite-sparse/7.14.1/lib/libspqr.dylib'
+          # because base-1 recorded 7.14.1 and base-2a only had 7.14.0. Rewrite every versioned Cellar
+          # path in the installed CMake files to the equivalent /opt/homebrew/opt/<formula>/ symlink,
+          # which brew keeps pointing at whatever keg that job has. Only touches paths that carry an
+          # explicit version directory, so /opt/homebrew/opt/... paths are left alone.
+          _n=0
+          for _c in $(grep -rl "/opt/homebrew/Cellar/" install --include='*.cmake' 2>/dev/null); do
+            perl -pi -e 's{/opt/homebrew/Cellar/([A-Za-z0-9@+._-]+)/[0-9][^/"]*/}{/opt/homebrew/opt/$1/}g' "$_c"
+            _n=$((_n+1))
+          done
+          echo "de-versioned brew Cellar paths in $_n installed cmake file(s)"
+      - name: Pack install-base
+        run: |
+          # Ship the base prefix as ONE compressed file instead of ~50k loose files.
+          # Raw-directory artifacts are what made run 35511271212 lie: two shards' downloads
+          # stopped mid-stream, actions/download-artifact did NOT fail, and they built against
+          # a partial prefix (37 phantom failures). A single tar.zst cannot fail that way --
+          # a truncated transfer dies at extraction -- and it also preserves the +x bits that
+          # GitHub artifacts strip. Same format the gz job has used reliably all along.
+          tar --zstd -cf install-base.tar.zst install
+          echo "packed $(du -h install-base.tar.zst | cut -f1) from $(find install -type f | wc -l | tr -d ' ') files"
+      - name: Upload install-base
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-base
+          path: install-base.tar.zst
+          retention-days: 2
+      - name: Summary base-b
+        if: always()
+        run: |
+          mkdir -p summaries
+          { echo "## base-b"
+            grep -E 'Summary:|packages? failed' build_baseb.log 2>/dev/null || true
+            # Drop packages that failed in the main pass but were recovered by the
+            # transient-failure retry pass, so the summary reports REAL failures only.
+            grep -E 'Failed +<<<' build_baseb.log 2>/dev/null | sort -u | while read -r _l; do
+              _p=$(echo "$_l" | sed -E 's/.*<<< ([^ ]+).*/\1/')
+              grep -qE "Finished +<<< $_p " retry_baseb.log 2>/dev/null || echo "$_l"
+            done
+            grep -E 'Finished +<<<' retry_baseb.log 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/  recovered on retry: \1/' || true
+          } > summaries/_base-b.txt
+      - name: Upload summary base
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-_base-b
+          path: summaries
+          retention-days: 5
+
+  domains:
+    needs: [plan, base-b]
+    runs-on: macos-26
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.domains) }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false, fetch-depth: 0 }
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
+      - name: Fetch and extract install-base
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Retry-capable replacement for actions/download-artifact, which has no retry and
+          # can end WITHOUT failing on a truncated download (run 35511271212: 37 phantom
+          # failures across two shards). Three layers of safety:
+          #   1. gh run download in a retry loop        -> a dropped transfer is retried
+          # -R is explicit because gh infers the repo from the git remote, and the assemble
+          # job has no actions/checkout -> "fatal: not a git repository" without it.
+          #   2. tar --zstd -xf                         -> a truncated/corrupt archive ERRORS
+          #   3. the package assertions below           -> last-resort sanity check
+          ok=0
+          for n in 1 2 3; do
+            rm -rf install install-base.tar.zst
+            if gh run download "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" -n install-base -D . && tar --zstd -xf install-base.tar.zst; then
+              ok=1; break
+            fi
+            echo "::warning::install-base fetch/extract attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          [ "$ok" = 1 ] || { echo "::error::could not fetch a complete install-base after 3 attempts"; exit 1; }
+          rm -f install-base.tar.zst
+          missing=0
+          for p in ament_cmake_core std_msgs rclcpp; do
+            [ -d "install/share/$p" ] || { echo "::error::base prefix incomplete: install/share/$p is missing"; missing=1; }
+          done
+          n=$(ls install/share 2>/dev/null | wc -l | tr -d ' ')
+          [ "${n:-0}" -ge 300 ] || { echo "::error::base prefix has only $n packages (expected >= 300)"; missing=1; }
+          [ "$missing" = 0 ] || exit 1
+          echo "install-base OK: $n packages in install/share"
+      - name: Restore executable bits (GitHub artifacts drop +x)
+        run: chmod -R +x install/bin 2>/dev/null || true
+      - name: Apply skip-list (COLCON_IGNORE)
+        run: |
+          # `colcon list` walks the whole 648-submodule tree and takes ~16s. Running it
+          # once per skip-list entry cost 67 min on humble base-1 of run 42025220816 (225
+          # entries), 48 min on jazzy and 35 min on kilted -- and this step runs in every
+          # base and domain job. That 67 min is what pushed humble base-1 past GitHub's
+          # unraisable 6h job cap. Snapshot the list once instead.
+          colcon list --base-paths . 2>/dev/null > /tmp/colcon_pkgs.tsv || true
+          echo "colcon list: $(wc -l < /tmp/colcon_pkgs.tsv | tr -d ' ') packages"
+          grep -vE '^\s*#|^\s*$' ci/skip-list.txt | while read -r pkg; do
+            path=$(awk -F'\t' -v p="$pkg" '$1==p{print $2; exit}' /tmp/colcon_pkgs.tsv)
+            [ -n "$path" ] && touch "$path/COLCON_IGNORE" && echo "ignore: $pkg" || true
+          done
+      - name: Unlink conflicting Homebrew packages (use vendored Boost 1.89, not brew 1.90)
+        run: |
+          set +e
+          brew unlink boost || true
+          brew unlink boost-python3 || true
+          brew unlink xtensor || true
+          brew unlink xdm || true
+          brew unlink xtl || true
+          brew unlink qt || true
+          # qtbase too, since Homebrew MODULARISED Qt6 at 6.12.0 and moved the QtCore
+          # forwarding headers out of `qt` into `qtbase`, which is also not keg-only.
+          # At 6.11.2 qtbase kept QtCore in Frameworks/ only, so /opt/homebrew/include/QtCore
+          # did not exist and the `qt` unlink above sufficed. At 6.12.0 it does exist, and its
+          # qtcoreglobal.h line 4 re-includes <QtCore/qtcoreglobal.h>, resolving back to itself
+          # via -I/opt/homebrew/include -> "error: #include nested too deeply". That shadowed
+          # keg-only qt@5 and failed plotjuggler + rviz_satellite (humble 39798399501) and
+          # open_manipulator_gui (jazzy 39798427519); all three built clean on 10-18 under
+          # Qt6 6.11.2. Same shadowing class as openssl@4.
+          brew unlink qtbase || true
+          brew unlink asio || true
+          brew unlink orocos-kdl || true
+          brew unlink protobuf || true
+          brew unlink ceres-solver || true
+          brew unlink osqp || true
+          echo "unlink done"
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-kilted-${{ matrix.shard }}-${{ github.run_id }}
+          restore-keys: ccache-kilted-${{ matrix.shard }}-
+      - name: Verify colcon is usable (infra guard)
+        run: |
+          # The Build steps below run under `continue-on-error: true`, so a broken
+          # colcon silently produces an EMPTY install prefix and the job only dies
+          # much later in "Pack install-*" with a misleading
+          #   tar: lseek(SEEK_HOLE) failed: Illegal byte sequence
+          # humble run 39120061470 lost a 6h base-1 exactly that way: 187 `colcon list`
+          # calls had just succeeded in "Apply skip-list", then 15s later `colcon build`
+          # died with `ModuleNotFoundError: No module named 'colcon_core.command'`.
+          # jazzy run 39120063171 had the identical brew/tap warnings on the same image
+          # and built 240 packages, so this is a per-runner pip/site-packages flake.
+          # Test the interpreter the colcon shim itself uses, not whatever python3 is
+          # first on PATH, and fail HERE with the cause named.
+          COLCON=$(command -v colcon) || { echo "::error::colcon not on PATH"; exit 1; }
+          PY=$(head -1 "$COLCON" | sed 's|^#!||; s| .*||')
+          [ -x "$PY" ] || PY=python3
+          "$PY" -c 'import colcon_core.command' || {
+            echo "::error::colcon is broken on this runner ($COLCON via $PY cannot import colcon_core.command) - infra flake, re-run the job"
+            exit 1
+          }
+          echo "colcon OK: $COLCON ($PY)"
+      - name: Build shard ${{ matrix.shard }}
+        continue-on-error: true
+        run: |
+          # set +e: broken package env hooks make `source install/setup.sh` exit
+          # 127 under bash -e, aborting before colcon. Tolerate and press on.
+          set +e
+          # Build INTO the base prefix (install/) so ament_package et al. resolve
+          # in the same prefix (a separate --install-base breaks ros_workspace and
+          # ament-python consumers). Snapshot first, then extract this shard's delta.
+          touch /tmp/base_marker
+          source install/setup.sh
+          # abseil-compat restore: place the base's protoc-linked abseil dylibs next to THIS shard's
+          # abseil so the workspace protoc's absolute /opt/homebrew/opt/abseil/lib/libabsl_*.<soname>.dylib
+          # path resolves even when brew here has a different abseil linked. cp -n never overwrites this
+          # shard's own abseil (they coexist by soname). Fixes rc_dynamics_api "Library not loaded:
+          # libabsl_die_if_null.NNNN.dylib" (Error 134). See the base "Build External Gazebo" step.
+          if [ -d install/abseil-compat ] && [ -d /opt/homebrew/opt/abseil/lib ]; then
+            cp -n install/abseil-compat/*.dylib /opt/homebrew/opt/abseil/lib/ 2>/dev/null || true
+            echo "abseil-compat: restored base abseil dylibs into /opt/homebrew/opt/abseil/lib"
+          fi
+          SEL=$(grep -vE '^\s*#|^\s*$' "ci/shards/dom_${{ matrix.shard }}.txt" | tr '\n' ' ')
+          [ -z "$SEL" ] && { echo "empty shard"; exit 0; }
+          colcon build --packages-select $SEL --merge-install \
+            --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+            --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "build_${{ matrix.shard }}.log"
+          # --- transient-failure retry pass -------------------------------------------------
+          # A few packages per run die with "make: *** [...] Alarm clock: 14" (SIGALRM killing a
+          # make job, usually in rosidl typesupport generation under the parallel executor) --
+          # not a code defect: cx_rl_interfaces and play_motion_builder_msgs both build clean on
+          # a re-run. Re-run ONLY packages whose own stderr block carries a transient signature,
+          # so a genuine failure is never masked and never paid for twice. Deliberately NOT
+          # keyed on "jobserver tokens" alone: that line also trails real crashes (auto_apms).
+          RETRY=$(grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/\1/' | sort -u | while read -r _p; do
+            awk -v p="$_p" '$0=="--- stderr: "p{f=1} f{print} f&&/^(Failed|Finished) +<<< /{exit}' "build_${{ matrix.shard }}.log" \
+              | grep -qE 'Alarm clock|Resource temporarily unavailable|Killed: 9' && echo "$_p"
+          done | tr '\n' ' ')
+          if [ -n "${RETRY// /}" ]; then
+            echo "::warning::retrying transient failures: $RETRY"
+            colcon build --packages-select $RETRY --merge-install \
+              --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
+              --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "retry_${{ matrix.shard }}.log"
+          fi
+          mkdir -p install_shard
+          find install -type f -newer /tmp/base_marker 2>/dev/null | while read -r f; do
+            rel="${f#install/}"; mkdir -p "install_shard/$(dirname "$rel")"; cp -p "$f" "install_shard/$rel"
+          done
+      - name: Summarize shard
+        if: always()
+        run: |
+          mkdir -p summaries
+          { echo "## shard: ${{ matrix.shard }}"
+            grep -E 'Summary:|packages? failed' "build_${{ matrix.shard }}.log" 2>/dev/null || true
+            # Drop packages that failed in the main pass but were recovered by the
+            # transient-failure retry pass, so the summary reports REAL failures only.
+            grep -E 'Failed +<<<' "build_${{ matrix.shard }}.log" 2>/dev/null | sort -u | while read -r _l; do
+              _p=$(echo "$_l" | sed -E 's/.*<<< ([^ ]+).*/\1/')
+              grep -qE "Finished +<<< $_p " "retry_${{ matrix.shard }}.log" 2>/dev/null || echo "$_l"
+            done
+            grep -E 'Finished +<<<' "retry_${{ matrix.shard }}.log" 2>/dev/null | sed -E 's/.*<<< ([^ ]+).*/  recovered on retry: \1/' || true
+          } > "summaries/${{ matrix.shard }}.txt"
+          # Collect macOS crash reports. Every process killed by a signal leaves a .ips
+          # report here -- which is the only way to see WHERE a build-time tool died when
+          # colcon just prints "Segmentation fault: 11" (auto_apms_behavior_tree's
+          # create_node_model, generating node_model_native.xml, does exactly that, and the
+          # stack is what is needed to fix it). Cheap, and only fires when something crashed.
+          for _d in "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports; do
+            [ -d "$_d" ] || continue
+            if [ -e /tmp/base_marker ]; then _find=(find "$_d" -name '*.ips' -newer /tmp/base_marker)
+            else _find=(find "$_d" -name '*.ips'); fi
+            "${_find[@]}" 2>/dev/null | while read -r _r; do
+              cp -p "$_r" "summaries/crash_$(basename "$_r")" 2>/dev/null || true
+            done
+          done
+          ls -1 summaries
+      - name: Upload shard delta
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-dom-${{ matrix.shard }}
+          path: install_shard
+          if-no-files-found: ignore
+          retention-days: 2
+      - name: Upload shard summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-${{ matrix.shard }}
+          path: summaries
+          retention-days: 5
+
+  assemble:
+    needs: domains
+    if: always()
+    runs-on: macos-26
+    steps:
+      - name: Fetch and extract install-base
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Retry-capable replacement for actions/download-artifact, which has no retry and
+          # can end WITHOUT failing on a truncated download (run 35511271212: 37 phantom
+          # failures across two shards). Three layers of safety:
+          #   1. gh run download in a retry loop        -> a dropped transfer is retried
+          # -R is explicit because gh infers the repo from the git remote, and the assemble
+          # job has no actions/checkout -> "fatal: not a git repository" without it.
+          #   2. tar --zstd -xf                         -> a truncated/corrupt archive ERRORS
+          #   3. the package assertions below           -> last-resort sanity check
+          ok=0
+          for n in 1 2 3; do
+            rm -rf install install-base.tar.zst
+            if gh run download "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" -n install-base -D . && tar --zstd -xf install-base.tar.zst; then
+              ok=1; break
+            fi
+            echo "::warning::install-base fetch/extract attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          [ "$ok" = 1 ] || { echo "::error::could not fetch a complete install-base after 3 attempts"; exit 1; }
+          rm -f install-base.tar.zst
+          missing=0
+          for p in ament_cmake_core std_msgs rclcpp; do
+            [ -d "install/share/$p" ] || { echo "::error::base prefix incomplete: install/share/$p is missing"; missing=1; }
+          done
+          n=$(ls install/share 2>/dev/null | wc -l | tr -d ' ')
+          [ "${n:-0}" -ge 300 ] || { echo "::error::base prefix has only $n packages (expected >= 300)"; missing=1; }
+          [ "$missing" = 0 ] || exit 1
+          echo "install-base OK: $n packages in install/share"
+      - name: Restore executable bits (GitHub artifacts drop +x)
+        run: chmod -R +x install/bin 2>/dev/null || true
+      - uses: actions/download-artifact@v4
+        with: { pattern: install-dom-*, path: deltas }
+      - name: Merge shard deltas
+        run: |
+          if [ -d deltas ]; then find deltas -mindepth 1 -maxdepth 1 -type d | while read -r d; do rsync -a "$d/" install/; done; fi
+          du -sh install || true
+      - name: Pack full workspace install
+        run: |
+          # One tar.zst, like every other install artifact in this workflow: reliable to
+          # transfer, and it PRESERVES THE EXECUTABLE BITS -- a raw-directory artifact is
+          # zipped by GitHub and every binary in install/bin comes back non-executable.
+          tar --zstd -cf install-full-kilted.tar.zst install
+          echo "packed $(du -h install-full-kilted.tar.zst | cut -f1)"
+      - name: Upload full workspace install
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-full-kilted
+          path: install-full-kilted.tar.zst
+          retention-days: 5
+
+  # Runs ci/deploy/package_tree.py over the assembled tree: vendors every Homebrew dylib in
+  # its transitive closure into vendor/lib, rewrites the references to @rpath, adds the
+  # absolute rpaths (including the in-tree opt/*/lib ones Hardened Runtime needs for
+  # dlopen'd plugins), re-signs and verifies. The output is what a release should ship.
+  #
+  # A SEPARATE job, not a step in assemble: assemble deliberately has no actions/checkout
+  # and no brew install (its own comment says so), and package_tree.py needs both -- the
+  # script itself, and an installed Homebrew for the closure to resolve against.
+  #
+  # It runs WITHOUT --allow-missing, so a Homebrew dylib the tree references but that does
+  # not exist fails the job. That is the abseil 2601 case: gz and protobuf were cached
+  # having been built against abseil 20260107.1, abseil then DELETED
+  # libabsl_crc_cpu_detect and libabsl_borrowed_fixup_buffer, and the shipped ros2-kilted
+  # keg ended up with 236 dylibs and 5 executables that cannot be dlopen'd at all.
+  #
+  # Validate changes here with .github/workflows/package-smoke-kilted.yml, which does the
+  # same thing against an already-built artifact in ~40 minutes instead of ~30 hours.
+  package:
+    needs: [plan, assemble]
+    runs-on: macos-26
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: false }
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+          brew-core-sha: ${{ needs.plan.outputs.brewcore }}
+      - name: Fetch the assembled tree
+        run: |
+          set -euo pipefail
+          ok=0
+          for n in 1 2 3; do
+            rm -rf install install-full-kilted.tar.zst
+            if gh run download "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" -n install-full-kilted -D . \
+               && tar --zstd -xf install-full-kilted.tar.zst; then ok=1; break; fi
+            echo "::warning::fetch/extract attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          [ "$ok" = 1 ] || { echo "::error::could not fetch install-full-kilted"; exit 1; }
+          chmod -R +x install/bin 2>/dev/null || true
+          echo "packages: $(ls install/share | wc -l | tr -d ' ')"
+      - name: Vendor Homebrew dylibs and fix rpaths
+        run: |
+          python3 -I ci/deploy/package_tree.py install \
+            --install-prefix "/opt/homebrew/opt/ros2-kilted"
+          echo "vendored: $(find install/vendor/lib -maxdepth 2 \( -name '*.dylib' -o -name '*.framework' \) | wc -l | tr -d ' ') libs, $(du -sh install/vendor/lib | awk '{print $1}')"
+      - name: Pack the release tree
+        run: |
+          tar --zstd -cf install-release-kilted.tar.zst install
+          echo "packed $(du -h install-release-kilted.tar.zst | cut -f1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: install-release-kilted
+          path: install-release-kilted.tar.zst
+          retention-days: 7
+
+  report:
+    needs: [base-b, domains]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { pattern: summary-*, path: summaries, merge-multiple: true }
+      - name: Combined report
+        run: |
+          echo "# Kilted layered build — per-shard results" >> "$GITHUB_STEP_SUMMARY"
+          for f in summaries/*.txt; do [ -f "$f" ] || continue; echo "- **$(basename "$f" .txt)**: $(grep -c 'Failed  *<<<' "$f" || true) failed" >> "$GITHUB_STEP_SUMMARY"; done
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep -rhE 'Failed +<<<' summaries/ | sort -u >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

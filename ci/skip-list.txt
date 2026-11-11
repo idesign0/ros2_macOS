@@ -1,0 +1,659 @@
+# ci/skip-list.txt — packages EXCLUDED from the macOS build (Lane 7: unsupported platform).
+# One package name per line. '#' starts a comment.
+# gen_shards.py removes these from the dependency graph before layering, and the
+# workflow COLCON_IGNOREs them, so nothing is assigned to depend on them.
+
+# Migrated from the old workflow's --packages-ignore (Qt6 binding failure + cascade).
+qt_gui_cpp
+rqt_gui_cpp
+nav2_system_tests
+
+# GenICam has no arm64 build -> rc_genicam_api fails "Unknown architecture".
+rc_genicam_api
+
+# ── Lane 7 sweep (2026-08-14): confirmed Linux-kernel-header deps, no macOS
+# equivalent. These are hardware drivers that can't run on macOS anyway.
+# (Fixable ones deliberately NOT here: ess_imu_driver2 [B2000000 baud],
+#  plansys2_bringup [sched_setscheduler] — leave for a real macOS guard.)
+
+# SocketCAN (linux/can.h, linux/can/raw.h) — no macOS SocketCAN.
+adi_tmcl
+clearpath_socketcan_interface
+ds_dbw_can
+ros2_socketcan
+nebula_continental_hw_interfaces
+
+# V4L2 video (linux/videodev2.h) — no macOS V4L2.
+usb_cam
+v4l2_camera
+
+# Linux serial / ioctls (asm/ioctls.h, linux/serial.h) — physical-HW drivers.
+coin_d4_driver
+ld08_driver
+sicks300_ros2
+septentrio_gnss_driver
+rplidar_driver
+
+# Other Linux-only kernel/sysfs interfaces.
+synapticon_ros2_control
+libbno055_linux
+adi_imu
+
+# avahi-client (Linux D-Bus mDNS discovery) — no macOS Homebrew bottle for
+# avahi (Linux/systemd-only, confirmed via formulae.brew.sh: bottles only for
+# arm64_linux/x86_64_linux, hard-deps on systemd). ARDISCOVERY_AvahiDiscovery.c
+# calls the avahi-client dbus API directly; a macOS-native path would mean
+# porting Avahi discovery to Apple's Bonjour/dns_sd.h — a real API port, not
+# a mechanical fix. humble+jazzy only (same commit a91f86c); not in kilted's tree.
+ardrone_sdk
+
+# ardrone_sumo — sole consumer of ardrone_sdk in this tree; CMakeLists.txt
+# has a hard `find_package(ardrone_sdk REQUIRED)` + links
+# `ardrone_sdk::ardrone_sdk_lib`, no optional/guarded path. Since ardrone_sdk
+# above is permanently unsupportable (not a transient build failure), this is
+# not a self-clearing cascade — skip-listing directly so it doesn't resurface
+# every cycle as a "new" own-error root. Same commit a91f86c, humble+jazzy
+# only; not in kilted's tree.
+ardrone_sumo
+
+# husarion_asset_server downloads a prebuilt asset_server binary from GitHub
+# releases; upstream (husarion/husarion_asset_server) only ever publishes
+# linux-amd64/linux-arm64 assets (confirmed via `gh api .../releases/latest`
+# for v0.4.0 — no darwin asset exists), and its CMakeLists uses `dpkg
+# --print-architecture` (absent on macOS) to pick the arch suffix, so it
+# fails even before the download. No macOS binary to fetch -> not a mechanical
+# fix. jazzy only; not in humble/kilted's trees.
+husarion_asset_server
+
+# kortex_api (Kinova's closed-source Kortex API SDK) hard-gates itself:
+# CMakeLists.txt:22 `if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
+# CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")` else FATAL_ERROR "Unsupported
+# System: currently support is for Linux x68_64" — a prebuilt vendor .so for
+# linux-x86_64 only, no arm64 Linux or macOS build exists upstream. humble +
+# jazzy (not in kilted's tree).
+kortex_api
+
+# GurumDDS RMW backend — needs the closed-source GurumDDS SDK (gurumdds-3.2, via
+# GURUMDDS_HOME); no macOS/arm64 build exists. rmw_gurumdds_cpp is a
+# <member_of_group>rmw_implementation_packages</member_of_group>, so when it can't
+# build, rmw_implementation (a BASE package) fails and ~779 kilted packages abort
+# behind it. Skip the whole gurumdds cluster -> rmw_implementation builds with
+# zenoh/fastrtps. kilted-only (absent from humble/jazzy trees; no-op there).
+gurumdds_cmake_module
+rmw_gurumdds_cpp
+demo_nodes_cpp_native_gurumdds
+
+# ── Lane 7 sweep (2026-08-19): verified Linux-only (inspected real sources).
+# swri_serial_util: src/serial_port.cpp #include <linux/serial.h> + serial_struct
+# ASYNC_LOW_LATENCY ioctl — no macOS equivalent.
+swri_serial_util
+# nobleo_socketcan_bridge: SocketCAN (linux/can.h) in src/socketcan_bridge.cpp —
+# no macOS SocketCAN.
+nobleo_socketcan_bridge
+
+# rosidl_generator_rs (ros2-rust): the Rust message generator needs a Rust/cargo
+# toolchain that is not installed on the macOS CI, so it never builds and produces
+# no package.sh. But it declares <member_of_group>rosidl_generator_packages</member_of_group>,
+# so colcon treats it as a required generator for EVERY message package -> in the
+# domain shards, autoware_*_msgs / rmf_*_msgs fail instantly at the pre-build
+# dependency check ("Failed to find ... Check that the following packages have been
+# built") -> cascades to ~46 autoware/nebula + the rmf msgs stacks. Nothing here
+# consumes Rust bindings, so drop it from the group. (Same pattern as the gurumdds skip.)
+rosidl_generator_rs
+
+# kobuki_core (+ kobuki_velocity_smoother cascade): find_package(ecl_build REQUIRED)
+# — the Yujin ECL suite (ecl_build/ecl_tools/ecl_lite/ecl_core/...) is NOT vendored in
+# this tree and has no macOS rosdep, so kobuki_core cannot configure. Skip until the ECL
+# stack is added; kobuki_velocity_smoother depends on kobuki_core so it cascades — skip both.
+kobuki_core
+kobuki_velocity_smoother
+# ── Lane 7 sweep (2026-08-20): confirmed no-macOS-build root.
+
+# libphidget22 + the phidgets_* USB hardware-driver cluster. libphidget22's upstream
+# source is the Linux tarball (libphidget22-*.tar.gz): it ships ONLY a Linux USB backend
+# (src/plat/linux/usblinux.c) and its configure OS-detection has no darwin arm — there is
+# no macOS/IOKit USB implementation in the source, so it cannot build from source on macOS
+# (Phidgets provides macOS support only as a prebuilt Phidget22.framework DMG, a different
+# major version than this tree targets — a vendor-framework port, not a mechanical fix, for
+# a driver that can't be exercised on macOS CI anyway). phidgets_api hard-requires
+# libphidget22 and every phidgets_* device driver requires phidgets_api, so the whole
+# cluster cascades — same Lane 7 policy as usb_cam / rplidar_driver / rc_genicam_api.
+# phidgets_msgs is a pure message package with no HW dep -> deliberately NOT skipped.
+libphidget22
+phidgets_api
+phidgets_drivers
+phidgets_accelerometer
+phidgets_analog_inputs
+phidgets_analog_outputs
+phidgets_digital_inputs
+phidgets_digital_outputs
+phidgets_gyroscope
+phidgets_high_speed_encoder
+phidgets_ik
+phidgets_magnetometer
+phidgets_motors
+phidgets_spatial
+phidgets_stepper
+phidgets_temperature
+# ── Base reds triaged (2026-08-27):
+# rqt_image_view: find_package(qt_gui_cpp REQUIRED) — qt_gui_cpp is Qt-binding-skipped
+# above, so this is a permanent cascade, not an own error. Skip alongside it.
+rqt_image_view
+# dataspeed_can_usb: find_package(lusb REQUIRED) + links lusb::lusb — 'lusb' is not a
+# package in this tree and not a macOS-resolvable dep; it is a HW USB-CAN driver that
+# can't run on macOS anyway (same class as the SocketCAN drivers above).
+dataspeed_can_usb
+# ── More base reds (2026-08-27): missing external deps not in this tree.
+# foxglove_compressed_video_transport: find_package(ffmpeg_encoder_decoder) — that package
+# is not in the tree and has no macOS dep. (foxglove_bridge itself is fixed separately.)
+foxglove_compressed_video_transport
+
+# --- autofix cycle 2026-08-28 ---
+# wiimote: wiimote-extras.cmake hard-requires libbluetooth (BlueZ, Linux-only) and
+# libcwiid (Wiimote-over-Bluetooth, built on BlueZ) via its own FATAL_ERROR gate —
+# no macOS IOBluetooth/CoreBluetooth backend implemented upstream. Genuinely Linux-only.
+wiimote
+
+# kortex_driver / kortex_bringup: cascade of the already-skipped kortex_api (Kinova's
+# closed-source SDK, prebuilt linux-x86_64-only .so, no arm64/macOS binary — see the
+# kortex_api entry above). Both hard find_package(kortex_api REQUIRED); skip alongside
+# it so they stop cascading instead of re-surfacing as "new" roots every cycle.
+kortex_driver
+kortex_bringup
+
+# turtlebot4_base: find_library(gpiod_library NAMES libgpiod.so) — libgpiod is a Linux
+# GPIO character-device userspace library (also hardcodes the .so extension, would fail
+# on macOS even if libgpiod existed). No macOS GPIO chardev equivalent.
+turtlebot4_base
+
+# spinnaker_camera_driver: cmake/DownloadSpinnaker.cmake requires `lsb_release` (Debian/
+# Ubuntu-only) to pick which vendor Spinnaker SDK archive to download; moot regardless
+# since FLIR's proprietary Spinnaker SDK has no macOS/arm64 binary published upstream.
+spinnaker_camera_driver
+
+# openni2_camera: pkg_check_modules(PC_OPENNI2 REQUIRED openni2) — OpenNI2 was EOL'd by
+# upstream (Apple acquired PrimeSense/discontinued the SDK) and was never packaged for
+# macOS ARM; no Homebrew formula, no pkg-config file, no vendored source in this tree.
+openni2_camera
+
+# open3d_conversions: needs Open3D (large 3D lib, not in the macOS brew set)
+open3d_conversions
+
+# rc_genicam_driver: needs RC_GENICAM_API (Roboception GenICam SDK, proprietary, no macOS)
+rc_genicam_driver
+
+# rc_reason_clients: Roboception rc_visard SDK client (proprietary, no macOS)
+rc_reason_clients
+
+# ign_rviz_common: needs classic ignition-math6; tree vendors gz-* only (classic ignition unsupported on macOS)
+ign_rviz_common
+
+# heaphook: Linux LD_PRELOAD heap hook (tlsf); macOS has no LD_PRELOAD equivalent
+heaphook
+
+# metavision_driver: Prophesee Metavision SDK (openeb) — Linux-only event-camera SDK
+metavision_driver
+
+# depthai: Luxonis depthai-core via vcpkg — Linux/USB SDK, no macOS build
+depthai
+
+# avt_vimba_camera: Allied Vision Vimba SDK — ships x86-64 Linux .so only (unknown file type on arm64)
+avt_vimba_camera
+
+# robotiq_driver: find_package(serial REQUIRED) wants wjwwood/serial (ships serialConfig.cmake); not in the tree, and brew "serial" is an unrelated CLI tool with no CMake config. No macOS build.
+robotiq_driver
+
+# acado_vendor: ACADO uses CMake policy CMP0042 (removed in CMake 4.x); dead solver, no macOS build
+acado_vendor
+
+# tvm_vendor: requires Vulkan (USE_VULKAN=ON); macOS has no standard Vulkan
+tvm_vendor
+
+# nao_meshes: mesh installer hard-rejects host arch arm64 (x86-only installer)
+nao_meshes
+
+# pepper_meshes: mesh installer hard-rejects host arch arm64 (x86-only installer)
+pepper_meshes
+
+# novatel_gps_driver: requires swri_serial_util (Linux serial, skipped) — cascade
+novatel_gps_driver
+
+# novatel_oem7_driver: Novatel OEM7 driver — swri/serial Linux deps, no macOS build
+novatel_oem7_driver
+
+# ur_client_library: bundled 3rdparty httplib uses accept4() (Linux-only syscall)
+ur_client_library
+
+# magnetic_model: requires cras_cpp_common (ctu-vras common lib) which is not in the tree — cascade, cannot build
+magnetic_model
+
+# magnetometer_pipeline: requires cras_cpp_common (ctu-vras common lib) which is not in the tree — cascade, cannot build
+magnetometer_pipeline
+
+# compass_interfaces: requires cras_cpp_common (ctu-vras common lib) which is not in the tree — cascade, cannot build
+compass_interfaces
+
+# rqt_image_overlay: depends on rqt_gui_cpp, which is already skip-listed
+# (needs Qt/python rqt bits not built in the brew base) -> cannot resolve its dep.
+rqt_image_overlay
+# === §1 common-33 skips (2026-09-03): each depends on an already-skip-listed or
+#     macOS-unsupportable library, so it is a permanent cascade, not an own error. ===
+# ur_robot_driver: find_package(ur_client_library REQUIRED) — ur_client_library is
+# skip-listed (bundled httplib uses accept4, Linux-only).
+ur_robot_driver
+# depthai_bridge: find_package(depthai) — Luxonis depthai-core SDK (skip-listed: Linux/USB vcpkg).
+depthai_bridge
+# spinnaker_synchronized_camera_driver: FLIR Spinnaker SDK, proprietary, no macOS/arm64
+# (spinnaker_camera_driver already skip-listed for the same reason).
+spinnaker_synchronized_camera_driver
+# plansys2_tools: find_package(qt_gui_cpp REQUIRED) — qt_gui_cpp is Qt-binding-skipped.
+plansys2_tools
+# mapviz: find_package(qt_gui_cpp REQUIRED) — same Qt-binding skip.
+mapviz
+# robotiq_hardware_tests: find_package(serial REQUIRED) — wjwwood/serial not in tree
+# (robotiq_driver already skip-listed for the same missing dep).
+robotiq_hardware_tests
+# mqtt_client: find_library(PahoMqttC) — Eclipse Paho MQTT C/C++ has no current Homebrew
+# formula (paho-mqtt-c was deleted) and no vendored source; no macOS build path.
+mqtt_client
+# === cascade siblings surfaced after §1 skips (2026-09-04, kilted run 33794872964) ===
+# Each depends on an already-skip-listed package, so it is a permanent cascade exposed once
+# its sibling stopped failing at config. Skip alongside the parent.
+# depthai_examples, depthai_ros_driver: depend on depthai_bridge (Luxonis depthai SDK, skipped).
+depthai_examples
+depthai_ros_driver
+# mapviz_plugins, multires_image, tile_map: depend on mapviz + qt_gui_cpp (both skipped).
+mapviz_plugins
+multires_image
+tile_map
+# ur_calibration: depends on ur_client_library (bundled httplib accept4, Linux-only, skipped).
+ur_calibration
+# === D-H triage (2026-09-04) ===
+# feetech_ros2_driver: pkg_check_modules(libserial) -- libserial has no current Homebrew
+# formula (deleted) and no vendored source; HW serial driver, no macOS path.
+feetech_ros2_driver
+# cx_protobuf_plugin: find_package(ProtobufComm) -- Fawkes' ProtobufComm library, not in
+# this tree and no macOS build.
+cx_protobuf_plugin
+# nmea_hardware_interface: find_package(quaternion_operation REQUIRED) -- quaternion_operation
+# is NOT vendored in this tree (Tier IV package). Skip until it is added.
+nmea_hardware_interface
+# menge_vendor: needs tinyxml (v1) via pkg-config; tinyxml is NOT a homebrew-core
+# formula (only osrf/simulation/tinyxml1, an untrusted tap). Do NOT add to BREW_BASE
+# -- an invalid formula name hard-fails the whole base brew install. Skip instead.
+menge_vendor
+# rmf_building_sim_gz_plugins: build-depends on menge_vendor (skipped above).
+rmf_building_sim_gz_plugins
+# === common-root triage (2026-09-07): blocked by an already-skipped or unavailable dep ===
+# rqt_play_motion_builder: build-depends on rqt_gui_cpp (skip-listed above; the Qt gui C++
+# binding does not build on macOS) -> "rqt_gui_cpp/plugin.h file not found". Same class as
+# rqt_image_overlay. Skip until rqt_gui_cpp builds.
+rqt_play_motion_builder
+# rmf_traffic_editor_test_maps: find_package(menge_vendor) REQUIRED, but menge_vendor is
+# skip-listed above (tinyxml). Skip until menge_vendor builds.
+rmf_traffic_editor_test_maps
+# rmf_robot_sim_gz_plugins: target_link_libraries against gz-sim plugin targets from the
+# gz/Fortress stack that are not built as ROS workspace packages here (same family as
+# rmf_building_sim_gz_plugins above). Skip until the gz plugin targets are provided.
+rmf_robot_sim_gz_plugins
+# ign_rviz_plugins: find_package(gz_math_vendor) -- a gz vendor package not built in this
+# ROS workspace (gz/Fortress). No macOS path until the gz vendors are provided.
+ign_rviz_plugins
+# --- humble+jazzy common, blocked by a skipped/absent dep (2026-09-07) ---
+# kuka_{iiqka_eac,rsi,sunrise_fri}_driver: find_package(kuka-external-control-sdk), whose
+# provider kuka_external_control_sdk is skip-listed below (Linux epoll). Skip until it builds.
+kuka_iiqka_eac_driver
+kuka_rsi_driver
+kuka_sunrise_fri_driver
+# hri_rviz: find_package(hri) -- the ROS4HRI 'hri' package is not vendored in this tree. Skip.
+hri_rviz
+# turtlebot4_bringup: depends on depthai_bridge (skip-listed; Linux depthai camera stack). Skip.
+turtlebot4_bringup
+# callback_isolated_executor: build-depends on cie_thread_configurator, skip-listed above as
+# Linux-only (error.h, CPU_SET/sched_setaffinity). Skip until it has a macOS port.
+callback_isolated_executor
+# agnocastlib: a Linux-kernel zero-copy transport -- needs the agnocast kernel module + epoll/
+# eventfd IPC and find_package(LTTngUST REQUIRED) with tracepoints embedded in its core headers.
+# No macOS path (same class as the agnocast_cie_thread_configurator skip). Skip.
+agnocastlib
+# === category I triage (2026-09-04) ===
+# canboat_vendor: ExternalProject builds upstream canboat, whose install step copies
+# rel/socketcan-serial -- a SocketCAN tool. SocketCAN is Linux-only (no CAN sockets on
+# macOS), so that binary is never built and cmake_install.cmake:41 fails "file INSTALL
+# cannot find .../rel/socketcan-serial". No macOS path.
+canboat_vendor
+# ecal: core/CMakeLists.txt find_package(ecaludp REQUIRED) -- ecaludp is not vendored in
+# this tree (separate eclipse-ecal/ecaludp repo). Skip until it is added.
+ecal
+# === humble-D triage (2026-09-04) ===
+# schunk_svh_library: src/serial/Serial.cpp uses Linux termios/serial APIs (ioctl, CBAUD,
+# FIONREAD, ...) with no macOS path -- HW serial driver, same class as feetech_ros2_driver.
+schunk_svh_library
+# qb_device_driver: bundled qbdevice-api serial impl_unix.cpp uses Linux 'struct serial_struct'
+# / TIOCGSERIAL (linux/serial.h) -- no macOS equivalent. HW serial driver.
+qb_device_driver
+# orbbec_camera: bundled OrbbecSDK is a closed prebuilt with only Linux/Windows binaries
+# (SDK/lib/arm64 = Linux aarch64 .so, no macOS .dylib); its CMake arch check also mis-flags
+# macOS arm64 as arm32 ("uname -m"=arm64 matches "arm"). No macOS build path.
+orbbec_camera
+# warehouse_ros_mongo: cmake/FindMONGODB.cmake -> "MONGODB not found" (needs the legacy mongo
+# client libs, not available/vendored on macOS).
+warehouse_ros_mongo
+# psdk_wrapper: CMakeLists.txt:80 message(FATAL) "Please confirm your platform" -- DJI Payload-SDK
+# only supports Linux (x86_64/aarch64)/embedded; no macOS platform. Closed prebuilt SDK.
+psdk_wrapper
+# kuka_external_control_sdk_examples: find_package(kuka-external-control-sdk) not found -- the SDK
+# lib does not produce a usable macOS config here; examples package, low value. Skip.
+kuka_external_control_sdk_examples
+# puma_motor_driver: find_package(clearpath_socketcan_interface) -- SocketCAN is Linux-only
+# (no CAN sockets on macOS). No macOS path.
+puma_motor_driver
+# husarion_ugv_hardware_interfaces: SuperBuild ExternalProject builds ep_libgpiod (Linux GPIO
+# character-device library, no macOS) + ep_liblely; libgpiod has no macOS port. Robot HW interface,
+# Linux-only.
+husarion_ugv_hardware_interfaces
+# lidar_situational_graphs: find_package(ndt_omp) -- ndt_omp is not a standalone vendored package
+# in this tree (it only exists embedded inside autoware_ndt_scan_matcher). Skip until vendored.
+lidar_situational_graphs
+
+# === MRPT consolidation (2026-09-04): keep mrpt_ros v2.x (mrpt_lib*), drop mrpt3 v3.x ===
+# mrpt3 (ros-planning/mrpt3, v3.1.3 modules) and mrpt_ros (v2.15.21, mrpt_lib*) both install
+# mrpt/*.h -> incompatible header clobber (exceptions.cpp return-type conflict) that breaks the
+# mrpt_ros v2.x build. mrpt3 has ZERO external consumers; the entire mola / mrpt_navigation /
+# mvsim / mp2p_icp / mrpt_sensors / mrpt_path_planning ecosystem (~65 pkgs) depends on mrpt_ros v2.x.
+# Decision (user 2026-09-04): keep the v2.x ecosystem, skip the orphan mrpt3 v3.x modules.
+mrpt_apps_cli
+mrpt_apps_gui
+mrpt_bayes
+mrpt_common
+mrpt_comms
+mrpt_config
+mrpt_containers
+mrpt_core
+mrpt_data
+mrpt_examples_cpp
+mrpt_expr
+mrpt_graphs
+mrpt_graphslam
+mrpt_gui
+mrpt_hwdrivers
+mrpt_img
+mrpt_imgui
+mrpt_io
+mrpt_kinematics
+mrpt_libapps_cli
+mrpt_libapps_gui
+mrpt_maps
+mrpt_math
+mrpt_nav
+mrpt_obs
+mrpt_opengl
+mrpt_poses
+mrpt_random
+mrpt_rtti
+mrpt_serialization
+mrpt_slam
+mrpt_system
+mrpt_tfest
+mrpt_topography
+mrpt_typemeta
+mrpt_viz
+# kuka_external_control_sdk: utils os-core-udp-communication/secure_replier.cc #include <sys/epoll.h>
+# -- epoll is Linux-only (macOS uses kqueue); the SDK's UDP layer has no macOS path. (base pkg;
+# its examples were already skipped.)
+kuka_external_control_sdk
+# ros2launch_security_examples: find_package(ament_nodl) succeeds but the ament_nodl_register
+# CMake macro is not provided (ament_nodl's cmake extension isn't registered on macOS) ->
+# "Unknown CMake command ament_nodl_register". Niche security EXAMPLE demonstrating NoDL-based
+# access policy; no consumers. Skip until ament_nodl's cmake integration builds on macOS.
+ros2launch_security_examples
+# aruco_opencv: aruco_tracker.cpp passes its LifecycleNode to image_transport::create_publisher(rclcpp::Node*), which has no LifecycleNode/NodeInterfaces overload in this image_transport -> 'no viable conversion from ArucoTracker to rclcpp::Node*'. Needs an upstream image_transport API addition; skip.
+aruco_opencv
+
+# foxglove_sdk_vendor: ships PREBUILT binaries for Linux x86_64/aarch64 only (CMakeLists FATAL_ERROR
+# "currently only supports Linux hosts"); no macOS artifact and no from-source build. Skip.
+foxglove_sdk_vendor
+
+# caret_trace: requires LTTngUST (Linux userspace tracing) with tracepoints embedded in its headers;
+# LTTng-UST does not build on macOS. Skip (same class as the LTTng agnostic skips).
+caret_trace
+
+# ign_rviz: metapackage over ign_rviz_common/ign_rviz_plugins (both skipped — classic
+# ignition-math6 / gz vendor packages unavailable on macOS). Consumer cascades; skip.
+ign_rviz
+
+# cx_bringup: build-depends cx_protobuf_plugin (skipped above — needs Fawkes ProtobufComm,
+# not in tree). Unsatisfiable cascade; skip.
+cx_bringup
+
+# compass_conversions: build-depends compass_interfaces (skipped above — needs cras_cpp_common,
+# not in tree). Unsatisfiable cascade; skip.
+compass_conversions
+
+# magnetometer_compass: build-depends compass_conversions (skipped — needs compass_interfaces
+# -> cras_cpp_common, not in tree). Unsatisfiable cascade; skip.
+magnetometer_compass
+
+# --- mrpt3 (v3.x) two-distribution cluster: the workspace builds mrpt_ros v2.x (mrpt_lib*) and
+# skip-lists the ~30 mrpt3 v3.x modules (mrpt_containers/mrpt_math/mrpt_maps/...) to avoid the
+# duplicate mrpt/core header install. mola, gtsam2mrpt_serial and kitti_metrics_eval
+# find_package() the v3.x module names, so they cannot build until the two MRPT distributions
+# are consolidated (upstream/maintainer task). Skip until then. (mrpt_libros_bridge was in this
+# list by mistake -- it is v2; see its entry below.)
+mola_gnss_to_markers
+mola_input_rosbag1
+gtsam2mrpt_serial
+# mrpt_libros_bridge: RE-SKIPPED 2026-09-23. The 2026-09-22 un-skip was wrong and the run proved
+# it on all three distros identically:
+#   CMakeLists.txt:30 (find_package): "mrpt_maps" (requested version 3.0) not found
+# The .gitmodules branch (MRPT/mrpt_ros_bridge @ ros2) now tips at 4.0.0, which requires the
+# UNDERSCORE mrpt3 v3.x modules -- the very set skip-listed above. The earlier reasoning came from
+# the pinned local copy (3.5.3, dash `mrpt-maps`), not the branch tip CI actually builds.
+
+# desktop_full: metapackage that pulls ros_gz_sim_demos (a gz demo package not built on macOS);
+# unsatisfiable cascade. Skip.
+desktop_full
+
+# python_mrpt (MRPT Python bindings, built from MRPT source): the pymrpt target compiles a
+# vendored-nanogui wrapper (python/src/nanogui/common.cpp) but MRPT's bundled nanogui headers
+# (nanogui/common.h) are not present in the fetched source tree -> "fatal error: 'nanogui/common.h'
+# file not found" after a ~22min build. Deep MRPT-internal (nanogui submodule not vendored for the
+# python build) and tied to the same MRPT two-distribution mess. Skip until MRPT is consolidated.
+python_mrpt
+
+# turtlebot3_gazebo: find_package(gazebo) -> Gazebo *classic* (gazebo11), which is not built/
+# available on macOS ARM (the workspace ships gz/ignition, not classic Gazebo). Unsatisfiable.
+turtlebot3_gazebo
+
+
+# --- more mrpt3 two-distribution cluster (need v3.x modules; see note above) ---
+
+# rmf_building_sim_gz_classic_plugins: find_package(gazebo) = Gazebo *classic* (gazebo11),
+# not available on macOS ARM (same class as turtlebot3_gazebo). Unsatisfiable.
+rmf_building_sim_gz_classic_plugins
+
+# irobot_create_gz_toolbox / irobot_create_nodes: both find_package(irobot_create_toolbox),
+# which is itself skip-listed (gz_math_vendor cascade) -> they can never configure. Skip the
+# dependents that are blocked by a skip-listed dep.
+irobot_create_gz_toolbox
+irobot_create_nodes
+
+# schunk_svh_simulation: CMakeLists hardcodes MUJOCO_DIR=$HOME/mujoco-3.2.3 and links
+# lib/libmujoco.so (Linux path + .so naming); that standalone MuJoCo tree does not exist on the
+# macOS runner (the workspace ships mujoco_vendor, a different layout) -> "'mujoco/mujoco.h' file
+# not found". Not macOS-portable as written; skip (could later be repointed at mujoco_vendor).
+schunk_svh_simulation
+
+# --- second-layer mrpt/mola cluster (re-skipped 2026-09-23) --------------------------------
+# All eight fail on the single missing mrpt-ros2bridge / mrpt_libros_bridge config, which is
+# skip-listed again (see its entry above -- branch tip 4.0.0 needs mrpt3 v3.x mrpt_maps).
+# NOTE colcon SKIPS the dependents of a failed package, so while mrpt_libros_bridge was un-skipped
+# these eight never even appeared as failures -- they were silently not built. Skipping them is the
+# honest state, and identical in outcome.
+# mp2p_icp_viz is NOT here: its failure was never mrpt-version related (upstream #if
+# MRPT_HAS_NANOGUI guard), and it now builds -- fork id_mp2p_icp@develop a58aa94.
+# mola_state_estimation_*: genuine mrpt_obs (mrpt3 v3.x) dependency.
+# mola_georeferencing: find_package(mola_gtsam_factors), itself skip-listed in the mrpt3 cluster.
+# Unsatisfiable cascade (new in the 2026-09-23 run, once mola built deeper).
+# canopen_fake_slaves: #includes <lely/io2/linux/can.hpp> (Linux SocketCAN) -> not available on
+# macOS. Linux-only.
+canopen_fake_slaves
+
+# rtabmap_rviz_plugins: a Qt5 rviz plugin (find_package(Qt5 QUIET COMPONENTS Widgets)) whose
+# transitive dependency chain re-runs brew's RTABMapConfig.cmake, which hard-requires Qt6:
+#   Found package configuration file: /opt/homebrew/lib/rtabmap-0.23/RTABMapConfig.cmake
+#   but it set RTABMap_FOUND to FALSE ... RTABMap could not be found because dependency Qt6
+#   could not be found.
+# Qt6 is deliberately disabled for this project in cmake/toolchain.cmake, because letting Qt6 in
+# poisons QT_MAJOR_VERSION=6 and then its own Qt5::Core mismatches -- the base rviz stack here is
+# Qt5. So the two requirements are mutually exclusive: brew ships a Qt6-built rtabmap (whose
+# rtabmap::gui rtabmap_conversions re-exports), and rviz here is Qt5; loading both Qt majors in one
+# process would be unsound even if it linked. This only became visible in run 35777232883 once
+# rtabmap_conversions itself started building (the VTK 9.7 Qt6::OpenGLWidgets stub). Skip until brew
+# rtabmap is Qt5-built or rtabmap_conversions stops exporting rtabmap::gui.
+rtabmap_rviz_plugins
+
+# --- second-order cascade from the mrpt/mola re-skips (observed in run 35983461657) -------
+# Skipping the 8 mrpt_libros_bridge consumers made THEIR consumers fail visibly. Note the
+# difference: while a dependency merely FAILS, colcon silently skips its dependents; once the
+# dependency is COLCON_IGNOREd the dependents are still selected and fail at configure with
+# "Could not find a package configuration file provided by <dep>". Same packages either way --
+# only the reporting changes. Each entry below is what actually failed, with its missing dep:
+
+# --- canopen: RE-SKIPPED 2026-09-25, reverting my 2026-09-22 un-skip ----------------------
+# I un-skipped canopen_core because its visible failure was a fixable CMake signature clash. Two
+# rounds of fixes later (keyword target_link_libraries, lely timespec, .template as<>, yaml-cpp
+# absolute path) it compiles the driver and then dies on what the original 2026-09-21 skip said
+# all along:
+#   canopen_core/include/canopen_core/node_interfaces/node_canopen_master.hpp:24:10:
+#   fatal error: 'lely/io2/linux/can.hpp' file not found
+# That include is unconditional -- the CAN master IS Linux SocketCAN. Not macOS-portable. The
+# CI patches for it are kept (correct in themselves, and idempotent) but the package and its
+# consumers are skipped.
+canopen_core
+canopen_base_driver
+canopen_master_driver
+canopen_402_driver
+canopen_proxy_driver
+canopen_ros2_control
+canopen_ros2_controllers
+canopen_inventus_driver
+canopen
+canopen_tests
+
+# --- mrpt_ros_bridge PINNED 2026-09-25, cluster un-skipped -------------------------------
+# The submodule now points at idesign0/id_mrpt_ros_bridge @ ros2, held at upstream 2c1a384.
+# Why: CI builds submodule BRANCH TIPS, and MRPT/mrpt_ros_bridge's ros2 tip moved to 4.0.0, which
+# wants the UNDERSCORE mrpt3 v3.x modules (find_package(mrpt_maps 3.0) / mrpt_obs 3.0) that this
+# workspace does not build. 2c1a384 uses find_package(mrpt-maps) -- the DASH v2 config that our
+# mrpt_ros v2 (mrpt_lib*) packages install and that every consumer still asks for:
+#   mvsim/pose_cov_ops/mrpt_navigation/mrpt_sensors/mola/mp2p_icp -> mrpt-ros2bridge, mrpt-maps,
+#   mrpt-poses, mrpt-obs ... (all dash at their own tips)
+# Forks are never rebased by update_forked_submodules.sh (it skips a submodule whose .gitmodules
+# URL owner matches origin's), so the pin holds.
+# Un-skipped below: the bridge, its 8 direct consumers, and the 6 that were blocked only through
+# those. STILL SKIPPED are the ones blocked by genuine mrpt3 v3.x modules -- mola_lidar_odometry,
+# mrpt_map_server, mrpt_pointcloud_pipeline (mrpt_maps), mrpt_path_planning_apps
+# (mrpt_path_planning), mola_sm_loop_closure + mola_georeferencing, mola_state_estimation_*.
+
+# --- mrpt/mola repos PINNED to their gitlinks 2026-10-01 ------------------------------------
+# Six more repos pinned to idesign0 forks held at the commit the superproject already recorded,
+# the same move that made mrpt_libros_bridge build:
+#   id_mrpt_sensors@ros2 eef39f1          id_mrpt_navigation@ros2 3b8c564
+#   id_mola_lidar_odometry@develop 4655d41 id_mola_state_estimation@develop fd60c10
+#   id_mola_imu_preintegration@develop 05b73c2  id_mrpt_path_planning@develop 45850e7
+# Each of those commits does find_package(mrpt-maps / mrpt-obs / mrpt-nav / mrpt-hwdrivers ...) --
+# the DASH configs our mrpt_ros v2 (mrpt_lib*) packages install -- while every repo's branch TIP had
+# moved to the UNDERSCORE mrpt3 v3.x module names we deliberately do not build. CI follows branch
+# tips, so it was building the v3-era code against a v2 workspace. Pinning simply makes CI build what
+# the gitlink already says.
+# NOTE this freezes those repos: upstream changes stop arriving until someone re-bases the pin.
+
+# cl_px4_mr: find_package(px4_msgs) -- and px4_msgs is not in this workspace at all (no submodule,
+# no shard entry, not skip-listed). Unsatisfiable rather than broken, so it follows the same policy
+# as the other blocked-by-absent-dependency entries. Adding the PX4 message definitions as a new
+# submodule would be a scope decision, not a fix.
+cl_px4_mr
+
+# --- rtabmap_ros + mola_academic_datasets PINNED 2026-10-04 -------------------------------
+# Same tip-drift pattern as the other pins.
+#   rtabmap_ros: the pin asks find_package(RTABMap 0.23.5) -- satisfied by brew's 0.23.8 --
+#     while the tip asks 0.23.13, which brew does not ship:
+#       "Could not find a configuration file for package RTABMap that is compatible with
+#        requested version 0.23.13 ... version found is not compatible"
+#     Pinned per distro (humble-devel c25a091 / jazzy-devel ba1f0bf / kilted-devel 2776d6c),
+#     since this repo has a branch and gitlink per distro.
+#   mola_academic_datasets (c4cffce, develop): mola_lidar_odometry stopped failing on mrpt_maps
+#     and started failing on mola_input_kitti_dataset, which lives here and was skip-listed as
+#     part of the mrpt3 cluster. Its pin uses the DASH mrpt configs we build, so it is
+#     recoverable like the rest.
+
+# sm_cl_px4_mr_test_1 / _2: find_package(cl_px4_mr), which is skip-listed above because px4_msgs
+# is not in this workspace at all. Cascade of that skip.
+sm_cl_px4_mr_test_1
+sm_cl_px4_mr_test_2
+
+# sm_husky_barrel_search_1: find_package(gazebo) and find_package(gazebo_dev) -- Gazebo
+# *classic*, which is not built on macOS ARM (same class as turtlebot3_gazebo and
+# rmf_building_sim_gz_classic_plugins above):
+#   Could not find a package configuration file provided by "gazebo"
+#   CMake Error at CMakeLists.txt:32 (find_package): ... "gazebo_dev" ...
+# Unsatisfiable here. The other five sm_dance_bot* in the same shard failed for an
+# unrelated reason (missing find_package(rosidl_default_generators)) and are fixed in the
+# id_smacc2 fork instead, not skipped.
+sm_husky_barrel_search_1
+
+# --- mvsim + mrpt_path_planning_apps 2026-10-15 -------------------------------------------
+# mvsim's GUI is not optional: modules/simulator/include/mvsim/World.h declares
+#   const mrpt::gui::CDisplayWindowGUI::Ptr& gui_window() const
+# and uses nanogui types directly, with no MRPT_HAS_NANOGUI guard anywhere in the package
+# and no CMake switch to build headless. It therefore fails to compile here:
+#   World.h:268:19: error: no member named 'CDisplayWindowGUI' in namespace 'mrpt::gui'
+#   World.h:840:3:  error: use of undeclared identifier 'nanogui'          (x many)
+#
+# The cause is upstream MRPT, not mvsim and not this workspace. In
+# cmakemodules/script_nanogui.cmake (MRPT 2.15.21):
+#     if (APPLE)
+#       set(def_ OFF)         # <-- MRPT_WITH_NANOGUI defaults OFF on macOS
+#     else()
+#       set(def_ ON)
+#     endif()
+#     set(MRPT_WITH_NANOGUI ${def_} CACHE BOOL "...")
+#     ...
+#     if (NOT MRPT_WITH_NANOGUI)
+#     return()                # <-- leaves CMAKE_MRPT_HAS_NANOGUI at 0
+#     endif()
+# and the whole of mrpt/gui/CDisplayWindowGUI.h (lines 22-380) sits inside
+# "#if MRPT_HAS_NANOGUI", so CDisplayWindowGUI simply does not exist on macOS. Note the
+# early return happens BEFORE MRPT_BUILD_nanogui is consulted, so mrpt_libgui already
+# passing -DMRPT_BUILD_nanogui=ON has no effect.
+#
+# Fixing this properly means turning MRPT's embedded nanogui (plus its bundled glfw and
+# nanovg) into something that builds on macOS ARM and then passing -DMRPT_WITH_NANOGUI=ON
+# to mrpt_libgui, and -DMRPT_WITH_NANOGUI=ON -DMRPT_BUILD_nanogui=OFF to mrpt_libbase so
+# the installed mrpt/config.h reports MRPT_HAS_NANOGUI 1 (only mrpt_libbase sets
+# MRPT_INSTALL_CONFIG_HEADERS=ON). That is a piece of work in its own right, and getting
+# it wrong fails mrpt_libgui or mrpt_libbase, which would cascade across the ~30 mrpt
+# packages in this shard. Not attempted blind; skipped until it can be built and verified.
+mvsim
+# mrpt_path_planning_apps: UN-SKIPPED 2026-10-18. The 2026-10-15 skip said
+# "find_package(mvsim) -- the only package depending on mvsim", but mvsim is OPTIONAL here:
+#   mrpt_path_planning_apps/CMakeLists.txt  find_package(mvsim-simulator QUIET)
+#                                           find_package(mvsim-comms QUIET)
+#   selfdriving-simulator-gui/CMakeLists.txt:3  if (NOT mvsim-simulator_FOUND OR
+#       NOT mvsim-comms_FOUND) -> message("mvsim not found, skipping ...") + return()
+# Only that one subdirectory needs mvsim, and it is also the only place nanogui /
+# CDisplayWindowGUI appear. The other two subdirs are clean:
+#   mrpt_path_planning_viz  links mrpt::gui + mpp::mrpt_path_planning; its sources include
+#                           only mrpt/gui/CDisplayWindow3D.h (OpenGL, works on macOS)
+#   path-planner-cli        mrpt::gui + mrpt::nav + mrpt::tclap + mrpt_path_planning_viz
+# The skip cost real packages: mpp/algos/viz.h is installed by mrpt_path_planning_viz, which
+# lives INSIDE mrpt_path_planning_apps (not a package of its own -- no package.xml), so with
+# the apps package skipped, mrpt_tps_astar_planner failed on all three distros with
+#   mrpt_tps_astar_planner_node.cpp:16:10: fatal error: 'mpp/algos/viz.h' file not found
+# and mrpt_navigation was then never built. (runs 38888909284 / 38796452721 / 38796471382)
+
+# ---- shard-coverage audit 2026-11-08: colcon finds these, no shard built them, and they
+# must NOT build. Reasons on their own lines: the skip step reads each line whole.
+# mrpt_imgui_vendor: mrpt3 module; mrpt3 is skipped (we keep mrpt_ros v2)
+mrpt_imgui_vendor

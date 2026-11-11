@@ -1,0 +1,106 @@
+name: Homebrew install test
+
+# Installs ros2-<distro> the way a user does -- `brew tap` + `brew install` -- on a fresh
+# runner, then runs the SAME functional checks the package-smoke workflows run on the
+# packaged tree (ci/deploy/functional_smoke.sh), against the installed keg.
+#
+# What this covers that package-smoke cannot: the formula itself (url/sha256, install,
+# post_install, keg_only), Homebrew's own install-time processing of ~5,800 mach-o files,
+# the keg living in Cellar/ behind the opt/ symlink, and a machine with NONE of the
+# build's Homebrew dependencies installed -- the formula no longer declares any.
+#
+# Install from the tap's `next` branch (default) to test a pre-release without touching
+# what `brew upgrade` serves from main.
+
+on:
+  workflow_dispatch:
+    inputs:
+      distro:
+        type: choice
+        options: ["kilted", "jazzy", "humble"]
+        default: kilted
+      tap_branch:
+        description: "Branch of idesign0/homebrew-ros2 to install from"
+        default: next
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      HOMEBREW_NO_ENV_HINTS: "1"
+      DISTRO: ${{ inputs.distro }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.distro }}-new
+          submodules: false
+
+      - name: What this machine has before the install
+        run: |
+          echo "python.org frameworks: $(ls /Library/Frameworks/Python.framework/Versions/ | tr '\n' ' ')"
+          hits=$(brew list --formula | grep -E '^(qt|qtbase|qt@5|vtk|opencv|pcl|ogre.*|dartsim|gz-.*|boost.*|abseil|protobuf)$' || true)
+          echo "build-side formulae already installed: ${hits:-none}"
+
+      - name: Python modules the formula's caveats ask for
+        run: |
+          /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 -m pip install -q \
+            --break-system-packages empy==3.3.4 lark==1.1.1 catkin_pkg netifaces osrf-pycommon \
+            PyYAML packaging psutil typeguard jinja2 lxml numpy \
+            argcomplete typing_extensions
+
+      - name: brew install from the tap
+        run: |
+          set -euo pipefail
+          brew tap idesign0/ros2
+          T="$(brew --repo idesign0/ros2)"
+          git -C "$T" fetch -q origin "${{ inputs.tap_branch }}"
+          git -C "$T" checkout -q -B "${{ inputs.tap_branch }}" FETCH_HEAD
+          grep -nE '^  (version|sha256|depends_on) ' "$T/Formula/ros2-$DISTRO.rb"
+          before=$(brew list --formula | wc -l | tr -d ' ')
+          start=$(date +%s)
+          brew install "idesign0/ros2/ros2-$DISTRO" 2>&1 | tail -40
+          echo "install took $(( $(date +%s) - start ))s"
+          after=$(brew list --formula | wc -l | tr -d ' ')
+          echo "formulae installed alongside: $((after - before - 1))"
+          brew list --versions "ros2-$DISTRO"
+          ls -la "$(brew --prefix)/opt/ros2-$DISTRO"
+
+      - name: Functional checks on the installed keg
+        run: |
+          # A stock Mac has /usr/bin/ruby only (bin/gz is `#!/usr/bin/env ruby`); the runner
+          # image puts a newer Homebrew ruby first on PATH, which would hide a dependency.
+          mkdir -p /tmp/sysruby && ln -sf /usr/bin/ruby /tmp/sysruby/ruby
+          export PATH="/tmp/sysruby:/Library/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
+          bash ci/deploy/functional_smoke.sh "$(brew --prefix)/opt/ros2-$DISTRO"
+
+      - name: ros2 CLI -- talker/listener from a sourced zsh
+        if: ${{ !cancelled() }}
+        run: |
+          export PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
+          cat > /tmp/chat.zsh <<'ZSH'
+          source "$(brew --prefix)/opt/ros2-$DISTRO/setup.zsh"
+          echo "packages: $(ros2 pkg list | wc -l | tr -d ' ')"
+          ros2 run demo_nodes_cpp talker > /tmp/talker.log 2>&1 &
+          tp=$!
+          ros2 topic echo /chatter std_msgs/msg/String --once > /tmp/echo.log 2>&1 &
+          ep=$!
+          for _ in $(seq 40); do kill -0 $ep 2>/dev/null || break; sleep 1; done
+          kill $tp $ep 2>/dev/null
+          if grep -q 'Hello World' /tmp/echo.log; then echo "talker -> listener OK: $(grep -m1 'Hello World' /tmp/echo.log)"; exit 0; fi
+          echo "::error::no message on /chatter"; tail -20 /tmp/talker.log /tmp/echo.log; exit 1
+          ZSH
+          zsh /tmp/chat.zsh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: brew-install-test-${{ inputs.distro }}
+          path: report
+          retention-days: 7
+          if-no-files-found: ignore

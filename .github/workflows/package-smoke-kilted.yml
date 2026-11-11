@@ -1,0 +1,377 @@
+name: Package smoke kilted (vendor + load test)
+
+# Dispatch-only. Takes an ALREADY BUILT install-full-<distro> artifact from a previous run
+# and puts it through ci/deploy/package_tree.py on a real macOS runner with real Homebrew,
+# then checks the result still loads. ~40 minutes instead of waiting ~30 hours for a full
+# layered build.
+#
+# This is the only way to answer the question local testing cannot: whether the Homebrew
+# dylib closure is COMPLETE on the build's own brew.
+#
+# It runs with --tolerate-stale-input, NOT --allow-missing. The subject of this job is the
+# PACKAGER, not the tree, and the two reasons a closure reference can be missing are not
+# equally interesting:
+#
+#   * the formula is installed at a newer version that dropped that soname -- Homebrew
+#     moved after the tree was built. The input artifact is stale. First run, 2026-10-29:
+#     a two-day-old kilted tree already wanted libdraco.9 and librealsense2.2.58 while
+#     core had draco 1.5.9 / librealsense 2.59.1, so the job failed before it could
+#     answer anything. Reported loudly here, then packaging continues: the consumers of
+#     those libs could not load BEFORE packaging either, so the before/after comparison
+#     stays honest.
+#   * the formula is not installed at all -- an undeclared dependency or a bad closure
+#     walk. Still fatal. No flag in this job tolerates it.
+#
+# The `package` job in macos-<distro>-layered.yml stays strict, with neither flag. It runs
+# in the same run as the build, so a stale input there is a real failure worth stopping on.
+#
+# The gate is LOAD SUCCESS, not "zero /opt/homebrew references". That weaker check passed
+# on a tree with 20 broken libraries: brew dylibs reach their siblings through @rpath
+# resolved against their own LC_RPATH (187 of 406 do), so an absolute-path-only closure
+# misses them and copying such a dylib into a flat vendor dir silently breaks it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run ID holding the install-full-kilted artifact"
+        required: true
+      ref:
+        description: "Branch to take ci/deploy/package_tree.py and the setup action from"
+        required: true
+        default: kilted-new
+      sample:
+        description: "How many dylibs to load-test before and after"
+        default: "150"
+      functional:
+        description: >
+          Headless functional checks on the PACKAGED tree (gz physics steps, gz transport
+          clock/poses, ros_gz_bridge relay). advisory = run and report, never fail the job;
+          strict = a failed check fails the job; off = skip. Requested in
+          idesign0/homebrew-ros2#3 after a user hit an incomplete DART closure that loaded
+          fine but could not step physics. The GUI / Ogre2 / Metal render from that report
+          is NOT covered: runners have no display or GPU.
+        required: false
+        default: advisory
+        type: choice
+        options: ["advisory", "strict", "off"]
+      publish:
+        description: >
+          If EVERY check passes (packaging, load test, functional, no Homebrew at run time),
+          publish this packaged tree as a PRE-release on idesign0/homebrew-ros2 and point the
+          tap's `next` branch at it. The tap's main branch -- what `brew upgrade` serves -- is
+          not touched.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Lifted verbatim from macos-kilted-layered.yml. The setup action REQUIRES gz-version and
+# brew-base-formulae, and BREW_BASE differs per distro (kilted is ionic; humble has no
+# `eigen`), so a single shared smoke workflow taking distro as an input would silently pass
+# the wrong formula set. One file per distro, each on its own -new ref, cannot mismatch.
+env:
+  CI_BUILD: "TRUE"
+  # ExternalProject vendors (e.g. clips_vendor) run `git apply` inside their build dir.
+  # When build/ is under the workspace git checkout, git apply finds the PARENT repo and
+  # silently SKIPS the vendor patch -> the source ends up without its generated
+  # CMakeLists.txt ("does not appear to contain CMakeLists.txt"). Stop git traversing
+  # above build/ so vendor git-applies behave as if outside a repo.
+  GIT_CEILING_DIRECTORIES: ${{ github.workspace }}/build
+  HOMEBREW_NO_INSTALL_FROM_API: "1"
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+  GZ_VERSION: ionic
+  GZ_DIR: gz-ionic
+  BREW_BASE: "graphviz eigen@3 eigen geographiclib vtk opencv@4 zbar png++ sophus vrpn draco aravis zeromq cppzmq glfw libusb rtabmap libpqxx leveldb libmodbus readline msgpack-cxx openvdb"
+
+jobs:
+  package:
+    runs-on: macos-26
+    # 180 was too tight once a slower runner turned up: run 42378019095 spent 74 min in
+    # setup and 75 min packaging, leaving 31 of 180. Same shape as the 6h cap that killed
+    # humble base-1 -- give it room rather than lose a 2.5h run to arithmetic.
+    timeout-minutes: 300
+    env:
+      GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+    steps:
+      # This workflow is registered on the DEFAULT branch so it can be dispatched at all
+      # (a workflow absent from the default branch gives HTTP 404: "not found on the
+      # default branch"). ci/deploy/package_tree.py and the setup action live on the -new
+      # refs, so check that ref out explicitly instead of the dispatch ref.
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          ref: ${{ inputs.ref }}
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+
+      - name: Fetch the prebuilt tree
+        run: |
+          set -euo pipefail
+          ok=0
+          for n in 1 2 3; do
+            rm -rf install "install-full-kilted.tar.zst"
+            if gh run download "${{ inputs.run_id }}" -R "$GITHUB_REPOSITORY" \
+                 -n "install-full-kilted" -D . \
+               && tar --zstd -xf "install-full-kilted.tar.zst"; then
+              ok=1; break
+            fi
+            echo "::warning::fetch/extract attempt $n failed; retrying in $((n*20))s"
+            sleep $((n*20))
+          done
+          [ "$ok" = 1 ] || { echo "::error::could not fetch install-full-kilted from run ${{ inputs.run_id }}"; exit 1; }
+          chmod -R +x install/bin 2>/dev/null || true
+          echo "packages: $(ls install/share | wc -l | tr -d ' ')"
+          du -sh install
+
+      - name: Load-test a sample BEFORE packaging
+        run: |
+          set -uo pipefail
+          # Prints the reason on stdout when LOADONE_WHY=1, so a failure is attributable:
+          # a missing Homebrew dylib and a plugin that merely needs its host process
+          # already loaded are both "failed to load" and mean completely different things.
+          # The dyld step below deliberately does NOT set it -- an error string containing
+          # a brew path would otherwise be counted as a runtime load.
+          cat > /tmp/loadone.py <<'PY'
+          import ctypes, os, sys
+          try:
+              ctypes.CDLL(sys.argv[1])
+          except Exception as e:
+              if os.environ.get("LOADONE_WHY") == "1":
+                  print(str(e).replace("\n", " ")[:300])
+              sys.exit(1)
+          sys.exit(0)
+          PY
+          # A dylib's own @rpath siblings must resolve, so test them where they live.
+          find install/lib -name '*.dylib' ! -type l | sort > /tmp/all_dylibs.txt
+          total=$(wc -l < /tmp/all_dylibs.txt | tr -d ' ')
+          echo "candidate dylibs: $total"
+          # deterministic sample: every Nth entry
+          N=$(( total / ${{ inputs.sample }} ))
+          [ "$N" -lt 1 ] && N=1
+          awk -v n="$N" 'NR % n == 1' /tmp/all_dylibs.txt | head -${{ inputs.sample }} > /tmp/sample.txt
+          echo "sampled: $(wc -l < /tmp/sample.txt | tr -d ' ')"
+          ok=0; fail=0
+          : > /tmp/why_before.txt
+          while read -r f; do
+            if why=$(LOADONE_WHY=1 python3 -I /tmp/loadone.py "$f"); then
+              ok=$((ok+1))
+            else
+              fail=$((fail+1))
+              echo "$f" >> /tmp/failed_before.txt
+              printf '%s\t%s\n' "$f" "$why" >> /tmp/why_before.txt
+            fi
+          done < /tmp/sample.txt
+          echo "BEFORE: loaded=$ok failed=$fail"
+          echo "before_ok=$ok" >> "$GITHUB_ENV"
+          touch /tmp/failed_before.txt
+          # Why they failed. A pre-existing failure is only alarming if it is the first kind.
+          brewmiss=$(grep -c 'Library not loaded: /opt/homebrew' /tmp/why_before.txt || true)
+          symmiss=$(grep -c 'symbol not found' /tmp/why_before.txt || true)
+          echo "  of those, missing a Homebrew dylib      : $brewmiss  (brew drift -- real)"
+          echo "  of those, unresolved symbol             : $symmiss  (needs its host process -- expected in isolation)"
+          echo "  of those, other                         : $(( fail - brewmiss - symmiss ))"
+          if [ "$brewmiss" -gt 0 ]; then
+            echo "  Homebrew dylibs the tree wants but cannot load:"
+            grep -o 'Library not loaded: /opt/homebrew/opt/[^ ]*' /tmp/why_before.txt \
+              | sed -E 's|.*/opt/homebrew/opt/||' | sort -u | sed 's/^/    /'
+          fi
+
+      - name: Package (vendor + rpaths) -- strict except for a stale input tree
+        id: package
+        run: |
+          set -uo pipefail
+          # The prefix the tree will occupy once installed. The current tap ships one monolithic
+          # keg per distro, so that is ros2-<distro>; a split layout would use ros2-<distro>-base.
+          python3 -I ci/deploy/package_tree.py install \
+            --install-prefix "/opt/homebrew/opt/ros2-kilted" \
+            --tolerate-stale-input
+          rc=$?
+          echo "package_tree exit=$rc"
+          if [ -d install/vendor/lib ]; then
+            echo "vendored: $(find install/vendor/lib -maxdepth 2 \( -name '*.dylib' -o -name '*.framework' \) | wc -l | tr -d ' ') libs, $(du -sh install/vendor/lib | awk '{print $1}')"
+          fi
+          exit $rc
+
+      - name: Load-test the SAME sample AFTER packaging
+        id: loadafter
+        run: |
+          set -uo pipefail
+          # The tree now expects its vendor dir at the INSTALLED path, so make that path exist.
+          # The whole relocated tree must sit at the install prefix (opt/gz_*_vendor, gz ruby cmd files).
+          sudo mkdir -p /opt/homebrew/opt
+          sudo rm -rf "/opt/homebrew/opt/ros2-kilted"
+          sudo ln -sfn "$PWD/install" "/opt/homebrew/opt/ros2-kilted"
+          ok=0; fail=0
+          : > /tmp/failed_after.txt
+          : > /tmp/why_after.txt
+          while read -r f; do
+            if why=$(LOADONE_WHY=1 python3 -I /tmp/loadone.py "$f"); then
+              ok=$((ok+1))
+            else
+              fail=$((fail+1))
+              echo "$f" >> /tmp/failed_after.txt
+              printf '%s\t%s\n' "$f" "$why" >> /tmp/why_after.txt
+            fi
+          done < /tmp/sample.txt
+          echo "AFTER:  loaded=$ok failed=$fail   (BEFORE loaded=${before_ok:-?})"
+          # A regression is a dylib that loaded BEFORE and does not load now. That is the gate:
+          # "zero /opt/homebrew references" is not, because it passed on a tree with 20 broken libs.
+          comm -13 <(sort -u /tmp/failed_before.txt) <(sort -u /tmp/failed_after.txt) > /tmp/regressions.txt
+          n=$(wc -l < /tmp/regressions.txt | tr -d ' ')
+          echo "REGRESSIONS: $n"
+          if [ "$n" -gt 0 ]; then
+            sed 's/^/  /' /tmp/regressions.txt
+            # An EMPTY why string is itself the finding, and the reason this block exists.
+            # loadone.py prints str(e) for a RAISED exception, so printing nothing means the
+            # probe process DIED instead -- a crashing initializer, not a missing library.
+            # kilted smoke 42368213363 hit exactly that on 9 of 9 gz plugins (every gz entry
+            # in the sample, 0 of which failed before), and a bare path said nothing about
+            # why. So capture what dyld actually did: the exit status, the last libraries it
+            # bound before stopping, and the file's own rpaths and @rpath deps.
+            while read -r f; do
+              echo "================ regression: $f"
+              # `|| rc=$?`, NOT `; rc=$?`: GitHub runs `run:` under `bash -e`, where a bare
+              # assignment from a failing command substitution exits the whole script. The
+              # first attempt at this block used `;` and died at the FIRST regression with
+              # the probe's own 134 as the step's exit code (run 42378019095).
+              rc=0
+              out=$(DYLD_PRINT_LIBRARIES=1 QT_QPA_PLATFORM=offscreen \
+                    python3 -I /tmp/loadone.py "$f" 2>&1) || rc=$?
+              echo "  probe exit=$rc   (>128 is a signal: 134 abort, 139 segv)"
+              echo "  --- recorded why: [$(grep -F "$f" /tmp/why_after.txt | cut -f2- | head -1)]"
+              # Unfiltered, this is 25 lines of system-framework chatter. Keep the lines
+              # that can explain a crash: our own tree, brew, and any abort/symbol text.
+              echo "  --- dyld lines naming the tree or brew (last 20):"
+              printf '%s\n' "$out" \
+                | grep -aE "install/|/opt/homebrew|ros2-" | tail -20 | sed 's/^/      /'
+              echo "  --- any error/abort text:"
+              printf '%s\n' "$out" \
+                | grep -aiE "abort|assertion failed|symbol not found|library not loaded|incompatible|duplicate symbol" \
+                | tail -10 | sed 's/^/      /'
+              echo "  --- final 4 raw lines:"
+              printf '%s\n' "$out" | tail -4 | sed 's/^/      /'
+              echo "  --- its own LC_RPATHs:"
+              otool -l "$f" | awk '/LC_RPATH/{p=1} p && /path /{print "      "$2; p=0}'
+              echo "  --- its @rpath deps:"
+              otool -L "$f" | grep '@rpath' | awk '{print "      "$1}' | head -25
+              # THE test for an abort. 134 is what protobuf and abseil do when one process
+              # registers the same descriptor or flag twice -- i.e. when TWO copies of one
+              # library get loaded from two different paths. The tree ships 96 in-tree
+              # copies of brew dylibs and vendors ~540 more, so that is reachable. If a
+              # basename appears at two paths here, that is the cause; if nothing is listed,
+              # it is not, and the abort is something the plugin does on its own.
+              printf '%s\n' "$out" \
+                | grep -aoE '/[^ ]*\.framework/[^ ]+|/[^ ]*\.dylib' \
+                | grep -aE 'install/|/opt/homebrew|ros2-' | sort -u \
+                | awk -F/ '{print $NF"\t"$0}' \
+                | awk -F'\t' '{c[$1]++; p[$1]=p[$1]"\n          "$2}
+                               END{for (k in c) if (c[k]>1) print "      "k":"p[k]}' \
+                | head -40 > /tmp/dup_$$.txt
+              if [ -s /tmp/dup_$$.txt ]; then
+                echo "  --- LOADED TWICE from different paths (abort cause):"
+                cat /tmp/dup_$$.txt
+              else
+                echo "  --- no library loaded twice -- the abort is not a double-load"
+              fi
+            done < <(head -6 /tmp/regressions.txt)
+            echo "::error::$n dylib(s) loaded before packaging and do not load after"
+            exit 1
+          fi
+          echo "no regressions"
+
+      - name: What still loads from Homebrew at runtime (the dlopen gap)
+        if: always()
+        run: |
+          set -uo pipefail
+          # otool cannot see a plugin that lives in a brew keg and is dlopen'd by path. The keg
+          # ships no libqcocoa, so a GUI tool loads Qt's platform plugin out of brew. dyld prints
+          # CELLAR paths, not opt, because it resolves the symlink -- match both.
+          S=$(head -40 /tmp/sample.txt)
+          : > /tmp/dyld_brew.txt
+          for f in $S; do
+            DYLD_PRINT_LIBRARIES=1 QT_QPA_PLATFORM=offscreen python3 -I /tmp/loadone.py "$f" 2>&1 \
+              | grep -oE '/opt/homebrew/(opt|Cellar)/[^/]+' | sed -E 's|.*/(opt\|Cellar)/||' >> /tmp/dyld_brew.txt || true
+          done
+          sort -u /tmp/dyld_brew.txt | grep -v "^ros2-" > /tmp/dyld_formulae.txt || true
+          echo "Homebrew formulae still loading at runtime after vendoring: $(wc -l < /tmp/dyld_formulae.txt | tr -d ' ')"
+          sed 's/^/  /' /tmp/dyld_formulae.txt
+          echo "(non-empty means the vendor set is incomplete -- those are the dlopen'd ones)"
+
+      - name: Functional smoke -- physics, transport, bridge, Qt runtime (headless)
+        id: functional
+        # NOT a bare `inputs.functional != 'off'`: without always()/!cancelled() a failing
+        # load-test step skips this one, which is why these checks had still never run after
+        # being added. They are about the PACKAGED tree, so the thing they depend on is the
+        # packager succeeding -- not the load gate passing.
+        if: ${{ !cancelled() && inputs.functional != 'off' && steps.package.conclusion == 'success' }}
+        continue-on-error: ${{ inputs.functional != 'strict' }}
+        env:
+          # Isolate gz transport from anything else on the runner.
+          GZ_PARTITION: smoke-${{ github.run_id }}
+          GZ_IP: 127.0.0.1
+        # The checks live in ci/deploy/functional_smoke.sh (from inputs.ref) so that
+        # brew-install-test.yml runs exactly the same ones against a `brew install`ed keg.
+        run: bash ci/deploy/functional_smoke.sh install
+      - name: Upload the packaged tree and the report
+        if: always()
+        run: |
+          mkdir -p report
+          cp /tmp/sample.txt /tmp/failed_before.txt /tmp/failed_after.txt /tmp/regressions.txt \
+             /tmp/why_before.txt /tmp/why_after.txt \
+             /tmp/dyld_formulae.txt report/ 2>/dev/null || true
+          ls -la report | sed 's/^/  /'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: package-smoke-kilted
+          path: report
+          retention-days: 7
+
+      - name: Publish the TESTED tree as a pre-release, and point the tap's next branch at it
+        # Only the tree this run just packaged AND passed every check on is published, and
+        # only as a PRE-release behind the tap's `next` branch. Promoting it to main is a
+        # separate, deliberate step.
+        if: ${{ inputs.publish && steps.package.outcome == 'success' && steps.loadafter.outcome == 'success' && steps.functional.outcome == 'success' }}
+        env:
+          TAP: idesign0/homebrew-ros2
+          DISTRO: kilted
+        run: |
+          set -euo pipefail
+          if [ -s /tmp/dyld_formulae.txt ]; then
+            echo "::error::Homebrew formulae still load at run time -- not publishing:"
+            cat /tmp/dyld_formulae.txt
+            exit 1
+          fi
+          VER="$(date -u +%y.%m.%d).${{ github.run_number }}"
+          TAG="${DISTRO}-${VER}"
+          ARCH="ros2-${DISTRO}-macos-${VER}.tar.gz"
+          # __pycache__ is written by the functional checks' own python runs, not the build.
+          tar --exclude '__pycache__' -cf - install | gzip -6 > "$ARCH"
+          SHA=$(shasum -a 256 "$ARCH" | awk '{print $1}')
+          SIZE=$(stat -f %z "$ARCH")
+          echo "archive: $ARCH  $((SIZE / 1048576)) MB  sha256 $SHA"
+          if [ "$SIZE" -ge 2000000000 ]; then
+            echo "::error::archive exceeds GitHub's 2 GiB release-asset limit"
+            exit 1
+          fi
+          gh release create "$TAG" --repo "$TAP" --prerelease \
+            --title "$DISTRO $VER (pre-release)" \
+            --notes "ROS 2 $DISTRO for macOS. Packaged and smoke-tested by idesign0/ros2_macOS run ${{ github.run_id }}, from build run ${{ inputs.run_id }} (ref ${{ inputs.ref }}). Pre-release: installable only from the tap's next branch." \
+            "$ARCH"
+          # http.extraheader, not URL userinfo: the latter dies on GitHub's receive-pack redirect.
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
+          git -c http.extraheader="$AUTH" clone -q --branch next "https://github.com/$TAP.git" tap
+          cd tap
+          F="Formula/ros2-${DISTRO}.rb"
+          sed -i '' -E "s/^  version \".*\"/  version \"${VER}\"/; s/^  sha256 \".*\"/  sha256 \"${SHA}\"/" "$F"
+          grep -nE '^  (version|sha256) ' "$F"
+          git -c user.name="github-actions[bot]" \
+              -c user.email="github-actions[bot]@users.noreply.github.com" \
+              commit -qam "ros2-${DISTRO} ${VER} (pre-release) from package-smoke run ${{ github.run_id }}"
+          git -c http.extraheader="$AUTH" push -q origin next
+          echo "::notice::published $TAG to $TAP (pre-release) and the tap's next branch"

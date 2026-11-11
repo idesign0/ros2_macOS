@@ -1,0 +1,2684 @@
+#!/bin/bash
+# Build-time source patches for submodule packages — applied in the composite
+# setup AFTER submodule checkout, BEFORE colcon build. No forks needed; edits
+# the submodule working tree in place. Idempotent (safe to re-run per job).
+#
+# Only put CLEAN, verified transforms here. Packages needing a real port
+# (io_service::work -> executor_work_guard, resolver::iterator -> range resolve,
+# etc.) get their own reviewed patch, not a blind sed.
+set -u
+ROOT="${1:-.}"
+
+# BSD (macOS) vs GNU sed in-place flag
+if sed --version >/dev/null 2>&1; then SEDI=(-i); else SEDI=(-i ''); fi
+
+_pkg_dir() {
+  find "$ROOT" -type d -name "$1" -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1
+}
+
+# Like _pkg_dir, but returns the CMakeLists.txt of the package named $1 -- skipping
+# a same-named REPO directory that has no CMakeLists.txt of its own (e.g.
+# camera_aravis2/camera_aravis2, resource_retriever/resource_retriever). _pkg_dir
+# returns the outer dir there, so "$(_pkg_dir x)/CMakeLists.txt" silently misses.
+_pkg_cml() {
+  local d
+  while read -r d; do
+    [ -f "$d/CMakeLists.txt" ] && { echo "$d/CMakeLists.txt"; return 0; }
+  done <<EOF
+$(find "$ROOT" -type d -name "$1" -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null)
+EOF
+  return 0
+}
+
+# --- Lane 2 (Boost 1.90): boost::asio::io_service was removed (== io_context).
+#     Only for packages that use the bare TYPE (no ::work / resolver::iterator). ---
+patch_io_service_typeonly() {
+  local dir; dir="$(_pkg_dir "$1")"; [ -z "$dir" ] && { echo "skip $1 (absent)"; return 0; }
+  # bail if this package also uses the removed ::work API — needs a real port
+  if grep -rq 'io_service::work' "$dir" 2>/dev/null; then
+    echo "skip $1 (uses io_service::work — needs full port, not this sed)"; return 0
+  fi
+  local files; files="$(grep -rl 'io_service' "$dir" \
+      --include='*.h' --include='*.hpp' --include='*.ipp' --include='*.cpp' --include='*.cc' 2>/dev/null)"
+  [ -z "$files" ] && return 0
+  echo "$files" | while IFS= read -r f; do
+    sed "${SEDI[@]}" 's/asio::io_service/asio::io_context/g' "$f"
+  done
+  echo "patched io_service -> io_context in $1 ($dir)"
+}
+
+patch_io_service_typeonly hls_lfcd_lds_driver
+patch_io_service_typeonly libcreate
+# nao_lola + nao_lola_client: bare `boost::asio::io_service` member only (no ::work,
+# no deadline_timer, no resolver) — type-only rename is safe. The variable is also
+# named `io_service`; only the `asio::io_service` TYPE token is rewritten.
+patch_io_service_typeonly nao_lola
+patch_io_service_typeonly nao_lola_client
+
+# --- add an #include to a file if missing (idempotent). Inserts after the first
+#     existing #include so it lands in the header block. ---
+_add_include() {  # $1=file  $2='#include <x>'
+  local f="$1" inc="$2"
+  [ -f "$f" ] || return 0
+  grep -qF "$inc" "$f" && return 0
+  awk -v inc="$inc" 'BEGIN{d=0} /^[[:space:]]*#include/ && !d {print; print inc; d=1; next} {print} END{if(!d) print inc}' "$f" > "$f.__p" && mv "$f.__p" "$f"
+  echo "  + $inc  ->  ${f#$ROOT/}"
+}
+
+# --- Lane 5: missing standard includes (clang/libc++ is stricter than libstdc++) ---
+# rcdiscover: several headers use std::string with only <stdexcept> — add <string>
+# to ALL of its headers that reference std::string (idempotent; skips ones with it)
+d="$(_pkg_dir rcdiscover)"; [ -n "$d" ] && for f in $(grep -rl 'std::string' "$d" 2>/dev/null | grep '\.h$'); do _add_include "$f" '#include <string>'; done
+# urg_node: urg_c_wrapper.cpp uses read()/write() (POSIX) undeclared without <unistd.h>
+d="$(_pkg_dir urg_node)"; [ -n "$d" ] && for f in $(find "$d" -name urg_c_wrapper.cpp 2>/dev/null); do _add_include "$f" '#include <unistd.h>'; done
+# swri_console_util: progress_bar.cpp calls select()/fd_set undeclared without <sys/select.h>
+d="$(_pkg_dir swri_console_util)"; [ -n "$d" ] && for f in $(find "$d" -name progress_bar.cpp 2>/dev/null); do _add_include "$f" '#include <sys/select.h>'; done
+# --- MOVED TO id_ FORKS (fix baked into forked source + submodule repointed; removed
+#     from this script so the next run validates the real source for upstream PRs):
+#       nebula_velodyne_hw_interfaces -> id_nebula (boost/format.hpp)
+#       event_camera_tools           -> id_event_camera_tools (unistd.h)
+#       sick_safetyscanners_base     -> id_sick_safetyscanners_base (posix_time_types + Boost 1.87 asio io_context port)
+# libcreate: serial_query.h declares boost::asio::deadline_timer, but on Boost 1.89 the
+# umbrella <boost/asio.hpp> no longer pulls in deadline_timer.hpp -> add the explicit
+# include (posix_time bits are header-only, no date_time link needed). The io_service->
+# io_context rename is already handled above by patch_io_service_typeonly libcreate;
+# create.cpp's "no viable overloaded '='" cascades from the incomplete SerialQuery.
+d="$(_pkg_dir libcreate)"; [ -n "$d" ] && for f in $(find "$d" -name serial_query.h 2>/dev/null); do _add_include "$f" '#include <boost/asio/deadline_timer.hpp>'; done
+# aruco_ros: aruco_ros_utils.cpp includes 'opencv4/opencv2/…' — wrong prefix; OpenCV_INCLUDE_DIRS
+# already ends in include/opencv4, so the include path is opencv2/… . Strip the opencv4/ prefix.
+d="$(_pkg_dir aruco_ros)"; [ -n "$d" ] && for f in $(grep -rl 'opencv4/opencv2/' "$d" 2>/dev/null); do sed "${SEDI[@]}" 's#opencv4/opencv2/#opencv2/#g' "$f"; done
+# schunk_svh_library: Serial.h includes Linux-only <termio.h>; macOS has only <termios.h>, and the
+# class uses the termios struct anyway. Swap the legacy header.
+d="$(_pkg_dir schunk_svh_library)"; [ -n "$d" ] && for f in $(grep -rl '<termio.h>' "$d" 2>/dev/null); do sed "${SEDI[@]}" 's#<termio\.h>#<termios.h>#g' "$f"; done
+
+# multisensor_calibration (ament): lib3D/core/exceptions.hpp #defines FN_NAME (used across the
+# bundled lib3D headers: geometry.hpp, extrinsics.hpp, ...) only for WIN32 or __linux__/__unix__.
+# macOS defines __APPLE__/__MACH__ but neither __linux__ nor __unix__, so FN_NAME is left undefined
+# -> "use of undeclared identifier 'FN_NAME'". Extend the __PRETTY_FUNCTION__ branch to __APPLE__.
+d="$(_pkg_dir multisensor_calibration)"
+if [ -n "$d" ]; then
+  for f in $(grep -rl 'defined(__linux__) || defined(__unix__)' "$d" 2>/dev/null); do
+    sed "${SEDI[@]}" 's/#elif defined(__linux__) || defined(__unix__)$/#elif defined(__linux__) || defined(__unix__) || defined(__APPLE__)/' "$f"
+    echo "  multisensor_calibration: FN_NAME __PRETTY_FUNCTION__ now covers __APPLE__ in ${f#$ROOT/}"
+  done
+fi
+# libcreate (peel #2): serial.cpp calls io_context::reset() — renamed to restart() in Boost 1.87.
+# (io_service->io_context handled by patch_io_service_typeonly; deadline_timer include above.)
+# Compile-tested: io_context::restart() compiles, io.reset() is gone, vs brew boost 1.89.
+d="$(_pkg_dir libcreate)"; [ -n "$d" ] && for f in $(find "$d" -name serial.cpp 2>/dev/null); do sed "${SEDI[@]}" 's/io\.reset()/io.restart()/g' "$f"; done
+# sick_safetyscanners2: boost::asio::ip::address_v4::from_string removed in Boost 1.87 -> make_address_v4.
+# Compile-tested: make_address_v4() compiles, address_v4::from_string is gone, vs brew boost 1.89.
+d="$(_pkg_dir sick_safetyscanners2)"; [ -n "$d" ] && for f in $(grep -rl 'address_v4::from_string' "$d" 2>/dev/null); do sed "${SEDI[@]}" 's/address_v4::from_string/make_address_v4/g' "$f"; done
+
+# rviz_imu_plugin (kilted, base_b shard): find_package(Qt5 COMPONENTS Widgets Test) collides with a
+# transitively-discovered Qt6 -- brew `qt` (Qt6) is reachable and the rviz/ament_cmake dependency
+# chain reaches Qt6Gui (via WrapOpenGL), which sets QT_MAJOR_VERSION=6 before this package's Qt5 is
+# resolved -> "INTERFACE_QT_MAJOR_VERSION property of Qt5::Core does not agree with QT_MAJOR_VERSION
+# already determined". rviz_imu_plugin and the base rviz (rviz_common/rviz_rendering) are all Qt5, so
+# block Qt6 discovery in this package's configure to keep QT_MAJOR_VERSION=5. Idempotent (ci-imu-noqt6).
+d="$(_pkg_dir rviz_imu_plugin)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-imu-noqt6' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{(\nproject\(rviz_imu_plugin[^\n]*\)\n)}{$1# ci-imu-noqt6: keep this Qt5 plugin off the transitively-reachable brew Qt6 (QT_MAJOR_VERSION clash)\nset(CMAKE_DISABLE_FIND_PACKAGE_Qt6 ON)\n}' "$d/CMakeLists.txt"
+  echo "  rviz_imu_plugin: block Qt6 discovery (CMAKE_DISABLE_FIND_PACKAGE_Qt6) in ${d#$ROOT/}"
+fi
+# onnxruntime_vendor: hard-rejects Darwin with FATAL_ERROR, but Microsoft publishes an osx-arm64
+# prebuilt with the SAME .tgz layout the Linux path uses (verified onnxruntime-osx-arm64-<ver>.tgz
+# exists on the v<ver> release). The vendor's copy/install is platform-agnostic (file(COPY) +
+# install(DIRECTORY lib/)), so only the download asset name needs a Darwin case. Not unsupported.
+d="$(_pkg_dir onnxruntime_vendor)"
+if [ -n "$d" ] && grep -q 'macOS (Darwin) is not supported' "$d/CMakeLists.txt" 2>/dev/null; then
+  sed "${SEDI[@]}" 's|.*message(FATAL_ERROR "onnxruntime_vendor: macOS (Darwin) is not supported.*|  set(ORT_ASSET_NAME "onnxruntime-osx-arm64-${ORT_VERSION}.tgz")|' "$d/CMakeLists.txt"
+  echo "  onnxruntime_vendor: Darwin -> osx-arm64 prebuilt"
+fi
+# ros2_medkit_cmake: medkit_find_yaml_cpp() does find_library(yaml-cpp) which fails on macOS (the
+# vendored yaml-cpp isn't on the default lib path) -> FATAL, blocking fmilibrary_vendor/clips_vendor
+# and other medkit consumers on humble. Add a fallback tier that uses the toolchain's vendored
+# YAML_CPP_LIBRARIES/YAML_CPP_INCLUDE_DIRS before the FATAL. Cmake-configure-tested: creates the
+# yaml-cpp::yaml-cpp target from those vars.
+d="$(_pkg_dir ros2_medkit_cmake)"
+if [ -n "$d" ] && [ -f "$d/cmake/ROS2MedkitCompat.cmake" ] && ! grep -q 'ci-medkit-yamlfallback' "$d/cmake/ROS2MedkitCompat.cmake"; then
+  perl -0pi -e 's/(\n[ \t]*)else\(\)\n([ \t]*message\(FATAL_ERROR "\[MedkitCompat\] Could not find yaml-cpp)/$1elseif(YAML_CPP_LIBRARIES AND YAML_CPP_INCLUDE_DIRS)  # ci-medkit-yamlfallback$1  add_library(yaml-cpp::yaml-cpp IMPORTED INTERFACE)$1  set_target_properties(yaml-cpp::yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES "\$\{YAML_CPP_LIBRARIES\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{YAML_CPP_INCLUDE_DIRS\}")$1else()\n$2/' "$d/cmake/ROS2MedkitCompat.cmake"
+  echo "  ros2_medkit_cmake: yaml-cpp vendored-path fallback"
+fi
+# dynamixel_hardware: target_link_libraries() references the namespaced target
+# dynamixel_workbench_toolbox::dynamixel_workbench_toolbox, but dynamixel_workbench_toolbox
+# only ament_export_libraries() a BARE lib name (no install(EXPORT)/namespaced target) -> CMake
+# aborts "Target links to dynamixel_workbench_toolbox::... which is not a target". Synthesize the
+# imported target from the ament-exported vars (INCLUDE_DIRS/LIBRARIES). Cmake-configure-tested:
+# the INTERFACE IMPORTED target links cleanly. (kilted+jazzy; absent on humble.)
+f="$(find "$ROOT" -path '*/dynamixel_hardware/dynamixel_hardware/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-dxl-toolbox-target' "$f"; then
+  perl -0pi -e 's{(\nfind_package\(dynamixel_workbench_toolbox REQUIRED\))}{$1\nif(NOT TARGET dynamixel_workbench_toolbox::dynamixel_workbench_toolbox)  # ci-dxl-toolbox-target\n  add_library(dynamixel_workbench_toolbox::dynamixel_workbench_toolbox INTERFACE IMPORTED)\n  set_target_properties(dynamixel_workbench_toolbox::dynamixel_workbench_toolbox PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "\$\{dynamixel_workbench_toolbox_INCLUDE_DIRS\}" INTERFACE_LINK_LIBRARIES "\$\{dynamixel_workbench_toolbox_LIBRARIES\}")\nendif()}' "$f"
+  echo "  dynamixel_hardware: synthesized dynamixel_workbench_toolbox:: imported target"
+fi
+# rc_dynamics_api: several TUs use std::string / std::stringstream but only include <stdexcept>
+# (or nothing, relying on transitive includes). On libc++ (macOS) std::basic_string<char> is not
+# pulled in that way -> "implicit instantiation of undefined template 'std::basic_string<char>'"
+# (socket_exception.h first, then data_receiver.h, msg_utils.h). Add an explicit <string> include
+# to every rc_dynamics_api TU that needs one, after its first #include (or the include-guard #define).
+rcd="$(find "$ROOT" -type d -path '*rc_dynamics_api/rc_dynamics_api' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$rcd" ]; then
+  # only rc_dynamics_api's OWN sources — NOT the bundled opt/{protobuf,cpr,googletest} third-party.
+  for f in $(grep -rlE 'std::(string|stringstream|to_string|ostringstream|istringstream)' "$rcd" --include='*.h' --include='*.hpp' --include='*.cc' --include='*.cpp' 2>/dev/null | grep -v '/opt/'); do
+    grep -qE '#include <string>' "$f" && continue
+    if grep -qE '#include [<"]' "$f"; then
+      perl -0pi -e 's~(#include [<"][^>"\n]+[>"]\n)~${1}#include <string>  // ci-rcdyn-string\n~' "$f"
+    elif grep -qE '^#define ' "$f"; then
+      perl -0pi -e 's~(^#define [^\n]+\n)~${1}#include <string>  // ci-rcdyn-string\n~m' "$f"
+    else
+      perl -0pi -e 's~\A~#include <string>  // ci-rcdyn-string\n~' "$f"
+    fi
+    echo "  rc_dynamics_api: +<string> in ${f#$ROOT/}"
+  done
+fi
+# rc_dynamics_api: cmake/Modules/FindProtocolBuffers.cmake keys PROTOBUF_INCLUDE_DIR on service.h,
+# which the modern workspace protobuf (the gz-built one, has runtime_version.h) may not ship -> the
+# include resolves to an OLDER protobuf than the protoc found on PATH, so the generated frame.pb.h's
+# #include <google/protobuf/runtime_version.h> is not found. Pin PROTOBUF_INCLUDE_DIR + LIBRARY to
+# the protoc's own prefix (the workspace protobuf that gz uses) so they always match.
+_fpb="$(find "$ROOT" -path '*rc_dynamics_api/cmake/Modules/FindProtocolBuffers.cmake' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$_fpb" ] && [ -f "$_fpb" ] && ! grep -q 'ci-rcdyn-protoc-match' "$_fpb"; then
+  perl -0pi -e 's{(FIND_PROGRAM\(PROTOBUF_PROTOC_EXECUTABLE NAMES protoc\n             HINTS "\$\{PROTOBUF_ROOT\}/bin"\n             DOC "The Google Protocol Buffers Compiler"\n\)\n)}{$1\n# ci-rcdyn-protoc-match: keep PROTOBUF_INCLUDE_DIR/LIBRARY matched to the protoc that generated\n# the .pb.h (the workspace protobuf), not an older service.h-having protobuf FIND_PATH may pick.\nIF(PROTOBUF_PROTOC_EXECUTABLE)\n  GET_FILENAME_COMPONENT(_ci_pb_bin "\$\{PROTOBUF_PROTOC_EXECUTABLE\}" DIRECTORY)\n  GET_FILENAME_COMPONENT(_ci_pb_root "\$\{_ci_pb_bin\}" DIRECTORY)\n  IF(EXISTS "\$\{_ci_pb_root\}/include/google/protobuf/descriptor.pb.h")\n    SET(PROTOBUF_INCLUDE_DIR "\$\{_ci_pb_root\}/include" CACHE PATH "" FORCE)\n    FILE(GLOB _ci_pb_lib "\$\{_ci_pb_root\}/lib/libprotobuf.dylib" "\$\{_ci_pb_root\}/lib/libprotobuf.a")\n    IF(_ci_pb_lib)\n      LIST(GET _ci_pb_lib 0 _ci_pb_lib0)\n      SET(PROTOBUF_LIBRARY "\$\{_ci_pb_lib0\}" CACHE FILEPATH "" FORCE)\n    ENDIF()\n  ENDIF()\nENDIF()\n}' "$_fpb"
+  echo "  rc_dynamics_api: FindProtocolBuffers pin include+lib to protoc prefix (workspace protobuf)"
+fi
+# zenoh_bridge_dds: the pinned Cargo.lock uses time v0.3.28, which fails to compile on
+# rustc >= 1.80 (E0282 "type annotations needed for Box<_>" in time's format_description
+# parse/mod.rs). The runner's cargo does not honor the crate's rust-toolchain.toml (1.72.0),
+# so it builds with a newer rustc. Bump the locked time crate to >=0.3.36 (the inference fix
+# landed in 0.3.35); it is API-compatible and cargo pulls compatible time-macros/deranged.
+# Best-effort: needs cargo on PATH (present on the runner during the Rust build). Guarded so a
+# failure cannot abort setup, and only runs when the vulnerable version is actually locked.
+zbd="$(find "$ROOT" -type d -path '*/middleware/zenoh_bridge_dds' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$zbd" ] && [ -f "$zbd/Cargo.lock" ] && grep -q '^version = "0.3.28"' "$zbd/Cargo.lock" && command -v cargo >/dev/null 2>&1; then
+  if ( cd "$zbd" && cargo update -p time@0.3.28 --precise 0.3.36 ) >/dev/null 2>&1; then
+    echo "  zenoh_bridge_dds: bumped locked time 0.3.28 -> 0.3.36 (rustc>=1.80 compat)"
+  else
+    echo "  zenoh_bridge_dds: 'cargo update time' failed — Cargo.lock left unchanged"
+  fi
+fi
+# fuse_publishers: pose_2d_publisher.cpp builds tf2_ros::TransformListener from the fuse_core
+# NodeInterfaces object. The installed tf2_ros TransformListener template ctor does
+# node->get_node_*_interface() (expects a Node POINTER), so a NodeInterfaces value fails:
+# "member reference type ...NodeInterfaces<...> is not a pointer" (fuse's own TODO notes it waits
+# on a tf2_ros change). Call the explicit-interfaces ctor instead (BufferCore& + the 4 interface
+# SharedPtrs, which fuse_core::NodeInterfaces exposes as getters). API-verified against the
+# in-tree tf2_ros transform_listener.hpp explicit-interfaces ctor. (kilted+jazzy.)
+for f in $(grep -rlE 'make_unique<tf2_ros::TransformListener>' "$ROOT" --include='*.cpp' 2>/dev/null | grep -E '/fuse'); do
+  { [ -f "$f" ] && ! grep -q 'ci-fuse-tf-interfaces' "$f"; } || continue
+  perl -0pi -e 's~(\n[ \t]*tf_listener_ = std::make_unique<tf2_ros::TransformListener>\()\n[ \t]*\*tf_buffer_,\n[ \t]*interfaces_\n([ \t]*\);)~${1}  // ci-fuse-tf-interfaces: installed tf2_ros TransformListener template ctor does node->\n        // get_node_*_interface() (expects a Node pointer); pass the interfaces explicitly instead.\n        *tf_buffer_,\n        interfaces_.get_node_base_interface(),\n        interfaces_.get_node_logging_interface(),\n        interfaces_.get_node_parameters_interface(),\n        interfaces_.get_node_topics_interface()\n${2}~' "$f"
+  grep -q 'ci-fuse-tf-interfaces' "$f" && echo "  fuse: TransformListener -> explicit node interfaces in ${f#$ROOT/}"
+done
+# auto_apms_behavior_tree_core: tree_document.hpp defines the SubTree insertNode() overloads
+# out-of-line BEFORE model::SubTree is complete (it is only forward-declared there; defined in
+# node_model_type.hpp). insertSubTreeNode() returns model::SubTree BY VALUE and the call is
+# NON-dependent, so clang checks completeness at parse (not instantiation) -> "calling
+# insertSubTreeNode with incomplete return type 'model::SubTree'". The author's trailing
+# #include of node_model_type.hpp is skipped under #pragma once when node_model_type.hpp is the
+# first header in the TU (node_model_type.cpp). Move the two defs to the end of node_model_type.hpp
+# (after model::SubTree is complete), inside namespace core. Verified with an isolated repro:
+# def-before-complete reproduces the exact error; def-after-complete compiles clean. (kilted+jazzy.)
+aad="$(find "$ROOT" -type d -path '*auto_apms_behavior_tree_core/include/auto_apms_behavior_tree_core' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$aad" ] && [ -f "$aad/tree/tree_document.hpp" ] && [ -f "$aad/node/node_model_type.hpp" ] && ! grep -q 'ci-autoapms-subtree-defs' "$aad/tree/tree_document.hpp"; then
+  perl -0pi -e 's~\ntemplate <class T>\ninline typename std::enable_if_t<std::is_same_v<model::SubTree, T>, model::SubTree>\nTreeDocument::NodeElement::insertNode\(const std::string & tree_name, const NodeElement \* before_this\)\n\{\n  return insertSubTreeNode\(tree_name, before_this\);\n\}\n\ntemplate <class T>\ninline typename std::enable_if_t<std::is_same_v<model::SubTree, T>, model::SubTree>\nTreeDocument::NodeElement::insertNode\(const TreeElement & tree, const NodeElement \* before_this\)\n\{\n  return insertSubTreeNode\(tree, before_this\);\n\}\n~\n// ci-autoapms-subtree-defs: the two SubTree insertNode() defs were moved to the end of\n// node_model_type.hpp (after model::SubTree is complete).\n~' "$aad/tree/tree_document.hpp"
+  perl -0pi -e 's~(\n\}  // namespace model\n)(\}  // namespace auto_apms_behavior_tree)~${1}\nnamespace core  // ci-autoapms-subtree-defs: SubTree insertNode() defs moved here from tree_document.hpp\n\{                 // (insertSubTreeNode returns model::SubTree by value; clang needs it complete at parse)\ntemplate <class T>\ninline typename std::enable_if_t<std::is_same_v<model::SubTree, T>, model::SubTree>\nTreeDocument::NodeElement::insertNode(const std::string \& tree_name, const NodeElement * before_this)\n\{\n  return insertSubTreeNode(tree_name, before_this);\n\}\n\ntemplate <class T>\ninline typename std::enable_if_t<std::is_same_v<model::SubTree, T>, model::SubTree>\nTreeDocument::NodeElement::insertNode(const TreeElement \& tree, const NodeElement * before_this)\n\{\n  return insertSubTreeNode(tree, before_this);\n\}\n\}  // namespace core\n${2}~' "$aad/node/node_model_type.hpp"
+  echo "  auto_apms_behavior_tree_core: moved SubTree insertNode defs after complete type"
+fi
+# ros2_ouster: MOVED TO id_ros2_ouster_drivers fork (declare_parameter type) — removed from script.
+# at_sonde_ros_driver: find_library(LIBMODBUS NAMES libmodbus.so PATHS /usr/lib) and
+# find_path(LIBMODBUS_INCLUDE_DIR NAMES modbus.h PATHS /usr/include/modbus) are Linux-only --
+# the NAMES is wrong (find_library wants the BASE name 'modbus', not 'libmodbus.so') and the
+# PATHS miss brew. libmodbus is in BREW_BASE at /opt/homebrew/opt/libmodbus -> both vars end up
+# NOTFOUND on macOS ("variables ... set to NOTFOUND: LIBMODBUS_INCLUDE_DIR, LIBMODBUS"). Fix the
+# NAMES and add brew paths. Idempotent (ci-atsonde-modbus).
+f="$(_pkg_dir at_sonde_ros_driver)/CMakeLists.txt"
+if [ -f "$f" ] && grep -q 'NAMES libmodbus.so' "$f" && ! grep -q 'ci-atsonde-modbus' "$f"; then
+  perl -0pi -e 's~NAMES libmodbus\.so\n  PATHS /usr/lib~NAMES modbus libmodbus  # ci-atsonde-modbus\n  PATHS /usr/lib /opt/homebrew/opt/libmodbus/lib~' "$f"
+  perl -0pi -e 's~NAMES modbus\.h\n  PATHS /usr/include/modbus~NAMES modbus.h\n  PATHS /usr/include/modbus /opt/homebrew/opt/libmodbus/include/modbus /opt/homebrew/include/modbus~' "$f"
+  echo "  at_sonde_ros_driver: LIBMODBUS find NAMES/PATHS -> brew libmodbus in ${f#$ROOT/}"
+fi
+# husarion_ugv_lights / husarion_ugv_diagnostics: link (directly, or transitively via
+# husarion_ugv_utils) yaml-cpp::yaml-cpp -- a DIRECTORY-scoped IMPORTED target that the vendored
+# yaml-cpp config references but does not create at generate on macOS -> "Target ... links to
+# yaml-cpp::yaml-cpp but the target was not found". Same class as camera_aravis2 / velodyne /
+# mavros_extras. Fabricate it (find_library over CMAKE_PREFIX_PATH) right after each package's
+# find_package loop. Idempotent (ci-husarion-yamlcpp).
+for _p in husarion_ugv_lights husarion_ugv_diagnostics; do
+  f="$(_pkg_dir "$_p")/CMakeLists.txt"
+  [ -f "$f" ] || continue
+  grep -q 'ci-husarion-yamlcpp' "$f" && continue
+  grep -q 'endforeach' "$f" || continue
+  perl -0pi -e 's{(\nendforeach\(\)\n)}{$1\n# ci-husarion-yamlcpp: fabricate the directory-scoped yaml-cpp::yaml-cpp IMPORTED target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_library(_ci_ycppb_lib NAMES yaml-cpp HINTS "\$\{YAML_CPP_INCLUDE_DIR\}/../lib" "\$\{yaml-cpp_DIR\}/../.." \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES lib)\n  find_path(_ci_ycppb_inc NAMES yaml-cpp/yaml.h HINTS "\$\{YAML_CPP_INCLUDE_DIR\}" \$\{CMAKE_PREFIX_PATH\} PATH_SUFFIXES include)\n  if(_ci_ycppb_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycppb_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycppb_inc\}")\n  endif()\nendif()\n}' "$f"
+  echo "  $_p: fabricate yaml-cpp::yaml-cpp target in ${f#$ROOT/}"
+done
+# velodyne_pointcloud / nebula_velodyne_common: link the BARE `yaml-cpp` target (velodyne via its
+# ${YAML_CPP_TARGET} fallback, nebula directly). The vendored/brew yaml-cpp config exports only the
+# namespaced yaml-cpp::yaml-cpp (and even that is directory-scoped), so at generate the bare name is
+# not a target -> "find_package call is missing for an IMPORTED target / ALIAS target missing" and
+# "CMake Generate step failed". Right after the first find_package, ensure a GLOBAL yaml-cpp::yaml-cpp
+# exists and fabricate a bare `yaml-cpp` INTERFACE target that forwards to it (an INTERFACE target,
+# not an ALIAS, to avoid the ALIAS-to-non-global-imported restriction). Idempotent (ci-yamlcpp-bare).
+# ONLY leaf packages belong here. A fabricated IMPORTED target name leaks into the exported
+# link interface of anything with downstream consumers -- nebula_velodyne_common did exactly that
+# and broke nebula_velodyne_decoders/_hw_interfaces with "the link interface of target
+# nebula_velodyne_common::nebula_velodyne_common contains yaml-cpp::yaml-cpp but the target was not
+# found". Packages WITH consumers (swri_transform_util 5, nebula_velodyne_common 3, canopen_core 5)
+# link the .dylib by ABSOLUTE PATH instead, via their own blocks further down.
+for _p in camera_aravis2; do
+  f="$(_pkg_cml "$_p")"
+  [ -n "$f" ] && [ -f "$f" ] || continue
+  grep -q 'ci-yamlcpp-bare' "$f" && continue
+  grep -qE '^find_package\(' "$f" || continue
+  perl -0pi -e 's{(\nfind_package\([^\n]*\)\n)}{$1\n# ci-yamlcpp-bare: ensure GLOBAL yaml-cpp::yaml-cpp + a bare yaml-cpp forwarding target\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  if(YAML_CPP_LIBRARIES AND EXISTS "\$\{YAML_CPP_LIBRARIES\}")\n    set(_ci_ycppb_lib "\$\{YAML_CPP_LIBRARIES\}")\n    set(_ci_ycppb_inc "\$\{YAML_CPP_INCLUDE_DIRS\}")\n  else()\n    find_library(_ci_ycppb_lib NAMES yaml-cpp HINTS \$\{CMAKE_PREFIX_PATH\} "\$\{CMAKE_INSTALL_PREFIX\}/opt/yaml_cpp_vendor/lib" PATH_SUFFIXES lib)\n    find_path(_ci_ycppb_inc NAMES yaml-cpp/yaml.h HINTS \$\{CMAKE_PREFIX_PATH\} "\$\{CMAKE_INSTALL_PREFIX\}/opt/yaml_cpp_vendor/include" PATH_SUFFIXES include)\n  endif()\n  if(_ci_ycppb_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED GLOBAL)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES IMPORTED_LOCATION "\$\{_ci_ycppb_lib\}" INTERFACE_INCLUDE_DIRECTORIES "\$\{_ci_ycppb_inc\}")\n  endif()\nendif()\nif(NOT TARGET yaml-cpp AND TARGET yaml-cpp::yaml-cpp)\n  add_library(yaml-cpp INTERFACE IMPORTED GLOBAL)\n  set_target_properties(yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp::yaml-cpp)\nendif()\n}' "$f"
+  echo "  $_p: ensure GLOBAL yaml-cpp::yaml-cpp + bare yaml-cpp forwarding target in ${f#$ROOT/}"
+done
+
+# rmf_task_ros2 / rmf_visualization_navgraphs / rmf_visualization_rviz2_plugins /
+# rmf_visualization_schedule: each find_package(rmf_traffic_ros2 REQUIRED)s. rmf_traffic_ros2's
+# exported target's INTERFACE_LINK_LIBRARIES names the string yaml-cpp::yaml-cpp (fabricated only in
+# rmf_traffic_ros2's OWN CMake run by the ci-yamlcpp-ns-alias guard above -- that fabrication does not
+# propagate into an installed Config.cmake). yaml-cpp 0.7.0 (humble) exports no namespaced target, so
+# a fresh CMake run in each of these CONSUMING packages never creates yaml-cpp::yaml-cpp itself ->
+# "find_package call is missing for an IMPORTED target ... yaml-cpp::yaml-cpp" at generate. Fabricate
+# it right after project() (a reliable single-line anchor present in all four, unlike find_package --
+# rmf_visualization_navgraphs' find_package calls are inside a foreach() and never match a line-start
+# ^find_package( anchor). No-op on yaml-cpp 0.8.0 (jazzy/kilted), which already exports the namespaced
+# target. Idempotent (ci-rmf-yamlcpp-ns).
+for _p in rmf_task_ros2 rmf_fleet_adapter rmf_fleet_adapter_python rmf_visualization_navgraphs rmf_visualization_rviz2_plugins rmf_visualization_schedule; do
+  f="$(_pkg_dir "$_p")/CMakeLists.txt"
+  [ -f "$f" ] || continue
+  grep -q 'ci-rmf-yamlcpp-ns' "$f" && continue
+  grep -qE '^project\(' "$f" || continue
+  perl -0pi -e 's{(\nproject\([^\n]*\)\n)}{$1\n# ci-rmf-yamlcpp-ns: find_package(rmf_traffic_ros2) resolves an exported target whose link\n# interface names yaml-cpp::yaml-cpp; yaml-cpp 0.7.0 (humble) exports only the unnamespaced\n# `yaml-cpp` target, so fabricate the namespaced alias here too (no-op on yaml-cpp 0.8.0).\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  if(NOT TARGET yaml-cpp)\n    find_package(yaml-cpp QUIET)\n  endif()\n  if(TARGET yaml-cpp)\n    add_library(yaml-cpp::yaml-cpp INTERFACE IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp)\n  endif()\nendif()\n}' "$f"
+  echo "  $_p: fabricate namespaced yaml-cpp::yaml-cpp (rmf_traffic_ros2 link-interface) in ${f#$ROOT/}"
+done
+
+# rmf_traffic_editor: target_link_libraries(gui_lib ... ceres ...) links the bare `ceres` target,
+# which IS the correct name here -- this tree's vendored ceres-solver (ros-planning/dependencies/
+# ceres-solver, v1.14.0, brew ceres-solver is explicitly unlinked) predates namespaced CMake targets:
+# its CeresConfig.cmake.in exports a target literally called `ceres` (there is no Ceres::ceres to
+# link instead; that would just be a different undefined-target error). The real bug: ceres-solver
+# 1.14's internal/ceres/CMakeLists.txt builds that target via plain add_library()+include_directories()
+# rather than target_include_directories(), so the EXPORTED `ceres` target carries no
+# INTERFACE_INCLUDE_DIRECTORIES at all -- linking it (correctly) still leaves gui_lib's compile
+# without Ceres' headers -> "fatal error: 'ceres/ceres.h' file not found". find_package(Ceres) does
+# populate the legacy CERES_INCLUDE_DIRS variable; add it explicitly. Idempotent (ci-rmf-editor-ceres-inc).
+# NOTE: hardcoded path, not _pkg_dir -- the submodule's own container dir (fleet/rmf_traffic_editor)
+# shares its name with the actual package dir (fleet/rmf_traffic_editor/rmf_traffic_editor), and
+# `find -name rmf_traffic_editor | head -1` returns the (CMakeLists.txt-less) outer one first.
+f="$ROOT/fleet/rmf_traffic_editor/rmf_traffic_editor/CMakeLists.txt"
+if [ -f "$f" ] && grep -qE '^find_package\(Ceres REQUIRED\)' "$f" && ! grep -q 'ci-rmf-editor-ceres-inc' "$f"; then
+  perl -0pi -e 's{(\nfind_package\(Ceres REQUIRED\)\n)}{$1include_directories(\$\{CERES_INCLUDE_DIRS\})  # ci-rmf-editor-ceres-inc: vendored ceres 1.14'"'"'s `ceres` target has no INTERFACE_INCLUDE_DIRECTORIES\n}' "$f"
+  echo "  rmf_traffic_editor: add \${CERES_INCLUDE_DIRS} (vendored ceres 1.14 target carries no include interface) in ${f#$ROOT/}"
+fi
+# libfranka (ros-drivers/arm, all 3): src/network.cpp sets the TCP keep-alive idle option via
+# TCP_KEEPIDLE, a Linux name. macOS/BSD spell the same option TCP_KEEPALIVE (TCP_KEEPCNT /
+# TCP_KEEPINTVL do exist) -> "use of undeclared identifier 'TCP_KEEPIDLE'". Map it on Apple.
+# Idempotent (ci-tcp-keepidle). ---
+_lf="$ROOT/ros-drivers/arm/libfranka/src/network.cpp"
+if [ -f "$_lf" ] && ! grep -q 'ci-tcp-keepidle' "$_lf"; then
+  perl -0pi -e 's{(#include "network\.h"\n)}{$1\n// ci-tcp-keepidle: TCP_KEEPIDLE is the Linux name for the keep-alive idle option;\n// macOS/BSD call it TCP_KEEPALIVE. Map it so setOption(IPPROTO_TCP, TCP_KEEPIDLE, ...) builds.\n#if defined(__APPLE__) && !defined(TCP_KEEPIDLE)\n#include <netinet/tcp.h>\n#define TCP_KEEPIDLE TCP_KEEPALIVE\n#endif\n}' "$_lf"
+  echo "  libfranka: map TCP_KEEPIDLE -> TCP_KEEPALIVE on Apple in ros-drivers/arm/libfranka/src/network.cpp"
+fi
+
+# adi_3dtof_image_stitching (ros-drivers, all 3): adi_3dtof_image_stitching.h #includes
+# <pcl/registration/transforms.h>, a forwarding header removed in PCL >= 1.13 (the functions moved
+# to <pcl/common/transforms.h> long ago). brew ships PCL 1.15 -> "fatal error:
+# 'pcl/registration/transforms.h' file not found". Repoint the include. Idempotent. ---
+for _f in $(grep -rlE 'pcl/registration/transforms\.h' "$ROOT" --include='*.h' --include='*.hpp' 2>/dev/null | grep -i 'adi_3dtof' | grep -v '/build/'); do
+  sed "${SEDI[@]}" -e 's#pcl/registration/transforms\.h#pcl/common/transforms.h#g' "$_f"
+  echo "  adi_3dtof_image_stitching: pcl/registration/transforms.h -> pcl/common/transforms.h in ${_f#$ROOT/}"
+done
+# pipe2(fds, flags) is a Linux/glibc extension. macOS SDKs BEFORE 27.0 do not declare it ->
+# "use of undeclared identifier 'pipe2'". Emulate with pipe() + fcntl(FD_CLOEXEC / O_NONBLOCK),
+# inserted after <unistd.h> (<fcntl.h> precedes it in every current hit, so the flag macros are
+# already visible).
+#
+# Matched on the CALL, not on a package name. This block used to end in `| grep ros2_medkit`,
+# because ros2_medkit_gateway was the first hit. That name filter silently skipped
+# plansys2_core/src/plansys2_core/PlanSolverBase.cpp:123, which then failed on ALL THREE distros
+# in runs 39798399501 / 39798427519 / 39798432515 with the identical error. A package-name filter
+# on a platform-portability shim is always wrong; the next repo to call pipe2 is not knowable.
+#
+# The shim is named ci_pipe2 and the CALL SITES are rewritten, rather than defining a function
+# called `pipe2`. That matters: macOS SDK 27.0 DOES declare pipe2, so a `static inline int pipe2`
+# would fail there with "static declaration of 'pipe2' follows non-static declaration". The CI
+# image currently ships SDK 26.5, so the old form happened to work -- and would have broken
+# silently on the next runner-image bump. Verified both ways locally (see commit message).
+#
+# The <unistd.h> anchor is checked explicitly and warns when absent, so a future file that calls
+# pipe2() without it is loud rather than quietly unpatched. Idempotent (ci-pipe2).
+for f in $(grep -rlE '\bpipe2\(' "$ROOT" --include='*.cpp' --include='*.cc' --include='*.hpp' 2>/dev/null | grep -v '/build/'); do
+  grep -q 'ci-pipe2' "$f" && continue
+  grep -q '#include <unistd\.h>' "$f" || { echo "  ::warning::pipe2() call without an <unistd.h> anchor, NOT patched: ${f#$ROOT/}"; continue; }
+  perl -0pi -e 's~\bpipe2\(~ci_pipe2(~g' "$f"
+  perl -0pi -e 's~(#include <unistd\.h>)~$1\n#if defined(__APPLE__)  // ci-pipe2: macOS SDKs before 27.0 have no pipe2(); emulate via pipe()+fcntl\nstatic inline int ci_pipe2(int _ci_fds[2], int _ci_flags) {\n  if (pipe(_ci_fds) != 0) return -1;\n  if (_ci_flags & O_CLOEXEC) { fcntl(_ci_fds[0], F_SETFD, FD_CLOEXEC); fcntl(_ci_fds[1], F_SETFD, FD_CLOEXEC); }\n  if (_ci_flags & O_NONBLOCK) { fcntl(_ci_fds[0], F_SETFL, fcntl(_ci_fds[0], F_GETFL) | O_NONBLOCK); fcntl(_ci_fds[1], F_SETFL, fcntl(_ci_fds[1], F_GETFL) | O_NONBLOCK); }\n  return 0;\n}\n#else\nstatic inline int ci_pipe2(int _ci_fds[2], int _ci_flags) { return pipe2(_ci_fds, _ci_flags); }\n#endif~' "$f"
+  echo "  pipe2() -> ci_pipe2() macOS shim in ${f#$ROOT/}"
+done
+
+# mkdtemp() is declared in <unistd.h> by POSIX. glibc ALSO declares it in <stdlib.h>, so a file
+# that includes only <cstdlib>/<stdlib.h> compiles on Linux and fails on macOS with
+# "error: use of undeclared identifier 'mkdtemp'". That is plansys2_popf_plan_solver's
+# popf_plan_solver.cpp:105 (humble 40189605776, jazzy 40189607431, kilted 40189609299): it has
+# `#include <cstdlib>` at line 18 and no <unistd.h>, on all three distro branches.
+# Shape-matched rather than keyed on that one path, since the next file to do this is not
+# knowable, and idempotent via the ci-mkdtemp marker. Only files that actually CALL mkdtemp and
+# genuinely lack the header are touched; the <cstdlib>/<stdlib.h> include is the anchor, and a
+# caller with no anchor at all warns instead of being silently skipped.
+for f in $(grep -rlE '\bmkdtemp\(' "$ROOT" --include='*.cpp' --include='*.cc' --include='*.cxx' --include='*.hpp' 2>/dev/null | grep -v '/build/'); do
+  grep -q 'ci-mkdtemp' "$f" && continue
+  grep -qE '#include <unistd\.h>' "$f" && continue   # already correct
+  if grep -qE '#include <cstdlib>' "$f"; then
+    perl -0pi -e 's~(#include <cstdlib>)~$1\n#include <unistd.h>  // ci-mkdtemp: mkdtemp() is in <unistd.h> on macOS; glibc also exposes it via <stdlib.h>~' "$f"
+  elif grep -qE '#include <stdlib\.h>' "$f"; then
+    perl -0pi -e 's~(#include <stdlib\.h>)~$1\n#include <unistd.h>  /* ci-mkdtemp: mkdtemp() is in <unistd.h> on macOS; glibc also exposes it via <stdlib.h> */~' "$f"
+  else
+    echo "  ::warning::mkdtemp() call with no <cstdlib>/<stdlib.h> anchor, NOT patched: ${f#$ROOT/}"
+    continue
+  fi
+  echo "  mkdtemp() -> added <unistd.h> in ${f#$ROOT/}"
+done
+# cx_cdb_{loader,saver}_plugin (clips_executive) use brew libpqxx, whose headers reference
+# std::source_location (C++20). The plugins intend C++20 but guard it `if(NOT CMAKE_CXX_STANDARD)
+# set(20)`; our toolchain.cmake sets CMAKE_CXX_STANDARD 17 globally, so the guard never fires and
+# set_property(... CXX_STANDARD ${CMAKE_CXX_STANDARD}) pins the target to 17 -> pqxx/types.hxx
+# "no type named 'source_location' in namespace 'std'". Force the target(s) that pull libpqxx to
+# C++20. Idempotent (ci-cx-cxx20). ---
+for f in $(grep -rlE 'pkg_check_modules\(LIBPQXX' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-cx-cxx20' "$f" && continue
+  perl -0pi -e 's~set_property\(TARGET \$\{PROJECT_NAME\} PROPERTY CXX_STANDARD \$\{CMAKE_CXX_STANDARD\}\)~set_property(TARGET \${PROJECT_NAME} PROPERTY CXX_STANDARD 20)  # ci-cx-cxx20: brew libpqxx headers need std::source_location (C++20); toolchain forces 17~' "$f"
+  echo "  cx pqxx plugin: force target CXX_STANDARD 20 (libpqxx source_location) in ${f#$ROOT/}"
+done
+# rc_dynamics_api: its generated *.pb.h gencode (built by the workspace protobuf v26+ protoc) begins
+# with #include "google/protobuf/runtime_version.h". The protobuf include dir (which ships that
+# header) is added only directory-scoped in rc_dynamics_api/CMakeLists.txt
+# (include_directories(${CPR_INCLUDE_DIRS} ${PROTOBUF_INCLUDE_DIR})), so the msgs .pb.cc compile
+# fine but the tools/ and examples/ subdirs -- which include the same generated headers (frame.pb.h)
+# -- do NOT get it, giving "fatal error: 'google/protobuf/runtime_version.h' file not found". Add
+# ${PROTOBUF_INCLUDE_DIR} (a global FIND_PATH cache var) to their include_directories line too.
+# Idempotent (ci-rcdyn-protobuf-inc). ---
+for f in $(grep -rlE 'include_directories\(BEFORE \$\{CMAKE_CURRENT_BINARY_DIR\}/\.\./rc_dynamics_api\) # generated protobuf headers' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-rcdyn-protobuf-inc' "$f" && continue
+  perl -0pi -e 's~include_directories\(BEFORE \$\{CMAKE_CURRENT_BINARY_DIR\}/\.\./rc_dynamics_api\) # generated protobuf headers~include_directories(BEFORE \${CMAKE_CURRENT_BINARY_DIR}/../rc_dynamics_api \${PROTOBUF_INCLUDE_DIR}) # ci-rcdyn-protobuf-inc: gencode #includes google/protobuf/runtime_version.h (protobuf v26+); tools/examples need the protobuf include dir too~g' "$f"
+  echo "  rc_dynamics_api: add \${PROTOBUF_INCLUDE_DIR} to tools/examples include dirs (runtime_version.h) in ${f#$ROOT/}"
+done
+# mvsim/modules/msgs: the mvsim_msgs target's target_include_directories has
+#   #$<BUILD_INTERFACE:${Protobuf_INCLUDE_DIRS}>
+# COMMENTED OUT, so the target that compiles the protobuf_generate_cpp gencode gets no protobuf
+# include dir. Upstream can leave it off because on Linux the system protobuf sits on the default
+# include path; on macOS the workspace protobuf lives in a non-default prefix, so the gencode's
+# #include "google/protobuf/runtime_version.h" (protobuf v26+) is not found -> "fatal error:
+# 'google/protobuf/runtime_version.h' file not found" (AdvertiseServiceRequest.pb.h:14). find_package
+# (Protobuf) already populated Protobuf_INCLUDE_DIRS with the workspace protobuf include; uncomment
+# the line so the target (SYSTEM PUBLIC) exports it to the gencode and to consumers of the .pb.h.
+# Idempotent: the leading # is gone after the rewrite (ci-mvsim-protobuf-inc). ---
+for f in $(grep -rlF '#$<BUILD_INTERFACE:${Protobuf_INCLUDE_DIRS}>' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  perl -0pi -e 's~#\$<BUILD_INTERFACE:\$\{Protobuf_INCLUDE_DIRS\}>~\$<BUILD_INTERFACE:\${Protobuf_INCLUDE_DIRS}>  # ci-mvsim-protobuf-inc: uncommented so gencode finds google/protobuf/runtime_version.h~g' "$f"
+  echo "  mvsim: uncomment \${Protobuf_INCLUDE_DIRS} in mvsim_msgs include dirs (runtime_version.h) in ${f#$ROOT/}"
+done
+# nao_lola / nao_lola_client vendor msgpack as a NESTED git submodule (external/msgpack-c, declared
+# in nao_lola's own .gitmodules) and add it via include_directories(external/msgpack-c/include). The
+# superproject checkout does not recurse into that submodule-of-a-submodule, so in CI the dir is
+# empty and #include <msgpack.hpp> / <msgpack/object.hpp> fails ("file not found"). Fall back to the
+# brew msgpack-cxx headers: it is header-only, non-keg-only, and ships an imported target whose
+# INTERFACE_INCLUDE_DIRECTORIES points at the brew include (msgpack-cxx is added to BREW_BASE for the
+# distros that carry nao_lola). Keep the original submodule include too, so a populated submodule
+# still works. Idempotent (ci-nao-msgpack). ---
+for f in $(grep -rlF 'external/msgpack-c/include' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-nao-msgpack' "$f" && continue
+  perl -0pi -e 's~include_directories\(\n  include\n  external/msgpack-c/include\n\)~include_directories(\n  include\n  external/msgpack-c/include\n)\n# ci-nao-msgpack: nested submodule external/msgpack-c is not recursed in CI; use brew msgpack-cxx.\nfind_package(msgpack-cxx QUIET)\nif(TARGET msgpack-cxx)\n  get_target_property(_ci_msgpack_inc msgpack-cxx INTERFACE_INCLUDE_DIRECTORIES)\n  include_directories(\${_ci_msgpack_inc})\nendif()~g' "$f"
+  echo "  nao_lola: brew msgpack-cxx include fallback (nested submodule not in CI) in ${f#$ROOT/}"
+done
+# rslidar_sdk's vendored rs_driver batches UDP reads with recvmmsg()/struct mmsghdr in
+# unix/input_sock_select.hpp. Those are a Linux (glibc) extension; macOS/BSD libc has neither, so
+# the build fails with "variable has incomplete type 'struct mmsghdr'". rs_driver already ships a
+# QNX fallback (qnx_recvmmsg.hpp) with the exact same shape but gated behind __QNX__ (and #if 0).
+# Inject an equivalent __APPLE__ shim right after <sys/socket.h> (which supplies struct msghdr /
+# recvmsg): define struct mmsghdr and a static recvmmsg() that loops recvmsg(), matching the 5-arg
+# call recvmmsg(fd, msgs, VLEN, MSG_DONTWAIT, NULL). Idempotent (ci-rslidar-mmsghdr). ---
+for f in $(grep -rlE '\brecvmmsg\(' "$ROOT" --include=input_sock_select.hpp 2>/dev/null | grep -E 'rs_driver/driver/input/unix/'); do
+  grep -q 'ci-rslidar-mmsghdr' "$f" && continue
+  RS_MMSGHDR_SHIM=$(cat <<'EOSHIM'
+#ifdef __APPLE__  // ci-rslidar-mmsghdr: macOS/BSD libc has no recvmmsg()/struct mmsghdr; provide a shim
+#include <cerrno>
+#ifndef RS_DRIVER_APPLE_MMSGHDR_SHIM
+#define RS_DRIVER_APPLE_MMSGHDR_SHIM
+struct mmsghdr {
+  struct msghdr msg_hdr;
+  unsigned int  msg_len;
+};
+static inline int recvmmsg(int sockfd, struct mmsghdr *msgvec, unsigned int vlen, int flags, struct timespec *timeout)
+{
+  (void)timeout;
+  unsigned int i = 0;
+  for (i = 0; i < vlen; ++i) {
+    ssize_t ret = ::recvmsg(sockfd, &msgvec[i].msg_hdr, flags);
+    if (ret < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) { if (i > 0) return (int)i; return -1; }
+      if (errno == EINTR) { if (i > 0) return (int)i; i--; continue; }
+      if (i == 0) return -1;
+      return (int)i;
+    }
+    msgvec[i].msg_len = (unsigned int)ret;
+  }
+  return (int)i;
+}
+#endif  // RS_DRIVER_APPLE_MMSGHDR_SHIM
+#endif  // __APPLE__
+EOSHIM
+)
+  export RS_MMSGHDR_SHIM
+  perl -0pi -e 's~(#include <sys/socket.h>\n)~$1 . $ENV{RS_MMSGHDR_SHIM} . "\n"~e' "$f"
+  unset RS_MMSGHDR_SHIM
+  echo "  rslidar_sdk: __APPLE__ recvmmsg/mmsghdr shim in ${f#$ROOT/}"
+done
+# easynav_fusion_localizer uses std_srvs::srv::Empty (ukf_wrapper) and find_package(std_srvs) +
+# adds ${std_srvs_INCLUDE_DIRS}, but its target_link_libraries(fusion_localizer ...) never links
+# ${std_srvs_TARGETS}. On Linux the std_srvs typesupport is pulled in transitively (DT_NEEDED) via
+# another dependency; the macOS linker does no such transitive resolution, so the Empty service
+# typesupport is undefined:
+#   "rosidl...get_service_type_support_handle<std_srvs::srv::Empty>()", referenced from: ...
+# Add the missing ${std_srvs_TARGETS} to the link line. Idempotent (ci-easynav-stdsrvs). ---
+for f in $(grep -rlF 'target_link_libraries(fusion_localizer' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-easynav-stdsrvs' "$f" && continue
+  perl -0pi -e 's~(target_link_libraries\(fusion_localizer\n)~$1  \${std_srvs_TARGETS}  # ci-easynav-stdsrvs: macOS needs std_srvs typesupport linked explicitly (no transitive linking)\n~' "$f"
+  echo "  easynav_fusion_localizer: link \${std_srvs_TARGETS} (std_srvs::srv::Empty typesupport) in ${f#$ROOT/}"
+done
+# plansys2_terminal links a bare `readline` (-lreadline) and includes <readline/readline.h>. macOS
+# has no system libreadline (only libedit), and brew's readline is keg-only -- not symlinked into
+# /opt/homebrew -- so -lreadline finds nothing and the link fails with undefined _readline,
+# _add_history, _rl_attempted_completion_function, _rl_completion_matches, ... The distros wire the
+# `readline` link token onto different targets (the terminal lib vs the executable), so instead of
+# rewriting each link line, expose brew readline's keg-only prefix once, right after project(): a
+# link_directories()/include_directories() (guarded by APPLE + EXISTS) makes the bare -lreadline and
+# the header resolve for every target defined afterwards. readline is added to BREW_BASE for all
+# three distros. Idempotent (ci-plansys-readline). ---
+for f in $(grep -rlF 'project(plansys2_terminal)' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-plansys-readline' "$f" && continue
+  perl -0pi -e 's~(project\(plansys2_terminal\)\n)~$1# ci-plansys-readline: brew readline is keg-only (not in /opt/homebrew); expose its real prefix so\n# the bare `readline` link target and <readline/readline.h> resolve on macOS.\nif(APPLE AND EXISTS "/opt/homebrew/opt/readline/lib")\n  link_directories(/opt/homebrew/opt/readline/lib)\n  include_directories(/opt/homebrew/opt/readline/include)\nendif()\n~' "$f"
+  # The `terminal` SHARED library itself calls readline (Terminal.cpp), but readline was linked
+  # only onto the plansys2_terminal EXECUTABLE. On macOS a shared lib must resolve all its own
+  # symbols at link time (unlike Linux), so terminal.dylib fails with undefined _readline/_add_history/
+  # _rl_*. Link readline into the terminal library too (harmless on Linux; readline is in the path).
+  perl -0pi -e 's~(ament_target_dependencies\(terminal \$\{dependencies\}\)\n)~${1}target_link_libraries(terminal readline)  # ci-plansys-readline: terminal.dylib itself uses readline\n~' "$f"
+  echo "  plansys2_terminal: expose keg-only brew readline prefix + link readline into terminal lib in ${f#$ROOT/}"
+done
+# crazyflie_server_cpp fails to link with undefined CoreFoundation/IOKit symbols
+# (_CFBooleanGetTypeID, _CFDataGetBytes, ...) referenced from libusb-1.0.a(darwin_usb.o) -- libusb's
+# macOS backend needs the IOKit/CoreFoundation/Security frameworks. crazyflie-link-cpp DOES try to
+# add them, but via `set(CMAKE_EXE_LINKER_FLAGS ...)` / CMAKE_MODULE_LINKER_FLAGS, which are
+# directory-scoped and so never reach the crazyflie_server_cpp executable (built in the crazyflie
+# package, a different directory). libusb is linked PRIVATE into the static crazyflieLinkCpp, so its
+# darwin symbols resolve only at the final executable link. Attach the frameworks to the
+# crazyflieLinkCpp target as PUBLIC, so they propagate transitively through crazyflie_cpp to the
+# executable. Idempotent (ci-crazyflie-frameworks). ---
+for f in $(grep -rlF 'set(CMAKE_MODULE_LINKER_FLAGS "-lobjc -framework IOKit -framework CoreFoundation -framework Security")' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-crazyflie-frameworks' "$f" && continue
+  # The CMAKE_MODULE_LINKER_FLAGS set() appears in BOTH crazyflie_tools/CMakeLists.txt (where
+  # crazyflieLinkCpp is NOT defined) and crazyflie-link-cpp/CMakeLists.txt (where it IS). Only the
+  # latter can target_link_libraries(crazyflieLinkCpp ...) -- injecting into the former yields
+  # "Cannot specify link libraries for target crazyflieLinkCpp which is not built by this project".
+  grep -qE 'add_library\(\s*crazyflieLinkCpp' "$f" || continue
+  perl -0pi -e 's~(set\(CMAKE_MODULE_LINKER_FLAGS "-lobjc -framework IOKit -framework CoreFoundation -framework Security"\)\n)~$1  # ci-crazyflie-frameworks: the CMAKE_*_LINKER_FLAGS above are directory-scoped and do not reach the\n  # crazyflie_server_cpp executable (built in another package); attach the frameworks to the target\n  # as PUBLIC so libusb\x27s darwin backend symbols resolve at the final link.\n  target_link_libraries(crazyflieLinkCpp PUBLIC "-framework IOKit" "-framework CoreFoundation" "-framework Security" objc)\n~' "$f"
+  echo "  crazyflie: propagate IOKit/CoreFoundation/Security via crazyflieLinkCpp PUBLIC in ${f#$ROOT/}"
+done
+# cloudini_ros: rclcpp_components_register_node(... EXECUTABLE cloudini_topic_converter) already
+# creates AND installs that executable to lib/cloudini_ros; a redundant install(TARGETS
+# cloudini_topic_converter RUNTIME DESTINATION lib/cloudini_ros) installs it a 2nd time, so macOS
+# install_name_tool errors on the duplicate LC_RPATH (@loader_path/..). Drop the redundant install.
+# (Same class as the off_highway install(TARGETS receiver/sender) dedup.) Unblocks the
+# etsi_its_rviz_plugins / roadmap_explorer cascade victims of cloudini_topic_converter.
+f="$(find "$ROOT" -path '*cloudini_ros/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-cloudini-dup-install' "$f"; then
+  perl -0pi -e 's~\ninstall\(TARGETS cloudini_topic_converter\n  RUNTIME DESTINATION lib/cloudini_ros\n\)\n~\n# ci-cloudini-dup-install: redundant install removed (rclcpp_components_register_node EXECUTABLE\n# already installs cloudini_topic_converter; the second install duplicates LC_RPATH on macOS)\n~' "$f"
+  echo "  cloudini_ros: dropped redundant install(TARGETS cloudini_topic_converter)"
+fi
+# camera_aravis2: gates WITH_MATCHED_EVENTS (rclcpp::MatchedInfo, camera_driver.h/.cpp) on whether
+# rclcpp_DIR path contains /humble/ or /iron/. With a merged/custom install prefix that string is
+# never present, so it's wrongly defined on humble (rclcpp 16, no MatchedInfo) -> "no type named
+# 'MatchedInfo' in namespace 'rclcpp'". Replace the path check with an rclcpp_VERSION gate
+# (MatchedInfo exists 22.0+; humble=16/iron=21 absent, jazzy=28/kilted=29 present).
+f="$(find "$ROOT" -path '*camera_aravis2/camera_aravis2/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-aravis-matched-version' "$f"; then
+  perl -0pi -e 's~if\(NOT \$\{rclcpp_DIR\} MATCHES "\.\*/humble/\.\*" AND NOT \$\{rclcpp_DIR\} MATCHES "\.\*/iron/\.\*"\)~# ci-aravis-matched-version: rclcpp_DIR path check is unreliable with a merged/custom install\n# prefix -> WITH_MATCHED_EVENTS wrongly defined on humble. Gate on rclcpp_VERSION instead\n# (rclcpp::MatchedInfo exists 22.0+; humble=16/iron=21 absent, jazzy=28/kilted=29 present).\nif(rclcpp_VERSION VERSION_GREATER_EQUAL "22.0.0")~' "$f"
+  echo "  camera_aravis2: WITH_MATCHED_EVENTS gated on rclcpp_VERSION>=22"
+fi
+# leo_filters ${YAML_CPP_LIBRARIES} -> yaml-cpp::yaml-cpp target MIGRATED to id_leo_robot fork.
+# ros2_medkit_serialization: dynamic_array_to_yaml_impl_bool() does array_node.push_back(v[ii])
+# where v is std::vector<bool>, so v[ii] is a vector<bool>::const_reference -- on libc++ that is
+# std::__bit_const_reference, for which yaml-cpp has no YAML::convert<> -> "implicit instantiation
+# of undefined template". Cast the element to bool before push_back.
+f="$(find "$ROOT" -path '*ros2_medkit_serialization*/message_reading_cpp.cpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-medkit-vecbool' "$f"; then
+  perl -pi -e 's~array_node\.push_back\(v->operator\[\]\(ii\)\);~array_node.push_back(static_cast<bool>(v->operator[](ii)));  // ci-medkit-vecbool: libc++ bit-reference has no YAML::convert~' "$f"
+  echo "  ros2_medkit_serialization: vector<bool> element -> static_cast<bool> before yaml push_back"
+fi
+# crane_plus_examples: aruco_detection.cpp calls the legacy free cv::aruco::detectMarkers(image,
+# MARKER_DICT, corners, ids), but OpenCV 4.7+ getPredefinedDictionary returns Dictionary (value)
+# while the deprecated free detectMarkers takes const Ptr<Dictionary>& -> "no viable conversion
+# from const Dictionary to const Ptr<Dictionary>". Switch to the modern cv::aruco::ArucoDetector
+# API. estimatePoseSingleMarkers is unchanged (still available). Compile-tested vs OpenCV 4.13.
+f="$(find "$ROOT" -path '*crane_plus_examples/src/aruco_detection.cpp' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)"
+if [ -n "$f" ] && [ -f "$f" ] && ! grep -q 'ci-crane-aruco' "$f"; then
+  perl -0pi -e 's~(#include "opencv2/aruco.hpp"\n)~${1}#include "opencv2/objdetect/aruco_detector.hpp"  // ci-crane-aruco: modern ArucoDetector API (OpenCV 4.7+)\n~' "$f"
+  perl -0pi -e 's~cv::aruco::detectMarkers\(cv_img->image, MARKER_DICT, corners, ids\);~cv::aruco::ArucoDetector _ci_aruco_detector(MARKER_DICT);  // ci-crane-aruco\n      _ci_aruco_detector.detectMarkers(cv_img->image, corners, ids);~' "$f"
+  echo "  crane_plus_examples: legacy aruco::detectMarkers -> ArucoDetector"
+fi
+
+# --- Lane 3: yaml_cpp_vendor consumers fail (find_package(yaml-cpp) not found ->
+#     ld: -lyaml-cpp not found). Root cause: the vendor's *-extras.cmake.in sets
+#     yaml-cpp_DIR to opt/yaml_cpp_vendor/SHARE/cmake/yaml-cpp, but yaml-cpp 0.8.0
+#     installs its config to CMAKE_INSTALL_LIBDIR/cmake = opt/yaml_cpp_vendor/LIB/
+#     cmake/yaml-cpp (matches cmake/toolchain.cmake's yaml-cpp_DIR). The extras'
+#     plain set() shadows the toolchain cache value in the consumer scope. Fix path. ---
+#     VERSION-SPECIFIC: only yaml-cpp 0.8.0 (jazzy/kilted) installs its cmake config
+#     to CMAKE_INSTALL_LIBDIR/cmake = lib/. humble builds yaml-cpp 0.7.0, which installs
+#     to CMAKE_INSTALL_DATADIR/cmake = share/ — there the extras `share` path is CORRECT,
+#     so guard on VCS_VERSION 0.8.x and never touch the 0.7.0 (humble) tree.
+d="$(_pkg_dir yaml_cpp_vendor)"
+if [ -n "$d" ] && grep -qE 'VCS_VERSION[[:space:]]+0\.8' "$d/CMakeLists.txt" 2>/dev/null; then
+  for f in $(find "$d" -name '*-extras.cmake.in' 2>/dev/null); do
+    sed "${SEDI[@]}" 's#/share/cmake/yaml-cpp#/lib/cmake/yaml-cpp#g' "$f"
+    echo "  yaml_cpp_vendor(0.8.0) extras: share->lib cmake dir: ${f#$ROOT/}"
+  done
+fi
+
+# --- autoware_map_loader (jazzy/kilted, yaml-cpp 0.8.0): links the BARE name `yaml-cpp` in
+#     target_link_libraries -> the linker treats it as `-lyaml-cpp` with no -L for the vendored
+#     yaml-cpp -> "ld: library 'yaml-cpp' not found". yaml-cpp 0.8.0 exports only the NAMESPACED
+#     target (which carries IMPORTED_LOCATION), so rewrite the bare token to yaml-cpp::yaml-cpp
+#     (then the namespaced-target fabrication below covers the 0.7.0/humble case). Runs BEFORE
+#     that fabrication so the rewritten file is picked up. Idempotent. ---
+d="$(_pkg_dir autoware_map_loader)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE 'target_link_libraries\([^)]* yaml-cpp\)' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{(target_link_libraries\([^)]*?) yaml-cpp\)}{$1 yaml-cpp::yaml-cpp)}g' "$d/CMakeLists.txt"
+  echo "  autoware_map_loader: bare yaml-cpp -> yaml-cpp::yaml-cpp in ${d#$ROOT/}/CMakeLists.txt"
+fi
+
+# --- yaml-cpp namespaced target (humble esp.): packages written for yaml-cpp >= 0.8.0 link the
+#     NAMESPACED target `yaml-cpp::yaml-cpp`, but yaml-cpp 0.7.0 (what yaml_cpp_vendor builds on
+#     humble) exports only the UNNAMESPACED `yaml-cpp` target, AND most consumers call
+#     find_package(yaml-cpp) directly (bypassing the yaml_cpp_vendor extras) -> generate-time
+#     "Target <X> links to yaml-cpp::yaml-cpp but the target was not found" (rmf_traffic_ros2,
+#     velodyne_pointcloud, leo_filters, nebula_velodyne_common, swri_transform_util, ~24 pkgs).
+#     Inject a fabrication guard before the first target_link_libraries of every CMakeLists that
+#     names the namespaced target: if it is missing but `yaml-cpp` exists, wrap it in an INTERFACE
+#     IMPORTED alias. On yaml-cpp 0.8.0 (jazzy/kilted) the namespaced target already exists so the
+#     guard is a runtime no-op -> the script stays byte-identical and self-adapts per distro. Skip
+#     files that already carry a yaml-cpp::yaml-cpp fabrication (husarion/medkit above, forks).
+#     Idempotent (ci-yamlcpp-ns-alias). ---
+for _f in $(grep -rlE 'yaml-cpp::yaml-cpp' "$ROOT" --include=CMakeLists.txt 2>/dev/null | grep -vE '/build/|/install/'); do
+  grep -q 'ci-yamlcpp-ns-alias' "$_f" && continue
+  grep -q 'add_library(yaml-cpp::yaml-cpp' "$_f" && continue
+  # Inject the guard before EACH target_link_libraries whose argument list actually contains
+  # yaml-cpp::yaml-cpp (matching one level of nested parens for generator expressions), so the
+  # fabrication runs in the SAME scope/conditional as the use -- injecting only before the FIRST
+  # target_link_libraries can land inside a disabled if(BUILD_TESTING) block and never run.
+  perl -0pi -e 's{(target_link_libraries\s*\((?:[^()]|\([^()]*\))*?yaml-cpp::yaml-cpp)}{# ci-yamlcpp-ns-alias: yaml-cpp 0.7.0 exports only the unnamespaced `yaml-cpp` target;\n# fabricate the `yaml-cpp::yaml-cpp` name consumers expect (runtime no-op on yaml-cpp 0.8.0).\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  if(NOT TARGET yaml-cpp)\n    find_package(yaml-cpp QUIET)\n  endif()\n  if(TARGET yaml-cpp)\n    add_library(yaml-cpp::yaml-cpp INTERFACE IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES INTERFACE_LINK_LIBRARIES yaml-cpp)\n  endif()\nendif()\n$1}g' "$_f"
+  echo "  yaml-cpp: fabricate namespaced yaml-cpp::yaml-cpp in ${_f#$ROOT/}"
+done
+
+# --- ros2_ouster (humble): find_package(jsoncpp REQUIRED) creates the imported target
+#     jsoncpp_lib, but PCL/pcl_conversions (found just above in the same CMakeLists) already
+#     pulled brew jsoncpp and created jsoncpp_lib -> "add_library cannot create imported target
+#     jsoncpp_lib because another target with the same name already exists" at jsoncppConfig.cmake.
+#     Guard the redundant find. Idempotent (ci-ouster-jsoncpp). ---
+d="$(_pkg_dir ros2_ouster)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^find_package\(jsoncpp REQUIRED\)' "$d/CMakeLists.txt" && ! grep -q 'ci-ouster-jsoncpp' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{^find_package\(jsoncpp REQUIRED\)}{# ci-ouster-jsoncpp: jsoncpp_lib may already be created transitively by PCL/pcl_conversions\nif(NOT TARGET jsoncpp_lib)\n  find_package(jsoncpp REQUIRED)\nendif()}m' "$d/CMakeLists.txt"
+  echo "  ros2_ouster: guard find_package(jsoncpp) against double jsoncpp_lib target in ${d#$ROOT/}/CMakeLists.txt"
+fi
+
+# --- plotjuggler ToolboxMosaico plugin (all): its bundled mosaico_sdk ALWAYS links
+#     ArrowFlight::arrow_flight_static. brew Arrow Flight's Flight.pb.cc.o references modern
+#     protobuf symbols (google::protobuf::internal::UntypedMapBase::ClearTableImpl,
+#     kDescriptorMethods) that the workspace's (older, gz-built) protobuf does not export -> a wall
+#     of "Undefined symbols" at the final plotjuggler link. ToolboxMosaico is an optional data-
+#     service plugin and the only Arrow *Flight* user (DataLoadParquet/ToolboxCSV use Arrow core
+#     only), so disable just this plugin on macOS. Idempotent (ci-drop-mosaico). ---
+for _f in $(find "$ROOT" -path '*plotjuggler_plugins/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  grep -q 'ci-drop-mosaico' "$_f" && continue
+  grep -q 'add_subdirectory(ToolboxMosaico)' "$_f" || continue
+  perl -0pi -e 's{^add_subdirectory\(ToolboxMosaico\)}{# ci-drop-mosaico: ToolboxMosaico/mosaico_sdk links Arrow Flight (brew), whose Flight.pb.cc\n# references modern protobuf symbols absent from the workspace protobuf -> undefined at link.\nif(NOT APPLE)\n  add_subdirectory(ToolboxMosaico)\nendif()}m' "$_f"
+  echo "  plotjuggler: guard ToolboxMosaico (Arrow Flight vs workspace protobuf) on APPLE in ${_f#$ROOT/}"
+done
+
+# --- Lane 4 cluster: fmt >= 11 (brew ships fmt 12) moved fmt::format out of
+#     <fmt/core.h> into <fmt/format.h>. Packages written for fmt <= 10 include
+#     only core.h and fail with "no member named 'format' in namespace 'fmt'".
+#     Add <fmt/format.h> to every file that uses fmt::format* with only core.h.
+#     Clears control_toolbox (ros2_control root), pick_ik, moveit_task_constructor,
+#     motion_capture_tracking, plotjuggler_ros, the autoware localization cluster, … ---
+for f in $(grep -rlE '#include <fmt/core.h>' "$ROOT" \
+    --include='*.hpp' --include='*.h' --include='*.cpp' --include='*.cc' 2>/dev/null \
+    | grep -vE '/build/|/install/|/thirdparty/|/bundled/'); do
+  if grep -qE 'fmt::(format|format_to|join|print)' "$f" && ! grep -qF '<fmt/format.h>' "$f"; then
+    _add_include "$f" '#include <fmt/format.h>'
+  fi
+done
+
+# --- Lane 2: naoqi_libqi — Boost split process into v1/v2; v1 header moved ---
+d="$(_pkg_dir naoqi_libqi)"; [ -n "$d" ] && for f in $(grep -rl 'boost/process/search_path.hpp' "$d" 2>/dev/null); do
+  sed "${SEDI[@]}" 's#boost/process/search_path.hpp#boost/process/v1/search_path.hpp#g' "$f"; echo "  naoqi_libqi process v1: ${f#$ROOT/}"
+done
+
+# --- Lane 2: naoqi_libqi/src/eventloop.cpp:10 has a stray raw
+#     `#include <boost/asio/io_service.hpp>` — removed in Boost 1.87+ (fatal
+#     error: file not found). The file already includes the package's own
+#     boostasiocompat.hpp shim (line 6, BOOST_VERSION-gated AsioIoService/
+#     AsioWork aliases) and uses qi::newAsioWork() from it — the raw include
+#     is dead/redundant, just delete it. Compile-tested the shim alone
+#     (qi::AsioIoService + qi::newAsioWork) against brew boost 1.89. ---
+d="$(_pkg_dir naoqi_libqi)"; [ -n "$d" ] && [ -f "$d/src/eventloop.cpp" ] && \
+  grep -q '^#include <boost/asio/io_service.hpp>' "$d/src/eventloop.cpp" && {
+  sed "${SEDI[@]}" '/^#include <boost\/asio\/io_service.hpp>$/d' "$d/src/eventloop.cpp"
+  echo "  naoqi_libqi eventloop.cpp: dropped stray boost/asio/io_service.hpp include"
+}
+
+# rt_usb_9axisimu_driver default-arg-on-definition fix MIGRATED to id_rt_usb_9axisimu_driver fork.
+
+
+# --- Lane 4/6: rc_dynamics_api forces C++11, but its abseil dependency requires
+#     C++17 (`C++ versions less than C++17 are not supported`). Bump to 17. ---
+d="$(_pkg_dir rc_dynamics_api)"; [ -n "$d" ] && for f in $(find "$d" -name CMakeLists.txt 2>/dev/null); do
+  sed "${SEDI[@]}" -e 's/set(CMAKE_CXX_STANDARD 11)/set(CMAKE_CXX_STANDARD 17)/' -e 's/-std=c++11/-std=c++17/g' "$f"
+  echo "  rc_dynamics_api: C++11 -> C++17: ${f#$ROOT/}"
+done
+
+# --- Lane 6: hash_library_vendor FetchContent's stbrumme/hash-library, whose
+#     crc32.cpp includes <endian.h> (glibc-only; absent on macOS) and is compiled
+#     by the vendor with -Werror. (1) drop -Werror on third-party source; (2) shim
+#     <endian.h> -> <machine/endian.h> for this target on APPLE. The include is only
+#     used to optionally define __BYTE_ORDER; arm64 is little-endian so the guarded
+#     big-endian path stays off. ---
+d="$(_pkg_dir hash_library_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ]; then
+  sed "${SEDI[@]}" 's/ -Werror//g' "$d/CMakeLists.txt"
+  if ! grep -q 'MACOS_ENDIAN_SHIM' "$d/CMakeLists.txt"; then
+    cat >> "$d/CMakeLists.txt" <<'EOF2'
+
+# MACOS_ENDIAN_SHIM (ci patch): macOS has no <endian.h>; shim to <machine/endian.h>.
+if(APPLE)
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/compat/endian.h" "#pragma once\n#include <machine/endian.h>\n")
+  target_include_directories(hash_library_vendor BEFORE PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/compat")
+endif()
+EOF2
+    echo "  hash_library_vendor: -Werror dropped + <endian.h> shim added"
+  fi
+fi
+
+# --- Lane 6: qpoases_vendor ExternalProject uses the dead coin-or SVN
+#     (svn E170013). Repoint to the GitHub mirror at the same 3.2 release. ---
+d="$(_pkg_dir qpoases_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ]; then
+  sed "${SEDI[@]}" \
+    -e 's#SVN_REPOSITORY https://projects.coin-or.org/svn/qpOASES/stable/3.2#GIT_REPOSITORY https://github.com/coin-or/qpOASES.git#' \
+    -e 's#SVN_TRUST_CERT TRUE#GIT_TAG releases/3.2.2#' \
+    "$d/CMakeLists.txt"
+  echo "  qpoases_vendor: dead coin-or SVN -> github releases/3.2.2"
+fi
+
+
+
+# --- Lane 6: lely_core_libraries (ros2_canopen) builds lely-core via autotools
+#     with -Werror; its libc/time.h shim redefines CLOCK_MONOTONIC (already defined
+#     on macOS) -> -Wmacro-redefined error. Pass CFLAGS to suppress that warning.
+#     ALSO (2026-08-19): lely/libc/threads.h picks its pthread fallback via
+#     `_POSIX_THREADS >= 200112L`, but on macOS _POSIX_THREADS is only defined after
+#     <unistd.h> (glibc exposes it globally), so the check fails -> no threads backend
+#     -> `unknown type name 'once_flag'/'cnd_t'/'mtx_t'`. Apple clang also claims C17
+#     without defining __STDC_NO_THREADS__, so LELY_HAVE_THREADS_H could wrongly try the
+#     absent system <threads.h>. Force both: THREADS_H off, PTHREAD_H on. Compile-tested
+#     on macOS 26.5.2 (arm64), Apple clang 21.0.0, clang -std=c11 vs lely-core fb735b79:
+#     fails without these (once_flag/cnd_t undefined), fully clean with them (+ the
+#     existing sys/types.h clockid_t __APPLE__ patch below). ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'Wno-macro-redefined' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" 's#<SOURCE_DIR>/configure --prefix#<SOURCE_DIR>/configure "CFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -fcommon -Wno-error=deprecated-declarations -Wno-unknown-warning-option -Wno-error=unterminated-string-initialization" "CXXFLAGS=-O2 -Wno-macro-redefined -Wno-keyword-macro -fcommon -Wno-error=deprecated-declarations -Wno-unknown-warning-option -Wno-error=unterminated-string-initialization" "CPPFLAGS=-DLELY_HAVE_UCHAR_H=0 -DLELY_HAVE_TIMESPEC=1 -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1" --prefix#' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: configure CFLAGS+CXXFLAGS (macro-redefined/keyword/fcommon + unterminated-string-initialization off) + CPPFLAGS -DLELY_HAVE_UCHAR_H=0 -DLELY_HAVE_TIMESPEC=1 -DLELY_HAVE_THREADS_H=0 -DLELY_HAVE_PTHREAD_H=1. TIMESPEC: lely/libc/time.h only sets LELY_HAVE_TIMESPEC via __STDC_VERSION__/_POSIX_C_SOURCE/_TIMESPEC_DEFINED, none of which hold for the C++ coapp TUs on macOS, so it redefined 'struct timespec' (hard error) + CLOCK_* macros; forcing =1 (honoured via #if !LELY_HAVE_TIMESPEC) suppresses the fallback. The feature -D's move to CPPFLAGS so BOTH C and the C++ coapp files (device.cpp etc.) see them; CXXFLAGS mirrors CFLAGS so the CLOCK_* -Wmacro-redefined does not -Werror in C++."
+fi
+
+# --- Lane 6: lely_core_libraries's vendored libc/sys/types.h only treats
+#     _POSIX_C_SOURCE/__MINGW32__/__NEWLIB__ as "has a real <sys/types.h>"; on
+#     macOS none of those are defined, so it falls back to `typedef int
+#     clockid_t;`, which conflicts with Apple SDK <time.h>'s `enum clockid_t`
+#     (Xcode 26.6 / macOS 26) -> "typedef redefinition with different types".
+#     Drop a patch file + wire it into the ExternalProject's UPDATE_COMMAND,
+#     matching this package's existing git-apply patch mechanism. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0099-macos-clockid_t.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0099-macos-clockid_t.patch" <<'PATCHEOF'
+From 0000000000000000000000000000000000000099 Mon Sep 17 00:00:00 2001
+From: Build Fix <noreply@example.com>
+Date: Sat, 15 Aug 2026 00:00:00 +0000
+Subject: [PATCH] Fix macOS clockid_t redefinition
+
+LELY_HAVE_SYS_TYPES_H only recognizes _POSIX_C_SOURCE, __MINGW32__ and
+__NEWLIB__ as "the platform provides a real <sys/types.h>". On macOS
+none of those are defined in this build (no -D_POSIX_C_SOURCE), so
+lely falls back to its own `typedef int clockid_t;` shim. But Apple's
+SDK <time.h> (pulled in separately by lely/libc/time.h) already
+declares `clockid_t` as `enum clockid_t` (Xcode 26.6 / macOS 26 SDK),
+so the two declarations conflict:
+
+  error: typedef redefinition with different types
+  ('enum clockid_t' vs 'int')
+
+macOS has a real, POSIX-conformant <sys/types.h> (with clockid_t and
+ssize_t), so treat __APPLE__ the same as the existing __MINGW32__ /
+__NEWLIB__ platform cases and use the system header instead of the
+shim.
+---
+ include/lely/libc/sys/types.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/lely/libc/sys/types.h b/include/lely/libc/sys/types.h
+index 9c4dd70d..5802fb39 100644
+--- a/include/lely/libc/sys/types.h
++++ b/include/lely/libc/sys/types.h
+@@ -26,7 +26,7 @@
+ #include <lely/features.h>
+
+ #ifndef LELY_HAVE_SYS_TYPES_H
+-#if defined(_POSIX_C_SOURCE) || defined(__MINGW32__) || defined(__NEWLIB__)
++#if defined(_POSIX_C_SOURCE) || defined(__MINGW32__) || defined(__NEWLIB__) || defined(__APPLE__)
+ #define LELY_HAVE_SYS_TYPES_H 1
+ #endif
+ #endif
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0099-macos-clockid_t.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0099-macos-clockid_t.patch to UPDATE_COMMAND"
+fi
+
+# --- Lane 6: lely_core_libraries's src/*/Makefile.am append -Wl,--as-needed to
+#     EVERY library's LDFLAGS unconditionally. That flag is GNU-ld-only; Apple's
+#     ld64 rejects it outright ("ld: unknown options: --as-needed" -> clang: linker
+#     command failed). On Darwin configure.ac's host case matches neither *linux*
+#     nor *-*-mingw*, so PLATFORM_LINUX=no. Wrap the flag in the existing
+#     `if PLATFORM_LINUX ... endif` automake conditional (same mechanism as the
+#     adjacent PLATFORM_WIN32 block), then autoreconf -i (run by CONFIGURE_COMMAND)
+#     emits it as @PLATFORM_LINUX_TRUE@ so macOS omits it. Verified vs pinned tag
+#     fb735b79: patch applies clean (0 rejects), autoreconf -i -> Makefile.in has
+#     `@PLATFORM_LINUX_TRUE@am__append = -Wl,--as-needed`. --as-needed only prunes
+#     unused DT_NEEDED entries; dropping it does not change macOS runtime. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0100-macos-no-as-needed.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0100-macos-no-as-needed.patch" <<'PATCHEOF'
+From 0000000000000000000000000000000000000100 Mon Sep 17 00:00:00 2001
+From: Build Fix <noreply@example.com>
+Date: Wed, 27 Aug 2026 00:00:00 +0000
+Subject: [PATCH] Guard -Wl,--as-needed behind PLATFORM_LINUX (macOS ld64)
+
+Each src/*/Makefile.am appends `-Wl,--as-needed` to its library
+LDFLAGS unconditionally. `--as-needed` is a GNU ld feature; Apple's
+ld64 (the macOS system linker) rejects it outright:
+
+  ld: unknown options: --as-needed
+  clang: error: linker command failed with exit code 1
+
+On Darwin, configure.ac's host case matches neither *linux* nor
+*-*-mingw*, so PLATFORM_LINUX/PLATFORM_POSIX/PLATFORM_WIN32 are all
+"no". Wrap the flag in the existing `if PLATFORM_LINUX ... endif`
+automake conditional so it is emitted only where the GNU linker is in
+use; on macOS the libraries link without it (identical runtime
+behaviour -- --as-needed only prunes unused DT_NEEDED entries).
+---
+diff --git a/src/can/Makefile.am b/src/can/Makefile.am
+index 5ccbb48..2dfce64 100644
+--- a/src/can/Makefile.am
++++ b/src/can/Makefile.am
+@@ -28,7 +28,9 @@ liblely_can_la_LDFLAGS = -no-undefined -version-number 1:9:2
+ if PLATFORM_WIN32
+ liblely_can_la_LDFLAGS += -Wl,--output-def,liblely-can-1.def
+ endif
++if PLATFORM_LINUX
+ liblely_can_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_can_la_LIBADD =
+ liblely_can_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_can_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/co/Makefile.am b/src/co/Makefile.am
+index 65b1a77..f606834 100644
+--- a/src/co/Makefile.am
++++ b/src/co/Makefile.am
+@@ -72,7 +72,9 @@ liblely_co_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSION
+ if PLATFORM_WIN32
+ liblely_co_la_LDFLAGS += -Wl,--output-def,liblely-co-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_co_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_co_la_LIBADD =
+ liblely_co_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_co_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/coapp/Makefile.am b/src/coapp/Makefile.am
+index 311535a..d867153 100644
+--- a/src/coapp/Makefile.am
++++ b/src/coapp/Makefile.am
+@@ -32,7 +32,9 @@ liblely_coapp_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERS
+ if PLATFORM_WIN32
+ liblely_coapp_la_LDFLAGS += -Wl,--output-def,liblely-coapp-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_coapp_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_coapp_la_LIBADD =
+ liblely_coapp_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_coapp_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/ev/Makefile.am b/src/ev/Makefile.am
+index 8844de6..f81fa25 100644
+--- a/src/ev/Makefile.am
++++ b/src/ev/Makefile.am
+@@ -31,7 +31,9 @@ liblely_ev_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSION
+ if PLATFORM_WIN32
+ liblely_ev_la_LDFLAGS += -Wl,--output-def,liblely-ev-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_ev_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_ev_la_LIBADD =
+ liblely_ev_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_ev_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/io/Makefile.am b/src/io/Makefile.am
+index 871bef8..550bb5d 100644
+--- a/src/io/Makefile.am
++++ b/src/io/Makefile.am
+@@ -35,7 +35,9 @@ liblely_io_la_LDFLAGS = -no-undefined -version-number 1:9:2
+ if PLATFORM_WIN32
+ liblely_io_la_LDFLAGS += -Wl,--output-def,liblely-io-1.def
+ endif
++if PLATFORM_LINUX
+ liblely_io_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_io_la_LIBADD =
+ liblely_io_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_io_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/io2/Makefile.am b/src/io2/Makefile.am
+index 2daf658..eba79dc 100644
+--- a/src/io2/Makefile.am
++++ b/src/io2/Makefile.am
+@@ -86,7 +86,9 @@ liblely_io2_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSIO
+ if PLATFORM_WIN32
+ liblely_io2_la_LDFLAGS += -Wl,--output-def,liblely-io2-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_io2_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_io2_la_LIBADD =
+ liblely_io2_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ liblely_io2_la_LIBADD += $(top_builddir)/src/util/liblely-util.la
+diff --git a/src/libc/Makefile.am b/src/libc/Makefile.am
+index dd1afe7..d484602 100644
+--- a/src/libc/Makefile.am
++++ b/src/libc/Makefile.am
+@@ -43,7 +43,9 @@ liblely_libc_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSI
+ if PLATFORM_WIN32
+ liblely_libc_la_LDFLAGS += -Wl,--output-def,liblely-libc-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_libc_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_libc_la_LIBADD = $(RT_LIBS)
+ if CODE_COVERAGE_ENABLED
+ liblely_libc_la_LIBADD += $(CODE_COVERAGE_LIBS)
+diff --git a/src/tap/Makefile.am b/src/tap/Makefile.am
+index 6c06b88..a2c3e24 100644
+--- a/src/tap/Makefile.am
++++ b/src/tap/Makefile.am
+@@ -15,7 +15,9 @@ liblely_tap_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSIO
+ if PLATFORM_WIN32
+ liblely_tap_la_LDFLAGS += -Wl,--output-def,liblely-tap-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_tap_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_tap_la_LIBADD =
+ liblely_tap_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ if CODE_COVERAGE_ENABLED
+diff --git a/src/util/Makefile.am b/src/util/Makefile.am
+index 3a77f65..780f4a6 100644
+--- a/src/util/Makefile.am
++++ b/src/util/Makefile.am
+@@ -67,7 +67,9 @@ liblely_util_la_LDFLAGS = -no-undefined -version-number $(VERSION_MAJOR):$(VERSI
+ if PLATFORM_WIN32
+ liblely_util_la_LDFLAGS += -Wl,--output-def,liblely-util-$(VERSION_MAJOR).def
+ endif
++if PLATFORM_LINUX
+ liblely_util_la_LDFLAGS += -Wl,--as-needed
++endif
+ liblely_util_la_LIBADD =
+ liblely_util_la_LIBADD += $(top_builddir)/src/libc/liblely-libc.la
+ if !ECSS_COMPLIANCE
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0100-macos-no-as-needed.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0100-macos-no-as-needed.patch to UPDATE_COMMAND"
+fi
+
+# --- lely_core_libraries: coapp/node.cpp builds a std::chrono::system_clock::time_point directly
+#     from util::from_timespec(), which returns std::chrono::nanoseconds. On Linux/libstdc++
+#     system_clock::duration IS nanoseconds so the value binds to time_point(const duration&); on
+#     macOS/libc++ system_clock::duration is MICROseconds, so a nanoseconds value has no matching
+#     time_point constructor -> "no matching constructor for ... system_clock::time_point". Wrap the
+#     from_timespec() result in duration_cast<system_clock::duration>. Done as a PATCH-step COMMAND
+#     (the source is fetched by ExternalProject); the script only rewrites time_point-construction
+#     sites, leaving other from_timespec() uses alone. Idempotent (ci-lely-chrono marker). ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-lely-chrono' "$d/CMakeLists.txt"; then
+  cat > "$d/patches/ci_lely_chrono_duration.sh" <<'SCRIPTEOF'
+#!/usr/bin/env bash
+# <SOURCE_DIR> passed as $1. system_clock::duration is microseconds on macOS (nanoseconds on
+# Linux); util::from_timespec() returns nanoseconds, so `system_clock::time_point t(from_timespec(..))`
+# has no matching constructor on libc++. Wrap in duration_cast<system_clock::duration>.
+f="$1/src/coapp/node.cpp"
+[ -f "$f" ] && sed -i.bak -E 's#(system_clock::time_point [A-Za-z_][A-Za-z0-9_]*\()util::from_timespec\(([^)]*)\)\)#\1::std::chrono::duration_cast<::std::chrono::system_clock::duration>(util::from_timespec(\2)))#g' "$f"
+exit 0
+SCRIPTEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  # ci-lely-chrono: from_timespec() -> duration_cast<system_clock::duration> (macOS us vs ns)\n  COMMAND bash \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/ci_lely_chrono_duration.sh <SOURCE_DIR>$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added ci_lely_chrono_duration.sh (from_timespec -> duration_cast) to PATCH step"
+fi
+
+# --- lely_core_libraries: include/lely/libc/unistd.h tentatively DEFINES the getopt globals
+#     (char *optarg; int optind; int opterr; int optopt;) in the HEADER with no `extern`, so every
+#     TU including it emits a definition -> duplicate symbols between getopt.o and sleep.o. -fcommon
+#     merged these under the old macOS linker, but Xcode 26's ld-prime rejects them ("4 duplicate
+#     symbols"). Declare them extern in the header; getopt.c keeps the single definitions. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0101-macos-getopt-extern.patch' "$d/CMakeLists.txt"; then
+  cat > "$d/patches/0101-macos-getopt-extern.patch" <<'PATCHEOF'
+diff --git a/include/lely/libc/unistd.h b/include/lely/libc/unistd.h
+--- a/include/lely/libc/unistd.h
++++ b/include/lely/libc/unistd.h
+@@ -39,20 +39,20 @@ extern "C" {
+ #endif
+
+ /// A pointer to the argument of the current option.
+-char *optarg;
++extern char *optarg;
+
+ /// The index of the next argument to be parsed by getopt().
+-int optind;
++extern int optind;
+
+ /**
+  * A flag indicating whether a diagnostic message should be printed if an
+  * unknown option character or missing argument is detected by getopt(). The
+  * default value is 1.
+  */
+-int opterr;
++extern int opterr;
+
+ /// The last option character to cause an error.
+-int optopt;
++extern int optopt;
+
+ /**
+  * Parses options passed as arguments to `main()`.
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0101-macos-getopt-extern.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0101-macos-getopt-extern.patch to UPDATE_COMMAND"
+fi
+
+# --- lely_core_libraries: src/util/daemon.c selects its platform backend with
+#     `#if _WIN32 / #elif _POSIX_C_SOURCE >= 200112L`. This build never defines
+#     _POSIX_C_SOURCE on macOS, so the preprocessor evaluates it as 0 and NEITHER
+#     branch is compiled -> daemon_signal() and daemon_status() are left undefined
+#     while the unconditional daemon_stop/daemon_reload/daemon_pause/daemon_continue
+#     and default_daemon_handler still call them -> at the liblely-util link:
+#       Undefined symbols for architecture arm64:
+#         "_daemon_signal", referenced from: _daemon_stop ...
+#         "_daemon_status", referenced from: _default_daemon_handler ...
+#     The POSIX backend is generic-POSIX, not Linux-only: its one Linux extension
+#     (pipe2 with O_NONBLOCK|O_CLOEXEC) already has a portable `#else` fallback
+#     (pipe()+fcntl()), and everything else it uses (sigaction/sigemptyset/poll/
+#     fcntl) is standard POSIX present on macOS -- the branch even has explicit
+#     `!defined(__linux__)` sub-cases. So enable it on __APPLE__ as well. Same
+#     git-apply-into-UPDATE_COMMAND mechanism as the patches above. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0102-macos-daemon-posix.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0102-macos-daemon-posix.patch" <<'PATCHEOF'
+Subject: [PATCH] Enable the POSIX daemon backend on macOS (__APPLE__)
+
+src/util/daemon.c compiles neither its _WIN32 nor its
+`_POSIX_C_SOURCE >= 200112L` backend on macOS (this build does not
+define _POSIX_C_SOURCE), leaving daemon_signal()/daemon_status()
+undefined at the liblely-util link. The POSIX backend is portable
+(Linux-only calls have `#else` fallbacks), so select it on Apple too.
+---
+diff --git a/src/util/daemon.c b/src/util/daemon.c
+--- a/src/util/daemon.c
++++ b/src/util/daemon.c
+@@ -233,6 +233,6 @@
+ }
+
+-#elif _POSIX_C_SOURCE >= 200112L
++#elif _POSIX_C_SOURCE >= 200112L || defined(__APPLE__)
+
+ #include <fcntl.h>
+ #include <poll.h>
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0102-macos-daemon-posix.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0102-macos-daemon-posix.patch to UPDATE_COMMAND"
+fi
+
+# --- lely_core_libraries: include/lely/libc/strings.h sets LELY_HAVE_STRINGS_H only for
+#     _POSIX_C_SOURCE>=200112L / __NEWLIB__. macOS never defines _POSIX_C_SOURCE in this build,
+#     so lely takes the fallback branch and declares its own `static inline int ffs(int)`, which
+#     clashes with the macOS SDK <strings.h> non-static ffs() -> "static declaration of 'ffs'
+#     follows non-static declaration" (co/gw_txt.c). macOS HAS a real POSIX <strings.h> with
+#     ffs(), so add __APPLE__ to the detection (same class as the 0099 sys/types.h fix). ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0103-macos-strings-have.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0103-macos-strings-have.patch" <<'PATCHEOF'
+Subject: [PATCH] Detect <strings.h> on macOS (avoid redeclaring ffs)
+
+On macOS this build does not define _POSIX_C_SOURCE, so LELY_HAVE_STRINGS_H
+is unset and lely declares its own `static inline int ffs(int)`, clashing
+with the non-static ffs() in the macOS SDK <strings.h>. macOS has a real
+POSIX <strings.h> with ffs(), so treat __APPLE__ as having it.
+---
+diff --git a/include/lely/libc/strings.h b/include/lely/libc/strings.h
+--- a/include/lely/libc/strings.h
++++ b/include/lely/libc/strings.h
+@@ -27,3 +27,3 @@
+ #ifndef LELY_HAVE_STRINGS_H
+-#if (_POSIX_C_SOURCE >= 200112L || defined(__NEWLIB__))
++#if (_POSIX_C_SOURCE >= 200112L || defined(__NEWLIB__) || defined(__APPLE__))
+ #define LELY_HAVE_STRINGS_H 1
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0103-macos-strings-have.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0103-macos-strings-have.patch to UPDATE_COMMAND"
+fi
+
+# --- aerostack2 (humble esp.): several packages force-include <cassert>/<assert.h>
+#     with add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-include$<SEMICOLON>cassert>" ...).
+#     $<SEMICOLON> splits it into two SEPARATE compile options (-include, cassert); CMake's
+#     option handling can then separate the pair so `cassert`/`assert.h` is left as a dangling
+#     positional input -> AppleClang "no such file or directory: 'cassert'". Use the SHELL:
+#     prefix so `-include cassert` stays one adjacent, un-deduplicated fragment (same fix as
+#     the ouster -include cstdint case). Scan ALL package CMakeLists for the pattern (hits
+#     as2_behaviors_swarm_flocking, as2_behaviors_trajectory_generation, ...). No-op if absent. ---
+for _f in $(grep -rlE 'include\$<SEMICOLON>(cassert|assert\.h)' "$ROOT" --include=CMakeLists.txt 2>/dev/null | grep -v '/build/'); do
+  perl -0pi -e 's{-include\$<SEMICOLON>cassert}{SHELL:-include cassert}g; s{-include\$<SEMICOLON>assert\.h}{SHELL:-include assert.h}g' "$_f"
+  echo "  aerostack2: -include \$<SEMICOLON> hack -> SHELL:-include in ${_f#$ROOT/}"
+done
+
+# --- point_cloud_msg_wrapper (ApexAI, all 3): point_cloud_msg_wrapper.hpp #includes
+#     <experimental/optional> and uses std::experimental::optional<>. libc++ removed the
+#     <experimental/optional> TS header (superseded by <optional> since C++17) -> AppleClang
+#     "fatal error: 'experimental/optional' file not found", which dooms every consumer
+#     (autoware_ground_filter via sanity_check.cpp, ...). Upstream is a GitLab repo (not one of
+#     our GitHub forks), so patch the header in place: <experimental/optional> -> <optional> and
+#     std::experimental::optional -> std::optional. Idempotent (skips once no experimental use
+#     remains). PR-able upstream. ---
+for _f in $(grep -rlE 'experimental/optional|std::experimental::optional' "$ROOT" --include='*.hpp' --include='*.h' 2>/dev/null | grep -i 'point_cloud_msg_wrapper' | grep -v '/build/'); do
+  sed "${SEDI[@]}" -e 's#<experimental/optional>#<optional>#g' -e 's#std::experimental::optional#std::optional#g' "$_f"
+  echo "  point_cloud_msg_wrapper: <experimental/optional>/std::experimental::optional -> <optional>/std::optional in ${_f#$ROOT/}"
+done
+
+# --- Lane 2: boost-python component version. mrt_cmake_modules FindBoostPython
+#     derives the component from find_package(Python3), which resolves the runner's
+#     newest Python (3.14) -> boost_python314, absent from the vendored boost-1.89
+#     (ships python311/313, built against the toolchain Python 3.11). Pin to 311 when
+#     the vendored 311 lib is present. Fixes lanelet2_python, libfranka, etc. ---
+d="$(_pkg_dir mrt_cmake_modules)"
+if [ -n "$d" ] && [ -f "$d/cmake/Modules/FindBoostPython.cmake" ] && ! grep -q 'ci-pin-python311' "$d/cmake/Modules/FindBoostPython.cmake"; then
+  perl -0pi -e 's{(\n[ \t]*find_package\(Boost COMPONENTS python\$\{_python_version\} numpy\$\{_python_version\}\))}{\n    # ci-pin-python311: vendored boost-1.89 ships python311/313 (built vs Python 3.11);\n    # find_package(Python3) may resolve 3.14 -> boost_python314 which does not exist.\n    if(DEFINED BOOST_LIBRARYDIR AND EXISTS "\$\{BOOST_LIBRARYDIR\}/libboost_python311.dylib")\n      set(_python_version 311)\n    endif()$1}' "$d/cmake/Modules/FindBoostPython.cmake"
+  echo "  mrt_cmake_modules FindBoostPython: pin python component -> 311 (vendored boost)"
+fi
+
+# --- Lane 2: websocketpp 0.8.2 (brew, header-only) vs Boost 1.87+ removed APIs.
+#     rmf_websocket includes brew websocketpp, whose asio transport uses a pile of
+#     APIs deleted in Boost 1.87: io_service, io_service::strand, strand::wrap,
+#     io_context::post/reset, io_service::work, socket_base::max_connections,
+#     basic_waitable_timer::expires_from_now, and resolver::iterator/query.
+#     Patch the installed brew headers in place (ephemeral runner; header-only).
+#     VERIFIED: patched tree compiles clean vs Boost 1.89 (server + client connect
+#     paths, clang -std=c++17). Idempotent via the ci-wspp-boost187 marker.
+#     Cascade root: rmf_traffic_ros2 (aborts) -> rmf_battery,
+#     rmf_visualization_rviz2_plugins, rmf_traffic_editor, rmf_traffic_examples. ---
+WSPP="$(cd /opt/homebrew/include/websocketpp 2>/dev/null && pwd -P || true)"
+if [ -n "${WSPP:-}" ] && [ -f "$WSPP/common/asio.hpp" ] && ! grep -q 'ci-wspp-boost187' "$WSPP/common/asio.hpp" 2>/dev/null; then
+  _AS="$WSPP/common/asio.hpp"
+  _CX="$WSPP/transport/asio/connection.hpp"
+  _EP="$WSPP/transport/asio/endpoint.hpp"
+  _NO="$WSPP/transport/asio/security/none.hpp"
+  _TL="$WSPP/transport/asio/security/tls.hpp"
+  # io_service -> io_context alias (fixes every bare io_service type reference)
+  perl -0pi -e 's/(using namespace boost::asio;)/$1  \/\/ ci-wspp-boost187\n        using io_service = io_context;/' "$_AS"
+  # strand: construction (needs executor) then member type
+  perl -0pi -e 's/new lib::asio::io_service::strand\(\*io_service\)/new lib::asio::strand<lib::asio::io_context::executor_type>(io_service->get_executor())/g' "$_CX"
+  perl -0pi -e 's/lib::asio::io_service::strand/lib::asio::strand<lib::asio::io_context::executor_type>/g' "$_CX" "$_NO" "$_TL"
+  # strand::wrap(h) -> bind_executor(strand, h)  (two exact receivers)
+  perl -0pi -e 's/m_strand->wrap\(/lib::asio::bind_executor(*m_strand, /g' "$_CX" "$_TL"
+  perl -0pi -e 's/tcon->get_strand\(\)->wrap\(/lib::asio::bind_executor(*tcon->get_strand(), /g' "$_EP"
+  # io_context::post(h) -> asio::post(io_context, h)
+  perl -0pi -e 's/m_io_service->post\(/lib::asio::post(*m_io_service, /g' "$_CX"
+  # timer->expires_from_now() -> remaining duration via expiry()
+  perl -0pi -e 's/->expires_from_now\(\)/->expiry() - lib::asio::steady_timer::clock_type::now()/g' "$_CX" "$_EP"
+  # io_service::work -> executor_work_guard (construction then type)
+  perl -0pi -e 's/new lib::asio::io_service::work\(\*m_io_service\)/new lib::asio::executor_work_guard<lib::asio::io_context::executor_type>(m_io_service->get_executor())/g' "$_EP"
+  perl -0pi -e 's/lib::asio::io_service::work/lib::asio::executor_work_guard<lib::asio::io_context::executor_type>/g' "$_EP"
+  # socket_base::max_connections -> max_listen_connections
+  perl -0pi -e 's/socket_base::max_connections/socket_base::max_listen_connections/g' "$_EP"
+  # resolver::iterator -> results_type (sync listen path, async handler param, debug loop)
+  perl -0777 -pi -e 's/tcp::resolver::iterator endpoint_iterator = r\.resolve\(query\);\n(\s*)tcp::resolver::iterator end;/tcp::resolver::results_type results = r.resolve(query);\n$1tcp::resolver::results_type::const_iterator endpoint_iterator = results.begin();\n$1tcp::resolver::results_type::const_iterator end = results.end();/' "$_EP"
+  perl -0pi -e 's/lib::asio::ip::tcp::resolver::iterator iterator\)/lib::asio::ip::tcp::resolver::results_type iterator)/g' "$_EP"
+  perl -0777 -pi -e 's/lib::asio::ip::tcp::resolver::iterator it, end;\n(\s*)for \(it = iterator; it != end; \+\+it\) \{/for (auto it = iterator.begin(); it != iterator.end(); ++it) {/' "$_EP"
+  # resolver::query removed -> host/service string overloads
+  perl -0777 -pi -e 's/^[ \t]*tcp::resolver::query query\([^)]*\);\n//mg' "$_EP"
+  perl -0pi -e 's/r\.resolve\(query\)/r.resolve(host, service)/g' "$_EP"
+  perl -0777 -pi -e 's/(async_resolve\(\n[ \t]*)query,/${1}host, port,/g' "$_EP"
+  # io_context::reset() renamed to restart()
+  perl -0pi -e 's/m_io_service->reset\(\)/m_io_service->restart()/g' "$_EP" "$_CX"
+  echo "  websocketpp 0.8.2: patched for Boost 1.87+ (io_service/strand/work/post/resolver/timer)"
+fi
+
+# --- Lane 6: canboat_vendor's CANBOAT_TOOLS list unconditionally installs
+#     socketcan-writer, but canboat's own Makefile (socketcan-writer/Makefile)
+#     gates that binary to Linux only (`ifeq ($(OS),Linux)` -> TARGETS empty
+#     elsewhere), so it is never built on macOS and `install(PROGRAMS ...)`
+#     fails with "file INSTALL cannot find .../rel/socketcan-writer". This repo
+#     only ever builds on macOS, so drop the entry (BUILD_BYPRODUCTS + tool
+#     list) rather than add a runtime guard. Present in jazzy/kilted only
+#     (same submodule commit fc04c4f, absent from humble) -> no-op there. ---
+d="$(_pkg_dir canboat_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'socketcan-writer' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e '/<SOURCE_DIR>\/rel\/socketcan-writer/d' \
+    -e '/^[[:space:]]*socketcan-writer[[:space:]]*$/d' \
+    "$d/CMakeLists.txt"
+  echo "  canboat_vendor: dropped Linux-only socketcan-writer from install list"
+fi
+
+# --- Lane 6: fmilibrary_vendor's ExternalProject clones modelon-community/
+#     fmi-library (own CMake project, cmake_minimum_required 2.8.6). Its
+#     Config.cmake/mergestaticlibs.cmake reads the LOCATION target property on
+#     not-yet-built targets (pre-3.0 idiom) -> modern CMake enforces CMP0026
+#     as a hard error ("The LOCATION property may not be read from target...
+#     use $<TARGET_FILE>"), hit on every merge_static_libs() call (fmiimport,
+#     fmilib, etc). Not macOS-specific -- same across all 3 distros (identical
+#     CMakeLists.txt, same fmilibrary_version 2.2.3 pin, verified byte-equal
+#     humble/jazzy/kilted despite differing vendor submodule commits).
+#     PATCH_COMMAND runs perl on the freshly-cloned fmi-library source,
+#     swapping the LOCATION reads for `set(... "$<TARGET_FILE:...>")`. The
+#     replacement is built via chr(36) + string concat (/e) instead of a
+#     literal '$<' in the command text: ExternalProject stores *_COMMAND as a
+#     CMake list, and any literal '$<...>' genexp syntax embedded in that text
+#     -- even inside a [[ ]] bracket-argument, which only suppresses ${VAR}
+#     expansion, not genexp scanning -- gets eagerly evaluated by the OUTER
+#     (fmilibrary_vendor) project at generate time and collapses to empty,
+#     since ${lib}/${outlib} aren't real targets in that scope. Split across
+#     two PATCH_COMMAND/COMMAND steps (not one `;`-joined perl -e) because
+#     ExternalProject also re-splits command text on bare semicolons.
+#     VERIFIED end-to-end against the real files: fetched mergestaticlibs.cmake
+#     from the v2.2.3 tag, ran this exact injected CMakeLists.txt through a
+#     real (offline, local SOURCE_DIR) externalproject_add PATCH_COMMAND step,
+#     diffed the output byte-identical to a version that was then separately
+#     configure+build tested (AppleClang) via a probe project calling
+#     merge_static_libs() on two dummy static libs -- produced a correctly
+#     merged archive with both input symbols present.
+#     2026-08-19: getting past CMP0026 unmasked 3 MORE errors in the SAME
+#     configure/build (CMake reports several errors per pass, then bails --
+#     each earlier fix just uncovers the next one; peeled all the way to a
+#     real `make install` locally):
+#       1) Config.cmake/runtime_test.cmake:36 `get_property(... TARGET
+#          compress_test_fmu_zip PROPERTY LOCATION)` -- same CMP0026 class,
+#          only reached when FMILIB_BUILD_TESTS=ON (default). fmi-library's
+#          own doc target construction (UseDoxygen.cmake:140
+#          `get_target_property(DOC_TARGET doc TYPE)` on a not-yet-defined
+#          "doc" target -- modern CMake hard-errors instead of returning
+#          NOTFOUND) only reached when FMILIB_GENERATE_DOXYGEN_DOC=ON
+#          (default, and this runner has doxygen installed so it's not even
+#          skipped by a missing-Doxygen guard). We don't need fmi-library's
+#          own test suite or doc target for a vendored lib -- CMAKE_ARGS
+#          turns both off, skipping the broken codepaths entirely rather than
+#          patching them.
+#       2) Config.cmake/fmixml.cmake:185 `add_dependencies(expatex
+#          ${CMAKE_BINARY_DIR}/CMakeCache.txt ${FMILIBRARYHOME}/CMakeLists.txt)`
+#          passes FILE paths (not target names) to add_dependencies() --
+#          modern CMake errors "dependency target ... does not exist";
+#          harmless/redundant since the actual file dependency for the
+#          expatex re-configure step is already declared correctly via the
+#          `DEPENDS ${CMAKE_BINARY_DIR}/CMakeCache.txt` on the
+#          ExternalProject_Add_Step right above it. This error was invisible
+#          in the CI log because CMake bails out of the configure phase
+#          entirely on error (1) before ever reaching the generate phase
+#          where this one surfaces -- confirmed locally: fixing only (1)
+#          exposes this as the new next failure. A 3rd PATCH_COMMAND step
+#          perl-deletes the whole `add_dependencies(expatex ...)` line
+#          (matched by literal prefix, no ${VAR}/genexp text needed in the
+#          pattern so no CMake-vs-perl escaping is involved).
+#       3) ThirdParty/Minizip/minizip/miniunz.c:143 calls bare `mkdir(path)`
+#          with no `<sys/stat.h>` include -- ancient (~2013) vendored C code;
+#          Apple Clang (Xcode 26.6) treats implicit-function-declaration as a
+#          hard error by default in C mode (Clang 15+ behavior change), so
+#          this blocks the actual `make` even after configure succeeds.
+#          CMAKE_ARGS downgrades it back to a warning for this ExternalProject
+#          only (`-DCMAKE_C_FLAGS=-Wno-error=...`) -- scoped to the vendored
+#          build, doesn't touch our own toolchain flags.
+#     Also: the wrapper's own install()/ament_export_libraries() hardcode
+#     `libfmilib_shared.so`, but fmi-library's CMakeLists never overrides
+#     OUTPUT_NAME, so on macOS the real built artifact is
+#     `libfmilib_shared.dylib` -- install(FILES ...) would fail on a
+#     nonexistent path. Fixed below via ${CMAKE_SHARED_LIBRARY_SUFFIX}
+#     (portable, Linux .so unaffected).
+#     VERIFIED end-to-end (2026-08-19): built a scratch outer CMakeLists.txt
+#     driving externalproject_add() with SOURCE_DIR pointed at a real,
+#     offline v2.2.3 clone and this exact CMAKE_ARGS/PATCH_COMMAND chain --
+#     full `cmake --build` (including the nested expatex sub-build) completed
+#     clean, `make install` produced both
+#     .../install/lib/libfmilib.a and .../install/lib/libfmilib_shared.dylib. ---
+d="$(_pkg_dir fmilibrary_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-fmilib-cmp0026' "$d/CMakeLists.txt"; then
+  _FMI_SNIPPET="$(mktemp)"
+  cat > "$_FMI_SNIPPET" <<'PATCHEOF'
+  CMAKE_ARGS -DFMILIB_BUILD_TESTS=OFF -DFMILIB_GENERATE_DOXYGEN_DOC=OFF -DCMAKE_C_FLAGS=-Wno-error=implicit-function-declaration
+  PATCH_COMMAND perl -0pi -e [[s/get_target_property\(libfile (\$\{lib\}) LOCATION\)/'set(libfile "'.chr(36).'<TARGET_FILE:'.$1.'>")'/ge]] <SOURCE_DIR>/Config.cmake/mergestaticlibs.cmake
+  COMMAND perl -0pi -e [[s/get_target_property\(outfile (\$\{outlib\}) LOCATION\)/'set(outfile "'.chr(36).'<TARGET_FILE:'.$1.'>")'/ge]] <SOURCE_DIR>/Config.cmake/mergestaticlibs.cmake
+  COMMAND perl -0pi -e [[s/^[ \t]*add_dependencies\(expatex[^\n]*\)[ \t]*\n//m]] <SOURCE_DIR>/Config.cmake/fmixml.cmake # ci-fmilib-cmp0026
+PATCHEOF
+  sed -e "/^[[:space:]]*TIMEOUT 60[[:space:]]*\$/r $_FMI_SNIPPET" "$d/CMakeLists.txt" > "$d/CMakeLists.txt.__p" && mv "$d/CMakeLists.txt.__p" "$d/CMakeLists.txt"
+  rm -f "$_FMI_SNIPPET"
+  echo "  fmilibrary_vendor: PATCH_COMMAND fixes CMP0026 (mergestaticlibs), disables tests/doxygen, drops broken expatex add_dependencies, downgrades implicit-decl to warning"
+fi
+d="$(_pkg_dir fmilibrary_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'libfmilib_shared\.so' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e 's/libfmilib_shared\.so/libfmilib_shared${CMAKE_SHARED_LIBRARY_SUFFIX}/' \
+    "$d/CMakeLists.txt"
+  echo "  fmilibrary_vendor: install()/ament_export_libraries() use \${CMAKE_SHARED_LIBRARY_SUFFIX} instead of hardcoded .so (macOS builds libfmilib_shared.dylib)"
+fi
+
+# --- Lane 8: live555_vendor (jazzy only -- absent from humble/kilted; a
+#     brand-new, 2025, CMake-native live555 port, not an ExternalProject).
+#     `add_library(UsageEnvironment ...)` is followed by an unconditional
+#     `if(NOT WIN32) target_link_options(... "LINKER:--allow-shlib-undefined")`
+#     -- a GNU-ld-only flag; Apple's ld64 rejects it outright ("ld: unknown
+#     options: --allow-shlib-undefined"). The flag isn't decorative: it's
+#     covering a real circular symbol dependency -- HashTable::create() /
+#     HashTable::Iterator::create() are only implemented in
+#     BasicHashTable.cpp (the BasicUsageEnvironment target), which itself
+#     links UsageEnvironment (not the reverse), so UsageEnvironment.dylib
+#     genuinely has unresolved symbols until the final consumer links both
+#     libs together. Confirmed locally: just deleting the flag on APPLE (a
+#     tempting first guess) makes UsageEnvironment fail with a real
+#     "Undefined symbols ... HashTable::Iterator::create" link error --
+#     GNU ld's --allow-shlib-undefined and Apple ld64's
+#     `-undefined dynamic_lookup` are the platform-equivalent way to permit
+#     this, so we swap to the latter under APPLE rather than dropping it.
+#     groupsock and liveMedia hit the identical HashTable-symbol pattern
+#     (both link UsageEnvironment only, not BasicUsageEnvironment) even
+#     though upstream's Linux build never needed the flag there -- macOS's
+#     ld64 defaults to strict undefined-symbol checking for dylibs, Linux's
+#     default is permissive, so this is a real linker-default gap between
+#     platforms, not an upstream omission to fix narrowly. Also fixed one
+#     more, platform-independent upstream bug that only surfaces once the
+#     linker errors above are cleared: `target_link_libraries(liveMedia
+#     PRIVATE ... OpenSSL::SSL)` hides OpenSSL's include dir from liveMedia's
+#     consumers, but TLSState.hh -- a *public* liveMedia header, pulled in
+#     transitively by the demo executables via RTPInterface.hh -- needs
+#     <openssl/ssl.h> directly whenever OpenSSL is present; PRIVATE->PUBLIC.
+#     VERIFIED end-to-end: real offline `cmake --build` of the actual
+#     submodule source with default options (LIVE555_BUILD_EXECUTABLES ON,
+#     i.e. exactly what colcon builds since this package is CMAKE_PROJECT_IS_
+#     TOP_LEVEL) -- all 4 libraries AND all 3 demo executables link clean;
+#     `make install` produced libUsageEnvironment/libBasicUsageEnvironment/
+#     libgroupsock/libliveMedia .dylib + live555Config.cmake under DESTDIR. ---
+d="$(_pkg_dir live555_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-live555-apple-undefined' "$d/CMakeLists.txt"; then
+  perl -0777 -pi -e '
+    s/if\(NOT WIN32\)\n([ \t]*)target_link_options\(UsageEnvironment PRIVATE "LINKER:--allow-shlib-undefined"\)\nendif\(\)/if(APPLE) # ci-live555-apple-undefined\n$1target_link_options(UsageEnvironment PRIVATE "LINKER:-undefined,dynamic_lookup")\nelseif(NOT WIN32)\n$1target_link_options(UsageEnvironment PRIVATE "LINKER:--allow-shlib-undefined")\nendif()/;
+    s/(live555\/BasicUsageEnvironment\/BasicHashTable\.cpp\n\))\n/$1\nif(APPLE)\n    target_link_options(BasicUsageEnvironment PRIVATE "LINKER:-undefined,dynamic_lookup")\nendif()\n/;
+    s/(live555\/groupsock\/NetInterface\.cpp\n\))\n/$1\nif(APPLE)\n    target_link_options(groupsock PRIVATE "LINKER:-undefined,dynamic_lookup")\nendif()\n/;
+    s/(live555\/liveMedia\/WAVAudioFileSource\.cpp\n\))\n/$1\nif(APPLE)\n    target_link_options(liveMedia PRIVATE "LINKER:-undefined,dynamic_lookup")\nendif()\n/;
+    s/target_link_libraries\(liveMedia PRIVATE \$<TARGET_NAME_IF_EXISTS:OpenSSL::SSL>\)/target_link_libraries(liveMedia PUBLIC \$<TARGET_NAME_IF_EXISTS:OpenSSL::SSL>)/;
+  ' "$d/CMakeLists.txt"
+  echo "  live555_vendor: Apple ld64 -undefined,dynamic_lookup for UsageEnvironment/BasicUsageEnvironment/groupsock/liveMedia (was GNU-ld-only --allow-shlib-undefined) + liveMedia's OpenSSL link PRIVATE->PUBLIC"
+fi
+
+# --- Lane 6: ecal — CMakeLists.txt:299 `find_package(CMakeFunctions REQUIRED)`
+#     only resolves via a CMake dependency provider
+#     (cmake_language(SET_DEPENDENCY_PROVIDER ...) in cmake/submodule_dependencies.cmake)
+#     that eCAL's own build never activates unless CMAKE_PROJECT_TOP_LEVEL_INCLUDES
+#     is set before the top-level project() call — upstream only does that via
+#     CMakePresets.json, which colcon does not use, so find_package() falls
+#     through to a normal search and fails ("Findcatkin"-style "could not find
+#     a package configuration file"). Turning the provider on globally would
+#     default-build ~15 more vendored thirdparty libs from source
+#     (ecal_submodule_dependencies: asio, HDF5, Protobuf, spdlog, yaml-cpp...)
+#     since each ECAL_THIRDPARTY_BUILD_<NAME> option defaults ON — far more
+#     than this needs. CMakeFunctionsConfig.cmake.in's @PACKAGE_INIT@ body is
+#     itself just `include(.../cmake_functions.cmake)` (plain macro
+#     definitions: git_revision_information, msvc_macros,
+#     protoc_generate_files, targets_protobuf — no compiled artifact) — so
+#     swap the find_package() for that same include directly, bypassing the
+#     provider entirely. Same submodule commit (e9ca7cf) + identical
+#     CMakeLists.txt across all 3 distros -> shared fix. ---
+d="$(find "$ROOT" -maxdepth 4 -type d -path '*/middleware/ecal' -not -path '*/build/*' 2>/dev/null | head -1)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'find_package(CMakeFunctions REQUIRED)' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" 's|find_package(CMakeFunctions REQUIRED)|include(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cmakefunctions/cmake_functions/cmake_functions.cmake)|' "$d/CMakeLists.txt"
+  echo "  ecal: find_package(CMakeFunctions) -> direct include (dependency provider never activated by colcon)"
+fi
+
+
+
+# --- Lane 4 (real bug): cartographer_ros_msgs/CMakeLists.txt falls back to
+#     set(CMAKE_CXX_STANDARD 14) when the toolchain has not already pinned it. But
+#     toolchain.cmake force-includes cartographer_absl_compat.h into every ^cartographer
+#     project, and that shim #include <absl/base/thread_annotations.h> -> Abseil's
+#     policy_checks.h hard-errors "C++ versions less than C++17 are not supported" under
+#     C++14. Bump the fallback to 17 (harmless for a msgs package). ---
+d="$(_pkg_dir cartographer_ros_msgs)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE 'set\(CMAKE_CXX_STANDARD 14\)' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" 's/set(CMAKE_CXX_STANDARD 14)/set(CMAKE_CXX_STANDARD 17)/' "$d/CMakeLists.txt"
+  echo "  cartographer_ros_msgs: CMAKE_CXX_STANDARD 14 -> 17 (absl shim needs C++17)"
+fi
+
+# rmf_traffic_editor bare yaml-cpp -> yaml-cpp::yaml-cpp target MIGRATED to id_rmf_traffic_editor fork.
+
+# rmf_traffic_ros2 bare yaml-cpp -> yaml-cpp::yaml-cpp target MIGRATED to id_rmf_ros2 fork.
+
+# --- Lane 6: nebula_velodyne_common (humble+jazzy, identical nebula commit
+#     ec2a724, absent kilted) -- same bare-`yaml-cpp` linker-name bug as
+#     rmf_traffic_editor/rmf_traffic_ros2 above, but on a single-line
+#     `target_link_libraries(nebula_velodyne_common PUBLIC yaml-cpp)` call
+#     rather than the multi-line indented form, so it needs its own literal
+#     match rather than reusing the indentation-anchored loop. "ld: library
+#     'yaml-cpp' not found" at the final link of libnebula_velodyne_common.dylib
+#     -- `yaml-cpp` resolves as a bare `-lyaml-cpp` linker flag, not a real
+#     CMake target, in this scope. Swapped for the toolchain's own
+#     ${YAML_CPP_LIBRARIES} absolute-path CACHE var (same proven idiom, used
+#     natively upstream by 8+ other in-tree packages per the toolchain
+#     comment). Left the separate `ament_export_dependencies(nebula_core_common
+#     yaml-cpp)` line alone -- that's a package-name export, not a linker
+#     flag, and unrelated to this bug. Not compile-tested end-to-end (same
+#     limitation as rmf_traffic_editor/rmf_traffic_ros2: needs a populated
+#     local yaml_cpp_vendor install/ tree to actually link-test, not available
+#     in this checkout); verified structurally against the real CMakeLists.txt
+#     in both humble and jazzy trees, idempotency-checked (2nd run: no match,
+#     no double-replace). ---
+d="$(_pkg_dir nebula_velodyne_common)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'target_link_libraries(nebula_velodyne_common PUBLIC yaml-cpp)' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e 's/target_link_libraries(nebula_velodyne_common PUBLIC yaml-cpp)/target_link_libraries(nebula_velodyne_common PUBLIC ${CI_YAML_CPP_LIB})/' \
+    "$d/CMakeLists.txt"
+  echo "  nebula_velodyne_common: bare yaml-cpp -> \${CI_YAML_CPP_LIB} (unclobberable absolute path)"
+fi
+
+# --- Lane 7-guard: rmw_stats_shim's `if(CMAKE_COMPILER_IS_GNUCXX OR
+#     CMAKE_CXX_COMPILER_ID MATCHES "Clang")` unconditionally adds
+#     `-Wl,--no-undefined` — a GNU-ld-only flag. MATCHES does a regex search,
+#     so "AppleClang" matches the "Clang" pattern too -> Apple's ld64 rejects
+#     the flag ("ld: unknown options: --no-undefined"). Apple's linker already
+#     errors on undefined symbols by default for a shared lib (no dynamic_lookup
+#     override here), so the flag is a no-op on Linux/GNU anyway if simply
+#     dropped for APPLE -- just guard it. Compile-tested: reproduced the exact
+#     guarded add_link_options() against a minimal SHARED-lib CMake probe;
+#     built clean with AppleClang. ---
+d="$(_pkg_dir rmw_stats_shim)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'add_link_options("-Wl,--no-undefined")' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/if\(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"\)\n(\s*)add_compile_options\(-Wall -Wextra -Wpedantic\)\n(\s*)add_link_options\("-Wl,--no-undefined"\)\n(\s*)endif\(\)/if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")\n${1}add_compile_options(-Wall -Wextra -Wpedantic)\n${1}if(NOT APPLE)\n${2}add_link_options("-Wl,--no-undefined")\n${2}endif()\n${3}endif()/' "$d/CMakeLists.txt"
+  echo "  rmw_stats_shim: guarded -Wl,--no-undefined with NOT APPLE"
+fi
+
+# --- Lane 6 (humble only, package absent in jazzy/kilted): as2_platform_crazyflie
+#     FetchContent-pulls crazyflie_cpp, which statically links libusb-1.0.
+#     libusb's macOS backend (darwin_usb.o) calls IOKit/CoreFoundation/Security
+#     APIs directly (CFRunLoop*, IOService*, SecTask*, ...) but neither
+#     crazyflie_cpp nor as2_platform_crazyflie's own CMakeLists link those
+#     system frameworks -> "Undefined symbols for architecture arm64" at the
+#     final link of both _node and _swarm_node executables. Standard macOS
+#     libusb consumers must add these 3 frameworks explicitly (libusb's own
+#     pkg-config .pc file lists them in Libs.private, which static linking
+#     doesn't auto-propagate). Compile-tested: N/A (no local libusb-based repro
+#     harness), but the fix is exactly the frameworks needed to resolve every
+#     undefined symbol seen in the CI log (CFBooleanGetTypeID, IOServiceMatching,
+#     SecTaskCreateFromSelf, etc — all covered by these 3 frameworks, a
+#     well-documented libusb-on-macOS requirement). ---
+d="$(_pkg_dir as2_platform_crazyflie)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'framework CoreFoundation' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/(if\(BUILD_TESTING\))/if(APPLE)\n  target_link_libraries(\${PROJECT_NAME}_node "-framework CoreFoundation" "-framework IOKit" "-framework Security")\n  target_link_libraries(\${PROJECT_NAME}_swarm_node "-framework CoreFoundation" "-framework IOKit" "-framework Security")\nendif()\n\n$1/' "$d/CMakeLists.txt"
+  echo "  as2_platform_crazyflie: link CoreFoundation/IOKit/Security frameworks (libusb macOS backend)"
+fi
+
+# --- Lane 1b (shared, same commit daa44c9 all 3): libmavconn's own FindASIO.cmake
+#     only searches PATHS /usr/include /usr/local/include for asio.hpp -> never
+#     checks the Apple Silicon homebrew prefix -> "Could NOT find ASIO (missing:
+#     ASIO_INCLUDE_DIRS)". brew asio isn't linked into /opt/homebrew/include on
+#     this runner (not keg-only, but not globally linked either), so add both the
+#     general homebrew include dir and the keg-specific opt/asio/include as
+#     additional PATHS. Compile-tested: verified asio.hpp resolves from
+#     /opt/homebrew/opt/asio/include locally (brew asio 1.36.0 installed). ---
+d="$(_pkg_dir libmavconn)"
+if [ -n "$d" ] && [ -f "$d/cmake/Modules/FindASIO.cmake" ] && ! grep -q '/opt/homebrew' "$d/cmake/Modules/FindASIO.cmake"; then
+  sed "${SEDI[@]}" 's#PATHS /usr/include /usr/local/include#PATHS /usr/include /usr/local/include /opt/homebrew/include /opt/homebrew/opt/asio/include#' "$d/cmake/Modules/FindASIO.cmake"
+  echo "  libmavconn: FindASIO.cmake PATHS += /opt/homebrew include dirs"
+fi
+# libmavconn finds ASIO + include_directories(${ASIO_INCLUDE_DIRS}) for its own build, but only
+# ament_export_dependencies(console_bridge) -- it does NOT export ASIO. Consumers (mavros) that
+# include mavconn/interface.hpp (which #include <asio.hpp>) then fail "asio.hpp file not found".
+# Export ASIO so find_package(libmavconn) pulls its include dir into libmavconn_INCLUDE_DIRS.
+d="$(_pkg_dir libmavconn)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-libmavconn-asio-export' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{ament_export_dependencies\(console_bridge\)}{ament_export_dependencies(console_bridge)\nament_export_dependencies(ASIO)  # ci-libmavconn-asio-export: consumers include <asio.hpp> via interface.hpp}' "$d/CMakeLists.txt"
+  echo "  libmavconn: +ament_export_dependencies(ASIO)"
+fi
+
+# --- Lane 3 (humble + jazzy, same file/macro; only humble's yaml-cpp 0.7.0
+#     actually hits this branch since jazzy's yaml_cpp_vendor exports a native
+#     yaml-cpp::yaml-cpp target per the macro's own comment): ros2_medkit_cmake's
+#     medkit_find_yaml_cpp() falls back to find_library(yaml-cpp)/find_path(...)
+#     when no yaml-cpp::yaml-cpp target exists, but yaml_cpp_vendor's lib/include
+#     live under the nested install/opt/yaml_cpp_vendor/{lib,include} prefix,
+#     which isn't in CMAKE_PREFIX_PATH's default <prefix>/lib search -> both
+#     find_library/find_path miss it -> FATAL_ERROR "Could not find yaml-cpp
+#     library". cmake/toolchain.cmake already exports ${YAML_CPP_LIBRARIES} /
+#     ${YAML_CPP_INCLUDE_DIRS} as absolute-path CACHE vars for exactly this
+#     (same proven idiom as the rmf_traffic_editor fix) -> try them as a 3rd
+#     fallback tier before giving up. Compile-tested: N/A (pure CMake macro
+#     edit); verified structurally that YAML_CPP_LIBRARIES/YAML_CPP_INCLUDE_DIRS
+#     are set unconditionally, globally, before any package configures. ---
+d="$(_pkg_dir ros2_medkit_cmake)"
+if [ -n "$d" ] && [ -f "$d/cmake/ROS2MedkitCompat.cmake" ] && ! grep -q 'elseif(YAML_CPP_LIBRARIES AND YAML_CPP_INCLUDE_DIRS)' "$d/cmake/ROS2MedkitCompat.cmake"; then
+  perl -0pi -e 's/( *)else\(\)\n( *message\(FATAL_ERROR)/$1elseif(YAML_CPP_LIBRARIES AND YAML_CPP_INCLUDE_DIRS)\n$1  add_library(yaml-cpp::yaml-cpp IMPORTED INTERFACE)\n$1  set_target_properties(yaml-cpp::yaml-cpp PROPERTIES\n$1    INTERFACE_LINK_LIBRARIES "\${YAML_CPP_LIBRARIES}"\n$1    INTERFACE_INCLUDE_DIRECTORIES "\${YAML_CPP_INCLUDE_DIRS}"\n$1  )\n$1  message(STATUS "[MedkitCompat] yaml-cpp: created target from toolchain YAML_CPP_LIBRARIES")\n$1else()\n$2/' "$d/cmake/ROS2MedkitCompat.cmake"
+  echo "  ros2_medkit_cmake: medkit_find_yaml_cpp() falls back to toolchain YAML_CPP_LIBRARIES/YAML_CPP_INCLUDE_DIRS"
+fi
+
+# --- Lane 1b (jazzy+kilted only, same commit e2600e98; absent from humble):
+#     multisensor_calibration's own CMakeLists.txt:89 does bare
+#     `find_package(tinyxml2 REQUIRED)` (no CONFIG keyword) -> CMake tries
+#     Module mode first. ros2/tinyxml2_vendor installs a Find-module at
+#     install/share/tinyxml2_vendor/cmake/Modules/FindTinyXML2.cmake (proper
+#     ROS-style case) into the workspace's global CMAKE_MODULE_PATH. On
+#     macOS's case-insensitive filesystem, CMake's search for
+#     "Findtinyxml2.cmake" matches that file anyway (CMake itself emits an
+#     author warning: "does not match the case of the module file name on
+#     disk ... may fail on case-sensitive file systems") and includes it, but
+#     it sets `TinyXML2_FOUND` (its own case), never the lowercase
+#     `tinyxml2_FOUND` ament_target_dependencies() actually checks (it keys
+#     off the literal name passed to find_package) -> "the passed package
+#     name 'tinyxml2' was not found before". On Linux (case-sensitive), the
+#     Module-mode search for "Findtinyxml2.cmake" simply misses and CMake
+#     falls through to Config mode, finding brew/apt's real tinyxml2 config
+#     and setting tinyxml2_FOUND correctly -> macOS-only bug, reproduced and
+#     confirmed locally (a scratch CMake project with the same module path +
+#     brew tinyxml2 config: bare find_package(tinyxml2) leaves tinyxml2_FOUND
+#     empty; find_package(tinyxml2 CONFIG) sets it). Fix: force Config mode
+#     for this one find_package call so it skips the module-mode collision
+#     entirely, functionally identical to today's behavior on Linux.
+#     Compile-tested: yes, real `cmake` configure reproducing both the bug
+#     and the fix against brew's tinyxml2-config.cmake. ---
+d="$(_pkg_dir multisensor_calibration)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q '^find_package(tinyxml2 REQUIRED)$' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" 's/^find_package(tinyxml2 REQUIRED)$/find_package(tinyxml2 REQUIRED CONFIG)/' "$d/CMakeLists.txt"
+  echo "  multisensor_calibration: find_package(tinyxml2 REQUIRED CONFIG) — force Config mode, dodge case-insensitive Module-mode collision with tinyxml2_vendor's FindTinyXML2.cmake"
+fi
+
+# --- cloudini_lib: benchmarks/CMakeLists.txt's pcd_benchmark target does
+#     `find_package(Draco QUIET)` then, when found, compiles pcd_benchmark.cpp
+#     with -DDRACO_FOUND (activating real draco::EncoderBuffer/PointCloudBuilder/
+#     ExpertEncoder calls) but links it via the bare variable ${DRACO_LIBRARIES}.
+#     Homebrew's draco ships Config-mode only (draco-config.cmake ->
+#     draco-targets.cmake), which defines the IMPORTED targets draco::draco /
+#     draco::draco_static (carrying their own INTERFACE_INCLUDE_DIRECTORIES) and
+#     never sets the old Module-mode DRACO_LIBRARIES/DRACO_INCLUDE_DIRS variables
+#     at all -> the link line silently drops all draco symbols while the object
+#     file still references them -> "Undefined symbols for architecture arm64"
+#     (draco::EncoderBuffer::Clear() etc.) at the final link, after a clean
+#     compile (headers already resolve via the global /opt/homebrew/include path
+#     this toolchain adds for CLI11, so the missing DRACO_INCLUDE_DIRS never
+#     surfaced as its own error). Fix: link the real imported target instead of
+#     the always-empty variable, gated on Draco_FOUND via a generator expression
+#     so an environment without draco still configures/links exactly as before
+#     (empty $<BOOL:...> substitutes to nothing). Compile-tested: a real `cmake`
+#     configure+build against the installed brew draco-config.cmake — old form
+#     (${DRACO_LIBRARIES}) mirrors the CI failure once draco headers are on the
+#     include path (undefined draco symbols at link); new form (draco::draco
+#     target) links clean.
+d="$(_pkg_dir cloudini_lib)"
+f="$d/benchmarks/CMakeLists.txt"
+if [ -n "$d" ] && [ -f "$f" ] && grep -qF '${DRACO_LIBRARIES}' "$f"; then
+  sed "${SEDI[@]}" 's#\${DRACO_LIBRARIES}#$<$<BOOL:${Draco_FOUND}>:draco::draco>#' "$f"
+  echo "  cloudini_lib: pcd_benchmark links draco::draco (imported target) instead of the never-set \${DRACO_LIBRARIES} — fixes undefined draco symbols at link"
+fi
+
+# --- data_tamer_cpp (all 3): its gtest tests link against the wrong gtest ---------------------
+#     The library builds; only tests/datatamer_test fails, with undefined symbols whose
+#     parameters are std::basic_string_view:
+#       "testing::internal::AssertHelper::AssertHelper(TestPartResult::Type,
+#          std::__1::basic_string_view<char,...>, int, std::__1::basic_string_view<...>)"
+#       "testing::internal::PrintStringTo(std::__1::basic_string_view<char,...>, ostream*)"
+#     i.e. it compiled against brew googletest (1.18.0, which moved those internals to
+#     string_view) and linked against the older gtest_vendor library. We do not run tests in
+#     this CI, so flip the package's own option off rather than trying to reconcile two gtests.
+#     Idempotent (the ON spelling is gone afterwards). ---
+#     Upstream has spelled the default three ways now (ON, then ${PROJECT_IS_TOP_LEVEL}),
+#     and under colcon every package IS the top-level project, so match whatever default is
+#     there rather than one literal -- the old 'ON)' matcher silently stopped firing when
+#     upstream moved to ${PROJECT_IS_TOP_LEVEL} and the tests came back. The
+#     ci-datatamer-no-tests marker keeps this idempotent. ---
+_f="$(_pkg_cml data_tamer_cpp)"
+if [ -n "$_f" ] && grep -qE 'option\(DATA_TAMER_BUILD_TESTS "Build tests" ' "$_f" \
+   && ! grep -q 'ci-datatamer-no-tests' "$_f"; then
+  perl -pi -e 's{option\(DATA_TAMER_BUILD_TESTS "Build tests" [^)]*\)}{option(DATA_TAMER_BUILD_TESTS "Build tests" OFF)  # ci-datatamer-no-tests: gtest header/lib skew}' "$_f"
+  echo "  data_tamer_cpp: DATA_TAMER_BUILD_TESTS -> OFF in ${_f#$ROOT/}"
+fi
+
+# --- mrpt_libbase (all 3): MRPT's tinyxml2 path does not compile here -------------------------
+#     mrpt_libbase builds upstream MRPT as an ExternalProject. Its tinyxml2 detection finds a
+#     system tinyxml2 and sets MRPT_HAS_TINYXML2, but the include directory never reaches the
+#     mrpt_obs compile line, so the guarded block compiles without a usable header:
+#       VelodyneCalibration.cpp:41:7: error: use of undeclared identifier 'tinyxml2'  (x30)
+#     MRPT exposes DISABLE_TINYXML2 (modules/mrpt_obs/cmake/script_tinyxml2.cmake returns early
+#     and leaves CMAKE_MRPT_HAS_TINYXML2 at 0), which compiles the block out. Same lever as the
+#     -DDISABLE_JSONCPP=ON already passed there.
+#     TRADE-OFF: this drops MRPT's Velodyne calibration-from-XML support. Nothing in this
+#     workspace is known to use it; revisit if a Velodyne consumer needs it.
+#     Idempotent (guarded on the flag being absent). ---
+_f="$(_pkg_cml mrpt_libbase)"
+if [ -n "$_f" ] && grep -q 'DISABLE_JSONCPP=ON' "$_f" && ! grep -q 'DISABLE_TINYXML2' "$_f"; then
+  perl -pi -e 's{(^\s*)-DDISABLE_JSONCPP=ON}{$1-DDISABLE_JSONCPP=ON\n$1-DDISABLE_TINYXML2=ON   # ci-mrpt-no-tinyxml2}m' "$_f"
+  echo "  mrpt_libbase: +-DDISABLE_TINYXML2=ON in ${_f#$ROOT/}"
+fi
+
+echo "source patches applied."
+# --- cartographer: declares <depend>libceres-dev</depend> (Linux rosdep key), NOT the
+#     vendored `ceres-solver` colcon package, so colcon does not order it after
+#     ceres-solver. Both are 00_base_core and build in parallel -> cartographer's
+#     find_package(Ceres REQUIRED) at CMakeLists:39 configures (~7.75s) before ceres
+#     finishes (~15min) -> "Could not find Ceres". Inject a colcon build_depend so
+#     ceres-solver builds first. (macOS-CI-only; on Linux ceres is the system pkg.) ---
+d="$(_pkg_dir cartographer)"
+if [ -n "$d" ] && [ -f "$d/package.xml" ] && ! grep -q '<build_depend>ceres-solver' "$d/package.xml"; then
+  perl -0pi -e 's{(\n\s*<depend>libceres-dev</depend>)}{$1\n  <build_depend>ceres-solver</build_depend>}' "$d/package.xml"
+  echo "  cartographer: +build_depend ceres-solver (colcon ordering vs find_package(Ceres) race)"
+fi
+
+# --- kuka_external_control_sdk: iiqka/CMakeLists.txt hardcodes the grpc codegen plugin as
+#     "protoc-gen-grpc=/usr/bin/grpc_cpp_plugin" (the Debian path) -> "program not found" on
+#     macOS, where it is Homebrew's /opt/homebrew/bin/grpc_cpp_plugin. Repoint it. ---
+d="$(_pkg_dir kuka_external_control_sdk)"
+if [ -n "$d" ]; then
+  for f in $(grep -rl '/usr/bin/grpc_cpp_plugin' "$d" 2>/dev/null); do
+    sed "${SEDI[@]}" 's#/usr/bin/grpc_cpp_plugin#/opt/homebrew/bin/grpc_cpp_plugin#g' "$f"
+    echo "  kuka_external_control_sdk: grpc_cpp_plugin /usr/bin -> /opt/homebrew/bin ($f)"
+  done
+fi
+
+# --- kuka_external_control_sdk: iiqka's protobuf target puts only the generated-code
+#     binary dir on its include path, never ${Protobuf_INCLUDE_DIRS}. The generated
+#     .pb.h does #include "google/protobuf/runtime_version.h", so it then depends on the
+#     toolchain's global -I/opt/homebrew/include -> EMPTY after the gz step's
+#     `brew unlink protobuf` -> "runtime_version.h file not found". kuka's FindProtobuf
+#     resolves protoc AND headers to the SAME protobuf (32.0, via ros2/workspace prefix,
+#     which HAS runtime_version.h) — it just never adds that include dir to the target.
+#     Add ${Protobuf_INCLUDE_DIRS} so the resolved protobuf's headers are on the path,
+#     matching the protoc that generated the code. Validated: kuka's FindProtobuf module
+#     resolves Protobuf_INCLUDE_DIRS to a dir containing runtime_version.h. ---
+for _kc in $(find "$ROOT" -path '*kuka_external_control_sdk/iiqka/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if ! grep -q 'Protobuf_INCLUDE_DIRS' "$_kc"; then
+    perl -0pi -e 's{(target_include_directories\(kuka-iiqka-client-library-protobuf PUBLIC\n\s*"\$<BUILD_INTERFACE:\$\{CMAKE_CURRENT_BINARY_DIR\}>"\n)}{$1  \$\{Protobuf_INCLUDE_DIRS\}\n}' "$_kc"
+    echo "  kuka_external_control_sdk: +\${Protobuf_INCLUDE_DIRS} to iiqka protobuf target (runtime_version.h after brew unlink)"
+  fi
+done
+
+# --- foxglove_bridge: its CMakeLists only has download arms for Linux aarch64/x86_64 and
+#     message(FATAL_ERROR) on every other platform. Foxglove DOES publish a macOS build
+#     (foxglove-v<ver>-cpp-aarch64-apple-darwin.zip). Add a Darwin/arm64 elseif before the
+#     else() so the prebuilt SDK is fetched on macOS. (SHA256 verified for v0.27.0.) PR-able. ---
+d="$(_pkg_dir foxglove_bridge)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'aarch64-apple-darwin' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{(set\(FOXGLOVE_SDK_SHA "4790dad[0-9a-f]+"\)\s*\n)(\s*else\(\))}{$1elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")\n  set(FOXGLOVE_SDK_PLATFORM "aarch64-apple-darwin")\n  set(FOXGLOVE_SDK_SHA "70c6e59cf757ac0480912c13cb2c630a3839de34eba428ef717411dae6b1688e")\n$2}' "$d/CMakeLists.txt"
+  echo "  foxglove_bridge: +Darwin/arm64 SDK download arm"
+fi
+
+# foxglove_bridge +#include <map> (libc++) MIGRATED to id_foxglove_sdk fork.
+
+
+
+
+# --- ess_imu_driver2: links Linux-only libs `crypt` (libcrypt) and `rt` (librt)
+#     in target_link_libraries(ess_imu_driver2_node ...). macOS has crypt() and the
+#     realtime clock funcs in libSystem (no separate libcrypt/librt) -> "ld: library
+#     'crypt' not found". Strip both standalone link lines (macOS-only CI patch). ---
+for _f in $(find "$ROOT" -path '*ess_imu_driver2/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -qE '^[[:space:]]*crypt[[:space:]]*$' "$_f"; then
+    perl -ni -e 'print unless /^\s*(crypt|rt)\s*$/' "$_f"
+    echo "  ess_imu_driver2: strip Linux-only crypt/rt link libs in ${_f#$ROOT/}"
+  fi
+done
+
+# roadmap_explorer Logger.hpp high_resolution_clock->system_clock (libc++) MIGRATED to id_roadmap_explorer fork.
+
+# --- GNU-ld link flags Apple ld64 rejects ("ld: unknown options: ..."): strip on macOS.
+#     rosgraph_monitor add_link_options(-Wl,--no-undefined) under an "OR Clang" guard that
+#     AppleClang matches -> applied; ublox_dgnss_node LINKER:--allow-multiple-definition
+#     unguarded. (broll's --no-undefined is already NOT-APPLE-guarded -> no-op.) These are
+#     macOS-CI-only strips; the flags stay on Linux/upstream. ---
+for _f in $(find "$ROOT" \( -path '*rosgraph_monitor/CMakeLists.txt' -o -path '*ublox_dgnss_node/CMakeLists.txt' -o -path '*rosbag2_broll/broll/CMakeLists.txt' \) -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -qE '"-Wl,--no-undefined"|LINKER:--allow-multiple-definition' "$_f"; then
+    perl -ni -e 'print unless /"-Wl,--no-undefined"|LINKER:--allow-multiple-definition/' "$_f"
+    echo "  strip GNU-ld flag (no-undefined/allow-multiple-definition) in ${_f#$ROOT/}"
+  fi
+done
+
+# --- camera_aravis2: its bundled CMakeModules/FindARAVIS.cmake searches only Linux
+#     include paths (/usr/local/include/aravis-X, /usr/include/aravis-X) for arv.h, so
+#     the header isn't found on macOS (brew puts it under /opt/homebrew/include/aravis-X)
+#     -> "Could NOT find ARAVIS (missing ARAVIS_INCLUDE_DIRS)". Add the brew paths.
+#     Compile-tested locally (aravis 0.8.36): find_package(ARAVIS) FOUND=TRUE. ---
+for _f in $(find "$ROOT" -path '*camera_aravis2/CMakeModules/FindARAVIS.cmake' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if ! grep -q 'homebrew/include/aravis' "$_f"; then
+    perl -0pi -e 's{(  /usr/include/aravis-\$\{ARAVIS_VERSION\}\n)}{$1  /opt/homebrew/include/aravis-\$\{ARAVIS_VERSION\}\n  /opt/homebrew/opt/aravis/include/aravis-\$\{ARAVIS_VERSION\}\n}' "$_f"
+    echo "  camera_aravis2 FindARAVIS: +brew include paths in ${_f#$ROOT/}"
+  fi
+done
+
+# --- yaml_cpp_vendor: the vendored yaml-cpp-config sets
+#     YAML_CPP_LIBRARIES="@EXPORT_TARGETS@" -> the BARE name "yaml-cpp", so every
+#     consumer using ${YAML_CPP_LIBRARIES} emits a fragile -lyaml-cpp AND clobbers the
+#     toolchain's absolute-path override. Patch yaml-cpp's config template to set
+#     YAML_CPP_LIBRARIES to the imported target yaml-cpp::yaml-cpp (carries the absolute
+#     .dylib path; both versions define it via install(EXPORT NAMESPACE yaml-cpp::)).
+#     humble (0.7.0 ExternalProject, unforked upstream): add a PATCH_COMMAND here.
+#     jazzy/kilted (0.8.0) carry the same change as patches/0002 IN the id_yaml_cpp_vendor
+#     fork (ament_vendor globs patches/). Tested: git apply -p1 clean on both tags. ---
+d="$(_pkg_dir yaml_cpp_vendor)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ]; then
+  if grep -q 'ExternalProject_Add(yaml_cpp-0.7.0' "$d/CMakeLists.txt" && ! grep -q 'yaml-cpp-libraries-target' "$d/CMakeLists.txt"; then
+    mkdir -p "$d/patches"
+    cat > "$d/patches/0001-yaml-cpp-libraries-target.patch" <<'PATCHEOF'
+diff --git a/yaml-cpp-config.cmake.in b/yaml-cpp-config.cmake.in
+index 7b41e3f..a9f513e 100644
+--- a/yaml-cpp-config.cmake.in
++++ b/yaml-cpp-config.cmake.in
+@@ -11,4 +11,4 @@ set(YAML_CPP_INCLUDE_DIR "@CONFIG_INCLUDE_DIRS@")
+ include("${YAML_CPP_CMAKE_DIR}/yaml-cpp-targets.cmake")
+ 
+ # These are IMPORTED targets created by yaml-cpp-targets.cmake
+-set(YAML_CPP_LIBRARIES "@EXPORT_TARGETS@")
++set(YAML_CPP_LIBRARIES yaml-cpp::yaml-cpp)
+PATCHEOF
+    perl -0pi -e 's{(\n[ \t]*URL_MD5 [0-9a-f]+\n)}{$1    PATCH_COMMAND git apply --whitespace=nowarn -p1 \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0001-yaml-cpp-libraries-target.patch\n}' "$d/CMakeLists.txt"
+    echo "  yaml_cpp_vendor (0.7.0): +patches/0001 + PATCH_COMMAND (YAML_CPP_LIBRARIES -> yaml-cpp::yaml-cpp target)"
+  fi
+fi
+
+# --- ouster_ros: ouster_client bundles spdlog+fmt under ouster-sdk/thirdparty, but the
+#     toolchain's global `-isystem /opt/homebrew/include` (brew spdlog, EXTERNAL fmt) is
+#     searched BEFORE ouster's bundled `-isystem .../thirdparty`. brew spdlog has no
+#     fmt/bundled/, so <spdlog/spdlog.h> resolves to brew (fmt 11) while
+#     <spdlog/fmt/bundled/args.h> falls through to ouster's bundled fmt -> two fmt versions
+#     in one TU ("redefinition of 'monostate'", "template parameter redefines default arg").
+#     Add the bundled thirdparty as a plain -I (non-SYSTEM, prepended): -I always beats
+#     -isystem, so ALL <spdlog/*> resolve to the bundled copy -> one fmt. Compile-tested
+#     (Apple clang 21): reproduces 20 errors without, 0 with. ---
+for f in $(find . -path '*ouster-sdk/ouster_client/CMakeLists.txt' 2>/dev/null); do
+  grep -q 'BEFORE PRIVATE.*thirdparty>' "$f" && continue
+  perl -0pi -e 's{(target_include_directories\(ouster_client SYSTEM)}{target_include_directories(ouster_client BEFORE PRIVATE \$<BUILD_INTERFACE:\${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty>)\n$1}' "$f"
+  echo "  ouster_client: bundled thirdparty as non-SYSTEM -I (brew-fmt vs bundled-fmt clash) ($f)"
+done
+
+# --- autoware_map_projection_loader (humble+jazzy, identical commit
+#     9472b3df, absent kilted -- package doesn't exist in kilted's tree) --
+#     same bare-`yaml-cpp` linker-name bug as rmf_traffic_editor/
+#     rmf_traffic_ros2/nebula_velodyne_common above: CMakeLists.txt:21 is
+#     `target_link_libraries(${PROJECT_NAME} yaml-cpp)` -- not a real CMake
+#     target in this scope, so it becomes a raw `-lyaml-cpp` linker flag ->
+#     "ld: library 'yaml-cpp' not found" linking libautoware_map_projection_
+#     loader.dylib. Swapped for the toolchain's own ${YAML_CPP_LIBRARIES}
+#     absolute-path CACHE var (same proven idiom as the 3 prior fixes, and
+#     already used natively upstream by 8+ other in-tree packages per the
+#     toolchain's own comment). Not compile-tested end-to-end (same stated
+#     limitation as rmf_traffic_editor/rmf_traffic_ros2/nebula_velodyne_common:
+#     needs a populated local yaml_cpp_vendor install/ tree to actually
+#     link-test, not available in this checkout, and brew's yaml-cpp is not a
+#     substitute per PLAYBOOK.md's "never use brew yaml" rule); verified
+#     structurally against the real CMakeLists.txt in both trees and
+#     idempotency-checked (2nd run: no match, no double-replace). ---
+d="$(_pkg_dir autoware_map_projection_loader)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'target_link_libraries(${PROJECT_NAME} yaml-cpp)' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e 's/target_link_libraries(${PROJECT_NAME} yaml-cpp)/target_link_libraries(${PROJECT_NAME} ${YAML_CPP_LIBRARIES})/' \
+    "$d/CMakeLists.txt"
+  echo "  autoware_map_projection_loader: bare yaml-cpp -> \${YAML_CPP_LIBRARIES}"
+fi
+
+# --- autoware_test_utils (humble+jazzy, identical commit 9472b3df, absent
+#     kilted) -- same bare-`yaml-cpp` linker-name bug as
+#     autoware_map_projection_loader/rmf_traffic_editor/rmf_traffic_ros2/
+#     nebula_velodyne_common above, but 2 separate occurrences in one file:
+#     `target_link_libraries(autoware_test_utils\n  yaml-cpp\n)` (multi-line)
+#     and `target_link_libraries(topic_snapshot_saver autoware_test_utils
+#     yaml-cpp)` (single-line). Despite `find_package(yaml-cpp REQUIRED)`
+#     succeeding (yaml_cpp_vendor exports a native, but NAMESPACED,
+#     `yaml-cpp::yaml-cpp` target on jazzy/kilted's yaml-cpp 0.8.0 -- no bare
+#     `yaml-cpp` alias), the bare name in target_link_libraries() doesn't
+#     match any known target -> raw `-lyaml-cpp` linker flag -> "ld: library
+#     'yaml-cpp' not found". Swapped both for ${YAML_CPP_LIBRARIES}. Not
+#     compile-tested end-to-end (same stated limitation as the other 3
+#     yaml-cpp fixes -- no populated local yaml_cpp_vendor install/ tree, and
+#     brew's yaml-cpp is not a substitute per PLAYBOOK.md); verified
+#     structurally against the real CMakeLists.txt (both occurrences replaced,
+#     diff clean) and idempotency-checked (2nd run: no match, no
+#     double-replace). ---
+d="$(_pkg_dir autoware_test_utils)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^  yaml-cpp$' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e 's/^  yaml-cpp$/  ${YAML_CPP_LIBRARIES}/' \
+    -e 's/target_link_libraries(topic_snapshot_saver autoware_test_utils yaml-cpp)/target_link_libraries(topic_snapshot_saver autoware_test_utils ${YAML_CPP_LIBRARIES})/' \
+    "$d/CMakeLists.txt"
+  echo "  autoware_test_utils: bare yaml-cpp (x2) -> \${YAML_CPP_LIBRARIES}"
+fi
+
+# --- sync_tooling_msgs (humble+jazzy, identical commit e631c5f0, absent
+#     kilted) -- CMakeLists.txt does `find_package(Protobuf 3.12 REQUIRED)`
+#     (CMake's bundled Module-mode FindProtobuf.cmake) and links the legacy
+#     ${Protobuf_LIBRARIES} var (a bare path to libprotobuf.dylib). Two
+#     stacked bugs, only the first visible in CI (compile fails before the
+#     link step is ever reached):
+#       1. target_include_directories() never adds ${Protobuf_INCLUDE_DIRS}
+#          (same class as the kuka_external_control_sdk fix above) -> the
+#          generated .pb.h's #include "google/protobuf/runtime_version.h"
+#          falls through to the toolchain's global include path, which is
+#          empty after `brew unlink protobuf` -> "file not found".
+#       2. Even once headers resolve, linking the bare libprotobuf.dylib via
+#          ${Protobuf_LIBRARIES} (Module-mode's legacy variable) omits
+#          protobuf's Abseil dependencies (modern protobuf/Abseil split the
+#          runtime; the real link requirements only live on the CONFIG
+#          package's protobuf::libprotobuf IMPORTED target's
+#          INTERFACE_LINK_LIBRARIES, ~35 absl:: components) -> "ld: symbol(s)
+#          not found for architecture arm64" (undefined absl::log_internal::*
+#          etc, referenced by the generated .pb.cc files) — only surfaces
+#          after fixing bug 1, so CI never got far enough to show it.
+#     Real fix: switch to CONFIG mode (`find_package(Protobuf REQUIRED
+#     CONFIG)`, dropping the "3.12" version pin -- protobuf's CONFIG version
+#     file enforces same-major-version compat and rejects "3.12" against the
+#     installed 32.x/6.32.x series, so a versioned CONFIG request errors
+#     outright; 3.12 was a vestigial floor far below anything actually
+#     installed) and link protobuf::libprotobuf directly, which carries both
+#     its own include dirs AND the full Abseil link set as usage
+#     requirements -- no manual ${Protobuf_INCLUDE_DIRS}/absl:: list needed.
+#     protobuf::protoc's IMPORTED_LOCATION isn't set by this brew formula
+#     (only the *_RELEASE config-suffixed property is), so derive
+#     Protobuf_PROTOC_EXECUTABLE from that with a plain-property fallback for
+#     robustness across protobuf formula revisions.
+#     Compile+link-tested end-to-end: real protoc codegen + cmake build of
+#     all 27 real .proto files from this submodule (not a toy proto),
+#     against real brew protobuf 32.0/Abseil, using this exact transform --
+#     rc=0, produced libsync_tooling_msgs.dylib linking cleanly against
+#     libprotobuf + ~15 libabsl_*.dylib (verified via otool -L). The naive
+#     "just add Protobuf_INCLUDE_DIRS" fix (bug 1 alone, matching the
+#     kuka_external_control_sdk precedent) was tried FIRST and confirmed via
+#     this same local probe to compile but then fail at link with the
+#     Abseil symbols -- not committed, since PLAYBOOK.md says don't commit a
+#     transform known to be incomplete. ---
+d="$(_pkg_dir sync_tooling_msgs)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -q 'find_package(Protobuf 3.12 REQUIRED)' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/find_package\(Protobuf 3\.12 REQUIRED\)/find_package(Protobuf REQUIRED CONFIG)\nget_target_property(Protobuf_PROTOC_EXECUTABLE protobuf::protoc IMPORTED_LOCATION_RELEASE)\nif(NOT Protobuf_PROTOC_EXECUTABLE)\n  get_target_property(Protobuf_PROTOC_EXECUTABLE protobuf::protoc IMPORTED_LOCATION)\nendif()/' "$d/CMakeLists.txt"
+  sed "${SEDI[@]}" 's/target_link_libraries(sync_tooling_msgs PUBLIC \${Protobuf_LIBRARIES})/target_link_libraries(sync_tooling_msgs PUBLIC protobuf::libprotobuf)/' "$d/CMakeLists.txt"
+  echo "  sync_tooling_msgs: Protobuf Module->CONFIG mode + protobuf::libprotobuf (Abseil link deps)"
+fi
+
+
+# --- broll (ros-tooling/rosbag2_broll, same commit all 3 present): decode_node_component
+#     hardcodes `target_link_options(... "-Wl,--no-undefined")` (GNU-ld-only flag) ->
+#     "ld: unknown options: --no-undefined". Apple's ld64 already defaults to erroring on
+#     undefined symbols for a shared lib with no `-undefined dynamic_lookup` override, so
+#     dropping the flag on macOS is a no-op behavior change (same reasoning as the
+#     rmw_stats_shim --no-undefined fix). ---
+d="$(_pkg_dir broll)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^target_link_options\(decode_node_component PRIVATE "-Wl,--no-undefined"\)$' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/target_link_options\(decode_node_component PRIVATE "-Wl,--no-undefined"\)/if(NOT APPLE)\n  target_link_options(decode_node_component PRIVATE "-Wl,--no-undefined")\nendif()/' "$d/CMakeLists.txt"
+  echo "  broll: guard GNU-ld-only -Wl,--no-undefined with if(NOT APPLE)"
+fi
+
+# --- ffw_joint_trajectory_command_broadcaster (jazzy only): -Wsign-conversion promoted to
+#     -Werror. int32_t delay_ns implicitly narrows to the uint32_t nanoseconds param of
+#     rclcpp::Duration(int32_t, uint32_t). Explicit cast, no behavior change. ---
+d="$(_pkg_dir ffw_joint_trajectory_command_broadcaster)"
+if [ -n "$d" ] && [ -f "$d/src/joint_trajectory_command_broadcaster.cpp" ] && grep -q 'rclcpp::Duration(0, delay_ns)' "$d/src/joint_trajectory_command_broadcaster.cpp"; then
+  sed "${SEDI[@]}" 's/rclcpp::Duration(0, delay_ns)/rclcpp::Duration(0, static_cast<uint32_t>(delay_ns))/' "$d/src/joint_trajectory_command_broadcaster.cpp"
+  echo "  ffw_joint_trajectory_command_broadcaster: explicit cast delay_ns -> uint32_t"
+fi
+
+# --- husarion_ugv_lights (humble+jazzy, different per-distro commits but identical
+#     CMakeLists construct): bare `yaml-cpp` as a target_link_libraries() name on the two
+#     real (non-test) targets -> "ld: library 'yaml-cpp' not found". Same class of bug as
+#     rmf_traffic_editor/nebula_velodyne_common/autoware_test_utils; swap for
+#     ${YAML_CPP_LIBRARIES}. ---
+d="$(_pkg_dir husarion_ugv_lights)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qE '^target_link_libraries\(animation_plugins png yaml-cpp\)$' "$d/CMakeLists.txt"; then
+  sed "${SEDI[@]}" \
+    -e 's/^target_link_libraries(animation_plugins png yaml-cpp)$/target_link_libraries(animation_plugins png ${YAML_CPP_LIBRARIES})/' \
+    -e 's/^target_link_libraries(lights_controller_node_component yaml-cpp$/target_link_libraries(lights_controller_node_component ${YAML_CPP_LIBRARIES}/' \
+    "$d/CMakeLists.txt"
+  echo "  husarion_ugv_lights: bare yaml-cpp (x2, non-test targets) -> \${YAML_CPP_LIBRARIES}"
+fi
+
+# ros_babel_fish_tools bare yaml-cpp -> yaml-cpp::yaml-cpp target MIGRATED to id_ros_babel_fish fork.
+
+# ur_client_library httplib accept4 Linux-guard MIGRATED to id_Universal_Robots_Client_Library fork.
+
+# --- ublox_gps (all 3, identical commit): own cmake/Findasio.cmake does a bare
+#     find_path(asio.hpp) with NO PATHS at all -> never finds brew's keg-only-adjacent
+#     asio (installed at /opt/homebrew/opt/asio/include, not always symlinked into
+#     /opt/homebrew/include). Same class of fix as the libmavconn FindASIO.cmake patch
+#     above (Lane 1b), different file. ---
+d="$(_pkg_dir ublox_gps)"
+f="$d/cmake/Findasio.cmake"
+if [ -n "$d" ] && [ -f "$f" ] && grep -q 'find_path(ASIO_INCLUDE_DIR NAMES asio.hpp)' "$f"; then
+  sed "${SEDI[@]}" 's#find_path(ASIO_INCLUDE_DIR NAMES asio.hpp)#find_path(ASIO_INCLUDE_DIR NAMES asio.hpp PATHS /opt/homebrew/include /opt/homebrew/opt/asio/include)#' "$f"
+  echo "  ublox_gps: Findasio.cmake += /opt/homebrew include dirs"
+fi
+
+# --- ublox_gps (all 3): two more asio fixes so it actually builds. (a) Findasio
+#     sets ASIO_INCLUDE_DIR but the CMakeLists never puts it on the target include
+#     path (it only references the empty asio_LIBRARIES), so asio/*.hpp is "file not
+#     found" -> propagate the include dir. (b) async_worker.hpp uses the removed
+#     asio::io_service / io_service::post; the found asio (brew 1.3x / Fast-DDS) has
+#     no io_service -> port to io_context + asio::post (same class as io_context).
+#     Verified: ported async_worker.hpp compiles against the Fast-DDS asio. ---
+d="$(_pkg_dir ublox_gps)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ASIO_INCLUDE_DIR}) # ci-asio-include' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's{(find_package\(asio REQUIRED\)\n)}{$1include_directories(SYSTEM \$\{ASIO_INCLUDE_DIR\}) # ci-asio-include\n}' "$d/CMakeLists.txt"
+  echo "  ublox_gps: CMakeLists propagate ASIO_INCLUDE_DIR to targets"
+fi
+
+# --- cx_config_plugin (ros-drivers/clips_executive, jazzy+kilted, dir named
+#     config_plugin): `if(NOT CMAKE_CXX_STANDARD) set(CMAKE_CXX_STANDARD 20) endif()`
+#     never fires because the repo-wide cmake/toolchain.cmake already sets
+#     CMAKE_CXX_STANDARD=17 (applied via CMAKE_TOOLCHAIN_FILE before project()) -> the
+#     package silently builds at C++17 -> std::string::starts_with/ends_with (C++20)
+#     don't exist -> "no member named 'starts_with'". Force 20 unconditionally for this
+#     package (matches its own stated intent), overriding the toolchain default just for
+#     this target's directory scope. ---
+d="$(_pkg_dir config_plugin)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && grep -qF 'if(NOT CMAKE_CXX_STANDARD)' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/if\(NOT CMAKE_CXX_STANDARD\)\n  set\(CMAKE_CXX_STANDARD 20\)\nendif\(\)/set(CMAKE_CXX_STANDARD 20)/' "$d/CMakeLists.txt"
+  echo "  cx_config_plugin: force CMAKE_CXX_STANDARD 20 (toolchain's global 17 was defeating the guard)"
+fi
+
+
+# --- plansys2_bringup (SMACC2-adjacent, all 3 different per-distro commits, same
+#     construct): plansys2_node.cpp calls the raw Linux syscall wrapper
+#     sched_setscheduler(0, SCHED_FIFO, &sch) with no include and no macOS path ->
+#     "use of undeclared identifier 'sched_setscheduler'". macOS has no equivalent
+#     process-wide syscall; the closest portable analog is pthread_setschedparam() on the
+#     calling thread. Guard: real Linux behavior unchanged, macOS gets the pthread
+#     equivalent. ---
+d="$(_pkg_dir plansys2_bringup)"
+f="$d/src/plansys2_bringup/plansys2_node.cpp"
+if [ -n "$d" ] && [ -f "$f" ] && grep -q 'sched_setscheduler(0, SCHED_FIFO, &sch) == -1' "$f"; then
+  perl -0pi -e 's/if \(sched_setscheduler\(0, SCHED_FIFO, &sch\) == -1\) \{/#ifdef __linux__\n        bool sched_failed = (sched_setscheduler(0, SCHED_FIFO, &sch) == -1);\n#else\n        bool sched_failed = (pthread_setschedparam(pthread_self(), SCHED_FIFO, &sch) != 0);\n#endif\n        if (sched_failed) {/' "$f"
+  echo "  plansys2_bringup: sched_setscheduler -> pthread_setschedparam on non-Linux"
+fi
+
+# find_object_2d drop CMP0043/CMP0042 OLD (humble) MIGRATED to id_find_object fork.
+
+# --- rc_dynamics_api (all 3, identical commit): net_utils.cc + data_receiver.h use
+#     TEMP_FAILURE_RETRY(), a glibc-only <unistd.h> extension macro with no macOS/libc++
+#     equivalent -> "use of undeclared identifier". The wrapped calls (inet_pton, etc.)
+#     don't need EINTR-retry semantics here; add a local fallback macro that just
+#     evaluates the expression once, matching the class of shim commonly used for
+#     portable code (BSD/macOS libc simply never defines this macro). ---
+for _f in $(find "$ROOT" -path '*rc_dynamics_api/rc_dynamics_api/net_utils.cc' -o -path '*rc_dynamics_api/rc_dynamics_api/data_receiver.h' 2>/dev/null); do
+  if grep -q 'TEMP_FAILURE_RETRY' "$_f" && ! grep -q '#ifndef TEMP_FAILURE_RETRY' "$_f"; then
+    perl -0pi -e 's/(#include <unistd\.h>\n)/$1\n#ifndef TEMP_FAILURE_RETRY\n#define TEMP_FAILURE_RETRY(expression) (expression)\n#endif\n/' "$_f"
+    echo "  rc_dynamics_api: add TEMP_FAILURE_RETRY fallback macro in ${_f#$ROOT/}"
+  fi
+done
+
+# --- battery_state_broadcaster duplicate-name collision (jazzy/kilted): the
+#     third-party ros_battery_monitoring stack (ipa320) ships a package literally
+#     named "battery_state_broadcaster" (v1.2.0) that collides with the official
+#     ros2_controllers "battery_state_broadcaster" (v4.x/5.x). Two packages sharing
+#     one name is invalid in a colcon workspace -> discovery ambiguity, and the
+#     ros2_controllers metapackage exec_depend can't resolve deterministically
+#     ("package.sh not found"). The name-based skip-list (colcon list -> first path)
+#     can't disambiguate two same-named dirs, so drop the third-party duplicate by
+#     PATH. Its sibling battery_state_rviz_overlay is independent (deps: fmt,
+#     sensor_msgs, rclcpp, rviz_2d_overlay_msgs) and keeps building. humble ships
+#     neither package -> no-op there. ---
+for _f in $(find "$ROOT" -path '*ros_battery_monitoring/battery_state_broadcaster/package.xml' 2>/dev/null); do
+  _d="$(dirname "$_f")"
+  if [ ! -f "$_d/COLCON_IGNORE" ]; then
+    touch "$_d/COLCON_IGNORE"
+    echo "  battery_state_broadcaster: COLCON_IGNORE third-party ros_battery_monitoring duplicate (${_d#$ROOT/})"
+  fi
+done
+
+
+
+# --- rviz_2d_overlay_plugins (teamspatzenhirn, all 3): its CMakeLists does
+#     find_package(Qt6 QUIET COMPONENTS Widgets) and, when Qt6 is found, links
+#     Qt6::Widgets. On macOS the base ROS (rviz_common) is Qt5 but the toolchain
+#     makes Qt6 findable (Qt6_DIR, for gz), so QT_MAJOR_VERSION is determined as 5
+#     by rviz_common while this package links Qt6::Widgets ->
+#     "INTERFACE_QT_MAJOR_VERSION property of Qt6::Widgets does not agree ... 5".
+#     Root of the overlay-plugin cascade (etsi_its_rviz_plugins, polygon_rviz_plugins,
+#     rqt_image_overlay, autoware_*_rviz_plugin, hri_rviz). Force Qt5 to match the base. ---
+for _f in $(find "$ROOT" -path '*rviz_2d_overlay_plugins/rviz_2d_overlay_plugins/CMakeLists.txt' 2>/dev/null); do
+  if grep -q 'find_package(Qt6 QUIET COMPONENTS Widgets)' "$_f"; then
+    perl -0777 -pi -e 's{find_package\(Qt6 QUIET COMPONENTS Widgets\).*?set\(qt_widgets_target Qt6::Widgets\)\n\s*endif\(\)}{# ci: base ROS (rviz_common) is Qt5; the toolchain makes Qt6 findable (for gz),\n# so picking Qt6::Widgets clashes with the Qt5 rviz. Force Qt5 to match the base.\nfind_package(Qt5 REQUIRED COMPONENTS Widgets)\nset(qt_widgets_target Qt5::Widgets)}s' "$_f"
+    echo "  rviz_2d_overlay_plugins: force Qt5::Widgets (Qt5 base vs findable Qt6) in ${_f#$ROOT/}"
+  fi
+done
+
+# --- jsoncpp (brew) ships jsoncppConfig.cmake but NO jsoncppConfigVersion.cmake, so
+#     any version-checked find_package(JsonCpp <ver>) reads the version as "unknown"
+#     and REJECTS it. VTK 9.6 does find_package(JsonCpp 0.7.0) -> fails -> the
+#     JsonCpp::JsonCpp target is never created -> VTK::jsoncpp references a missing
+#     target and VTK config breaks. Downstream: PCL's find_external_library(VTK)
+#     then reports "visualization is required but vtk was not found", so every
+#     PCL-visualization / VTK consumer fails (grid_map_pcl, rtabmap_rviz_plugins,
+#     navmap_rviz_plugin, pcl_conversions consumers, ...). Synthesize the missing
+#     ConfigVersion file (version-only; any >= request passes). Runs post-brew via the
+#     re-apply step. Verified: with it present, find_package(JsonCpp 0.7.0) FOUND and
+#     find_package(VTK) succeeds. ---
+for _d in /opt/homebrew/lib/cmake/jsoncpp /opt/homebrew/opt/jsoncpp/lib/cmake/jsoncpp; do
+  [ -f "$_d/jsoncppConfig.cmake" ] || continue
+  [ -f "$_d/jsoncppConfigVersion.cmake" ] && continue
+  _jv="$(grep -hoE 'Version: *[0-9.]+' /opt/homebrew/opt/jsoncpp/lib/pkgconfig/jsoncpp.pc 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  [ -z "$_jv" ] && _jv="$(brew list --versions jsoncpp 2>/dev/null | awk '{print $2}')"
+  [ -z "$_jv" ] && _jv="1.9.0"
+  {
+    printf 'set(PACKAGE_VERSION "%s")\n' "$_jv"
+    printf 'if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)\n'
+    printf '  set(PACKAGE_VERSION_COMPATIBLE FALSE)\n'
+    printf 'else()\n'
+    printf '  set(PACKAGE_VERSION_COMPATIBLE TRUE)\n'
+    printf '  if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)\n'
+    printf '    set(PACKAGE_VERSION_EXACT TRUE)\n'
+    printf '  endif()\n'
+    printf 'endif()\n'
+  } > "$_d/jsoncppConfigVersion.cmake"
+  echo "  jsoncpp: created missing jsoncppConfigVersion.cmake (v$_jv) in $_d (VTK/PCL fix)"
+done
+
+# --- PCL (brew) hardcoded VTK_DIR (post-brew, all 3): PCLConfig.cmake's find_VTK() macro does
+#     set(VTK_DIR "/opt/homebrew/lib/cmake/vtk-9.6" CACHE PATH ...) then find_package(VTK QUIET
+#     COMPONENTS ...). When brew installs a NEWER VTK (currently 9.7) the hardcoded 9.6 path does
+#     not exist, the QUIET find fails, and PCL aborts with "visualization is required but vtk was
+#     not found" -> every PCL-visualization consumer dies at configure (rtabmap_rviz_plugins via
+#     pcl_conversions, multisensor_calibration via pcl_ros, navmap_rviz_plugin, ...). Repoint the
+#     hardcoded brew VTK_DIR at the actually-installed vtk-9.x cmake dir (highest version present).
+#     Only the /opt/homebrew brew path is touched; the PCL_ALL_IN_ONE_INSTALLER 3rdParty paths are
+#     left alone. Idempotent (skips once VTK_DIR already names the real dir). ---
+_vtk_real="$(ls -d /opt/homebrew/lib/cmake/vtk-9.* 2>/dev/null | sort -V | tail -1)"
+if [ -n "$_vtk_real" ]; then
+  for _pcl in /opt/homebrew/share/pcl-1.*/PCLConfig.cmake; do
+    [ -f "$_pcl" ] || continue
+    # (a) Repoint a STALE hardcoded brew VTK_DIR at the actually-installed vtk-9.x. (When the pcl
+    #     bottle was already built against the current vtk, this line is a no-op.)
+    if grep -qE 'set\(VTK_DIR "/opt/homebrew/lib/cmake/vtk-9\.[0-9]+"' "$_pcl" \
+       && ! grep -qE "set\(VTK_DIR \"$_vtk_real\"" "$_pcl"; then
+      sed "${SEDI[@]}" -E "s#(set\(VTK_DIR \")/opt/homebrew/lib/cmake/vtk-9\.[0-9]+(\")#\\1$_vtk_real\\2#" "$_pcl"
+      echo "  pcl: repoint hardcoded brew VTK_DIR -> $_vtk_real in $_pcl"
+    fi
+    # (b) DIAGNOSTIC: PCL's find_VTK() does find_package(VTK ${QUIET_} COMPONENTS ...) QUIET, so when
+    #     VTK's component resolution fails (observed with brew vtk 9.7 — passes with 9.6) PCL prints
+    #     only the terse "visualization is required but vtk was not found" with no cause, dooming
+    #     multisensor_calibration / rtabmap_rviz_plugins / navmap_rviz_plugin. Drop QUIET_ so the real
+    #     "Could NOT find VTK (missing: <component>/<dependency>)" is logged. Idempotent.
+    if grep -qE 'find_package\(VTK \$\{QUIET_\} COMPONENTS' "$_pcl"; then
+      sed "${SEDI[@]}" -E 's#(find_package\(VTK) \$\{QUIET_\}( COMPONENTS)#\1\2#' "$_pcl"
+      echo "  pcl: de-QUIET find_package(VTK COMPONENTS ...) to surface the vtk-9.7 cause in $_pcl"
+    fi
+    # (c) FIX: PCL_VTK_COMPONENTS requires GUISupportQt, but the brew vtk 9.7 bottle is built without
+    #     Qt, so that module is absent -> "Could not find the VTK package with the following required
+    #     components: GUISupportQt" (the cause surfaced by (b)) -> multisensor_calibration /
+    #     rtabmap_rviz_plugins / navmap_rviz_plugin die at find_package(PCL). These consumers use VTK
+    #     rendering, not the Qt widget module, so drop GUISupportQt from the required component list.
+    #     Idempotent (only rewrites the line while GUISupportQt is still listed).
+    if grep -qE 'set\(PCL_VTK_COMPONENTS .*GUISupportQt' "$_pcl"; then
+      sed "${SEDI[@]}" -E 's#(set\(PCL_VTK_COMPONENTS[^)]*);GUISupportQt#\1#' "$_pcl"
+      echo "  pcl: drop GUISupportQt from PCL_VTK_COMPONENTS (brew vtk 9.7 has no Qt module) in $_pcl"
+    fi
+  done
+fi
+
+# --- VTK 9.x (brew) Boost EXACT pin (post-brew): VTK-vtk-module-find-packages.cmake does
+#     find_package(Boost 1.90.0 EXACT), but this workspace routes Boost to the vendored
+#     boost-1.89 -> "Could not find the VTK package due to a missing dependency: Boost"
+#     -> VTK not found -> PCL's find_package(VTK COMPONENTS ...) fails (QUIET) -> PCL
+#     visualization consumers die with "visualization is required but vtk was not found"
+#     (navmap_rviz_plugin, rtabmap_rviz_plugins). VTK's Boost dependency is only its
+#     BoostGraphAlgorithms module; PCL-visualization/rviz consumers use VTK rendering, not
+#     that module, so relax the EXACT 1.90.0 pin to accept the vendored 1.89. Runs post-brew
+#     (idempotent: the 1.90.0/EXACT lines are gone after). ---
+for _vf in /opt/homebrew/lib/cmake/vtk-9.*/VTK-vtk-module-find-packages.cmake; do
+  [ -f "$_vf" ] || continue
+  # Match ANY pinned version (brew bumps it: 1.90.0, 1.91.0, ...), not just 1.90.0.
+  if grep -qE 'find_package\(Boost$' "$_vf" && grep -qE '^    EXACT$' "$_vf"; then
+    perl -0pi -e 's{find_package\(Boost\n    [0-9]+\.[0-9]+\.[0-9]+\n    EXACT\n}{find_package(Boost\n    \n    \n}g;' "$_vf"
+    echo "  VTK: relax find_package(Boost <ver> EXACT) -> any (vendored boost-1.89) in $_vf"
+  fi
+done
+
+
+
+
+# --- rc_dynamics_api (ros-perception/vision, all 3): data_receiver.h does
+#     _recv_func_map[ MsgType::descriptor()->name() ] = ... but modern protobuf's
+#     Descriptor::name() returns absl::string_view (not const std::string&), so
+#     std::map<std::string,...>::operator[] has no viable overload:
+#       error: no viable overloaded operator[] for type 'map_type'
+#     Wrap the key in std::string(...) at the 3 call sites (Frame/Imu/Dynamics). ---
+for _f in $(find "$ROOT" -path '*rc_dynamics_api/rc_dynamics_api/data_receiver.h' 2>/dev/null); do
+  if grep -qE '_recv_func_map\[.*::descriptor\(\)->name\(\)\]' "$_f"; then
+    perl -pi -e 's{_recv_func_map\[(.*?::descriptor\(\)->name\(\))\]}{_recv_func_map[std::string($1)]}g;' "$_f"
+    echo "  rc_dynamics_api: wrap protobuf descriptor()->name() (string_view) in std::string in ${_f#$ROOT/}"
+  fi
+done
+
+# --- libmavconn (aerial/mavros submodule, all 3): io_context_runner.hpp uses
+#     std::jthread, which on macOS/libc++ is availability-gated to a recent
+#     deployment target -> "no type named 'jthread' in namespace 'std'". The thread
+#     lambda never reads the stop_token (the run loop is stopped via io_work_.reset()),
+#     and join_owned() already does joinable()/get_id()/detach()/join(), so a plain
+#     std::thread is behaviourally equivalent. Swap jthread->thread and drop the
+#     now-meaningless io_thread_.request_stop() (std::thread has no such member;
+#     io_work_.reset() on the next line is what actually stops the loop). ---
+for _f in $(find "$ROOT" -path '*libmavconn/include/mavconn/io_context_runner.hpp' 2>/dev/null); do
+  if grep -q 'std::jthread' "$_f"; then
+    perl -0pi -e 's{\bstd::jthread\b}{std::thread}g; s{[ \t]*io_thread_\.request_stop\(\);\n}{}g;' "$_f"
+    echo "  libmavconn: std::jthread -> std::thread (macOS availability) in ${_f#$ROOT/}"
+  fi
+done
+
+# --- libmavconn interface.cpp (all 3): default_signing_timestamp() builds the mavlink
+#     signing epoch with the C++20 chrono calendar
+#       std::chrono::sys_days{std::chrono::year(2015)/std::chrono::January/1}
+#     but libc++ on this macOS lacks sys_days / year / month -> "no member named
+#     'sys_days' in namespace 'std::chrono'" (interface.cpp:221; surfaced only after the
+#     jthread fix let the TU compile that far). The epoch is 2015-01-01T00:00:00Z and
+#     system_clock measures Unix Time (guaranteed C++20; libc++ always has), so it is a
+#     fixed 1420070400 s offset from the system_clock epoch -- behaviourally identical.
+#     Replace the calendar construction with that constant. Idempotent (guard on sys_days). ---
+for _f in $(find "$ROOT" -path '*libmavconn/src/interface.cpp' 2>/dev/null); do
+  if grep -q 'std::chrono::sys_days' "$_f"; then
+    perl -0pi -e 's{constexpr auto mavlink_signing_epoch = std::chrono::sys_days \{std::chrono::year\(2015\) /\s*std::chrono::January / 1\};}{// ci: libc++ lacks the C++20 chrono calendar (sys_days/year/month). The mavlink\n  // signing epoch 2015-01-01T00:00:00Z is a fixed 1420070400 s offset from the\n  // system_clock (Unix) epoch -- behaviourally identical to sys_days\{2015/Jan/1\}.\n  const auto mavlink_signing_epoch =\n    std::chrono::system_clock::time_point\{std::chrono::seconds\{1420070400\}\};}' "$_f"
+    echo "  libmavconn: sys_days calendar -> fixed Unix-offset epoch (libc++ no C++20 chrono calendar) in ${_f#$ROOT/}"
+  fi
+  # apply_signing_config() sets m_{tx,rx}_signing.last_status = mavlink::MAVLINK_SIGNING_STATUS_NONE,
+  # but the vendored mavlink v2.0 mavlink_signing_t has NO last_status field and there is no
+  # MAVLINK_SIGNING_STATUS_NONE enum (both are newer-mavlink additions; this libmavconn is ahead
+  # of the vendored mavlink) -> "no member named 'last_status'". The field is write-only here
+  # (never read anywhere in libmavconn), so drop the two assignments. Idempotent.
+  if grep -q 'last_status = mavlink::MAVLINK_SIGNING_STATUS_NONE' "$_f"; then
+    perl -0pi -e 's{^[ \t]*m_[tr]x_signing\.last_status = mavlink::MAVLINK_SIGNING_STATUS_NONE;\n}{}mg;' "$_f"
+    echo "  libmavconn: drop m_*_signing.last_status assignments (field absent in vendored mavlink v2.0) in ${_f#$ROOT/}"
+  fi
+done
+
+# --- mavros_extras (aerial/mavros submodule, all 3): plugins (fake_gps.cpp,
+#     guided_target.cpp) call GeographicLib::Geocentric::{Geocentric,IntForward,IntReverse}
+#     and the CMakeLists find_package(GeographicLib REQUIRED) + includes ${GeographicLib_INCLUDE_DIRS},
+#     but target_link_libraries(mavros_extras_plugins ...) never links GeographicLib -> ld64
+#     "Undefined symbols: GeographicLib::Geocentric::..." (Linux ld is lazier so upstream
+#     never noticed). Link ${GeographicLib_LIBRARIES} (brew geographiclib CONFIG sets it to
+#     the GeographicLib::GeographicLib_SHARED target; the module form sets the lib path --
+#     either is linkable). Idempotent (ci-mavros-geographiclib). ---
+for _f in $(find "$ROOT" -path '*mavros_extras/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q 'GeographicLib::Geocentric\|GeographicLib_INCLUDE_DIRS' "$_f" && ! grep -q 'ci-mavros-geographiclib' "$_f"; then
+    perl -0pi -e 's{(target_link_libraries\(mavros_extras_plugins PUBLIC\n)(  \$\{geographic_msgs_TARGETS\}\n)}{$1  # ci-mavros-geographiclib: GeographicLib::Geocentric used in fake_gps.cpp but never linked\n  \$\{GeographicLib_LIBRARIES\}\n$2}' "$_f"
+    echo "  mavros_extras: link \${GeographicLib_LIBRARIES} into mavros_extras_plugins in ${_f#$ROOT/}"
+  fi
+done
+
+# --- mavlink (aerial submodule, pin 71c47402 on kilted/jazzy): its CMakeLists defaults
+#     Py_VERSION to "2" when ROS_PYTHON_VERSION is unset (it is unset here), so it does
+#     find_package(Python2). macOS runners have no Python2 -> Python2_EXECUTABLE resolves to
+#     the literal "_Python2_EXECUTABLE-NOTFOUND", and the header-generation custom command runs
+#     `env _Python2_EXECUTABLE-NOTFOUND <gen> ...` -> "env: _Python2_EXECUTABLE-NOTFOUND: No such
+#     file or directory" (Error 127) -> mavlink aborts and cascades mavros_msgs/mavros. ROS 2 is
+#     Python 3 everywhere here (the toolchain pins framework Python 3.11), and the mavlink
+#     generator runs fine under Python 3, so default Py_VERSION to "3". Self-adapting: only files
+#     that still say "2" are touched (humble's newer mavlink already ships "3"). Idempotent. ---
+for _f in $(grep -rlE 'set\(Py_VERSION "2"\)' "$ROOT" --include=CMakeLists.txt 2>/dev/null | grep -v '/build/'); do
+  sed "${SEDI[@]}" 's/set(Py_VERSION "2")/set(Py_VERSION "3")/' "$_f"
+  echo "  mavlink: default Py_VERSION 2 -> 3 (ROS 2 uses Python 3; avoid absent Python2) in ${_f#$ROOT/}"
+done
+
+# mavros (aerial submodule): references the `standard` mavlink dialect --
+# mavlink::standard::MAV_PROTOCOL_CAPABILITY and mavlink::standard::msg::{AUTOPILOT_VERSION,
+# GLOBAL_POSITION_INT} (plugin.hpp, mavros_uas.hpp, mission_protocol_base.hpp, sys_status.cpp,
+# global_position.cpp). Where the enum/messages live depends on the PINNED mavlink version and
+# differs per distro, so this rewrite must self-adapt (the script is byte-identical across distros):
+#   * newer mavlink (kilted/jazzy pin 71c47402): MAV_PROTOCOL_CAPABILITY is defined in common.xml
+#     and standard.xml `<include>`s common.xml, so in the standard-dialect build the symbols live in
+#     mavlink::common:: only -> mavros's mavlink::standard:: refs fail ("no type named
+#     MAV_PROTOCOL_CAPABILITY in namespace mavlink::standard") -> rewrite standard:: -> common::.
+#   * older mavlink (humble pin fc95b961): standard.xml SELF-DEFINES MAV_PROTOCOL_CAPABILITY (it
+#     `<include>`s minimal.xml, not common.xml), so mavlink::standard:: is correct and there is no
+#     mavlink::common::MAV_PROTOCOL_CAPABILITY -> rewriting would BREAK it -> skip the rewrite.
+# Detect by asking the checked-out mavlink whether standard.xml self-defines the enum.
+# Idempotent (ci-mavros-common). ---
+_mavlink_std_xml=$(find "$ROOT" -path '*mavlink/message_definitions/v1.0/standard.xml' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null | head -1)
+if [ -n "$_mavlink_std_xml" ] && grep -q 'enum name="MAV_PROTOCOL_CAPABILITY"' "$_mavlink_std_xml"; then
+  echo "  mavros: pinned mavlink standard.xml self-defines MAV_PROTOCOL_CAPABILITY -> keep mavlink::standard:: (skip common rewrite)"
+else
+  for f in $(grep -rlE 'mavlink::standard::' "$ROOT" --include='*.hpp' --include='*.cpp' 2>/dev/null | grep '/mavros/'); do
+    grep -q 'ci-mavros-common' "$f" && continue
+    sed "${SEDI[@]}" 's/mavlink::standard::/mavlink::common::/g' "$f"
+    printf '\n// ci-mavros-common: standard mavlink dialect absent; symbols used are all common\n' >> "$f"
+    echo "  mavros: mavlink::standard:: -> mavlink::common:: in ${f#$ROOT/}"
+  done
+fi
+
+# --- autoware yaml-cpp::yaml-cpp target scoping (autoware_core, humble esp.): several
+#     autoware packages link ${YAML_CPP_LIBRARIES} (= yaml-cpp::yaml-cpp, set by the
+#     yaml_cpp_vendor fork). But yaml-cpp::yaml-cpp is a DIRECTORY-scoped IMPORTED
+#     target: autoware_package() finds yaml-cpp inside a function (target not visible
+#     in the calling directory), and a subsequent find_package(yaml-cpp) short-circuits
+#     on the cached yaml-cpp_FOUND without recreating it -> at link time:
+#       CMake Error: Target links to yaml-cpp::yaml-cpp but the target was not found.
+#     This gates autoware_map_projection_loader / autoware_test_utils ->
+#     autoware_lanelet2_utils (7 cascade victims) -> the wider autoware planning cascade.
+#     A plain re-find (unset FOUND + find_package again) was tried first and STILL failed
+#     in CI ("Target links to yaml-cpp::yaml-cpp but the target was not found" at
+#     autoware_map_projection_loader/CMakeLists.txt:30, run d05419b3): in this env
+#     find_package(yaml-cpp) does not (re)create the namespaced IMPORTED target at the
+#     caller's scope. So don't depend on find_package's export-scope behavior at all --
+#     FABRICATE the target directly from the vendored yaml_cpp_vendor install (same
+#     technique already used for ROS2MedkitCompat above), discovering the real .dylib +
+#     headers via find_library/find_path anchored on yaml-cpp_DIR / YAML_CPP_INCLUDE_DIR.
+#     Idempotent via ci-yaml-cpp-target marker. ---
+for _f in $(find "$ROOT" -path '*autoware*/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q 'autoware_package()' "$_f" && grep -q 'YAML_CPP_LIBRARIES' "$_f" && ! grep -q 'ci-yaml-cpp-target' "$_f"; then
+    perl -0pi -e 's{(autoware_package\(\)\n)}{$1\n# ci-yaml-cpp-target: yaml-cpp::yaml-cpp is a directory-scoped IMPORTED target that\n# find_package(yaml-cpp) does not recreate at this scope; fabricate it from the\n# vendored yaml_cpp_vendor install so target_link_libraries(... yaml-cpp::yaml-cpp) links.\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  unset(yaml-cpp_FOUND CACHE)\n  unset(yaml-cpp_FOUND)\n  find_package(yaml-cpp QUIET)\nendif()\nif(NOT TARGET yaml-cpp::yaml-cpp)\n  get_filename_component(_ci_ycpp_root "\${yaml-cpp_DIR}" DIRECTORY)\n  get_filename_component(_ci_ycpp_root "\${_ci_ycpp_root}" DIRECTORY)\n  get_filename_component(_ci_ycpp_root "\${_ci_ycpp_root}" DIRECTORY)\n  find_library(_ci_ycppb_lib NAMES yaml-cpp\n    HINTS "\${_ci_ycpp_root}/lib" "\${YAML_CPP_INCLUDE_DIR}/../lib" \${CMAKE_PREFIX_PATH}\n    PATH_SUFFIXES lib)\n  find_path(_ci_ycppb_inc NAMES yaml-cpp/yaml.h\n    HINTS "\${YAML_CPP_INCLUDE_DIR}" "\${_ci_ycpp_root}/include" \${CMAKE_PREFIX_PATH}\n    PATH_SUFFIXES include)\n  if(_ci_ycppb_lib)\n    add_library(yaml-cpp::yaml-cpp UNKNOWN IMPORTED)\n    set_target_properties(yaml-cpp::yaml-cpp PROPERTIES\n      IMPORTED_LOCATION "\${_ci_ycppb_lib}"\n      INTERFACE_INCLUDE_DIRECTORIES "\${_ci_ycppb_inc}")\n    message(STATUS "[ci-yaml-cpp-target] fabricated yaml-cpp::yaml-cpp from \${_ci_ycppb_lib}")\n  else()\n    find_package(yaml-cpp REQUIRED)\n  endif()\nendif()\n}' "$_f"
+    echo "  autoware: fabricate yaml-cpp::yaml-cpp target in ${_f#$ROOT/}"
+  fi
+done
+
+# --- bare-`yaml-cpp` linker-name bug (kilted+jazzy: easynav_*_maps_manager
+#     bonxai/costmap/navmap/octomap/routes, and clips_executive cx_config_plugin) --
+#     same class as autoware_test_utils/rmf_traffic_editor: target_link_libraries(... has a
+#     lone `  yaml-cpp` line -> emits raw -lyaml-cpp -> "ld: library 'yaml-cpp' not found"
+#     (yaml_cpp_vendor/yaml-cpp 0.8.0 export only the NAMESPACED yaml-cpp::yaml-cpp target,
+#     no bare alias, and brew yaml-cpp is unlinked). All of these find yaml at TOP-LEVEL
+#     scope (find_package(yaml_cpp_vendor|yaml-cpp) directly in CMakeLists, not inside a
+#     function), so ${YAML_CPP_LIBRARIES} (= yaml-cpp::yaml-cpp, set by the vendor config)
+#     resolves to a target visible here -- no fabrication needed. Swap the bare name for
+#     ${YAML_CPP_LIBRARIES}. Idempotent (bare `^  yaml-cpp$` gone after). ---
+for _f in $(find "$ROOT" \( -path '*easynav*maps_manager/CMakeLists.txt' -o -path '*clips_executive/cx_plugins/config_plugin/CMakeLists.txt' \) -not -path '*/build/*' -not -path '*/install/*' -not -path '*/tests/*' 2>/dev/null); do
+  if grep -qE '^[ \t]*yaml-cpp[ \t]*$' "$_f"; then
+    perl -pi -e 's{^[ \t]*yaml-cpp[ \t]*$}{  \$\{YAML_CPP_LIBRARIES\}}g;' "$_f"
+    echo "  easynav maps_manager: bare yaml-cpp -> \${YAML_CPP_LIBRARIES} in ${_f#$ROOT/}"
+  fi
+done
+
+# NB: the lely_core_libraries getopt tentative-def dup-symbol fix (-fcommon) is folded into
+# the lely configure-CFLAGS transform above (the one that sets -Wno-macro-redefined +
+# THREADS_H/PTHREAD_H). A separate transform here was DEAD -- by the time it ran, that earlier
+# transform had already extended the CFLAGS string so its `"CFLAGS=-O2 -Wno-macro-redefined"`
+# guard (with closing quote) no longer matched, so -fcommon was silently never appended.
+
+# nav2_waypoint_follower opencv4/opencv2->opencv2 include (humble) MIGRATED to id_navigation2 fork.
+
+# mujoco_ros2_control_plugins EGL headless macOS-guard MIGRATED to id_mujoco_ros2_control fork.
+
+# === §1 common-33 batch (A/B/C): source fixes ===
+
+# camera_aravis2 yaml-cpp link -> yaml-cpp::yaml-cpp target MIGRATED to id_camera_aravis2 fork.
+
+# --- VTK 9.x (brew, all 3): vtk-config.cmake include()s VTK-targets.cmake -- which declares
+#     VTK::jsoncpp's link interface as JsonCpp::JsonCpp -- BEFORE VTK-vtk-module-find-packages.cmake
+#     runs find_package(JsonCpp) that defines that target. When a consumer requests VTK COMPONENTS
+#     that only pull jsoncpp TRANSITIVELY (PCL visualization -> VTK::IOLegacy/IOParallel -> VTK::jsoncpp)
+#     without naming jsoncpp, VTK skips the JsonCpp find, so JsonCpp::JsonCpp is never created and
+#     generate fails: "link interface of target VTK::jsoncpp contains JsonCpp::JsonCpp but the target
+#     was not found (VTK-targets.cmake:NNNN)". Hits grid_map_pcl, rtabmap_rviz_plugins and any
+#     pcl_conversions consumer. Pre-define JsonCpp::JsonCpp before the targets include -- brew jsoncpp
+#     ships a CONFIG that exports it; find_library fallback covers the rest. Idempotent (ci-vtk-jsoncpp). ---
+for _f in /opt/homebrew/lib/cmake/vtk-*/vtk-config.cmake; do
+  [ -f "$_f" ] || continue
+  grep -q 'ci-vtk-jsoncpp' "$_f" && continue
+  perl -0pi -e 's{(include\("\$\{CMAKE_CURRENT_LIST_DIR\}/\$\{CMAKE_FIND_PACKAGE_NAME\}-targets\.cmake"\))}{# ci-vtk-jsoncpp: define JsonCpp::JsonCpp before VTK-targets.cmake references it\nif(NOT TARGET JsonCpp::JsonCpp)\n  find_package(jsoncpp CONFIG QUIET)\n  if(NOT TARGET JsonCpp::JsonCpp)\n    find_library(_ci_jsoncpp_lib NAMES jsoncpp)\n    find_path(_ci_jsoncpp_inc NAMES json/json.h PATH_SUFFIXES jsoncpp)\n    if(_ci_jsoncpp_lib)\n      add_library(JsonCpp::JsonCpp UNKNOWN IMPORTED)\n      set_target_properties(JsonCpp::JsonCpp PROPERTIES IMPORTED_LOCATION "\${_ci_jsoncpp_lib}")\n      if(_ci_jsoncpp_inc)\n        set_target_properties(JsonCpp::JsonCpp PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "\${_ci_jsoncpp_inc}")\n      endif()\n    endif()\n  endif()\nendif()\n$1}' "$_f"
+  echo "  VTK: pre-define JsonCpp::JsonCpp before VTK-targets.cmake in ${_f}"
+done
+
+# --- ublox_dgnss_node (all 3): target_link_libraries links bare 'usb-1.0' -> raw
+#     '-lusb-1.0' with no -L for brew libusb -> "ld: library 'usb-1.0' not found".
+#     pkg_check_modules(libusb REQUIRED libusb-1.0) already resolved the full path in
+#     ${libusb_LINK_LIBRARIES}; link that. Also 'LINKER:--allow-multiple-definition' is a
+#     GNU-ld-only flag (ld64 rejects it) -> guard for non-Apple. Idempotent. ---
+_f="$(_pkg_dir ublox_dgnss_node)/CMakeLists.txt"
+if [ -f "$_f" ] && grep -qE '^\s*usb-1\.0\s*$' "$_f"; then
+  perl -0pi -e 's{\n  usb-1\.0\n\)}{\n  \$\{libusb_LINK_LIBRARIES\}\n)}' "$_f"
+  perl -0pi -e 's{target_link_options\(ublox_dgnss_components PRIVATE\n  "LINKER:--allow-multiple-definition"\n\)}{if(NOT APPLE)\n  target_link_options(ublox_dgnss_components PRIVATE\n    "LINKER:--allow-multiple-definition"\n  )\nendif()}' "$_f"
+  echo "  ublox_dgnss_node: bare usb-1.0 -> \${libusb_LINK_LIBRARIES} + guard GNU-ld flag in ${_f#$ROOT/}"
+fi
+# --- ublox_dgnss_node headers (all 3): once the GNU-ld '--allow-multiple-definition' flag is
+#     guarded off on macOS (ld64 has no equivalent), the REAL ODR bug surfaces -> the ubx/
+#     headers define namespace-scope symbols WITHOUT inline, so every .cpp that includes them
+#     emits its own copy -> "duplicate symbol ubx::cfg::ubxKeyCfgItemMap / operator< /
+#     ubx::get_polled_frame" across parameters.cpp / ubx_config_loader.cpp / ublox_dgnss_node.cpp.
+#     Fix the root: mark the header definitions `inline` (correct on every platform, makes the
+#     --allow-multiple-definition workaround unnecessary). Idempotent. ---
+for _hf in $(find "$ROOT" -path '*ublox_dgnss_node/include/*/ubx/ubx_cfg_item_map.hpp' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qE '^ubx_cfg_item_map_t ubxKeyCfgItemMap = \{' "$_hf"; then
+    perl -pi -e 's~^ubx_cfg_item_map_t ubxKeyCfgItemMap = \{~inline ubx_cfg_item_map_t ubxKeyCfgItemMap = {~; s~^bool operator<\(const ubx_key_id_t~inline bool operator<(const ubx_key_id_t~;' "$_hf"
+    echo "  ublox_dgnss_node: +inline ubxKeyCfgItemMap/operator< (header ODR dup) in ${_hf#$ROOT/}"
+  fi
+done
+for _hf in $(find "$ROOT" -path '*ublox_dgnss_node/include/*/ubx/ubx.hpp' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qE '^std::shared_ptr<FramePolled> get_polled_frame\(' "$_hf"; then
+    perl -pi -e 's{^std::shared_ptr<FramePolled> get_polled_frame\(}{inline std::shared_ptr<FramePolled> get_polled_frame(};' "$_hf"
+    echo "  ublox_dgnss_node: +inline get_polled_frame (header ODR dup) in ${_hf#$ROOT/}"
+  fi
+done
+# ubx_cfg_item.hpp defines storage_size_bytes() non-inline in the header -> duplicate symbol
+# 'ubx::cfg::storage_size_bytes(unsigned long long)' across parameters.cpp/ubx_config_loader.cpp/
+# ublox_dgnss_node.cpp (macOS ld-prime rejects dups). Add inline.
+for _hf in $(find "$ROOT" -path '*ublox_dgnss_node/include/*/ubx/ubx_cfg_item.hpp' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qE '^size_t storage_size_bytes\(' "$_hf"; then
+    perl -pi -e 's{^size_t storage_size_bytes\(}{inline size_t storage_size_bytes(};' "$_hf"
+    echo "  ublox_dgnss_node: +inline storage_size_bytes (header ODR dup) in ${_hf#$ROOT/}"
+  fi
+done
+
+# grid_map_pcl OpenMP-flag split MIGRATED to id_grid_map fork (separate_arguments in CMakeLists).
+
+# --- adi_3dtof_image_stitching (humble only): OpenMP wired the GNU way -- links a bare `gomp`
+#     (set(OpenMP_LIBS gomp)) which does not exist on macOS (libomp), and passes OpenMP_CXX_FLAGS
+#     ("-Xclang -fopenmp") as ONE token to target_compile_options -> "unknown argument:
+#     '-Xclang -fopenmp'". Link the portable OpenMP::OpenMP_CXX imported target instead of gomp
+#     (it also carries the compile flags with correct quoting), and split the compile flags with
+#     separate_arguments (same as grid_map_pcl). No-op where the package/patterns are absent. ---
+_f="$(_pkg_dir adi_3dtof_image_stitching)/CMakeLists.txt"
+if [ -f "$_f" ] && grep -qF 'set(OpenMP_LIBS gomp)' "$_f"; then
+  perl -0pi -e 's~set\(OpenMP_LIBS gomp\)~set(OpenMP_LIBS OpenMP::OpenMP_CXX)~; s~target_compile_options\(\$\{PROJECT_NAME\}_node PRIVATE \$\{OpenMP_FLAGS\}\)~separate_arguments(_adi_omp_flags NATIVE_COMMAND "\$\{OpenMP_FLAGS\}")\n  target_compile_options(\$\{PROJECT_NAME\}_node PRIVATE \$\{_adi_omp_flags\})~' "$_f"
+  echo "  adi_3dtof_image_stitching: OpenMP gomp->OpenMP::OpenMP_CXX + separate_arguments OpenMP_FLAGS in ${_f#$ROOT/}"
+fi
+# --- adi_3dtof_image_stitching (humble only): headers do #include <pcl/registration/icp.h> etc.,
+#     but the CMakeLists never find_package(PCL) and its include_directories() hardcodes the Linux
+#     path /opt/ros/humble/include (absent on macOS) instead of ${PCL_INCLUDE_DIRS} -> "fatal error:
+#     'pcl/registration/icp.h' file not found". Add find_package(PCL) and put ${PCL_INCLUDE_DIRS} on
+#     the include path (brew pcl-1.15 ships pcl/registration/). Idempotent (ci-adi-pcl). ---
+_f="$(_pkg_dir adi_3dtof_image_stitching)/CMakeLists.txt"
+if [ -f "$_f" ] && grep -qE '^find_package\(pcl_conversions' "$_f" && ! grep -q 'ci-adi-pcl' "$_f"; then
+  grep -qE '^find_package\(PCL\b' "$_f" || perl -0pi -e 's~(^find_package\(pcl_conversions[^\n]*\n)~$1find_package(PCL REQUIRED)  # ci-adi-pcl\n~m' "$_f"
+  perl -0pi -e 's~(include_directories\(\n\s*include\n)~$1  \$\{PCL_INCLUDE_DIRS\}\n~' "$_f"
+  echo "  adi_3dtof_image_stitching: find_package(PCL) + \${PCL_INCLUDE_DIRS} on include path in ${_f#$ROOT/}"
+fi
+
+# --- as2_motion_controller / pid_speed_controller (humble aerostack2): its CMakeLists does
+#     find_package(pid_controller QUIET), expecting the RPS98 header-only pid_controller lib
+#     (github.com/RPS98/pid_controller, providing include/pid_controller/pid.hpp), and only vendors
+#     that repo (FetchContent) when NOT found. But the name COLLIDES with ros2_controllers'
+#     unrelated `pid_controller` controller package (also in this workspace); once that is
+#     installed, pid_controller_FOUND is TRUE, the RPS98 clone is skipped, thirdparties/ stays
+#     empty, and pid_speed_controller.hpp's `#include "pid_controller/pid.hpp"` is not found. Force
+#     the vendored-clone branch. Idempotent (ci-as2-pidctrl). ---
+for _f in $(find "$ROOT" -path '*as2_motion_controller/plugins/pid_speed_controller/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  grep -q 'ci-as2-pidctrl' "$_f" && continue
+  grep -qF 'if(${pid_controller_FOUND})' "$_f" || continue
+  perl -0pi -e 's{if\(\$\{pid_controller_FOUND\}\)}{if(FALSE)  # ci-as2-pidctrl: ros2_controllers pid_controller shadows the RPS98 header lib; always vendor}' "$_f"
+  echo "  as2_motion_controller: force-vendor RPS98 pid_controller (find_package name collision) in ${_f#$ROOT/}"
+done
+
+# data_tamer_cpp disable-gtest-tests (googletest ABI skew) handled by the single
+# DATA_TAMER_BUILD_TESTS block above; this duplicate matched the same file with the same
+# stale 'ON)' literal and is removed.
+
+# pose_cov_ops disable-gtest-test (googletest ABI skew) MIGRATED to id_pose_cov_ops fork.
+
+# --- etsi_its_msgs_utils (all 3): INTERFACE lib links ${GeographicLib_LIBRARIES}
+#     (= the GeographicLib::GeographicLib IMPORTED target) but ament_export_dependencies()
+#     omits GeographicLib, so a consumer (etsi_its_rviz_plugins) importing the exported
+#     target hits "target not found" at set_target_properties in the generated
+#     TargetsExport. Add GeographicLib to the export deps. Idempotent. ---
+_f="$(_pkg_dir etsi_its_msgs_utils)/CMakeLists.txt"
+if [ -f "$_f" ] && grep -qF 'ament_export_dependencies(etsi_its_msgs geometry_msgs tf2_geometry_msgs)' "$_f"; then
+  perl -pi -e 's{ament_export_dependencies\(etsi_its_msgs geometry_msgs tf2_geometry_msgs\)}{ament_export_dependencies(etsi_its_msgs geometry_msgs tf2_geometry_msgs GeographicLib)}g;' "$_f"
+  echo "  etsi_its_msgs_utils: +GeographicLib to ament_export_dependencies (export target scope) in ${_f#$ROOT/}"
+fi
+
+# --- velodyne_pointcloud + swri_transform_util (humble esp.): both select yaml-cpp via
+#     the same upstream block `if(TARGET yaml-cpp::yaml-cpp) set(YAML_CPP_TARGET ...) else()
+#     set(YAML_CPP_TARGET ${YAML_CPP_LIBRARIES}) endif()`. find_package(yaml-cpp) leaves
+#     yaml-cpp::yaml-cpp as a directory-scoped IMPORTED target -- defined at configure (the
+#     if() is TRUE) but NOT at generate on macOS -> "links to yaml-cpp::yaml-cpp but the
+#     target was not found" (velodyne CMakeLists:49 / swri :93). Link the vendored yaml-cpp
+#     .dylib by ABSOLUTE PATH (discovered via find_library) + add its include dir globally.
+#     NB: do NOT fabricate a named IMPORTED target here -- swri_transform_util is a LIBRARY
+#     consumed downstream (swri_route_util), and a fabricated target name leaks into its
+#     exported PUBLIC link interface -> "ld: library 'ci_fab_yamlcpp' not found" in consumers.
+#     An absolute path exports cleanly. Idempotent (ci-yamlcpp-pathlink marker). ---
+for _p in velodyne_pointcloud swri_transform_util; do
+  _f="$(_pkg_dir "$_p")/CMakeLists.txt"
+  if [ -f "$_f" ] && grep -qF 'if(TARGET yaml-cpp::yaml-cpp)' "$_f" && ! grep -q 'ci-yamlcpp-pathlink' "$_f"; then
+    perl -0pi -e 's~if\(TARGET yaml-cpp::yaml-cpp\)\n  set\(YAML_CPP_TARGET "yaml-cpp::yaml-cpp"\)\nelse\(\)\n  set\(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\}\)\nendif\(\)~# ci-yamlcpp-pathlink: find_package(yaml-cpp) can leave yaml-cpp::yaml-cpp as a\n# directory-scoped IMPORTED target (TRUE here, absent at generate on macOS). Link the\n# vendored yaml-cpp .dylib by ABSOLUTE PATH so it also exports cleanly to consumers.\nif(YAML_CPP_LIBRARIES AND EXISTS "\$\{YAML_CPP_LIBRARIES\}")\n  set(_ci_ycpp_lib "\$\{YAML_CPP_LIBRARIES\}")\nelse()\n  find_library(_ci_ycpp_lib NAMES yaml-cpp\n    HINTS "\$\{YAML_CPP_INCLUDE_DIRS\}/../lib" "\$\{yaml-cpp_DIR\}/../.." "\$\{CMAKE_INSTALL_PREFIX\}/opt/yaml_cpp_vendor/lib" \$\{CMAKE_PREFIX_PATH\}\n    PATH_SUFFIXES lib)\nendif()\nif(_ci_ycpp_lib)\n  set(YAML_CPP_TARGET "\$\{_ci_ycpp_lib\}")\n  if(YAML_CPP_INCLUDE_DIRS)\n    include_directories(\$\{YAML_CPP_INCLUDE_DIRS\})\n  endif()\nelseif(TARGET yaml-cpp::yaml-cpp)\n  set(YAML_CPP_TARGET "yaml-cpp::yaml-cpp")\nelse()\n  set(YAML_CPP_TARGET \$\{YAML_CPP_LIBRARIES\})\nendif()~' "$_f"
+    echo "  $_p: link yaml-cpp .dylib by absolute path (export-safe) in ${_f#$ROOT/}"
+  fi
+done
+
+# eventdispatch_ros2_interfaces +find_package(builtin_interfaces) MIGRATED to id_ros2_eventdispatch fork.
+
+
+# etsi_its_rviz_plugins dead-MOC-slot stub MIGRATED to id_etsi_its_messages fork.
+
+# --- cx_ros_msgs_plugin (all 3): uses std::unordered_map::contains (C++20) in 28 places, and
+#     its CMakeLists only sets CMAKE_CXX_STANDARD 20 `if(NOT CMAKE_CXX_STANDARD)`. But the
+#     toolchain/ament already sets it to 17, so the guard never fires -> compiled at C++17 ->
+#     "no member named 'contains' in std::unordered_map". Force C++20 unconditionally for this
+#     package. Idempotent. ---
+for _f in $(find "$ROOT" -path '*cx_plugins/ros_msgs_plugin/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qF 'if(NOT CMAKE_CXX_STANDARD)' "$_f"; then
+    perl -0pi -e 's{if\(NOT CMAKE_CXX_STANDARD\)\n  set\(CMAKE_CXX_STANDARD 20\)\nendif\(\)}{set(CMAKE_CXX_STANDARD 20)  # ci: force C++20 (code uses std::unordered_map::contains); global default is 17}' "$_f"
+    echo "  cx_ros_msgs_plugin: force CMAKE_CXX_STANDARD 20 (C++20 .contains) in ${_f#$ROOT/}"
+  fi
+done
+
+# --- cx_msgs ListClipsEnvs.srv (all 3): the ListClipsEnvs service Response declares
+#     `string[] plugins` (copy-paste from ListClipsPlugins.srv), but cx_clips_env_manager's
+#     list_envs callback writes `response->envs` -> "no member named 'envs' in
+#     ListClipsEnvs_Response_". The service lists CLIPS ENVIRONMENTS, so the field should be
+#     `envs`. Rename plugins->envs in this srv only (NOT ListClipsPlugins.srv). Idempotent. ---
+for _f in $(find "$ROOT" -ipath '*cx_msgs/srv/ListClipsEnvs.srv' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qxF 'string[] plugins' "$_f"; then
+    perl -pi -e 's{^string\[\] plugins$}{string[] envs};' "$_f"
+    echo "  cx_msgs ListClipsEnvs.srv: Response field plugins -> envs in ${_f#$ROOT/}"
+  fi
+done
+
+# grid_map_pcl high_resolution_clock->system_clock (libc++) MIGRATED to id_grid_map fork.
+
+# === category-I own-error roots (2026-09-04) ===
+
+# --- plansys2_bringup (all 3): plansys2_node.cpp calls sched_setscheduler(0, SCHED_FIFO, ...)
+#     for real-time scheduling -> "use of undeclared identifier 'sched_setscheduler'" (Linux
+#     syscall, absent on macOS; pthread scheduling is the macOS equivalent). Guard the RT
+#     setup with __linux__; on macOS the thread still spins, just without SCHED_FIFO. ---
+for _f in $(find "$ROOT" -path '*plansys2_bringup/src/plansys2_node.cpp' 2>/dev/null); do
+  if grep -qF 'if (sched_setscheduler(0, SCHED_FIFO, &sch) == -1) {' "$_f"; then
+    perl -0pi -e 's{(        if \(sched_setscheduler\(0, SCHED_FIFO, &sch\) == -1\) \{.*?\n        \}\n)}{#if defined(__linux__)\n$1#else\n        (void)sch;  // ci: sched_setscheduler is Linux-only; macOS has no SCHED_FIFO syscall\n#endif\n}s' "$_f"
+    echo "  plansys2_bringup: guard sched_setscheduler (__linux__) in ${_f#$ROOT/}"
+  fi
+done
+
+
+# backward_global_planner +find_package(visualization_msgs) (SMACC2) MIGRATED to id_smacc2 fork.
+
+# --- multisensor_calibration (all 3): lists bare `tinyxml2` in its ament dependency set, but
+#     tinyxml2 is a plain-CMake package (target tinyxml2::tinyxml2, already in
+#     target_link_libraries), NOT an ament package -> ament_target_dependencies() "the passed
+#     package name 'tinyxml2' was not found before". Drop the bare tinyxml2 from the ament list
+#     (it stays linked via tinyxml2::tinyxml2). Idempotent. ---
+for _f in $(find "$ROOT" -path '*multisensor_calibration/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  if grep -qE '^  tinyxml2$' "$_f"; then
+    perl -0pi -e 's{^  tinyxml2\n}{}m;' "$_f"
+    echo "  multisensor_calibration: drop bare tinyxml2 from ament deps (linked via tinyxml2::tinyxml2) in ${_f#$ROOT/}"
+  fi
+done
+
+# --- rmf_visualization_schedule (all 3): bare `OpenSSL` in ament_target_dependencies() ->
+#     websocketpp TLS undefined symbols (_HMAC/_i2d_ECDSA_SIG). ament_target_dependencies wants
+#     PACKAGE names, not the OpenSSL::SSL/Crypto TARGETS (passing those errors "package name
+#     'OpenSSL::SSL' was not found"), so DROP OpenSSL from the ament call and link the imported
+#     targets via target_link_libraries. ament_export_dependencies(OpenSSL) stays for consumers. ---
+for _f in $(find "$ROOT" -path '*rmf_visualization_schedule/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null); do
+  grep -q 'ci-rmfviz-openssl' "$_f" && continue
+  if grep -qzE 'websocketpp\n    OpenSSL\n    Threads' "$_f"; then
+    perl -0pi -e 's{\n    OpenSSL\n    Threads\n}{\n    Threads\n}' "$_f"
+    perl -0pi -e 's{(\nament_target_dependencies\(rmf_visualization_schedule\n.*?\n\)\n)}{$1target_link_libraries(rmf_visualization_schedule PUBLIC OpenSSL::SSL OpenSSL::Crypto)  # ci-rmfviz-openssl\n}s' "$_f"
+    echo "  rmf_visualization_schedule: OpenSSL -> target_link_libraries(OpenSSL::SSL+Crypto) in ${_f#$ROOT/}"
+  fi
+done
+
+# play_motion_builder bare yaml-cpp -> yaml-cpp::yaml-cpp (yaml_cpp_vendor) MIGRATED to id_play_motion_builder fork.
+
+# --- canopen_core (all 3, upstream master): after the keyword-form
+#     `target_link_libraries(node_canopen_driver PUBLIC ...)` the CMakeLists adds a
+#     SECOND, PLAIN-form call `target_link_libraries(node_canopen_driver\n  yaml-cpp::yaml-cpp\n)`
+#     (same for node_canopen_master). CMake rejects mixing the two signatures on one
+#     target -- "All uses of target_link_libraries with a target must be either
+#     all-keyword or all-plain" (CMakeLists.txt:63 / :98) -> configure fails, which
+#     also cascades to canopen_proxy_driver / canopen_ros2_control /
+#     canopen_ros2_controllers / canopen_inventus_driver. Not macOS-specific, but it is
+#     what blocks the CAN stack here. Rewrite the two plain calls to keyword form.
+#     Idempotent (only fires while a plain-form call is still present). ---
+_f="$(_pkg_cml canopen_core)"
+if [ -n "$_f" ] && [ -f "$_f" ]; then
+  if perl -0ne 'exit(!/^target_link_libraries\(node_canopen_(?:driver|master)\n/m)' "$_f"; then
+    perl -0pi -e 's{^target_link_libraries\((node_canopen_(?:driver|master))\n}{target_link_libraries($1 PUBLIC\n}mg' "$_f"
+    echo "  canopen_core: plain-form target_link_libraries(node_canopen_driver/master) -> keyword form"
+  fi
+fi
+
+# --- canopen_core (all 3): its target_link_libraries lists the BARE name `yaml-cpp`. The
+#     vendored yaml_cpp_vendor exports only yaml-cpp::yaml-cpp (0.8.0) or nothing usable (0.7.0),
+#     so CMake passes the bare name through as `-lyaml-cpp` and the link dies:
+#       ld: library 'yaml-cpp' not found -> libnode_canopen_driver.dylib
+#     canopen_core has FIVE downstream consumers (canopen_base_driver, canopen_402_driver,
+#     canopen_proxy_driver, canopen_ros2_control, canopen_ros2_controllers), so a fabricated
+#     IMPORTED target name is NOT an option here -- it would leak into the exported link interface
+#     and break all of them (exactly what happened to nebula_velodyne_common). Substitute the
+#     toolchain's ABSOLUTE ${YAML_CPP_LIBRARIES} path, which exports cleanly. Idempotent. ---
+if [ -n "$_f" ] && [ -f "$_f" ] && grep -qE '^[[:space:]]+yaml-cpp$' "$_f"; then
+  perl -0pi -e 's{^([ \t]+)yaml-cpp$}{$1\$\{CI_YAML_CPP_LIB\}}mg' "$_f"
+  echo "  canopen_core: bare yaml-cpp link item -> \${CI_YAML_CPP_LIB} (unclobberable absolute path)"
+fi
+
+# --- canopen_core (humble branch only): node_canopen_driver.hpp calls
+#     `this->config_["dcf_path"].as<std::string>()` inside a CLASS TEMPLATE, where config_ is a
+#     dependent expression -- so `as` must be spelled `.template as<...>` or clang rejects it:
+#       node_canopen_driver.hpp:198:43: error: use 'template' keyword to treat 'as' as a
+#       dependent template name
+#     gcc accepts the sloppy form, which is why it survives on Linux. Upstream master already
+#     carries the fix; this backports it to the humble branch. No-op where `.template` is present. ---
+_h="$(dirname "$_f")/include/canopen_core/node_interfaces/node_canopen_driver.hpp"
+if [ -f "$_h" ] && grep -qE '\]\.as<' "$_h"; then
+  perl -pi -e 's{(\["(?:dcf_path|dcf)"\])\.as<}{$1.template as<}g' "$_h"
+  echo "  canopen_core: config_[...].as<> -> .template as<> (dependent template name) in node_canopen_driver.hpp"
+fi
+
+# --- lely_core_libraries (all 3): the INSTALLED lely/libc/time.h still carries the
+#     `#if !LELY_HAVE_TIMESPEC -> struct timespec {...}` fallback. The configure-time
+#     `-DLELY_HAVE_TIMESPEC=1` (CPPFLAGS, above) only covers lely's OWN build; a consumer
+#     TU (canopen_core -> lely/coapp/driver.hpp -> ... -> lely/libc/time.h) never defines
+#     it, so the header re-declares `struct timespec` over the SDK's _STRUCT_TIMESPEC ->
+#     "error: redefinition of 'timespec'" (install/include/lely/libc/time.h:88). Fix it in
+#     the header itself: lely already accepts _TIMESPEC_DEFINED / __timespec_defined as
+#     "the platform has timespec"; add Apple's equivalent macro, _STRUCT_TIMESPEC, which
+#     <time.h> (included 9 lines above the guard) always defines on macOS. ITIMERSPEC is
+#     deliberately left alone -- macOS does NOT define `struct itimerspec`, so lely must
+#     keep providing it. Verified: patch applies cleanly to lely-core fb735b79. ---
+d="$(_pkg_dir lely_core_libraries)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q '0101-macos-timespec.patch' "$d/CMakeLists.txt"; then
+  mkdir -p "$d/patches"
+  cat > "$d/patches/0101-macos-timespec.patch" <<'PATCHEOF'
+From 0000000000000000000000000000000000000101 Mon Sep 17 00:00:00 2001
+From: Build Fix <noreply@example.com>
+Date: Mon, 22 Sep 2026 00:00:00 +0000
+Subject: [PATCH] Recognize Apple's _STRUCT_TIMESPEC in LELY_HAVE_TIMESPEC
+
+lely/libc/time.h decides whether the platform already provides
+`struct timespec` from __STDC_VERSION__ / _MSC_VER / _POSIX_C_SOURCE /
+__CYGWIN__ / _TIMESPEC_DEFINED / __timespec_defined. On macOS none of
+those hold for a plain C++ TU, so the header defines its own
+`struct timespec`, which collides with the SDK's:
+
+  install/include/lely/libc/time.h:88:8: error: redefinition of 'timespec'
+  .../sys/_types/_timespec.h:33:1: note: previous definition is here
+
+macOS signals "timespec is already declared" with _STRUCT_TIMESPEC,
+defined by <time.h> -- which this header includes before the check --
+so treat it like the other platform macros already listed.
+
+struct itimerspec is intentionally NOT covered: macOS does not provide
+it, so lely's own definition must stay.
+---
+ include/lely/libc/time.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/include/lely/libc/time.h b/include/lely/libc/time.h
+index b4946d9..0430a1b 100644
+--- a/include/lely/libc/time.h
++++ b/include/lely/libc/time.h
+@@ -36,7 +36,8 @@
+ #ifndef LELY_HAVE_TIMESPEC
+ #if __STDC_VERSION__ >= 201112L || _MSC_VER >= 1900 \
+ 		|| _POSIX_C_SOURCE >= 199309L || defined(__CYGWIN__) \
+-		|| defined(_TIMESPEC_DEFINED) || defined(__timespec_defined)
++		|| defined(_TIMESPEC_DEFINED) || defined(__timespec_defined) \
++		|| defined(_STRUCT_TIMESPEC)
+ #define LELY_HAVE_TIMESPEC 1
+ #endif
+ #endif
+PATCHEOF
+  perl -0pi -e 's{(\n[ \t]*#CONFIGURE step execute autoreconf and configure)}{\n  COMMAND git apply --whitespace=fix --reject \$\{CMAKE_CURRENT_SOURCE_DIR\}/patches/0101-macos-timespec.patch$1}' "$d/CMakeLists.txt"
+  echo "  lely_core_libraries: added 0101-macos-timespec.patch to UPDATE_COMMAND"
+fi
+
+# --- adi_3dtof_image_stitching (humble only): stitch_frames_core_cpu.cpp uses M_PIf32,
+#     a glibc _GNU_SOURCE float constant (<math.h>, __USE_GNU). The macOS SDK has no
+#     M_PIf32/M_PIf64 family -> "use of undeclared identifier 'M_PIf32'". The expression
+#     is float arithmetic, so the portable spelling is a cast of M_PI. ---
+for _f in $(grep -rl 'M_PIf32' "$ROOT" --include='*.cpp' --include='*.h' --include='*.hpp' 2>/dev/null | grep -v '/build/' | grep -v '/install/'); do
+  sed "${SEDI[@]}" 's/M_PIf32/static_cast<float>(M_PI)/g' "$_f"
+  echo "  M_PIf32 -> static_cast<float>(M_PI) (glibc-only macro) in ${_f#$ROOT/}"
+done
+
+# --- VTK 9.7 (brew, all 3): the runner's brew VTK moved 9.6 -> 9.7, and the 9.7 bottle
+#     IS built with Qt6 -- so VTK-targets.cmake now declares VTK::GUISupportQt with
+#     `Qt6::OpenGLWidgets` in its link interface. vtk-config.cmake include()s
+#     VTK-targets.cmake before any Qt find, and set_target_properties() validates every
+#     named target, so the whole find_package(VTK) aborts:
+#       CMake Error at .../vtk-9.7/VTK-targets.cmake:2328 (set_target_properties):
+#         The link interface of target "VTK::GUISupportQt" contains: Qt6::OpenGLWidgets
+#         but the target was not found.
+#     reached via PCLConfig find_VTK() from pcl_conversions -> kills rtabmap_conversions
+#     on all 3 distros. Same shape as the JsonCpp::JsonCpp case above, so the same cure:
+#     pre-define the missing target. A bare INTERFACE IMPORTED stub is deliberate -- this
+#     workspace's rviz/ROS stack is Qt5 (see the Qt5/Qt6 prefix-ordering rules) and must
+#     NOT have a Qt6 find dragged in from inside a VTK find; nothing here links
+#     VTK::GUISupportQt anyway (GUISupportQt is stripped from PCL_VTK_COMPONENTS above),
+#     the target only has to EXIST for VTK-targets.cmake to load. ---
+for _f in /opt/homebrew/lib/cmake/vtk-*/vtk-config.cmake; do
+  [ -f "$_f" ] || continue
+  grep -q 'ci-vtk-qt6openglwidgets' "$_f" && continue
+  perl -0pi -e 's{(include\("\$\{CMAKE_CURRENT_LIST_DIR\}/\$\{CMAKE_FIND_PACKAGE_NAME\}-targets\.cmake"\))}{# ci-vtk-qt6openglwidgets: VTK 9.7 GUISupportQt names Qt6::OpenGLWidgets in its link\n# interface; satisfy the target-exists check without pulling Qt6 into this Qt5 workspace.\nif(NOT TARGET Qt6::OpenGLWidgets)\n  add_library(Qt6::OpenGLWidgets INTERFACE IMPORTED)\nendif()\n$1}' "$_f"
+  echo "  VTK: pre-define Qt6::OpenGLWidgets stub before VTK-targets.cmake in ${_f}"
+done
+
+# --- multisensor_calibration (kilted/jazzy): OpenCV 4.7 rewrote the aruco module. Two sites in
+#     CalibrationTarget.hpp still use the pre-4.7 API and fail on brew opencv@4:
+#       :105 `pArucoDictionary = cv::aruco::getPredefinedDictionary(...)` -- 4.7+ returns a
+#            Dictionary BY VALUE, the member is a cv::Ptr<Dictionary> -> "no viable overloaded '='"
+#       :128 `cv::aruco::Board::create(corners, dict, ids)` -- the static factory was removed in
+#            4.7+ in favour of the Board constructor -> "no member named 'create' in
+#            'cv::aruco::Board'"
+#     Keep the members as cv::Ptr (the nullptr checks at :308/:309 and the estimatePoseBoard /
+#     detectMarkers call sites rely on it) and just construct them with cv::makePtr. Guarded on the
+#     OpenCV version so a pre-4.7 tree still compiles. Idempotent (ci-msc-aruco47 marker). ---
+_f="$(_pkg_cml multisensor_calibration)"
+_f="$(dirname "${_f:-/nonexistent}")/include/multisensor_calibration/calibration_target/CalibrationTarget.hpp"
+if [ -f "$_f" ] && ! grep -q 'ci-msc-aruco47' "$_f"; then
+  perl -0pi -e 's{\n([ \t]*)pArucoDictionary = cv::aruco::getPredefinedDictionary\(cv::aruco::DICT_6X6_250\);}{"\n$1// ci-msc-aruco47: OpenCV 4.7+ returns Dictionary by value; this member is a cv::Ptr\n#if CV_VERSION_MAJOR > 4 || (CV_VERSION_MAJOR == 4 \&\& CV_VERSION_MINOR >= 7)\n$1pArucoDictionary = cv::makePtr<cv::aruco::Dictionary>(\n$1  cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250));\n#else\n$1pArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);\n#endif"}e' "$_f"
+  perl -0pi -e 's{\n([ \t]*)pArucoBoard = cv::aruco::Board::create\(boardCorners, pArucoDictionary,\s*\n\s*markerIds\);}{"\n$1// ci-msc-aruco47: Board::create() was removed in OpenCV 4.7+; use the constructor\n#if CV_VERSION_MAJOR > 4 || (CV_VERSION_MAJOR == 4 \&\& CV_VERSION_MINOR >= 7)\n$1pArucoBoard = cv::makePtr<cv::aruco::Board>(boardCorners, *pArucoDictionary, markerIds);\n#else\n$1pArucoBoard = cv::aruco::Board::create(boardCorners, pArucoDictionary, markerIds);\n#endif"}e' "$_f"
+  echo "  multisensor_calibration: aruco getPredefinedDictionary/Board::create -> OpenCV 4.7+ API in ${_f#$ROOT/}"
+fi
+
+# --- multisensor_calibration, part 2 (the .cpp): OpenCV 4.7+ also removed
+#     cv::aruco::DetectorParameters::create(). The member stays a cv::Ptr (line 353 passes it to
+#     detectMarkers), so construct one with cv::makePtr. Revealed only after the header fix above
+#     let the package compile for 5 minutes instead of 30 seconds. Idempotent. ---
+_f="$(_pkg_cml multisensor_calibration)"
+_f="$(dirname "${_f:-/nonexistent}")/src/sensor_data_processing/CameraDataProcessor.cpp"
+if [ -f "$_f" ] && ! grep -q 'ci-msc-aruco47-params' "$_f"; then
+  perl -0pi -e 's{\n([ \t]*)pArucoDetectorParameters_(\s*)= cv::aruco::DetectorParameters::create\(\);}{"\n$1// ci-msc-aruco47-params: DetectorParameters::create() was removed in OpenCV 4.7+\n#if CV_VERSION_MAJOR > 4 || (CV_VERSION_MAJOR == 4 \&\& CV_VERSION_MINOR >= 7)\n$1pArucoDetectorParameters_$2= cv::makePtr<cv::aruco::DetectorParameters>();\n#else\n$1pArucoDetectorParameters_$2= cv::aruco::DetectorParameters::create();\n#endif"}e' "$_f"
+  echo "  multisensor_calibration: aruco DetectorParameters::create -> makePtr (OpenCV 4.7+) in ${_f#$ROOT/}"
+fi
+
+# --- tf2_ros: consumers that pass the NODE BY REFERENCE (all 3) -------------------------------
+#     The tf2_ros in this workspace takes pointer-like / interface arguments:
+#       CreateTimerROS(NodeBaseInterface::SharedPtr, NodeTimersInterface::SharedPtr, ...)
+#       TransformListener(buffer, NodeT && node, ...)   -> body calls node->get_node_base_interface()
+#     Several consumers' branch TIPS have moved to the newer convention of handing it `*this`:
+#       imu_transformer.cpp:16           make_shared<tf2_ros::CreateTimerROS>(*this)
+#       laserscan_to_pointcloud_node.cpp make_shared<tf2_ros::CreateTimerROS>(*this)
+#       pointcloud_to_laserscan_node.cpp make_shared<tf2_ros::CreateTimerROS>(*this)
+#       dual_laser_merger.cpp:44         make_shared<tf2_ros::TransformListener>(*buf, *this)
+#     which fails as "no matching constructor for initialization of 'tf2_ros::CreateTimerROS'" and
+#     "member reference type 'merger_node::MergerNode' is not a pointer". Their PINNED commits use
+#     the pointer form, so this is pure tip drift. Rewrite to the pointer/interface form, which both
+#     the old and new tf2_ros accept. Idempotent (the `*this` spelling is gone afterwards). ---
+for _f in $(grep -rl 'tf2_ros::CreateTimerROS>(\*this)\|tf2_ros::TransformListener>(\*[A-Za-z0-9_]*, \*this)' "$ROOT" \
+            --include='*.cpp' --include='*.hpp' 2>/dev/null | grep -v '/build/' | grep -v '/install/'); do
+  perl -pi -e 's{tf2_ros::CreateTimerROS>\(\*this\)}{tf2_ros::CreateTimerROS>(this->get_node_base_interface(), this->get_node_timers_interface())}g;' \
+            -e 's{(tf2_ros::TransformListener>\(\*[A-Za-z0-9_]+, )\*this\)}{$1this)}g;' "$_f"
+  echo "  tf2_ros: node-by-reference -> pointer/interface form in ${_f#$ROOT/}"
+done
+
+# --- multisensor_calibration: explicit instantiations placed BEFORE a member definition --------
+#     ExtrinsicCalibrationBase.cpp has `template class ExtrinsicCalibrationBase<A,B>;` at ~:907 but
+#     defines updateCalibrationResult() at ~:914 -- AFTER them. An explicit class instantiation only
+#     emits the members defined at that point, so that one is never emitted and every consumer fails
+#     at link:
+#       Undefined symbols: ExtrinsicCalibrationBase<LidarDataProcessor, ...>::updateCalibrationResult(
+#         std::pair<std::string, double>, int), referenced from ...finalizeCalibration()
+#     Move the five instantiation statements to the END of the file, after all definitions.
+#     Idempotent (guarded on the block still preceding the definition). ---
+_f="$(_pkg_cml multisensor_calibration)"
+_f="$(dirname "${_f:-/nonexistent}")/src/calibration/ExtrinsicCalibrationBase.cpp"
+if [ -f "$_f" ] && ! grep -q 'ci-msc-instantiation-order' "$_f"; then
+  python3 - "$_f" <<'PYEOF'
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+blk = re.findall(r'^template class ExtrinsicCalibrationBase<[^;]+>;\n', s, re.M)
+if blk:
+    for b in blk:
+        s = s.replace(b, '')
+    tail = (
+        '\n// ci-msc-instantiation-order: these explicit instantiations used to sit mid-file, BEFORE\n'
+        '// updateCalibrationResult() was defined -- so that member was never emitted and every\n'
+        '// consumer failed at link with an undefined symbol. An explicit class instantiation only\n'
+        '// emits the members already defined at that point, so they must come after all of them --\n'
+        '// but still INSIDE the namespace, or the template arguments no longer resolve\n'
+        '// ("unknown type name CameraDataProcessor").\n'
+        + ''.join(blk))
+    # anchor on the LAST namespace-closing brace, not end-of-file
+    m = list(re.finditer(r'^\}\s*//\s*namespace\s+\S+.*$', s, re.M))
+    if m:
+        last = m[-1]
+        s = s[:last.start()] + tail + '\n' + s[last.start():]
+    else:
+        s = s.rstrip('\n') + '\n' + tail
+    open(p, 'w').write(s)
+    print("  multisensor_calibration: moved %d explicit instantiation(s) to end of ExtrinsicCalibrationBase.cpp" % len(blk))
+PYEOF
+  # A broken heredoc body (python SyntaxError) exits non-zero and is otherwise
+  # invisible -- that cost three CI rounds once. Make it an annotation.
+  if [ $? -ne 0 ] || ! grep -q 'ci-msc-instantiation-order' "$_f"; then
+    echo "::error::apply_source_patches: the multisensor_calibration instantiation-order patch did not apply to ${_f#$ROOT/}"
+  fi
+fi
+
+# --- ${YAML_CPP_LIBRARIES} as a LINK item -> ${CI_YAML_CPP_LIB} (all 3) -----------------------
+#     YAML_CPP_LIBRARIES is a coin flip in this workspace: the toolchain sets it to the absolute
+#     .dylib path, but the vendor config (and our own 0.7.0 patch) sets it to the TARGET NAME
+#     yaml-cpp::yaml-cpp -- so which one a package sees depends on whether find_package(yaml-cpp)
+#     has run in its scope yet. cl_moveit2z and moveit2z_client lost that flip:
+#       CMakeLists.txt:51 (target_link_libraries): Target "cl_moveit2z" links to:
+#         yaml-cpp::yaml-cpp   but the target was not found
+#     which also took out their consumers. CI_YAML_CPP_LIB (set in cmake/toolchain.cmake) is never
+#     assigned by anything else, always holds the absolute path, and exports cleanly to consumers --
+#     unlike a target name. Rewrite it everywhere it is used as a LINK item; several of these sites
+#     were themselves created by the bare-yaml-cpp patches further up, so this closes the class
+#     rather than the instance. Idempotent. ---
+for _f in $(grep -rl 'YAML_CPP_LIBRARIES' "$ROOT" --include=CMakeLists.txt 2>/dev/null \
+            | grep -v '/build/' | grep -v '/install/'); do
+  grep -q 'ci-yamlcpp-linkvar' "$_f" && continue
+  if perl -0ne 'exit(!/target_link_libraries\([^)]*\$\{YAML_CPP_LIBRARIES\}/s)' "$_f"; then
+    perl -0pi -e 's{(target_link_libraries\([^)]*?)\$\{YAML_CPP_LIBRARIES\}}{$1\$\{CI_YAML_CPP_LIB\}}gs' "$_f"
+    perl -0pi -e 's{\A}{# ci-yamlcpp-linkvar: \$\{YAML_CPP_LIBRARIES\} in link lines -> \$\{CI_YAML_CPP_LIB\} (absolute path,\n# never clobbered by find_package, exports cleanly). See apply_source_patches.sh.\n}' "$_f"
+    echo "  ${_f#$ROOT/}: \${YAML_CPP_LIBRARIES} -> \${CI_YAML_CPP_LIB} in link line(s)"
+  fi
+done

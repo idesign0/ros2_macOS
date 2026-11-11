@@ -1,17 +1,42 @@
 name: macOS ROS 2 Kilted CI (Apple Silicon)
 
 on:
+  # kilted-new is deliberately NOT a push trigger here.
+  #
+  # This is the monolithic build: the entire workspace in ONE job. The layered workflow
+  # (macos-kilted-layered.yml) is what builds the -new branches, and the two compete for the
+  # same capacity -- GitHub runs only 5 macOS jobs at a time for this account, so on
+  # 2026-10-12 seven push-triggered monolithic builds queued alongside three layered runs
+  # (45 jobs waiting behind 5 slots) and then died on their own timeouts:
+  #   jazzy      ran 4h01m -> hit timeout-minutes: 240
+  #   kilted-new ran 6h02m -> hit timeout-minutes: 360
+  # GitHub reports a timed-out job as "cancelled", which made it look like a quota problem.
+  # Pushing a fix batch to a -new branch should not start a build that cannot finish and
+  # that starves the layered run of the same commit.
   push:
     branches: [kilted]
   pull_request:
   workflow_dispatch:
+
+# One build per ref. Two commits pushed back-to-back previously produced two full runs of
+# the same branch (the OpenCV fix landed as two commits and started two builds per branch);
+# supersede instead of queueing both.
+concurrency:
+  group: monolithic-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: macos-26
     env:
       CI_BUILD: TRUE
-    timeout-minutes: 240
+      # Homebrew refuses formulae from third-party taps when resolving via the
+      # API ("Refusing to load formula ... from untrusted tap"), which silently
+      # skipped the gz-* bottles and forced source builds until the job timed out.
+      HOMEBREW_NO_INSTALL_FROM_API: 1
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    # 360 is the GitHub-hosted runner maximum (6 h); jobs are killed past this.
+    timeout-minutes: 360
 
     steps:
     # --------------------------------------------------
@@ -64,12 +89,12 @@ jobs:
     # --------------------------------------------------
     - name: Update Homebrew and install base packages
       run: |
-        brew tap osrf/simulation
+        brew tap osrf/simulation https://github.com/osrf/homebrew-simulation
         brew install \
           graphviz \
           eigen@3 \
           eigen \
-          GeographicLib \
+          geographiclib \
           vtk \
           opencv@4
       
@@ -99,13 +124,13 @@ jobs:
           --config-settings="--global-option=build_ext" \
           --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
           --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
-          argcomplete catkin_pkg colcon-common-extensions coverage \
+          argcomplete future catkin_pkg colcon-common-extensions coverage \
           cryptography empy==3.3.4 flake8 flake8-blind-except==0.1.1 flake8-builtins \
           flake8-class-newline flake8-comprehensions flake8-deprecated \
           flake8-docstrings flake8-import-order flake8-quotes \
           importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
           nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
-          pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard jinja2
+          pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard jinja2 rtree
 
     # --------------------------------------------------
     # Environment
@@ -183,8 +208,15 @@ jobs:
     # Build full workspace
     # --------------------------------------------------
     - name: Build full workspace
+      # tolerant on -new branches (see all package failures), strict on release
+      continue-on-error: ${{ endsWith(github.ref_name, '-new') }}
       shell: bash
       run: |
+        # Drop ros2_controllers' battery_state_broadcaster: it collides with the
+        # standalone ros_battery_monitoring package we ship, and only appears via
+        # the upstream auto-rebase (not in our tree), so ignore it at build time.
+        [ -d ros2_control/ros2_controllers/battery_state_broadcaster ] && \
+          touch ros2_control/ros2_controllers/battery_state_broadcaster/COLCON_IGNORE || true
         colcon build \
           --merge-install \
           --executor parallel \
@@ -210,7 +242,7 @@ jobs:
     # Deploy Release + Update Homebrew Formula
     # --------------------------------------------------
     - name: Deploy Release + Update Formula
-      if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && !endsWith(github.ref_name, '-new')
       shell: bash
       env:
         TAP_REPO: "idesign0/homebrew-ros2"

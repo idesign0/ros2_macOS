@@ -50,23 +50,66 @@ set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 set(ROS_WORKSPACE_INSTALL "${WORKSPACE_ROOT}/install")
 list(APPEND CMAKE_PREFIX_PATH "${ROS_WORKSPACE_INSTALL}")
 
+# Homebrew's tl-expected ships tl-expected-config.cmake (hyphen); several
+# ros2_control-family packages (om_gravity_compensation_controller,
+# om_spring_actuator_controller, ...) call find_package(tl_expected)
+# (underscore, matching their package.xml <depend>) -> name mismatch, never
+# found by CMake's default search. Bridge via cmake/Modules/Findtl_expected.cmake.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Modules")
+
 # --- Force System Python 3.11 ---
 set(PYTHON_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 interpreter" FORCE)
 set(Python3_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 executable" FORCE)
 set(Python3_ROOT_DIR "/Library/Frameworks/Python.framework/Versions/3.11" CACHE PATH "Python3 root directory" FORCE)
+# Make find_package(Python3) honor the forced 3.11 executable/root instead of
+# picking the runner newest (3.14). mrt FindBoostPython uses find_package(Python3).
+set(Python3_FIND_STRATEGY LOCATION CACHE STRING "" FORCE)
+set(Python3_FIND_UNVERSIONED_NAMES FIRST CACHE STRING "" FORCE)
+# --- versionless FindPython pin: find_package(Python)/mrt AutoDeps derive the Boost
+#     python component from THIS; pin to 3.11 so consumers request boost_python311
+#     (present in the vendored boost-1.89), not boost_python314 (runner default). ---
+set(Python_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3" CACHE FILEPATH "Python 3.11 (versionless)" FORCE)
+set(Python_ROOT_DIR "/Library/Frameworks/Python.framework/Versions/3.11" CACHE PATH "Python 3.11 root (versionless)" FORCE)
+set(Python_FIND_STRATEGY "LOCATION" CACHE STRING "" FORCE)
 
 # Optional: if you want CMake to locate headers & libs too
 set(PYTHON_LIBRARY "/Library/Frameworks/Python.framework/Versions/3.11/lib/libpython3.11.dylib" CACHE FILEPATH "Python 3.11 library" FORCE)
 set(PYTHON_INCLUDE_DIR "/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11" CACHE PATH "Python 3.11 include dir" FORCE)
 
 # Check the package/project name
-if("${CMAKE_PROJECT_NAME}" STREQUAL "kinematics_interface_pinocchio")
+if("${CMAKE_PROJECT_NAME}" MATCHES "^(kinematics_interface_pinocchio|linear_feedback_controller|libfranka|franka_example_controllers)$")
     message(STATUS "Stitching Boost and Boost-Python for ${CMAKE_PROJECT_NAME}")
     set(Boost_INCLUDE_DIR "/opt/homebrew/opt/boost/include" CACHE PATH "" FORCE)
-    # Explicitly map the Python 3.14 library path you just found
-    set(Boost_PYTHON314_LIBRARY_RELEASE "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
-    set(Boost_PYTHON314_LIBRARY_DEBUG "/opt/homebrew/opt/boost-python3/lib/libboost_python314.dylib" CACHE FILEPATH "" FORCE)
+    # ci-boost-python-glob: brew bumps its python3 (3.11 -> 3.14 -> 3.15 -> ...) and rebuilds
+    # boost-python3 against it, so a hardcoded libboost_python314 goes stale on the next
+    # runner image. eigenpy's SEARCH_FOR_BOOST_PYTHON derives the component name from the
+    # Python it found (boost.cmake:114 "python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
+    # and then reads Boost_PYTHON<NNN>_LIBRARY_RELEASE, so a stale pin surfaces as
+    #   Could NOT find Boost (missing: python315) (found version "1.92.0")
+    # from eigenpyConfig.cmake -> boost.cmake:146. Register every versioned boost_python and
+    # boost_numpy brew actually ships, under the exact variable name FindBoost derives.
+    file(GLOB _ci_bp_libs
+      "/opt/homebrew/opt/boost-python3/lib/libboost_python3*.dylib"
+      "/opt/homebrew/opt/boost-python3/lib/libboost_numpy3*.dylib")
+    foreach(_ci_bp IN LISTS _ci_bp_libs)
+      if(_ci_bp MATCHES "libboost_(python|numpy)([0-9]+)\\.dylib$")
+        string(TOUPPER "${CMAKE_MATCH_1}" _ci_bp_comp)
+        set(Boost_${_ci_bp_comp}${CMAKE_MATCH_2}_LIBRARY_RELEASE "${_ci_bp}" CACHE FILEPATH "" FORCE)
+        set(Boost_${_ci_bp_comp}${CMAKE_MATCH_2}_LIBRARY_DEBUG   "${_ci_bp}" CACHE FILEPATH "" FORCE)
+        message(STATUS "ci-boost-python-glob: Boost_${_ci_bp_comp}${CMAKE_MATCH_2} -> ${_ci_bp}")
+      endif()
+    endforeach()
+    unset(_ci_bp_libs)
     set(Boost_NO_SYSTEM_PATHS OFF CACHE BOOL "" FORCE)
+    # Point CONFIG-mode find_package(Boost) (realtime_tools/hardware_interface extras that
+    # do find_package(Boost) with no components) at brew boost's BoostConfig.cmake, else those
+    # transitive finds fail: "Could not find a package configuration file provided by Boost".
+    file(GLOB _brew_boost_cmake_dirs "/opt/homebrew/opt/boost/lib/cmake/Boost-*")
+    if(_brew_boost_cmake_dirs)
+        list(GET _brew_boost_cmake_dirs 0 _brew_boost_cmake_dir)
+        set(Boost_DIR "${_brew_boost_cmake_dir}" CACHE PATH "" FORCE)
+    endif()
+    set(CMAKE_PREFIX_PATH "/opt/homebrew/opt/boost;${CMAKE_PREFIX_PATH}")
 else()
     message(STATUS "Using custom CMake Boost for ${CMAKE_PROJECT_NAME}")
 
@@ -97,6 +140,15 @@ endif()
 
 
 # --- RPATH settings for macOS ---
+# ci-pkgconfig-keg: keg-only formulae (libpqxx/libpq) do not put their .pc on the default pkg-config
+# path, so pkg_check_modules(libpqxx) (cx_cdb_*_plugin) fails. Add the keg pkgconfig dirs.
+# beluga_vdb finds OpenVDB via MODULE mode + a glob of /usr/lib//FindOpenVDB.cmake (Linux only);
+# point it at brew openvdb's CMake module dir so find_package(OpenVDB) resolves on macOS.
+if(EXISTS "/opt/homebrew/opt/openvdb/lib/cmake/OpenVDB")
+  set(OPENVDB_CMAKE_MODULE_PATH "/opt/homebrew/opt/openvdb/lib/cmake/OpenVDB" CACHE PATH "brew OpenVDB module dir" FORCE)
+endif()
+set(ENV{PKG_CONFIG_PATH} "/opt/homebrew/lib/pkgconfig:/opt/homebrew/opt/libpqxx/lib/pkgconfig:/opt/homebrew/opt/libpq/lib/pkgconfig:")
+
 set(CMAKE_SKIP_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 if(IS_CI)
@@ -136,6 +188,19 @@ set(yaml-cpp_DIR "${YAML_CPP_PREFIX}/lib/cmake/yaml-cpp" CACHE PATH "yaml-cpp co
 # Explicit include dirs and library (optional)
 set(YAML_CPP_INCLUDE_DIRS "${YAML_CPP_PREFIX}/include" CACHE PATH "yaml-cpp include directory")
 set(YAML_CPP_LIBRARIES "${YAML_CPP_PREFIX}/lib/libyaml-cpp.dylib" CACHE FILEPATH "yaml-cpp library")
+# A PRIVATE, unclobberable handle on the vendored yaml-cpp. YAML_CPP_LIBRARIES has TWO meanings
+# here: the absolute path set just above (before anyone calls find_package), and the yaml-cpp::yaml-cpp
+# TARGET NAME that the vendor config deliberately sets (see the yaml_cpp_vendor patch in
+# apply_source_patches.sh). Which one a package sees depends on whether find_package(yaml-cpp) has run
+# yet -- so a patch that rewrites a link line to ${YAML_CPP_LIBRARIES} is a coin flip.
+# nebula_velodyne_common lost that flip: autoware_package() runs find_package(yaml-cpp) at line 5,
+# so by line 18 the variable held the target name, and the link failed with
+#   Target "nebula_velodyne_common" links to: yaml-cpp::yaml-cpp
+#   but the target was not found
+# Nothing else ever assigns CI_YAML_CPP_LIB, so a rewrite pointed at it always gets the absolute path
+# -- which links locally AND exports cleanly to consumers (a fabricated target name does not).
+set(CI_YAML_CPP_LIB "${YAML_CPP_PREFIX}/lib/libyaml-cpp.dylib"
+    CACHE FILEPATH "Absolute path to the vendored yaml-cpp (never overwritten by find_package)")
 
 # Make headers visible globally (optional)
 include_directories(${YAML_CPP_INCLUDE_DIRS})
@@ -175,6 +240,7 @@ add_compile_options(
         -Wno-error=format-security
         -Wno-error=overloaded-virtual
         -Wno-error=deprecated-builtins
+        -Wno-error=deprecated-declarations
         -Wno-error=deprecated-copy-with-dtor
         -Wno-error=deprecated-copy-with-user-provided-dtor
         -Wno-error=unused-lambda-capture
@@ -184,6 +250,10 @@ add_compile_options(
         -Wno-error=missing-template-arg-list-after-template-kw
         -Wno-error=deprecated-literal-operator
         -Wno-error=thread-safety-analysis
+        # ci-utf8: urg_c and other Shift-JIS-encoded sources emit -Winvalid-utf8 warnings that dump raw
+        # invalid bytes into the build log, crashing the GitHub runner's UTF-8 log writer
+        # (System.IO.IOException: Illegal byte sequence) and failing the whole job. Suppress the warning.
+        -Wno-invalid-utf8
         -Wno-thread-safety-analysis
  )
 
@@ -242,6 +312,43 @@ include_directories(SYSTEM ${CLI11_INCLUDE_DIRS})
 set(CSPARSE_INCLUDE_DIR "/opt/homebrew/include/suitesparse")
 set(CSPARSE_LIBRARY "/opt/homebrew/lib/libsuitesparse.dylib")
 
+# SuiteSparse: Ceres (built in base) requires SuiteSparse >= 7.14.0, but the linked
+# /opt/homebrew/opt/suite-sparse can point at an older keg (7.12.x) at consumer time ->
+# "Failed to find ... SuiteSparse: unsuitable version 7.12.3, required >= 7.14.0"
+# (robot_calibration, rmf_traffic_editor). Prepend the NEWEST installed suite-sparse keg to
+# CMAKE_PREFIX_PATH so find_package(SuiteSparse) resolves the >=7.14 one consistently in
+# every job (also keeps base and domain shards on one version).
+# PREFER THE STABLE SYMLINK. Pointing CMAKE_PREFIX_PATH at a versioned Cellar keg makes every
+# recorded path version-specific, and jobs in one run provision Homebrew independently hours apart:
+# humble run 35983456051 built ceres in base-1 against suite-sparse 7.14.1, base-2a then had only
+# 7.14.0, and cartographer died with
+#   make: *** No rule to make target '/opt/homebrew/Cellar/suite-sparse/7.14.1/lib/libspqr.dylib'
+# (after the CeresConfig version-pin strip had already got it past the find_package check -- that
+# fixed the version COMPARISON but not the baked-in absolute PATH). /opt/homebrew/opt/suite-sparse
+# is a symlink brew keeps pointing at the current keg, so a path recorded through it stays valid in
+# every job whatever version that job has. Only fall back to a versioned keg if the symlink is
+# older than what Ceres needs (>= 7.14.0), which is the case this block originally existed for.
+set(_ss_prefix "")
+if(EXISTS "/opt/homebrew/opt/suite-sparse")
+  file(REAL_PATH "/opt/homebrew/opt/suite-sparse" _ss_real)
+  get_filename_component(_ss_linked_ver "${_ss_real}" NAME)
+  if(_ss_linked_ver VERSION_GREATER_EQUAL 7.14.0)
+    set(_ss_prefix "/opt/homebrew/opt/suite-sparse")
+  endif()
+endif()
+if(NOT _ss_prefix)
+  file(GLOB _ss_kegs "/opt/homebrew/Cellar/suite-sparse/*")
+  if(_ss_kegs)
+    list(SORT _ss_kegs COMPARE NATURAL)
+    list(LENGTH _ss_kegs _ss_n)
+    math(EXPR _ss_last "${_ss_n}-1")
+    list(GET _ss_kegs ${_ss_last} _ss_prefix)
+  endif()
+endif()
+if(_ss_prefix)
+  set(CMAKE_PREFIX_PATH "${_ss_prefix};${CMAKE_PREFIX_PATH}")
+endif()
+
 # 1. Set the GDAL_CONFIG variable (often found in /opt/homebrew/bin)
 set(GDAL_CONFIG_BIN "/opt/homebrew/bin/gdal-config" CACHE FILEPATH "Path to Homebrew gdal-config utility." FORCE)
 
@@ -267,11 +374,73 @@ set(QT5_PREFIX "/opt/homebrew/opt/qt@5" CACHE PATH "Qt5 prefix path")
 set(Qt6_DIR "/opt/homebrew/opt/qt/lib/cmake/Qt6" CACHE PATH "Qt6 CMake path")
 set(QT6_PREFIX "/opt/homebrew/opt/qt" CACHE PATH "Qt6 prefix path")
 
+# ci-qt6-keg: Homebrew MODULARISED Qt6 at 6.12.0, with two consequences.
+#  1. The Qt6 configs reached through the `qt` paths above are symlinks into the *linked*
+#     prefix (/opt/homebrew/opt/qt/lib/cmake/Qt6 -> /opt/homebrew/lib/cmake/Qt6, whose
+#     Qt6Core/Qt6Network/Qt6Widgets entries point into Cellar/qtbase). So `brew unlink
+#     qtbase` -- which base-1/base-2a/base-2b/domains already run -- silently deletes them
+#     and breaks every explicit find_package(Qt6). The promise in the comment below that
+#     "Qt6 stays reachable via the Qt6_DIR cache var" stopped holding when that unlink landed.
+#  2. qtbase now links a top-level include/QtCore, include/QtNetwork, ... whose forwarding
+#     headers redirect with `#include <QtNetwork/qformdatabuilder.h>`. Under the ubiquitous
+#     -I/opt/homebrew/include that resolves back to ITSELF -> "#include nested too deeply",
+#     which killed gz-sim8 (humble run 40189605776, jazzy 40189607431) and with it
+#     ros_gz_sim, gz_ros2_control and 17 cascaded packages. The cure is `brew unlink qtbase`
+#     in the gz job; THIS block is what makes that unlink survivable.
+# Point Qt6 at the KEGS (/opt/homebrew/opt/...), which survive `brew unlink`.
+# QT_ADDITIONAL_PACKAGES_PREFIX_PATH is Qt's own split-install variable and is NOT consulted
+# by find_package(QT NAMES Qt6 Qt5), so the Qt5-first contract below is untouched.
+# Compile-tested locally on this macOS 27 box against brew qtbase 6.11.2 + qt@5 5.15.19 with
+# cmake probe projects (scratchpad/qt2), /opt/homebrew excluded to simulate the unlink:
+#   find_package(QT NAMES Qt6 Qt5 COMPONENTS Core)              -> Qt5 5.15.19   (unchanged)
+#   find_package(Qt6 COMPONENTS Core Network Quick Qml Widgets) -> FOUND 6.11.2, Quick=1
+#   find_package(Qt5 COMPONENTS Core Widgets)                   -> FOUND 5.15.19
+#   Qt6::Network INTERFACE_INCLUDE_DIRECTORIES
+#        -> /opt/homebrew/opt/qtbase/lib/QtNetwork.framework/Headers   (the real headers,
+#           NOT /opt/homebrew/include -> the self-include loop cannot form)
+# Pinning Qt6_DIR to the qtbase keg ALONE gives Qt6_FOUND=0 because Quick/Qml live in
+# qtdeclarative; hence the sibling-keg list. EXISTS-guarded throughout, so a pre-6.12 layout
+# simply keeps the `qt` paths set above.
+if(EXISTS "/opt/homebrew/opt/qtbase/lib/cmake/Qt6")
+  set(QT6_PREFIX "/opt/homebrew/opt/qtbase" CACHE PATH "Qt6 prefix path" FORCE)
+  set(Qt6_DIR "/opt/homebrew/opt/qtbase/lib/cmake/Qt6" CACHE PATH "Qt6 CMake path" FORCE)
+  set(_ci_qt6_kegs "")
+  foreach(_ci_qt6_mod qtdeclarative qtsvg qtshadertools qttools qt5compat
+                      qtmultimedia qtwebengine qtwebsockets qtwebchannel
+                      qtserialport qtpositioning qtcharts qtimageformats)
+    if(EXISTS "/opt/homebrew/opt/${_ci_qt6_mod}/lib/cmake")
+      list(APPEND _ci_qt6_kegs "/opt/homebrew/opt/${_ci_qt6_mod}")
+    endif()
+  endforeach()
+  set(QT_ADDITIONAL_PACKAGES_PREFIX_PATH "${_ci_qt6_kegs}"
+      CACHE STRING "Qt6 sibling module kegs (Homebrew modularised Qt6 at 6.12.0)" FORCE)
+  unset(_ci_qt6_kegs)
+endif()
+
+# navmap_rviz_plugin / rtabmap_rviz_plugins force Qt5 themselves, but a transitive
+# dependency Config does find_dependency(Qt6) -> loads Qt6Gui/Qt6OpenGL -> poisons
+# QT_MAJOR_VERSION=6, so their own Qt5::Core then mismatches. Disable Qt6 discovery
+# for just these two so their whole configure resolves to Qt5. Scoped per-project, so
+# the genuine Qt6 consumers (rviz_satellite, rviz_visual_tools, gz_gui_vendor) are
+# unaffected. CMAKE_DISABLE_FIND_PACKAGE_Qt6 overrides the Qt6_DIR cache var above.
+if("${CMAKE_PROJECT_NAME}" MATCHES "^(navmap_rviz_plugin|rtabmap_rviz_plugins|multisensor_calibration|extrinsic_camera_lidar_calibration)$")
+  set(CMAKE_DISABLE_FIND_PACKAGE_Qt6 ON CACHE BOOL "" FORCE)
+endif()
+
+
 # Add both Qt5 and Qt6 CMake modules to CMAKE_PREFIX_PATH
-set(CMAKE_PREFIX_PATH "${QT6_PREFIX}/lib/cmake;${QT5_PREFIX}/lib/cmake;${CMAKE_PREFIX_PATH}" CACHE PATH "Qt CMake paths" FORCE)
+# Qt5/Qt6 mixing fix: the ROS base (rviz_common, qt_gui_cpp) is built with Qt5, but
+# rviz-plugin packages do find_package(QT NAMES Qt6 Qt5) which picks Qt6 whenever Qt6 is
+# on CMAKE_PREFIX_PATH -> they link Qt6::Widgets while rviz_common is Qt5 -> "INTERFACE_
+# QT_MAJOR_VERSION does not agree" (octomap_rviz_plugins, rviz_2d_overlay_plugins, mapviz,
+# autoware_*_rviz_plugin, ...). Keep ONLY Qt5 on CMAKE_PREFIX_PATH so the versionless
+# find resolves to Qt5 (matching the base). Qt6 stays reachable for anything that does an
+# explicit find_package(Qt6) via the Qt6_DIR cache var set above. Verified: with Qt5-only
+# path + Qt6_DIR set, find_package(QT NAMES Qt6 Qt5) -> Qt5, and find_package(Qt6) -> FOUND.
+set(CMAKE_PREFIX_PATH "${QT5_PREFIX}/lib/cmake;${CMAKE_PREFIX_PATH}" CACHE PATH "Qt CMake paths" FORCE)
 
 # Add Qt5 and Qt6 binaries to PATH (for moc, uic, rcc)
-set(ENV{PATH} "${QT6_PREFIX}/bin:${QT5_PREFIX}/bin:$ENV{PATH}")
+set(ENV{PATH} "${QT5_PREFIX}/bin:${QT6_PREFIX}/bin:$ENV{PATH}")  # Qt5 tools (moc/uic) first to match
 
 # Tell CMake to look for frameworks last (helps prevent conflicts)
 set(CMAKE_FIND_FRAMEWORK LAST)
@@ -327,6 +496,14 @@ endif()
 set(Eigen3_DIR "/opt/homebrew/opt/eigen@3/share/eigen3/cmake" CACHE PATH "" FORCE)
 list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/eigen@3")
 
+# --- ICU4C (Homebrew, keg-only) ---
+# cx_ros_msgs_plugin (ros-drivers/clips_executive) calls
+# find_package(ICU REQUIRED COMPONENTS uc i18n). icu4c is keg-only (not
+# symlinked into /opt/homebrew/{include,lib}) so CMake's bundled FindICU sees
+# the pkg-config version but can't locate the actual headers/libs without an
+# explicit prefix hint.
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/icu4c")
+
 # --- Google glog (Homebrew) ---
 set(GLOG_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "glog include path" FORCE)
 set(GLOG_LIBRARY "/opt/homebrew/lib/libglog.dylib" CACHE FILEPATH "glog library" FORCE)
@@ -368,3 +545,175 @@ endif()
 
 # OpenCV (Homebrew)
 set(OpenCV_DIR "/opt/homebrew/opt/opencv@4/lib/cmake/opencv4" CACHE PATH "" FORCE)
+# ---------------------------------------------------------------------------
+# GTSAM (borglab/gtsam @ 4.2.2) build options — macOS arm64 / colcon
+# GTSAM_* vars are namespaced, so setting them unconditionally is harmless to
+# every other package. These control build time, bottle portability, Eigen ABI,
+# and the Homebrew oneTBB incompatibility.
+# ---------------------------------------------------------------------------
+set(GTSAM_BUILD_TESTS              OFF CACHE BOOL "" FORCE)  # default ON  - skip tests
+set(GTSAM_BUILD_EXAMPLES_ALWAYS    OFF CACHE BOOL "" FORCE)  # default ON  - skip examples
+set(GTSAM_BUILD_TIMING_ALWAYS      OFF CACHE BOOL "" FORCE)
+set(GTSAM_BUILD_UNSTABLE           ON  CACHE BOOL "" FORCE)  # mola_state_estimation_smoother needs GTSAM_UNSTABLE
+set(GTSAM_UNSTABLE_BUILD_PYTHON    OFF CACHE BOOL "" FORCE)
+set(GTSAM_BUILD_PYTHON             OFF CACHE BOOL "" FORCE)
+set(GTSAM_INSTALL_MATLAB_TOOLBOX   OFF CACHE BOOL "" FORCE)
+set(GTSAM_USE_SYSTEM_EIGEN         ON  CACHE BOOL "" FORCE)  # share workspace Homebrew Eigen (avoid ABI mismatch)
+set(GTSAM_WITH_TBB                 OFF CACHE BOOL "" FORCE)  # Homebrew = oneTBB removed tbb::task GTSAM 4.2 uses
+set(GTSAM_BUILD_WITH_MARCH_NATIVE  OFF CACHE BOOL "" FORCE)  # keep bottle portable across Macs
+# --- end GTSAM options ---
+
+# ---------------------------------------------------------------------------
+# Cartographer (ros2 branch) uses legacy unprefixed Abseil thread-safety macros
+# (LOCKS_EXCLUDED / EXCLUSIVE_LOCKS_REQUIRED / GUARDED_BY) removed by newer
+# Abseil. Force-include a shim mapping them to the ABSL_* equivalents.
+# ---------------------------------------------------------------------------
+if(CMAKE_PROJECT_NAME MATCHES "^cartographer" AND NOT CMAKE_PROJECT_NAME MATCHES "_msgs$")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include ${CMAKE_CURRENT_LIST_DIR}/cartographer_absl_compat.h")
+endif()
+
+# ---------------------------------------------------------------------------
+# Lane 1b: Homebrew as a general link/search prefix (Apple Silicon)
+# /opt/homebrew is NOT a default search path here, so any package emitting a
+# bare -lglog / -lproj / -lgeos_c / -logg / -ltheoraenc / -lbenchmark / -lzstd
+# died with "ld: library 'X' not found". Adding -L/opt/homebrew/lib once fixes
+# that whole class (the per-glog full-path hack above only helped glog, and not
+# for packages that emit their own -lglog like cartographer).
+# Placed LAST so it captures all prior linker-flag additions and is not wiped by
+# earlier CACHE...FORCE sets. Appended (not prepended) so vendored -L paths
+# (boost-1.89, yaml_cpp_vendor) still win; `brew unlink` keeps conflicting kegs
+# (boost, yaml-cpp, qt, orocos-kdl) out of /opt/homebrew/lib, so no clash.
+# ---------------------------------------------------------------------------
+list(APPEND CMAKE_PREFIX_PATH  "/opt/homebrew")
+list(APPEND CMAKE_LIBRARY_PATH "/opt/homebrew/lib")
+list(APPEND CMAKE_INCLUDE_PATH "/opt/homebrew/include")
+
+# --- asio: brew asio (1.36) is too new for several consumers and is deliberately
+#     `brew unlink`ed (do NOT re-link). Fast-DDS vendors asio 1.34.2 under
+#     thirdparty/asio (checked out via --recursive submodules). Point CMAKE_INCLUDE_PATH
+#     at it so find_path(asio.hpp) in asio_cmake_module's FindASIO (io_context) and the
+#     per-package Findasio (ublox_gps, ecal, ...) resolve the vendored copy. Header-only,
+#     so include-path is all that's needed; scoped to find_path (not a global -I) so it
+#     doesn't shadow Fast-DDS's own relative use. ---
+WORKSPACE_PATH(_FASTDDS_ASIO_INC "eProsima/Fast-DDS/thirdparty/asio/asio/include")
+if(EXISTS "${_FASTDDS_ASIO_INC}/asio.hpp")
+  list(APPEND CMAKE_INCLUDE_PATH "${_FASTDDS_ASIO_INC}")
+  message(STATUS "Toolchain: using Fast-DDS vendored asio 1.34.2 at ${_FASTDDS_ASIO_INC}")
+endif()
+link_directories(/opt/homebrew/lib)
+include_directories(SYSTEM /opt/homebrew/include)
+
+# --- openssl@3 must win over openssl@4's /opt/homebrew/include symlinks -------------------
+#     Homebrew's new `openssl@4` (4.0.3) is NOT keg-only, so it links its headers into
+#     /opt/homebrew/include/openssl, which the `include_directories(SYSTEM /opt/homebrew/include)`
+#     above puts on EVERY compile as a directory-scope -isystem -- ahead of the target-scope
+#     -isystem that OpenSSL::SSL carries from find_package(OpenSSL) (OPENSSL_ROOT_DIR=openssl@3).
+#     Result: the whole workspace compiled OpenSSL 4 headers while linking OpenSSL 3 libs.
+#     OpenSSL 4 removed `struct asn1_string_st` from the public ABI and made the X509
+#     getters return const, so any pre-4.0 direct member access hard-errors:
+#       fastrtps      -- thirdparty/asio 1.34.2 ssl/impl/rfc2818_verification.ipp:65 ff.
+#                        "member access into incomplete type 'ASN1_IA5STRING'"
+#       librealsense2 -- third-party/libcurl lib/vtls/openssl.c:457 ff. (same, on ASN1_INTEGER)
+#     and eclipse-cyclonedds' auth plugin compiled with -Wincompatible-pointer-types-
+#     discards-qualifiers warnings -- i.e. a silent 3-vs-4 header/lib skew even where it built.
+#     Prepend openssl@3's include dir so headers and libs are the same OpenSSL again.
+#     NOTE the argument order: it is include_directories([AFTER|BEFORE] [SYSTEM] dirs) --
+#     `SYSTEM BEFORE` makes CMake treat "BEFORE" as a DIRECTORY NAME and silently APPENDS.
+if(EXISTS "/opt/homebrew/opt/openssl@3/include/openssl/ssl.h")
+  include_directories(BEFORE SYSTEM "/opt/homebrew/opt/openssl@3/include")
+endif()
+foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
+  set(${_lf} "${${_lf}} -L/opt/homebrew/lib" CACHE STRING "" FORCE)
+endforeach()
+
+# --- Make the vendored yaml-cpp resolvable for a BARE `-lyaml-cpp` -------------------------
+# yaml_cpp_vendor installs to the nested prefix install/opt/yaml_cpp_vendor/{lib,include}, which is
+# not on the normal <prefix>/lib search path, so any package linking the bare name `yaml-cpp`
+# (rather than the yaml-cpp::yaml-cpp target) gets a plain -lyaml-cpp with no -L and dies with
+# "ld: library 'yaml-cpp' not found" -- which is why a dozen packages carry a bespoke patch.
+#
+# This lived above as `link_directories(...)`, which NEVER WORKED: link_directories() called from a
+# toolchain file does not reach the project. Measured on CMake 4.x / Apple clang 21:
+#   link_directories directly in CMakeLists.txt  -> -L emitted, links
+#   link_directories in the toolchain file       -> NO -L      <-- the old line
+#   link_directories via CMAKE_PROJECT_INCLUDE   -> NO -L
+#   CMAKE_*_LINKER_FLAGS_INIT                    -> seeded, but this toolchain then overwrites
+#                                                   CMAKE_*_LINKER_FLAGS outright (lines above)
+# So use the same CACHE/FORCE append the /opt/homebrew/lib block right above uses -- the one idiom
+# that demonstrably survives here -- placed after every other assignment to those variables.
+#
+# EXISTS-guarded: an -L to a missing directory makes ld warn on every single link, and the early
+# base packages configure before yaml_cpp_vendor is installed (they do not need it).
+# FIND-guarded: the toolchain is re-read on every configure and these are FORCEd cache appends,
+# so without it the flag would accumulate on repeat configures of the same build tree.
+set(_ci_ycpp_libdir "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib")
+if(EXISTS "${_ci_ycpp_libdir}")
+  foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
+    string(FIND "${${_lf}}" "${_ci_ycpp_libdir}" _ci_ycpp_seen)
+    if(_ci_ycpp_seen EQUAL -1)
+      set(${_lf} "${${_lf}} -L${_ci_ycpp_libdir}" CACHE STRING "" FORCE)
+    endif()
+  endforeach()
+  unset(_ci_ycpp_seen)
+endif()
+
+# ---------------------------------------------------------------------------
+# macOS / libc++ portability shims (Lane 4 clusters)
+#  - clang errors on GCC-only warning flags (e.g. -Wmaybe-uninitialized) under
+#    -Werror; ignore unknown warning options instead of failing.
+#  - -Wignored-qualifiers (const on return type) is benign — don't make it fatal.
+#  - glibc float/long-double math macros (M_PIf/M_PIl) are absent on macOS.
+# ---------------------------------------------------------------------------
+add_compile_options(-Wno-unknown-warning-option -Wno-error=ignored-qualifiers)
+add_compile_definitions(M_PIf=3.14159265358979323846f
+                        M_PI_2f=1.57079632679489661923f
+                        M_PI_4f=0.78539816339744830962f
+                        M_1_PIf=0.31830988618379067154f
+                        M_2_PIf=0.63661977236758134308f
+                        M_PIl=3.141592653589793238462643383279502884L)
+# libc++ removed std::result_of etc. in C++20; re-enable for older third-party
+# code (e.g. libcaer_driver device.cpp) instead of patching each.
+add_compile_definitions(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
+# libc++ (Apple Clang) never ships the C++17 Parallel Algorithms / <execution> extension
+# (std::execution::seq/par, std::is_execution_policy_v, the policy-taking overloads of
+# std::transform/reduce/...) under the default config -- it's gated behind -fexperimental-
+# library. beluga's normalize.hpp uses std::execution::seq with std::transform. Compile-
+# tested (Apple clang 21.0.0): "no member 'seq'/no type 'sequenced_policy' in namespace
+# 'std::execution'" without the flag; clean compile+link+run with it.
+if(APPLE)
+  add_compile_options(-fexperimental-library)
+  # ...and at LINK too: with std::execution::par the parallel backend symbols
+  # (std::__pstl::__libdispatch::__dispatch_apply / __partition_chunks) live in
+  # libc++experimental, which the clang driver only links when -fexperimental-library is on the
+  # LINK line. add_compile_options alone leaves them undefined at link (beluga_amcl's amcl nodes
+  # instantiate par-using beluga templates -> "Undefined symbols ... __pstl::__libdispatch...").
+  add_link_options(-fexperimental-library)
+endif()
+# std::codecvt_utf8_utf16 (rosidl_runtime_cpp/traits.hpp:132) is _LIBCPP_DEPRECATED_IN_CXX17;
+# autoware & others compile with -Werror and re-add it AFTER the toolchain's
+# -Wno-error=deprecated-declarations (order loses), so the deprecation escalates to an error.
+# Disable libc++ deprecation warnings at the source so -Werror has nothing to escalate.
+# Compile-tested: reproduces the 6 deprecated-errors without it; clean with it, under -Werror.
+add_compile_definitions(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
+# Linux termios high-baud constants absent on macOS (it caps standard names at B230400 and
+# uses IOSSIOSPEED for the rest). Define the numeric values so serial drivers compile
+# (ess_imu_driver2, rosbot_mavlink_bridge, …); they aren't run on macOS CI. macOS defines
+# none of these, so no redefinition clash.
+add_compile_definitions(B460800=460800 B500000=500000 B921600=921600
+                        B1000000=1000000 B1152000=1152000 B1500000=1500000
+                        B2000000=2000000 B2500000=2500000 B3000000=3000000)
+
+# Force-include a macOS-compat shim (glibc endian.h funcs htole*/le*toh/be*, SOCK_CLOEXEC) so
+# ports needing them don't each require an #ifdef. APPLE-only; no-op on Linux. Compile-tested.
+if(APPLE)
+  add_compile_options(-include "${CMAKE_CURRENT_LIST_DIR}/macos_compat.h")
+endif()
+
+# --- Per-project hook ---------------------------------------------------------------
+# CMAKE_PROJECT_INCLUDE is read at the END of every project() call, i.e. after language
+# detection, which is the only point where CMAKE_<LANG>_IMPLICIT_INCLUDE_DIRECTORIES can
+# be extended without the compiler-detection step overwriting it again. See
+# cmake/project_include.cmake for what it does (stripping the SDK's usr/include from the
+# generated compile lines, which otherwise shadows libc++'s headers).
+set(CMAKE_PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/project_include.cmake"
+    CACHE FILEPATH "Workspace-wide per-project CMake hook")

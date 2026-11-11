@@ -1,0 +1,742 @@
+name: Setup ROS 2 macOS build
+description: >
+  Shared setup for the layered-build jobs: submodule init, Homebrew (cached),
+  Python 3.11 toolchain, ccache, and build environment. The calling job must run
+  actions/checkout BEFORE this action so the action file exists on disk.
+
+inputs:
+  deploy-token:
+    description: Token used to update forked submodules from upstream (CATS_DEPLOY_TOKEN).
+    required: true
+  gz-version:
+    description: Gazebo version for this distro (harmonic | ionic).
+    required: true
+  brew-base-formulae:
+    description: Space-separated base Homebrew formulae for this distro.
+    required: true
+  brew-core-sha:
+    description: >
+      The single homebrew-core commit every job of this run pins its tap to, supplied by the
+      plan job. Empty means no pin: each job then resolves formulae against the tap baked into
+      its own runner image, which is exactly how they drifted apart. Best-effort -- if the pin
+      cannot be applied the job continues unpinned and the skew check below still catches it.
+    required: false
+    default: ""
+  brew-state-publish:
+    description: >
+      "true" in the FIRST job of a run that installs Homebrew (gz). That job's
+      brew-state.txt becomes the run's baseline and is uploaded as the `brew-state-run`
+      artifact; every other job downloads it and diffs its own Homebrew against it.
+      Leave unset elsewhere -- a job with no baseline to fetch just skips the check.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # Cache all submodule git data so the ~20 parallel domain jobs restore it
+    # instead of each re-cloning ~650 submodules (the flaky-setup root cause).
+    # base runs first (populates on miss); every later job restores -> local
+    # checkout, no network clone. restore-keys reuses it across runs too.
+    # .git/modules is deliberately NOT cached. Measured on humble 37193719299:
+    # the entry was 11.08 GB -- larger on its own than GitHub's unraisable 10 GB
+    # per-repo cache budget -- and it hit in 1 job out of 8, because its key is
+    # hashFiles('.gitmodules') and every submodule pin rewrites it. Each rewrite
+    # evicted the 6.75 GB Homebrew cache and every ccache entry, so base jobs ran
+    # cold on essentially every run. The trade, both sides measured in that run:
+    #   submodule checkout  2m14s cached vs 6m16s cold  -> ~4 min, won 1 job in 8
+    #   brew install step  22m09s cached vs 33m21s cold -> ~11 min, every job
+    # Dropping this frees the whole budget for the Homebrew and ccache entries,
+    # which is where the time actually is. The clone below already retries, since
+    # cold was the common path anyway.
+
+    - name: Update submodules
+      shell: bash
+      run: |
+        git submodule sync --recursive
+        # Always a cold clone now (see the note above); retry+backoff for transient flakes.
+        ok=0
+        for n in 1 2 3 4 5 6; do
+          if git submodule update --init --recursive --jobs 8; then ok=1; break; fi
+          echo "submodule update attempt $n failed (transient); retrying in $((n*20))s…"
+          git submodule sync --recursive || true
+          sleep $((n*20))
+        done
+
+        if [ "$ok" = 1 ]; then exit 0; fi
+
+        # --- forge.etsi.org tolerance -------------------------------------------------
+        # etsi_its_messages nests its ASN.1 sources as submodules on forge.etsi.org, which
+        # returns 502/403 for minutes at a time. This step runs in EVERY job and fetches the
+        # whole tree recursively, so an ETSI outage used to `exit 1` and kill whichever shard
+        # happened to be running -- regardless of whether it builds anything ETSI. Run
+        # 39120065125 lost `domains (eclipse-iceoryx)` (1 package, no ETSI content) that way
+        # while 1548 packages elsewhere in the same run were fine, and `ros-visualization`,
+        # which DOES hold all 38 etsi_its_* packages, passed because the forge was back up by
+        # the time it started.
+        #   So: after the retries are exhausted, tolerate the failure only if every submodule
+        # still missing is hosted on forge.etsi.org. Keyed on the URL host, not the path, so a
+        # GitHub-hosted nested submodule under the same subtree (doc/doxygen-awesome-css,
+        # asn1/raw/uulm_mcm_etsi) still fails the job as it should.
+        decl=$(mktemp)
+        while IFS= read -r gm; do
+          base=$(dirname "${gm#./}"); [ "$base" = "." ] && base=""
+          git config --file "$gm" --get-regexp '^submodule\..*\.path$' 2>/dev/null |
+            while read -r key val; do
+              name=${key#submodule.}; name=${name%.path}
+              url=$(git config --file "$gm" --get "submodule.${name}.url" 2>/dev/null)
+              if [ -n "$base" ]; then printf '%s/%s\t%s\n' "$base" "$val" "$url"
+              else printf '%s\t%s\n' "$val" "$url"; fi
+            done
+        done < <(find . -name .gitmodules -not -path './.git/*') > "$decl"
+
+        missing=$(git submodule status --recursive 2>/dev/null | awk '/^-/{print $2}')
+        blocking=""
+        tolerated=""
+        for p in $missing; do
+          u=$(awk -F'\t' -v p="$p" '$1==p{print $2; exit}' "$decl")
+          case "$u" in
+            *forge.etsi.org*) tolerated="$tolerated $p" ;;
+            *)                blocking="$blocking $p" ;;
+          esac
+        done
+
+        if [ -n "$blocking" ]; then
+          echo "::error::submodule update failed after 6 attempts; missing submodules not attributable to forge.etsi.org:"
+          for p in $blocking; do echo "    $p"; done
+          exit 1
+        fi
+
+        if [ -z "$tolerated" ]; then
+          echo "::error::submodule update failed after 6 attempts and no submodule is reported missing -- not a forge.etsi.org outage, failing."
+          exit 1
+        fi
+
+        echo "::warning::forge.etsi.org is unreachable; continuing without its ASN.1 submodules. Consequence: the etsi_its_* packages in the ros-visualization shard will fail to build in THIS run. That is this outage, not a code regression. Every other shard is unaffected."
+        for p in $tolerated; do echo "    missing (tolerated): $p"; done
+
+    - name: Sync submodule branches
+      shell: bash
+      run: |
+        chmod +x scripts/sync-submodules-branches.sh
+        ./scripts/sync-submodules-branches.sh
+
+    # Kept: rewrites github.com URLs to carry the token, which also helps submodule
+    # fetches against rate limits. Harmless when nothing pushes.
+    - name: Configure git credentials
+      shell: bash
+      run: |
+        git config --global url."https://${{ inputs.deploy-token }}@github.com/".insteadOf "https://github.com/"
+
+    # update_forked_submodules.sh is deliberately NOT called here any more.
+    #
+    # It never worked in this path: it needs an `upstream` remote, that remote lives in
+    # the uncommitted .git/modules/<path>/config, and CI clones submodules fresh with
+    # only `origin`. Every job logged "Skipped (648) -- no upstream remote" after walking
+    # all 648 submodules, so it cost time and achieved nothing.
+    #
+    # It also must not be made to work here. This action has 4 call sites and the last
+    # kilted run had 27 jobs, so a working updater would rebase and force-push every fork
+    # up to 27 times per run, concurrently, across three distros. Jobs early and late in
+    # one run would then build DIFFERENT fork commits -- which would make a failure
+    # impossible to attribute.
+    #
+    # Fork updating now runs once, serialized, in .github/workflows/update-forks.yml.
+    # Builds compile whatever that last pushed.
+
+    - name: Apply in-tree source patches
+      shell: bash
+      run: |
+        if [ -f ci/patches/apply_source_patches.sh ]; then
+          chmod +x ci/patches/apply_source_patches.sh
+          ./ci/patches/apply_source_patches.sh .
+        fi
+
+    # Cache brew's DOWNLOAD cache, not the installed prefix.
+    #
+    # Caching /opt/homebrew itself (key prefix macOS-brew-v2-) broke every distro on
+    # 2026-10-06. kilted's gz job ran first; its `brew update` died in a github.com DNS
+    # outage ("Fetching /opt/homebrew/Library/Taps/homebrew/homebrew-core failed!"), and its
+    # post step then cached that prefix -- including the half-fetched homebrew-core tap.
+    # humble and jazzy base-1 restored that snapshot, and because HOMEBREW_NO_INSTALL_FROM_API
+    # is set, brew had to resolve oldnames from that broken local tap:
+    #   ##[warning]No available formula with the name "glfw3". Did you mean glfw?
+    #   ##[error]Process completed with exit code 1
+    # base-1 died, base-2a/2b/domains were skipped, all three runs lost. Restoring the prefix
+    # is also unreliable on its own: on humble the extract hit symlink conflicts
+    # ("Cannot create symlink ... File exists", gtar exit 2) after pulling 8.3 GB.
+    #
+    # ~/Library/Caches/Homebrew holds the downloaded bottles (~3.8 GB) and is purely additive:
+    # entries are checksum-named, so a stale or partial one is re-fetched rather than trusted,
+    # and nothing it contains can corrupt the installed prefix or a tap. That keeps the saving
+    # that actually mattered -- the bottle downloads, i.e. 457 formulae vs 36, ~11 min/job --
+    # without the failure mode. The key prefix is bumped to brewbottles-v1 so the poisoned
+    # macOS-brew-v2-* entries can never be restored by the restore-keys fallback again.
+    - name: Cache Homebrew downloads
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Caches/Homebrew
+        key: ${{ runner.os }}-brewbottles-v1-${{ hashFiles('brew-packages/matched_packages.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-brewbottles-v1-
+
+    - name: Configure Homebrew parallelism
+      shell: bash
+      run: |
+        echo "HOMEBREW_MAKE_JOBS=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
+        echo "HOMEBREW_CMAKE_BUILD_PARALLEL_LEVEL=$(sysctl -n hw.ncpu)" >> $GITHUB_ENV
+
+    # Pin homebrew-core so all 24 macOS jobs of a run resolve formulae from ONE snapshot.
+    #
+    # Measured 2026-10-30. gz vs base-1 of humble run 41083360164 disagreed on 91 of 379
+    # formulae -- qtbase 6.12.0_2 vs 6.11.2_1 (and 35 other qt*), dartsim 6.20.3 vs 6.20.0,
+    # boost 1.92.0_1 vs 1.92.0. Worse, the gz jobs of the humble and jazzy runs were launched
+    # in the SAME SECOND and still disagreed on 12 of those formulae, so this is not a rotation
+    # you can wait out: the image pool holds several homebrew-core generations at once and which
+    # one a job draws is luck. That is the mechanism behind the 236 non-dlopen-able abseil dylibs
+    # and jazzy's 16 suite-sparse failures.
+    #
+    # Best-effort on purpose: a DNS blip here must not kill a 5-hour run, and the skew check
+    # further down is the hard gate. Pin = prevention, gate = detection; keep both.
+    - name: Pin homebrew-core to this run's commit
+      if: inputs.brew-core-sha != ''
+      shell: bash
+      run: |
+        set -uo pipefail
+        SHA='${{ inputs.brew-core-sha }}'
+        core="$(brew --repo homebrew/core 2>/dev/null || true)"
+        [ -n "$core" ] || core=/opt/homebrew/Library/Taps/homebrew/homebrew-core
+        if [ ! -d "$core" ]; then
+          echo "::warning::homebrew-core tap directory does not exist at $core -- continuing unpinned"
+          exit 0
+        fi
+        # Runner images have started shipping the taps as PLAIN DIRECTORIES with no .git, so
+        # there is nothing to check out. Image 20261102.0473.1 is such an image and image
+        # 20261026.0455.2 is not, and both are in the pool at once -- jazzy gz in run
+        # 42005147306 drew the former, warned "homebrew-core is not a git tap", and ran
+        # unpinned while humble's gz in the same dispatch pinned normally. Bailing out there
+        # silently discards the whole cross-job consistency guarantee, so initialise a repo in
+        # place instead and pin that. Verified working on a simulated plain layout across 15
+        # runner samples (probe runs 42019711276 / 42020114564 / 42020494616).
+        created=no
+        if [ ! -e "$core/.git" ]; then
+          echo "homebrew-core at $core has no .git (plain-directory image) -- initialising one"
+          if git -C "$core" init -q \
+             && git -C "$core" remote add origin https://github.com/Homebrew/homebrew-core.git; then
+            created=yes
+          else
+            echo "::warning::could not initialise a git repo in $core -- continuing unpinned"
+            exit 0
+          fi
+        fi
+        before="$(git -C "$core" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+        ok=0
+        for n in 1 2 3; do
+          if git -C "$core" fetch --depth=1 --no-tags origin "$SHA"; then ok=1; break; fi
+          echo "fetch attempt $n failed (transient?); retrying in $((n*15))s"
+          sleep $((n*15))
+        done
+        if [ "$ok" != 1 ]; then
+          echo "::warning::could not fetch homebrew-core $SHA -- continuing on the image tap ($before)"
+          exit 0
+        fi
+        # `checkout --detach` cannot be used on a tap we just initialised: the directory
+        # already holds ~8,700 untracked .rb files and checkout refuses to clobber them
+        # ("untracked working tree files would be overwritten"). Measured 5/5 runners in
+        # probe run 42020114564. `reset --hard` is the form that works, and it is also the
+        # existing fallback for a real tap, so prefer it outright when we created the repo.
+        if [ "$created" = yes ]; then
+          git -C "$core" reset --hard -q FETCH_HEAD || {
+            echo "::warning::could not reset the initialised tap to $SHA -- continuing unpinned"
+            exit 0
+          }
+        else
+          git -C "$core" checkout -q --detach FETCH_HEAD \
+            || git -C "$core" reset --hard -q FETCH_HEAD
+        fi
+        # `reset --hard` restores TRACKED files but leaves untracked ones in place, so every
+        # formula added upstream after $SHA survives and still resolves. Two jobs on different
+        # runner images would then keep different formula sets while both reporting "pinned".
+        # Measured: 4 such leftovers per runner, and cleaning Formula/ + Aliases/ takes the
+        # tree from 8691 to 8688 .rb files with `git status` reporting 0 dirty paths, after
+        # which brew still resolves formulae and `brew install` still succeeds (probe run
+        # 42020494616, 5/5). Scoped to those two directories so brew's own tracked tooling
+        # (cmd/, Abstract/, audit_exceptions/) is never touched.
+        git -C "$core" clean -fdq -- Formula Aliases 2>/dev/null || true
+        echo "homebrew-core: $before -> $(git -C "$core" rev-parse --short HEAD) (pinned for this run)"
+        # Tells the skew check below it may be STRICT. Without this marker the check falls
+        # back to the 9 load-bearing names, because unpinned wide drift is expected and
+        # failing on all of it would block every run.
+        echo "BREW_PINNED=$SHA" >> "$GITHUB_ENV"
+
+    # Pinning the tap only governs what this job INSTALLS, and that is not everything.
+    # Of the 91 formulae that drifted on humble run 41083360164, 21 were never poured by the
+    # job at all -- openssl@3, harfbuzz, freetype, sqlite, python@3.14, ca-certificates and
+    # friends ship pre-installed in the runner image, and install_brew_packages.sh skips
+    # anything already present REGARDLESS of version ("already installed"). The image's copy
+    # would therefore survive the pin and keep drifting; openssl@3 (3.5.9 vs 3.6.5) is one of
+    # the four load-bearing hits that failed humble and jazzy.
+    #
+    # So reconcile exactly the formulae whose mismatch is FATAL -- the same set the skew check
+    # gates on. brew downgrades happily here because the bottle for a superseded revision stays
+    # in ghcr: checked 2026-10-30, every one of qtbase 6.11.2_1/6.12.0_2, openssl@3 3.5.9/3.6.5,
+    # dartsim 6.20.0/6.20.3 and boost 1.92.0/1.92.0_1 returns HTTP 200. Everything else only
+    # warns, so leaving it on the image's version matches the existing policy and keeps this
+    # step short -- a full reconcile would reinstall ~300 formulae in every one of 24 jobs.
+    # Converge this job's Homebrew onto the pinned tap, for EVERY formula the workspace
+    # names -- not just the load-bearing few.
+    #
+    # Why the whole list. Pinning the tap only governs what a job INSTALLS. 21 of the 91
+    # formulae that drifted on humble run 41083360164 were never poured by the job at all:
+    # they ship pre-installed in the runner image, and install_brew_packages.sh skips
+    # anything already present REGARDLESS of version. The pinned runs on 2026-10-31 proved
+    # the residue is real -- humble gz and jazzy gz, both pinned to 4076b8a4, still ended up
+    # with icu4c@78 78.3 vs 78.3_1 and python@3.14 3.14.8_2 vs 3.14.10, purely from their
+    # images. Reconciling only 9 names leaves that in place.
+    #
+    # Why it matters even though the reference carries no version. A Mach-O records
+    # /opt/homebrew/opt/<formula>/lib/<soname> -- 452 of 468 references in a sample, with no
+    # version in the path. So a shard built against harfbuzz 14.6.0 and one built against
+    # 15.0.0_1 record the SAME string, assemble merges them, and both bind to whichever copy
+    # the packaging machine has. Nothing errors. The ABI mismatch is already compiled into
+    # the object code, so vendoring cannot fix it either -- only building every shard against
+    # the same versions can. Demonstrated locally: a caller built against a struct of
+    # {width,height} and run against {depth,width,height} under the same soname returned 0
+    # instead of 12, exit code 0, no diagnostic. abseil is only LOUDER than that because its
+    # soname carries the version (2601 vs 2608), which is why it surfaced as the missing
+    # symbol in homebrew-ros2 issue 3 instead of silently wrong numbers.
+    #
+    # Batched brew info: one call per 80 names, not 379 separate processes.
+    # Downgrades are safe -- every superseded bottle revision stays in ghcr (checked
+    # 2026-10-30: qtbase 6.11.2_1/6.12.0_2, openssl@3 3.5.9/3.6.5, dartsim 6.20.0/6.20.3,
+    # boost 1.92.0/1.92.0_1 all return HTTP 200).
+    - name: Converge Homebrew onto the pinned tap
+      if: inputs.brew-core-sha != ''
+      shell: bash
+      run: |
+        set -uo pipefail
+        LIST=brew-packages/matched_packages.txt
+        if [ ! -f "$LIST" ]; then
+          echo "::warning::$LIST missing -- skipping convergence"
+          exit 0
+        fi
+        # Same union the state file uses: formulae we install, plus ones we only LINK
+        # (simdjson, openssl@4). Convergence skips anything not installed, so naming a
+        # link-only formula here can never cause it to be installed.
+        { awk '{print $1}' "$LIST"
+          [ -f brew-packages/also_linked.txt ] \
+            && grep -vE '^\s*(#|$)' brew-packages/also_linked.txt | awk '{print $1}'
+        } | sort -u > /tmp/want_names.txt
+        # Resolve wanted versions from the PINNED tap. Two traps here, both of which bit us
+        # in runs 41187642680 / 41187644695 / 41187646503 (2026-10-31):
+        #
+        # 1. `brew info --json=v2 a b c` prints NOTHING to stdout and exits non-zero if ANY
+        #    single argument is unresolvable, so one bad name silently voids the whole batch
+        #    and `|| true` hides it. matched_packages.txt carries six names that are not in
+        #    homebrew-core -- ogre1.9, ogre2.2, ogre2.3, sdformat14 and the fully
+        #    qualified osrf/simulation/tinyxml1
+        #    (untrusted tap osrf/simulation, which brew REFUSES to load) and ros2-jazzy
+        #    (idesign0/ros2). They landed in three of the five batches, so only two survived:
+        #    "pinned tap knows 160 of the 390" is exactly 2x80. 230 formulae were never
+        #    checked against the pin, including SIX of the nine load-bearing ones (protobuf,
+        #    qt@5, qtbase, openssl@3, opencv@4, suite-sparse). That is why openssl@3 stayed
+        #    3.6.5 in gz and 3.5.9 in base-1 and tripped the load-bearing gate.
+        # 2. Counting lines in an accumulated file looks like success. Assert the count.
+        #
+        # Prefilter against the tap's own Formula/ tree: exact, offline, and immune to the
+        # untrusted-tap refusal, which no amount of retrying would get past.
+        rm -f /tmp/wbatch_* /tmp/want_core.txt /tmp/want_noncore.txt
+        CORE_REPO="$(brew --repo homebrew/core 2>/dev/null || true)"
+        : > /tmp/core_names.txt
+        if [ -n "$CORE_REPO" ] && [ -d "$CORE_REPO/Formula" ]; then
+          # Aliases/ too: a name that is only an alias (python -> python@3.13) has no
+          # Formula/*.rb, and leaving it out would silently drop it from convergence.
+          { find "$CORE_REPO/Formula" -name '*.rb' -type f 2>/dev/null \
+              | sed 's#.*/##; s#\.rb$##'
+            ls -1 "$CORE_REPO/Aliases" 2>/dev/null
+          } | sort -u > /tmp/core_names.txt
+        fi
+        if [ -s /tmp/core_names.txt ]; then
+          comm -12 /tmp/want_names.txt /tmp/core_names.txt > /tmp/want_core.txt
+          comm -23 /tmp/want_names.txt /tmp/core_names.txt > /tmp/want_noncore.txt
+        else
+          echo "::warning::could not enumerate the core tap; querying every name unfiltered"
+          cp /tmp/want_names.txt /tmp/want_core.txt
+          : > /tmp/want_noncore.txt
+        fi
+        if [ -s /tmp/want_noncore.txt ]; then
+          echo "  skipping $(wc -l < /tmp/want_noncore.txt | tr -d ' ') name(s) absent from"\
+               "the pinned core tap: $(tr '\n' ' ' < /tmp/want_noncore.txt)"
+        fi
+
+        # name<TAB>version for one batch, or non-zero if brew refused the batch outright.
+        JQ_VER='.formulae[] | select(.tap == "homebrew/core") | [.name,
+                  (.versions.stable // "") +
+                  (if (.revision // 0) > 0 then "_" + ((.revision)|tostring) else "" end)]
+                | @tsv'
+        : > /tmp/want_versions.tsv
+        split -l 80 /tmp/want_core.txt /tmp/wbatch_
+        for b in /tmp/wbatch_*; do
+          if out="$(brew info --json=v2 $(cat "$b") 2>/dev/null)" \
+             && printf '%s' "$out" | jq -e -r "$JQ_VER" >> /tmp/want_versions.tsv; then
+            continue
+          fi
+          # A batch died. Do NOT lose the other 79 -- fall back to one at a time so a single
+          # unresolvable name costs exactly itself.
+          echo "  a batch of $(wc -l < "$b" | tr -d ' ') did not resolve; retrying per name"
+          while read -r one; do
+            [ -n "$one" ] || continue
+            brew info --json=v2 "$one" 2>/dev/null | jq -r "$JQ_VER" \
+              >> /tmp/want_versions.tsv || echo "  unresolved in the pinned tap: $one"
+          done < "$b"
+        done
+
+        brew list --formula --versions 2>/dev/null > /tmp/have_versions.txt || true
+        n_want=$(wc -l < /tmp/want_core.txt | tr -d ' ')
+        n_got=$(wc -l < /tmp/want_versions.tsv | tr -d ' ')
+        echo "  pinned tap resolved $n_got of the $n_want core formula name(s)"\
+             "($(wc -l < /tmp/want_names.txt | tr -d ' ') named in total)"
+        # Silence is the failure mode worth catching: a resolution hole means those formulae
+        # are never compared against the pin at all, and the gate only notices much later.
+        if [ "$n_want" -gt 0 ] && [ "$n_got" -lt $(( n_want * 9 / 10 )) ]; then
+          echo "::warning::only $n_got of $n_want core formulae resolved against the pinned"\
+               "tap; the rest keep whatever version this runner image shipped and may skew"
+        fi
+
+        # Decide what to reinstall. A formula is fine if the pinned version is among the
+        # versions already installed; absent formulae are left to the install steps below.
+        python3 -I - <<'PY' > /tmp/to_reconcile.txt
+        want = {}
+        for line in open("/tmp/want_versions.tsv"):
+            p = line.rstrip("\n").split("\t")
+            if len(p) == 2 and p[1]:
+                want[p[0]] = p[1]
+        for line in open("/tmp/have_versions.txt"):
+            f = line.split()
+            if not f:
+                continue
+            name, have = f[0], set(f[1:])
+            w = want.get(name)
+            if w and w not in have:
+                print("%s\t%s\t%s" % (name, " ".join(sorted(have)), w))
+        PY
+
+        n=$(wc -l < /tmp/to_reconcile.txt | tr -d ' ')
+        echo "  $n installed formula(e) disagree with the pinned tap"
+        # `brew` is a Ruby process that READS STDIN, and stdin inside this loop is the
+        # redirected file -- so without </dev/null the first `brew reinstall` swallows every
+        # remaining line and the loop ends after ONE formula. That is not a theory: gz in run
+        # 41187642680 reported "20 installed formula(e) disagree" and then printed exactly one
+        # `reconciling` line (aws-c-auth) and no warnings, while the prune loop below printed
+        # all 14 of its lines because `rm -rf` does not read stdin. Reproduce with:
+        #   printf 'a\nb\nc\n' > t; while read -r x; do echo "$x"; cat >/dev/null; done < t
+        # Keep </dev/null on every stdin-reading command in a `while read` body.
+        #
+        # And RE-CHECK each formula immediately before reinstalling it. /tmp/have_versions.txt
+        # is one snapshot taken before the loop, but `brew reinstall X` upgrades X's
+        # dependencies as a side effect -- so a formula listed here can already have moved by
+        # the time the loop reaches it. ca-certificates is the worst case because almost
+        # everything depends on it: in jazzy gz of run 41993571500 the aws-c-* reinstalls
+        # pulled it 2026-10-20 -> 2026-11-05, and the later `brew reinstall ca-certificates`
+        # then died on its stale keg --
+        #   ::error::ca-certificates: No such file or directory
+        #            - /opt/homebrew/Cellar/ca-certificates/2026-10-20
+        # which left brew unable to install ANYTHING, so the base install failed all 3
+        # attempts and took the whole job with it. Skipping an already-satisfied formula costs
+        # one `brew list` and removes that entire class of failure.
+        reconciled=0
+        skipped=0
+        while IFS=$'\t' read -r f have w; do
+          [ -n "$f" ] || continue
+          now="$(brew list --versions "$f" 2>/dev/null </dev/null | cut -d' ' -f2- || true)"
+          case " $now " in
+            *" $w "*)
+              echo "  $f already at pinned $w (moved by an earlier reinstall) -- skipping"
+              skipped=$((skipped+1))
+              continue ;;
+          esac
+          echo "  reconciling $f: installed [${now:-$have}] -> pinned $w"
+          if brew reinstall --formula "$f" </dev/null; then
+            reconciled=$((reconciled+1))
+          else
+            # Do not leave brew wedged: a failed reinstall can leave the formula unlinked,
+            # and every later `brew install` would then fail too.
+            echo "::warning::could not reconcile $f to the pinned $w"
+            brew link --overwrite --force "$f" </dev/null >/dev/null 2>&1 || true
+          fi
+        done < /tmp/to_reconcile.txt
+        [ "$skipped" -gt 0 ] && echo "  skipped $skipped already-satisfied by side effects"
+        echo "  reconciled $reconciled of $n formula(e)"
+        if [ "$n" -gt 0 ] && [ "$reconciled" -eq 0 ]; then
+          echo "::warning::$n formula(e) disagreed with the pin and none were reconciled"
+        fi
+
+        # Prune superseded kegs so each formula keeps ONE version. rpath_refs() in
+        # package_tree.py calls realpath, which turns an opt/ path into Cellar/<version>/ --
+        # the one route by which a stale keg can enter the vendored closure. (The state file
+        # no longer depends on this: it records the LINKED version, so a leftover keg cannot
+        # by itself read as skew.) `brew cleanup <f>` is not usable here: it SKIPS a formula
+        # whose newest tap version is not installed ("Skipping libssh2: most recent version
+        # 1.11.1_7 not installed"),
+        # which is exactly our case when the pin is behind tip. Remove the non-linked kegs
+        # directly, which is what cleanup does internally, and only ever the ones that
+        # /opt/homebrew/opt/<f> does NOT point at.
+        pruned=0
+        while read -r f rest; do
+          case "$rest" in *" "*) ;; *) continue ;; esac   # only multi-version formulae
+          link="/opt/homebrew/opt/$f"
+          [ -L "$link" ] || continue
+          keep="$(basename "$(readlink "$link")")"
+          [ -n "$keep" ] || continue
+          [ -d "/opt/homebrew/Cellar/$f/$keep" ] || continue
+          for d in /opt/homebrew/Cellar/"$f"/*/; do
+            v="$(basename "$d")"
+            [ "$v" = "$keep" ] && continue
+            echo "  pruning superseded keg $f/$v (keeping $keep)"
+            rm -rf "$d" && pruned=$((pruned+1))
+          done
+        done < <(brew list --formula --versions 2>/dev/null)
+        echo "  pruned $pruned superseded keg(s)"
+
+    - name: Update Homebrew and install base packages
+      shell: bash
+      run: |
+        # Both commands below talk to github.com, which has gone down twice in two days
+        # ("Could not resolve host: github.com"). Retry so a DNS blip is not mistaken for a
+        # real error. The hard failure is PRESERVED on purpose: an invalid or tapped formula
+        # name in BREW_BASE must still kill this job rather than silently drop a dependency,
+        # and a genuinely bad name fails all three attempts just the same.
+        retry() {
+          local n=0
+          until "$@"; do
+            n=$((n+1))
+            if [ "$n" -ge 3 ]; then echo "::error::failed after $n attempts: $*"; return 1; fi
+            echo "attempt $n failed (transient?); retrying in $((n*20))s: $*"
+            sleep $((n*20))
+          done
+        }
+        retry brew tap osrf/simulation https://github.com/osrf/homebrew-simulation
+        retry brew install ccache ${{ inputs.brew-base-formulae }}
+        # Symlink eigen3 for standard discovery
+        sudo ln -sfn /opt/homebrew/opt/eigen@3/include/eigen3 /opt/homebrew/include/eigen3
+
+    - name: Install Homebrew packages via script
+      shell: bash
+      run: |
+        chmod +x brew-packages/install_brew_packages.sh
+        ./brew-packages/install_brew_packages.sh
+        # `brew update` here is non-essential: it runs AFTER every formula is installed, so it
+        # only refreshes metadata for later steps, and HOMEBREW_NO_AUTO_UPDATE=1 is set anyway.
+        # It must not be able to fail the job -- it did exactly that on kilted 37460304339,
+        # where a github.com DNS outage made it report "Error: Fetching /opt/homebrew failed!"
+        # and killed gz, which skipped base-a/base-b and the whole domain matrix.
+        # Refreshing formula definitions mid-run is also how formulae drift between jobs of one
+        # run, so there is nothing to gain by insisting it succeed.
+        # `brew update` used to run here and has been REMOVED.
+        #
+        # It ran AFTER every formula was installed, so it never made this job's own
+        # packages any newer -- it only moved formula definitions for LATER jobs in the
+        # same run. That is precisely how formulae drift between jobs of one run, as the
+        # comment above already said. Each macOS job is a separate runner (24 of them on
+        # kilted: gz + 2 base + 21 domain shards), so with this gone every job resolves
+        # against the tap baked into its runner image.
+        #
+        # That is NOT by itself enough to make a run self-consistent, as this comment used to
+        # claim. The runner images are not uniform: humble run 41083360164 had gz and base-1
+        # disagree on 91 of 379 formulae, and two gz jobs launched in the same second disagreed
+        # on 12. Removing `brew update` stops US from moving the tap mid-run; the
+        # `brew-core-sha` pin above is what makes the jobs agree with EACH OTHER.
+        #
+        # Nothing about package freshness is lost: the versions a job installs come from
+        # that tap either way, and HOMEBREW_NO_AUTO_UPDATE=1 is set regardless. Freshness
+        # now tracks the runner image, which GitHub refreshes on its own cadence, and the
+        # weekly .github/workflows/update-brew.yml refreshes the recorded list on the
+        # default branch so a version bump is visible as a reviewable diff.
+        #
+        # What makes the caches follow along is brew-state.txt, written by
+        # install_brew_packages.sh from `brew list --formula --versions` AFTER the
+        # installs: the gz-install cache key hashes it, so a cached gz tree can never be
+        # restored into a job that installed different Homebrew versions. That is the bug
+        # this whole chain exists to stop -- gz and protobuf stayed linked to abseil 2601
+        # after abseil deleted libabsl_crc_cpu_detect, leaving 236 dylibs and 5
+        # executables in the shipped keg that cannot be dlopen'd.
+        #
+        # It has also killed jobs outright: on kilted 37460304339 a github.com DNS outage
+        # made it report "Error: Fetching /opt/homebrew failed!" and took down gz, which
+        # skipped base-a/base-b and the entire domain matrix.
+
+    # ---- intra-run Homebrew skew -------------------------------------------------
+    # Each macOS job is its own runner and provisions Homebrew itself from the tap baked
+    # into its runner image, and GitHub rotates those images. So a formula's version is
+    # not even monotonic across one run: two package-smoke-kilted runs 75 minutes apart
+    # on 2026-10-30 installed draco 1.5.9 and then draco 1.5.7, which is why one of them
+    # could not find libdraco.9.dylib and the other could.
+    #
+    # That skew has twice cost a whole run, and each time it surfaced far from its cause:
+    #   * suite-sparse 7.14.1 in base-1 vs 7.14.0 in base-2a -> CeresConfig
+    #     find_dependency(SuiteSparse 7.14.1) "Found unsuitable version" -> 16 of jazzy's
+    #     27 failures (run 35777229974)
+    #   * abseil moving under gz/protobuf -> 236 dylibs in the shipped keg that cannot be
+    #     dlopen'd, discovered only when someone tried to load them
+    # Neither looked like a Homebrew problem in the log. This makes it say so, in the job
+    # where it happens, instead of being inferred from a missing dylib hours later.
+    - name: Publish this job's Homebrew state as the run baseline
+      if: inputs.brew-state-publish == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: brew-state-run
+        path: brew-state.txt
+        retention-days: 7
+
+    - name: Fetch the run's Homebrew baseline
+      id: brew-baseline
+      if: inputs.brew-state-publish != 'true'
+      continue-on-error: true
+      uses: actions/download-artifact@v4
+      with:
+        name: brew-state-run
+        path: /tmp/brew-baseline
+
+    - name: Diff this job's Homebrew against the run baseline
+      if: inputs.brew-state-publish != 'true'
+      shell: bash
+      run: |
+        set -uo pipefail
+        BASE=/tmp/brew-baseline/brew-state.txt
+        if [ ! -f "$BASE" ]; then
+          echo "no baseline artifact in this run -- skipping the skew check"
+          echo "(expected when the job that publishes it has not run, or when this"
+          echo " workflow does not publish one at all, e.g. the package smoke job)"
+          exit 0
+        fi
+        cat > /tmp/brewdiff.py <<'PY'
+        import os, sys
+
+        # Evidence-driven, and deliberately the same set install_brew_packages.sh already
+        # echoes after installing, plus suite-sparse for the documented ceres break. A
+        # version change in one of these has actually broken a run; everything else gets
+        # reported but does not stop the build, because losing five hours to a graphviz
+        # patch bump is its own kind of failure.
+        LOAD_BEARING = {
+            "abseil", "protobuf", "qt@5", "qtbase", "boost", "openssl@3",
+            "opencv@4", "dartsim", "suite-sparse",
+        }
+
+        # Formulae the build does not LINK: command-line tools and trust stores. A version
+        # change in these cannot produce an ABI mismatch in the merged tree, so they stay
+        # advisory even in strict mode. Everything else the workspace names is treated as
+        # linkable, because a reference records no version (452 of 468 sampled references are
+        # the version-free /opt/homebrew/opt/<f>/lib/<soname> form) and a mismatch between two
+        # shards is therefore silent at merge time.
+        NOT_LINKED = {
+            "gh", "git-lfs", "pre-commit", "nmap", "clang-format", "gnupg",
+            "ca-certificates", "certifi", "coreutils",
+        }
+
+        # STRICT only when the pin actually applied in this job. Unpinned, wide drift is the
+        # norm (91 of 379 on humble 41083360164), and failing on all of it would block every
+        # run; pinned, the convergence step should leave nothing, so anything that remains is
+        # a real anomaly worth stopping for.
+        PINNED = bool(os.environ.get("BREW_PINNED"))
+
+        def read(path):
+            out = {}
+            with open(path) as fh:
+                for line in fh:
+                    f = line.split()
+                    if f:
+                        out[f[0]] = " ".join(f[1:])
+            return out
+
+        base, cur = read(sys.argv[1]), read(sys.argv[2])
+        changed = sorted((n, base[n], cur[n]) for n in base.keys() & cur.keys()
+                         if base[n] != cur[n])
+        gone = sorted(base.keys() - cur.keys())
+        added = sorted(cur.keys() - base.keys())
+
+        print(f"  baseline : {len(base)} formulae")
+        print(f"  this job : {len(cur)} formulae")
+        if not (changed or gone or added):
+            print("  IDENTICAL -- no Homebrew skew in this run so far")
+            sys.exit(0)
+
+        if changed:
+            print(f"  CHANGED VERSION ({len(changed)}):")
+            for n, b, c in changed:
+                mark = "  <-- load-bearing" if n in LOAD_BEARING else ""
+                print(f"     {n}: baseline {b} -> this job {c}{mark}")
+        if gone:
+            print(f"  IN BASELINE, NOT HERE ({len(gone)}): {', '.join(gone)}")
+        if added:
+            print(f"  HERE, NOT IN BASELINE ({len(added)}): {', '.join(added)}")
+
+        if PINNED:
+            hot = [n for n, _, _ in changed if n not in NOT_LINKED]
+            mode = ("strict (homebrew-core pinned to %s)"
+                    % os.environ.get("BREW_PINNED", "")[:11])
+        else:
+            hot = [n for n, _, _ in changed if n in LOAD_BEARING]
+            mode = "advisory (no homebrew-core pin in this job)"
+        print(f"  gate mode: {mode}")
+        if hot:
+            # Deliberately NOT "just re-run": two gz jobs launched in the same second
+            # disagreed on 12 formulae (2026-10-30), so a fresh run is not reliably
+            # self-consistent. If brew-core-sha was supplied, the pin is what failed or was
+            # skipped -- look for the "Pin homebrew-core" warning in this job's log first.
+            print(f"::error::Homebrew moved under this run: {', '.join(hot)} changed "
+                  f"version since the baseline job. Anything already built links the "
+                  f"baseline version by absolute path, so this job's output cannot be "
+                  f"combined with it. Check whether the homebrew-core pin applied in this "
+                  f"job and in the baseline job; a plain re-run is NOT guaranteed to be "
+                  f"self-consistent. This is not a code failure.")
+            sys.exit(1)
+        print("::warning::Homebrew differs from the run baseline, but nothing the build "
+              "links changed version. Continuing; see the table above if something "
+              "downstream fails to find a library.")
+        PY
+        python3 -I /tmp/brewdiff.py "$BASE" brew-state.txt
+
+    - name: Re-apply source patches for brew-installed headers (post-brew)
+      shell: bash
+      run: |
+        # apply_source_patches also patches brew-installed headers in place (e.g.
+        # websocketpp 0.8.2 for Boost 1.87+ removed asio APIs -> rmf_websocket).
+        # Those headers are installed by the brew steps ABOVE, i.e. after the first
+        # apply pass ran, so its /opt/homebrew/... targets did not exist yet and were
+        # skipped. Re-run now that they exist. apply_source_patches is idempotent
+        # (every block is guarded), so the source-tree patches are no-ops here.
+        if [ -f ci/patches/apply_source_patches.sh ]; then
+          ./ci/patches/apply_source_patches.sh .
+        fi
+
+    - name: Python 3.11
+      shell: bash
+      run: |
+        export PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
+        which python3
+        python3 --version
+        echo "/Library/Frameworks/Python.framework/Versions/3.11/bin" >> $GITHUB_PATH
+        python3 -m pip install --upgrade pip --break-system-packages
+        python3 -m pip install -U \
+          --break-system-packages \
+          --config-settings="--global-option=build_ext" \
+          --config-settings="--global-option=-I$(brew --prefix graphviz)/include/" \
+          --config-settings="--global-option=-L$(brew --prefix graphviz)/lib/" \
+          argcomplete future catkin_pkg colcon-common-extensions coverage \
+          cryptography empy==3.3.4 flake8 flake8-blind-except==0.1.1 flake8-builtins \
+          flake8-class-newline flake8-comprehensions flake8-deprecated \
+          flake8-docstrings flake8-import-order flake8-quotes \
+          importlib-metadata lark==1.1.1 lxml matplotlib mock mypy==0.931 netifaces \
+          nose pep8 psutil pydocstyle pydot pygraphviz pyparsing==2.4.7 \
+          pytest-mock rosdep rosdistro setuptools==59.6.0 vcstool typeguard jinja2 fiona pyproj rtree shapely requests
+
+    - name: Setup build environment
+      shell: bash
+      run: |
+        echo "CMAKE_POLICY_VERSION_MINIMUM=3.5" >> $GITHUB_ENV
+        echo "OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
+        echo "CMAKE_PREFIX_PATH=$(brew --prefix qt@5):$CMAKE_PREFIX_PATH" >> $GITHUB_ENV
+        echo "GZ_VERSION=${{ inputs.gz-version }}" >> $GITHUB_ENV
+        echo "CMAKE_TOOLCHAIN_FILE=${GITHUB_WORKSPACE}/cmake/toolchain.cmake" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${HOME}/.cache/ccache" >> $GITHUB_ENV
+        echo "CCACHE_MAXSIZE=8G" >> $GITHUB_ENV

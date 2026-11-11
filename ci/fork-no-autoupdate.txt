@@ -1,9 +1,65 @@
 # ci/fork-no-autoupdate.txt -- forks that must NEVER be rebased onto upstream.
 #
-# These are PINS: each one's branch was force-set to the commit this superproject records,
-# because upstream's tip had drifted to something that no longer builds here. Rebasing one
-# would undo the pin and bring the original failure straight back.
+# These are PINS. Each one exists specifically to stop tracking upstream: its branch was
+# force-set to the commit this superproject records, because upstream's tip had drifted
+# to something that no longer builds here (the mrpt v2/v3 split, an RTABMap version brew
+# does not ship, and so on). Rebasing one onto upstream would undo the pin and bring the
+# original failure straight back.
 #
-# add_upstream_remotes.sh withholds AND actively removes their `upstream` remote, and
-# update_forked_submodules.sh refuses them by name too. One path per line.
-# (no pinned forks on this branch)
+# add_upstream_remotes.sh refuses to add an `upstream` remote for anything listed here,
+# so update_forked_submodules.sh cannot see it and cannot touch it.
+#
+# Remove a line only when you have deliberately decided that fork should track upstream
+# again. One path per line.
+gzsim/gps_umd
+ros-drivers/imu_gnss/imu_pipeline
+ros-drivers/lidar/pointcloud_to_laserscan
+ros-planning/mola_academic_datasets
+ros-planning/mola_imu_preintegration
+ros-planning/mola_lidar_odometry
+ros-planning/mola_sm_loop_closure
+ros-planning/mola_state_estimation
+ros-planning/mrpt_navigation
+ros-planning/mrpt_path_planning
+ros-planning/mrpt_ros_bridge
+ros-planning/mrpt_sensors
+ros-planning/rtabmap_ros
+# ros-planning/easynav_plugins was pinned here from this file's first commit (4fe39eb0,
+# 2026-10-09) with no recorded reason, and that pin is what broke the build: the plugins
+# fork froze at upstream's 2026-07-26 tree while ros2_control/easynav (the core repo) is
+# NOT pinned and tracked upstream through "Robot geometry centralized" / "Remove collision
+# checker from controllers", which deleted the protected members the frozen plugins still
+# referenced. easynav_mpc_controller and easynav_regulated_pp_controller then failed to
+# compile (jazzy 40491410462, kilted 40491414514). Pinning one half of a two-repo pair
+# guards content but not the interface it compiles against, so a one-sided pin here is
+# worse than no pin. The fork now carries ZERO local patches -- upstream absorbed all of
+# them -- so a rebase is a plain fast-forward and the two repos move together again.
+# mola / mp2p_icp: PINNED 2026-10-25. Upstream MOLA migrated off the MRPT 2.x umbrella
+# package onto the mrpt3 v3.x underscore modules (find_package(mrpt_containers) etc.),
+# which are the very set skip-listed for the v2/v3 duplicate-header split -- so they can
+# never resolve here. That cost mola_yaml, mola_pose_list, mola_traj_tools and
+# mp2p_icp_core on ALL THREE distros in runs 39798399501 / 39798427519 / 39798432515;
+# all four built green at the pinned commits in 39120063171 on 10-18. Branch trees were
+# set back to the gitlinks this superproject records (mola c0d293c4, mp2p_icp a58aa943),
+# both of which carry our own macOS patches. The five sibling mola_* repos above were
+# already pinned for this same split; these two had been missed, which is why they drifted.
+ros-planning/mola
+ros-planning/mp2p_icp
+# aerial/mavros: PINNED 2026-10-25. mavros upstream keeps adopting MAVLink fields that the
+# vendored MAVLink (mavlink-gbp-release, release/rolling/mavlink) does not define yet, and
+# that branch's tip == our gitlink, so there is no newer MAVLink to take. opaque_id on
+# MISSION_COUNT/MISSION_ACK broke mavros on kilted+jazzy in 39798432515 / 39798427519; it
+# came in with the 10-22 updater run (786e4194) and is absent from a08f681e, which built
+# green on 10-18. The fork already carried FOUR patches of this exact shape (FLIX,
+# SIM_STATE, open_drone_id, MANUAL_CONTROL aux1-6) -- pinning stops the treadmill instead
+# of adding a fifth. Tree set back to a08f681e in id_mavros 0f69a153.
+aerial/mavros
+
+# MRPT v2 vs mrpt3 v3.x. Upstream develop moved to the v3 module names and the
+# updater rebased our macOS patch onto it, producing a commit with the SAME subject
+# line but v3 content (b38541a1 find_package(mrpt-obs)/mrpt::obs ->
+# 574cf453 find_package(mrpt_obs)/mrpt::mrpt_obs). This workspace distributes MRPT v2
+# via mrpt_ros and skip-lists the v3 module packages, so the v3 form cannot resolve.
+# Repaired forward to the v2 tree in id_mola_input_ouster cdb723e; pinned so the
+# Sunday cron cannot redo it. Same class as the mola / mp2p_icp pins above.
+ros-planning/mola_input_ouster

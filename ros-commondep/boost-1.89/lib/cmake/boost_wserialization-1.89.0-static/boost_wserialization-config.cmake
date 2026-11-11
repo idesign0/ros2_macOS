@@ -7,4 +7,6 @@ endif()
 include(CMakeFindDependencyMacro)
 
 
+find_dependency(boost_serialization 1.89.0 EXACT HINTS "${CMAKE_CURRENT_LIST_DIR}/..")
+
 include("${CMAKE_CURRENT_LIST_DIR}/boost_wserialization-targets.cmake")

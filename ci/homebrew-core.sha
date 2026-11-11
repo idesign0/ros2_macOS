@@ -1,0 +1,14 @@
+# The homebrew-core commit EVERY macOS job of a run pins its tap to.
+#
+# Resolved together with brew-packages/matched_packages.txt by
+# .github/workflows/update-brew.yml, so the pin and the recorded versions always
+# agree: these are the versions that tap resolves to.
+#
+# Why committed rather than resolved per run: brew-state.txt feeds the gz-install
+# cache key, and homebrew-core moves many times a day, so a tip-derived pin changes
+# that key every run and rebuilds gz (~2.5h) every time. Pinning here keeps the
+# resolved versions -- and the cache -- stable between refreshes, and makes a build
+# reproducible from this SHA plus matched_packages.txt.
+#
+# Refreshed 2026-11-01.
+4392eb17026de31d12a17bdf6b17b753f767d198
