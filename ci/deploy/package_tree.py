@@ -202,7 +202,7 @@ def rpath_deps(path):
     `path`. The text matters as well as the target: a scoped library is no longer at the
     name such a dep spells, so step 2b has to rewrite the dep itself."""
     out = {}
-    d = os.path.dirname(path)
+    d = os.path.dirname(ORIGIN.get(path, path))
     lc = run(["otool", "-l", path]).stdout
     rpaths = [m.group(1).strip() for m in
               re.finditer(r"^\s*path (.+?) \(offset \d+\)$", lc, re.M)]
@@ -276,10 +276,15 @@ def formula_retired(name):
     return _GONE[name]
 
 
-def closure(tree_files):
+def closure(tree_files, resolve_rpaths=False):
     seen, frontier = set(), set()
     for s in refs_of(tree_files).values():
         frontier |= s
+    if resolve_rpaths:
+        # staged Qt plugins reach their frameworks ONLY by @rpath (Qt6), which refs_of
+        # cannot see; resolve those against the plugin's original keg location.
+        for p in tree_files:
+            frontier |= rpath_refs(p)
     seen |= frontier
     while frontier:
         existing = [p for p in frontier if os.path.exists(p)]
@@ -473,6 +478,173 @@ def add_intree_rpaths(tree, install_prefix, targets):
     return added
 
 
+# ---- Qt runtime: plugins and QML imports.
+# The closure only follows LINK edges. Qt loads its platform plugin (cocoa), image
+# formats, icon engines, styles and every QML module by dlopen from a directory it
+# derives at run time, so none of that is in the closure, and with no brew Qt on the
+# user's machine rviz2 aborts: "could not find the Qt platform plugin cocoa". Leaning on
+# the user's brew Qt instead is worse: its plugins link brew's QtCore by Cellar path,
+# so a second QtCore loads next to the vendored one -- the exit-134 double-load again.
+#
+# Where each Qt looks, measured with brew qt@5 5.15.19 and qtbase 6.11.2 by copying
+# QtCore elsewhere and printing QLibraryInfo:
+#   Qt5: prefix = the directory ABOVE the dir holding QtCore.framework, plugins in
+#        <prefix>/plugins, QML in <prefix>/qml. It follows the vendored copy by itself.
+#   Qt6: prefix = <dir holding QtCore.framework> + "/../../../.." -- the literal maps
+#        brew's Cellar/qtbase/<v>/lib back to /opt/homebrew. From a vendored copy that
+#        lands OUTSIDE the keg, so it is patched (shorter, NUL-padded) to point inside.
+# Neither then ever searches the user's brew Qt. A QT_PLUGIN_PATH holding both majors
+# would also work -- each rejects the other's plugins from metadata without loading
+# them -- but Qt5 prints a warning for every Qt6 plugin it scans, on every start.
+ORIGIN = {}           # staged copy -> the brew file it came from
+
+QT_PLUGIN_CATS = {
+    5: ("platforms", "imageformats", "iconengines", "styles", "platformthemes", "printsupport"),
+    6: ("platforms", "imageformats", "iconengines", "styles", "tls", "networkinformation"),
+}
+QT_PLATFORMS = {"libqcocoa.dylib", "libqminimal.dylib", "libqoffscreen.dylib"}
+QML_KEEP = {
+    5: {"builtins.qmltypes", "Qt", "QtGraphicalEffects", "QtQml", "QtQuick", "QtQuick.2",
+        "QtWebSockets"},
+    6: {"builtins.qmltypes", "jsroot.qmltypes", "Qt", "QtCore", "QtQml", "QtQuick",
+        "QtNetwork", "QtWebSockets"},
+}
+# A plugin or QML module that links any of these is dropped rather than dragging the
+# framework (WebEngine alone is ~150 MB) into the keg for a feature nothing here uses.
+QT_DENY = re.compile(
+    r"/Qt(WebEngine\w*|WebView\w*|WebChannel\w*|3D\w*|Quick3D\w*|Multimedia\w*|"
+    r"Location|Positioning\w*|Sensors|Bluetooth|Nfc|DataVisualization|Charts|Graphs|"
+    r"Scxml|StateMachine\w*|RemoteObjects|VirtualKeyboard\w*|Purchasing|Gamepad|Test|"
+    r"Designer\w*|Sql|SerialBus|TextToSpeech|Pdf\w*|Lottie|Wayland\w*|Bodymovin)"
+    r"\.framework/")
+QT6_PREFIX_LIT = b"/../../../..\x00"
+
+
+def qt_major(keg):
+    return 5 if keg.split("-")[0] == "qt@5" else 6
+
+
+def _qt_keg_root(keg):
+    return os.path.join(HB, keg)
+
+
+def stage_qt_runtime(tree, vendor_abs, cl):
+    """Copy the Qt plugins and QML modules the vendored Qt frameworks will look for into
+    the place they will look. Returns the staged mach-o files, plus where each major
+    expects its prefix, so main() can check the layout and patch Qt6 once it is final."""
+    kegs = set()
+    qtcore_units = set()
+    for p in cl:
+        fp = fw_parts(p)
+        if fp and fp[1].startswith("Qt") and os.path.exists(p):
+            kegs.add(keg_of(p))
+            if fp[1] == "QtCore":
+                qtcore_units.add(vendor_unit(p))
+    kegs.discard("other")
+    if not kegs:
+        return None
+    # QtCore is scoped (vendor/lib/<keg>/QtCore.framework) exactly when two kegs claim
+    # it; plugins cannot add a third QtCore, so the layout is already decided here.
+    scoped = len(qtcore_units) > 1
+    p5 = vendor_abs if scoped else os.path.dirname(vendor_abs)
+    p6 = vendor_abs
+    dests = {5: (os.path.join(p5, "plugins"), os.path.join(p5, "qml")),
+             6: (os.path.join(p6, "share", "qt", "plugins"), os.path.join(p6, "share", "qt", "qml"))}
+    staged, dropped = [], collections.Counter()
+    for keg in sorted(kegs):
+        major = qt_major(keg)
+        root = _qt_keg_root(keg)
+        src_plug = os.path.join(root, "plugins") if major == 5 else os.path.join(root, "share", "qt", "plugins")
+        src_qml = os.path.join(root, "qml") if major == 5 else os.path.join(root, "share", "qt", "qml")
+        dplug, dqml = dests[major]
+        for cat in QT_PLUGIN_CATS[major]:
+            sd = os.path.join(src_plug, cat)
+            if not os.path.isdir(sd):
+                continue
+            for n in sorted(os.listdir(sd)):
+                if not n.endswith(".dylib") or (cat == "platforms" and n not in QT_PLATFORMS):
+                    continue
+                src = os.path.realpath(os.path.join(sd, n))
+                dst = os.path.join(dplug, cat, n)
+                if os.path.exists(dst):
+                    continue
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(src, dst)
+                os.chmod(dst, 0o755)
+                ORIGIN[dst] = src
+                staged.append(dst)
+        if os.path.isdir(src_qml):
+            for n in sorted(os.listdir(src_qml)):
+                if n not in QML_KEEP[major]:
+                    continue
+                s_, d_ = os.path.join(src_qml, n), os.path.join(dqml, n)
+                if os.path.isdir(s_):
+                    shutil.copytree(s_, d_, symlinks=False, dirs_exist_ok=True)
+                    for r, _, ns in os.walk(d_):
+                        for m in ns:
+                            q = os.path.join(r, m)
+                            if q.endswith(MACHO_EXT):
+                                ORIGIN[q] = os.path.realpath(os.path.join(s_, os.path.relpath(q, d_)))
+                                staged.append(q)
+                elif not os.path.exists(d_):
+                    shutil.copy2(s_, d_)
+    # drop what links a denied framework, or a brew file that is not there
+    keep = []
+    gone_dirs = set()
+    for q in staged:
+        if any(q.startswith(g + os.sep) for g in gone_dirs):
+            continue
+        lines = run(["otool", "-L", q]).stdout.splitlines()[2:]
+        refs = [l.strip().split(" ")[0] for l in lines]
+        bad = [r for r in refs if QT_DENY.search(r)
+               or ((r.startswith(HB) or r.startswith(CELLAR)) and not os.path.exists(r))]
+        if not bad:
+            keep.append(q)
+            continue
+        m = re.search(r"/Qt(\w+)\.framework/", next((r for r in bad if QT_DENY.search(r)), bad[0]))
+        dropped[m.group(1) if m else "missing dep"] += 1
+        # a QML plugin goes with its whole module: the qmldir would name a missing plugin
+        d = os.path.dirname(q)
+        while d.startswith(vendor_abs) and not os.path.exists(os.path.join(d, "qmldir")) \
+                and os.path.basename(os.path.dirname(d)) not in ("qml",):
+            d = os.path.dirname(d)
+        if os.path.exists(os.path.join(d, "qmldir")):
+            shutil.rmtree(d, ignore_errors=True)
+            gone_dirs.add(d)
+        else:
+            os.remove(q)
+    keep = [q for q in keep if os.path.exists(q)]
+    # their own install names still spell the brew path, which every later scan would
+    # read as a Homebrew reference; give them in-keg ones now
+    for q in keep:
+        run(["install_name_tool", "-id", f"@rpath/{os.path.relpath(q, vendor_abs)}", q])
+    return {"files": keep, "kegs": sorted(kegs), "scoped": scoped, "p5": p5, "p6": p6,
+            "dropped": dropped}
+
+
+def patch_qt6_prefix(fw_binary, libdir, prefix):
+    """Point a vendored Qt6 QtCore's relative prefix literal at `prefix`."""
+    # Same LENGTH, not just shorter: QtCore builds the string from the literal's compiled
+    # size, so NUL padding lands inside the path ("Broken filename passed to function").
+    # Pad with "/." segments, and a final "/" for odd lengths -- both are no-ops in a path.
+    want = len(QT6_PREFIX_LIT) - 1
+    new = "/" + os.path.relpath(prefix, libdir)
+    while len(new) + 2 <= want:
+        new += "/."
+    if len(new) < want:
+        new += "/"
+    new = new.encode()
+    raw = bytearray(open(fw_binary, "rb").read())
+    n = raw.count(QT6_PREFIX_LIT)
+    if n != 1 or len(new) != want:
+        return f"literal found {n}x / {new!r} does not fit {want} bytes"
+    i = raw.find(QT6_PREFIX_LIT)
+    raw[i:i + want] = new
+    os.chmod(fw_binary, os.stat(fw_binary).st_mode | 0o200)   # brew ships it 0444
+    open(fw_binary, "wb").write(bytes(raw))
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("tree")
@@ -514,6 +686,15 @@ def main():
         sys.exit(1 if bad else 0)
 
     cl = closure(files)
+    qt = stage_qt_runtime(tree, vendor_abs, cl)
+    if qt and qt["files"]:
+        files += qt["files"]
+        cl |= closure(qt["files"], resolve_rpaths=True)
+        print(f"  qt runtime staged    : {len(qt['files'])} plugin/QML mach-o files from "
+              f"{', '.join(qt['kegs'])}"
+              + (f"; dropped (heavy/unused Qt modules): "
+                 + ", ".join(f"{k}x{v}" for k, v in qt['dropped'].most_common())
+                 if qt['dropped'] else ""), flush=True)
     present = sorted(p for p in cl if os.path.exists(p))
     missing = sorted(p for p in cl if not os.path.exists(p))
     print(f"  closure              : {len(cl)} dylibs "
@@ -702,6 +883,29 @@ def main():
             print(f"     {key}: {', '.join(sorted(used))}")
 
     vendored = [os.path.join(vendor_abs, b) for b in sorted(set(base_of.values()))]
+
+    if qt:
+        for unit, rel in sorted(dest_rel.items()):
+            if unit[0] != "fw" or not rel.endswith("QtCore.framework"):
+                continue
+            fwdir = os.path.join(vendor_abs, rel)
+            libdir = os.path.dirname(fwdir)
+            major = 5 if os.path.isdir(os.path.join(fwdir, "Versions", "5")) else 6
+            if major == 5:
+                if os.path.dirname(libdir) != qt["p5"]:
+                    print(f"::error::Qt5 will look for plugins under {os.path.dirname(libdir)}, "
+                          f"but they were staged under {qt['p5']}")
+                    sys.exit(1)
+                print(f"  qt5 prefix           : {os.path.relpath(qt['p5'], tree)} "
+                      f"(follows {os.path.relpath(fwdir, tree)})")
+            else:
+                why = patch_qt6_prefix(os.path.join(fwdir, "Versions", "A", "QtCore"),
+                                       libdir, qt["p6"])
+                if why:
+                    print(f"::error::cannot point Qt6 at its vendored plugins: {why}")
+                    sys.exit(1)
+                print(f"  qt6 prefix           : {os.path.relpath(qt['p6'], tree)} "
+                      f"(patched in {os.path.relpath(fwdir, tree)})")
 
     # vendored copies: own install_name -> @rpath, and their refs rewritten too
     for v in vendored:
