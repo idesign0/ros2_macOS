@@ -51,7 +51,8 @@ jobs:
         run: |
           /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 -m pip install -q \
             --break-system-packages empy==3.3.4 lark==1.1.1 catkin_pkg netifaces osrf-pycommon \
-            PyYAML packaging psutil typeguard jinja2 lxml numpy
+            PyYAML packaging psutil typeguard jinja2 lxml numpy \
+            argcomplete typing_extensions
 
       - name: brew install from the tap
         run: |
