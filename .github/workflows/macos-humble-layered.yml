@@ -1008,10 +1008,17 @@ jobs:
               --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
               -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "retry_${{ matrix.shard }}.log"
           fi
+          # This shard's delta = everything created in install/ after the base was extracted.
+          # By CTIME (-cnewer), not mtime: CMake's install() stamps a copied file with its
+          # SOURCE mtime, so `-newer` dropped every package.xml, launch/, config/, plugin XML
+          # and media file of every domain-shard package (811 of 1340 on kilted: rviz2 found
+          # no plugin descriptions, nav2_bringup shipped no launch files). And -type l too:
+          # `-type f` dropped so-version symlinks (libgtsam.4.dylib -> mola could not load).
+          # Packed as a tar so symlinks and exec bits survive the artifact round trip.
           mkdir -p install_shard
-          find install -type f -newer /tmp/base_marker 2>/dev/null | while read -r f; do
-            rel="${f#install/}"; mkdir -p "install_shard/$(dirname "$rel")"; cp -p "$f" "install_shard/$rel"
-          done
+          ( cd install && find . \( -type f -o -type l \) -cnewer /tmp/base_marker -print0 ) > /tmp/delta.lst
+          tar --zstd -cf install_shard/delta.tar.zst -C install --null -T /tmp/delta.lst
+          echo "shard delta: $(tr -cd '\0' < /tmp/delta.lst | wc -c | tr -d ' ') entries, $(du -h install_shard/delta.tar.zst | cut -f1)"
       - name: Summarize shard
         if: always()
         run: |
@@ -1104,7 +1111,10 @@ jobs:
         with: { pattern: install-dom-*, path: deltas }
       - name: Merge shard deltas
         run: |
-          if [ -d deltas ]; then find deltas -mindepth 1 -maxdepth 1 -type d | while read -r d; do rsync -a "$d/" install/; done; fi
+          if [ -d deltas ]; then find deltas -mindepth 1 -maxdepth 1 -type d | while read -r d; do
+            if [ -f "$d/delta.tar.zst" ]; then tar --zstd -xf "$d/delta.tar.zst" -C install
+            else rsync -a "$d/" install/; fi
+          done; fi
           du -sh install || true
       - name: Pack full workspace install
         run: |
