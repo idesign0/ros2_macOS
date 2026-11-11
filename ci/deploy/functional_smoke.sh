@@ -273,6 +273,26 @@ dangling=$(find "$REAL/lib" "$REAL/bin" -type f \( -name '*.dylib' -o -name '*.s
 if [ -z "$dangling" ]; then note "every in-prefix library reference resolves"
 else bad "$(echo "$dangling" | wc -l | tr -d ' ') in-prefix library references point at nothing"; echo "$dangling" | head -5 | sed 's/^/    /'; fi
 
+# ---------------------------------------------------------------- 6. gz ogre2 render engine
+# Without it the gz GUI cannot draw ("Failed to load plugin [ogre2]: couldn't find shared
+# library") while every headless check above still passes.
+OG=$(find "$PREFIX/" -name 'libgz-rendering*-ogre2.dylib' -path '*engine-plugins*' 2>/dev/null | head -1)
+if [ -z "$OG" ]; then
+  bad "no gz-rendering ogre2 engine plugin (the gz GUI cannot render)"
+else
+  note "ogre2 engine: ${OG#$PREFIX/}"
+  RS=""
+  IFS=: read -r -a _ogp <<< "${OGRE2_RESOURCE_PATH:-}"
+  for d in "${_ogp[@]}"; do [ -n "$d" ] && [ -e "$d/RenderSystem_Metal.dylib" ] && { RS="$d"; break; }; done
+  if [ -n "$RS" ]; then note "OGRE2_RESOURCE_PATH holds RenderSystem_Metal: ${RS#$PREFIX/}"
+  else bad "OGRE2_RESOURCE_PATH ('${OGRE2_RESOURCE_PATH:-}') has no RenderSystem_Metal.dylib"; fi
+  if python3 -c 'import ctypes,sys; ctypes.CDLL(sys.argv[1])' "$OG" 2>"$L/ogre2_dlopen.txt"; then
+    note "ogre2 engine plugin loads"
+  else
+    bad "ogre2 engine plugin does not load"; head -3 "$L/ogre2_dlopen.txt" | sed 's/^/    /'
+  fi
+fi
+
 echo "functional checks failed: $fails"
 # The report step below does `mkdir -p report` too, so this is order-independent;
 # step 9 uploads report/ with if: always(), so these survive a failed check.
