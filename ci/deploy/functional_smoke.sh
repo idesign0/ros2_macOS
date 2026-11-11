@@ -251,6 +251,28 @@ else
   note "rviz2 not in this tree -- Qt check skipped"
 fi
 
+# ---------------------------------------------------------------- 5. tree completeness
+# Every indexed package must ship its package.xml, and every in-prefix library a mach-o
+# names must exist. Both went missing for domain-shard packages (CMake keeps the SOURCE
+# mtime on installed files, and the shard delta selected by mtime and skipped symlinks),
+# and nothing above exercised them: 811 packages without package.xml, mola without
+# libgtsam.4.dylib.
+IDX="$PREFIX/share/ament_index/resource_index/packages"
+if [ -d "$IDX" ]; then
+  nopx=0; tot=0
+  for m in "$IDX"/*; do
+    tot=$((tot+1)); [ -f "$PREFIX/share/$(basename "$m")/package.xml" ] || { nopx=$((nopx+1)); [ $nopx -le 5 ] && echo "    no package.xml: $(basename "$m")"; }
+  done
+  if [ "$nopx" -eq 0 ]; then note "all $tot indexed packages ship package.xml"
+  else bad "$nopx of $tot indexed packages have no package.xml"; fi
+fi
+REAL="$(cd "$PREFIX" && pwd -P)"
+dangling=$(find "$REAL/lib" "$REAL/bin" -type f \( -name '*.dylib' -o -name '*.so' -o -perm -u+x \) 2>/dev/null \
+  | while read -r f; do otool -L "$f" 2>/dev/null | tail -n +3; done \
+  | awk '{print $1}' | grep -E "^($PREFIX|$REAL)/" | sort -u | while read -r r; do [ -e "$r" ] || echo "$r"; done)
+if [ -z "$dangling" ]; then note "every in-prefix library reference resolves"
+else bad "$(echo "$dangling" | wc -l | tr -d ' ') in-prefix library references point at nothing"; echo "$dangling" | head -5 | sed 's/^/    /'; fi
+
 echo "functional checks failed: $fails"
 # The report step below does `mkdir -p report` too, so this is order-independent;
 # step 9 uploads report/ with if: always(), so these survive a failed check.
