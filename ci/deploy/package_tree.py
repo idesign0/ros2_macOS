@@ -134,10 +134,44 @@ def run(cmd):
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
+# Linkable mach-o file types: MH_EXECUTE, MH_DYLIB, MH_BUNDLE. Objects (.o) and dSYM
+# companions carry the same magic but are never loaded, so they are left alone.
+MH_LOADABLE = {2, 6, 8}
+MH_EXECUTE = 2
+
+
+def macho_type(p):
+    """Mach-O filetype of p (fat: of its first slice), or None if p is not mach-o."""
+    try:
+        with open(p, "rb") as fh:
+            h = fh.read(4096)
+    except OSError:
+        return None
+    m = h[:4]
+    if m not in MACHO_MAGIC:
+        return None
+    if m in (b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"):
+        # fat header (big endian): nfat_arch, then cputype,cpusubtype,offset,size,align
+        if int.from_bytes(h[4:8], "big") > 32:
+            return None         # a java .class shares this magic
+        off = int.from_bytes(h[16:20], "big")
+        try:
+            with open(p, "rb") as fh:
+                fh.seek(off)
+                h = fh.read(16)
+        except OSError:
+            return None
+        m = h[:4]
+    end = "little" if m in (b"\xce\xfa\xed\xfe", b"\xcf\xfa\xed\xfe") else "big"
+    return int.from_bytes(h[12:16], end) if len(h) >= 16 else None
+
+
 def is_macho(p):
-    if p.endswith(MACHO_EXT):
-        return True
-    return os.access(p, os.X_OK) and os.path.isfile(p) and "." not in os.path.basename(p)
+    # By content, not by name or mode. The shipped tree arrives through CI artifacts
+    # that drop the exec bit, so an os.X_OK test silently skipped every
+    # lib/<pkg>/<node> executable (demo_nodes_cpp/talker kept /opt/homebrew/opt/glog
+    # refs), and a dotted name (bin/protoc-32.1.0) was skipped by the "." test.
+    return macho_type(p) in MH_LOADABLE
 
 
 def walk_macho(tree):
@@ -677,6 +711,12 @@ def main():
 
     files = walk_macho(tree)
     print(f"  mach-o files in tree : {len(files)}", flush=True)
+    # Executables that lost their mode on the way through CI artifacts: `ros2 run`
+    # lists only X_OK files, and a user without Homebrew's cleaner cannot exec them.
+    noexec = [p for p in files if macho_type(p) == MH_EXECUTE and not os.access(p, os.X_OK)]
+    for p in noexec:
+        os.chmod(p, os.stat(p).st_mode | 0o755)
+    print(f"  exec bit restored    : {len(noexec)} mach-o executables", flush=True)
 
     if a.verify_only:
         bad = {p: s for p, s in refs_of(files).items() if s}

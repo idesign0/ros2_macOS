@@ -9,6 +9,11 @@
 set -uo pipefail
 PREFIX="${1:?usage: functional_smoke.sh <prefix>}"
 PREFIX="${PREFIX%/}"
+# gz-transport picks a network interface on its own. A CI runner has several, discovery
+# never comes back over the chosen one, and the server then looks dead (no /stats, no
+# poses). Loopback is all a single-host check needs; a caller's own setting wins.
+export GZ_IP="${GZ_IP:-127.0.0.1}"
+export GZ_PARTITION="${GZ_PARTITION:-fsmoke-$$}"
 # Everything here runs HEADLESS. The GUI / Ogre2 / Metal render that joaaosc verified by
 # hand (homebrew-ros2#3) is deliberately NOT attempted: GitHub's macOS runners have no
 # display and no GPU, so a Metal render cannot be exercised in CI at all.
