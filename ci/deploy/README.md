@@ -367,6 +367,29 @@ A tolerated reference is deliberately **not rewritten** -- rewriting a path that
 vendored turns a resolvable absolute path into a dangling `@rpath` -- so the final verify
 subtracts exactly that set and fails on anything else.
 
+### Qt plugins and QML modules are dlopen'd, so they are staged explicitly
+
+The closure follows link edges only. Qt loads its platform plugin (cocoa), image formats,
+icon engines, styles and every QML module by dlopen from a directory it derives at run
+time, so none of that is in the closure. Without it a keg on a machine without brew Qt
+cannot start rviz2 ("could not find the Qt platform plugin"); with brew Qt present it
+loads brew's plugins, and through them brew's QtCore next to the vendored one.
+
+`stage_qt_runtime()` copies them for every Qt keg in the closure, dropping modules that
+would drag in unused heavy frameworks (WebEngine, 3D, Multimedia, ...). Where they go is
+where each vendored QtCore will look, measured by moving QtCore and printing QLibraryInfo:
+
+| | prefix rule | staged at |
+|---|---|---|
+| Qt5 (`qt@5`) | the dir above the one holding `QtCore.framework` | `vendor/lib/plugins`, `vendor/lib/qml` (QtCore scoped) |
+| Qt6 (`qtbase`, ...) | `<dir holding QtCore.framework>` + literal `/../../../..` | `vendor/lib/share/qt/{plugins,qml}`, literal patched to `/../././././` |
+
+The Qt6 literal is patched at the SAME length: QtCore builds the string from its compiled
+size, so NUL padding ends up inside the path ("Broken filename passed to function").
+No environment variable is involved, and neither Qt ever searches the user's brew Qt.
+`ci/deploy/functional_smoke.sh` check 4 runs rviz2 offscreen and fails on a platform
+plugin that is missing, a second QtCore, or any Homebrew image.
+
 ## post_install is deprecated -- move it into CI packaging
 
 Homebrew 7 raises `odeprecated "post_install", "post_install_steps"`, and
