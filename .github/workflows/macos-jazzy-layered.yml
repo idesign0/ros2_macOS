@@ -27,6 +27,10 @@ env:
   HOMEBREW_NO_AUTO_UPDATE: "1"
   GZ_VERSION: harmonic
   GZ_DIR: gz-harmonic
+  # Build gz from gz-macOS in the gz job? Jazzy ships gz through the gz_*_vendor packages
+  # (built in base). Building gz-macOS as well put a SECOND gz stack in lib/ that the vendor
+  # libs resolved through @rpath. Only protobuf from gz-macOS is still needed.
+  GZ_BUILD_STACK: "false"
   BREW_BASE: "graphviz eigen@3 eigen geographiclib vtk opencv@4 zbar png++ sophus vrpn draco aravis zeromq cppzmq glfw libusb rtabmap libpqxx leveldb libmodbus readline msgpack-cxx openvdb"
 
 jobs:
@@ -149,7 +153,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: gz-install.tar.zst
-          key: gz-install-jazzy-${{ env.GZ_VERSION }}-${{ hashFiles('cmake/toolchain.cmake', 'brew-packages/matched_packages.txt') }}-${{ hashFiles('brew-state.txt') }}-${{ steps.gzsrc.outputs.sha }}-v1
+          key: gz-install-jazzy-${{ env.GZ_VERSION }}-${{ hashFiles('cmake/toolchain.cmake', 'brew-packages/matched_packages.txt') }}-${{ hashFiles('brew-state.txt') }}-${{ steps.gzsrc.outputs.sha }}-stack${{ env.GZ_BUILD_STACK }}-v1
       - name: Restore ccache (gz)
         if: steps.gzcache.outputs.cache-hit != 'true'
         uses: actions/cache@v4
@@ -207,9 +211,13 @@ jobs:
             -Dprotobuf_BUILD_CONFORMANCE=OFF -Dprotobuf_BUILD_EXAMPLES=OFF \
             -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
+          if [ "$GZ_BUILD_STACK" = "true" ]; then
           colcon build --base-paths "$GZ_DIR/" --packages-ignore protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
             --merge-install --continue-on-error --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_gz.log || true
+          else
+            echo "GZ_BUILD_STACK=false: gz comes from the gz_*_vendor packages; built protobuf only"
+          fi
           # ci-gz-nopartial: this whole step runs under `|| true` + --continue-on-error, so
           # without this guard a failed gz package is packed into gz-install.tar.zst and SAVED
           # to the cache; the next run restores the hole and skips this step entirely
