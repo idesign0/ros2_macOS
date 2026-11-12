@@ -63,7 +63,7 @@ fi
 command -v gz >/dev/null 2>&1 || { echo "::error::no gz binary on PATH after sourcing"; exit 1; }
 note "gz: $(command -v gz)"
 
-WORLD="$(find "$PREFIX/share" -name shapes.sdf -path '*worlds*' 2>/dev/null | head -1)"
+WORLD="$(find "$PREFIX/share" "$PREFIX/opt" -name shapes.sdf -path '*worlds*' 2>/dev/null | head -1)"
 [ -n "$WORLD" ] || { echo "::error::no worlds/shapes.sdf in the tree"; exit 1; }
 note "world: $WORLD"
 
