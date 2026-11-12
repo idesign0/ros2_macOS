@@ -259,12 +259,19 @@ fi
 # libgtsam.4.dylib.
 IDX="$PREFIX/share/ament_index/resource_index/packages"
 if [ -d "$IDX" ]; then
-  nopx=0; tot=0
+  # Plain-CMake packages (rmf_traffic, dynamicEDT3D, ...) write the index marker but never
+  # install package.xml, upstream included; only ament packages (share/<pkg>/environment) count.
+  nopx=0; plain=""; tot=0
   for m in "$IDX"/*; do
-    tot=$((tot+1)); [ -f "$PREFIX/share/$(basename "$m")/package.xml" ] || { nopx=$((nopx+1)); [ $nopx -le 5 ] && echo "    no package.xml: $(basename "$m")"; }
+    n=$(basename "$m"); tot=$((tot+1))
+    [ -f "$PREFIX/share/$n/package.xml" ] && continue
+    if [ -d "$PREFIX/share/$n/environment" ]; then
+      nopx=$((nopx+1)); [ $nopx -le 5 ] && echo "    no package.xml: $n"
+    else plain="$plain $n"; fi
   done
-  if [ "$nopx" -eq 0 ]; then note "all $tot indexed packages ship package.xml"
-  else bad "$nopx of $tot indexed packages have no package.xml"; fi
+  [ -n "$plain" ] && note "plain-CMake packages without package.xml (upstream ships none):$plain"
+  if [ "$nopx" -eq 0 ]; then note "every ament package of $tot indexed ships package.xml"
+  else bad "$nopx of $tot indexed ament packages have no package.xml"; fi
 fi
 REAL="$(cd "$PREFIX" && pwd -P)"
 dangling=$(find "$REAL/lib" "$REAL/bin" -type f \( -name '*.dylib' -o -name '*.so' -o -perm -u+x \) 2>/dev/null \
