@@ -64,6 +64,9 @@ runs:
         done
 
         if [ "$ok" = 1 ]; then exit 0; fi
+        # The step shell is -e -o pipefail: one non-zero git/awk below would end the step
+        # silently before the verdict. Every exit from here on is an explicit one.
+        set +e +o pipefail
 
         # --- forge.etsi.org tolerance -------------------------------------------------
         # etsi_its_messages nests its ASN.1 sources as submodules on forge.etsi.org, which
