@@ -52,6 +52,7 @@ autoware_global_parameter_loader
 autoware_gnss_poser
 autoware_ground_filter
 autoware_gyro_odometer
+autoware_internal_control_msgs
 autoware_internal_debug_msgs
 autoware_internal_localization_msgs
 autoware_internal_metric_msgs
