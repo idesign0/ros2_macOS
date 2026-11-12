@@ -5,6 +5,7 @@ autoware_auto_debug_msgs
 autoware_cmake
 autoware_common_msgs
 autoware_control_msgs
+autoware_internal_control_msgs
 autoware_internal_debug_msgs
 autoware_internal_localization_msgs
 autoware_internal_metric_msgs

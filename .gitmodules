@@ -1589,7 +1589,7 @@
 [submodule "ros-visualization/plotjuggler"]
 	path = ros-visualization/plotjuggler
 	url = https://github.com/facontidavide/PlotJuggler.git
-	branch = main
+	branch = main-3.x
 [submodule "ros-visualization/plotjuggler_msgs"]
 	path = ros-visualization/plotjuggler_msgs
 	url = https://github.com/facontidavide/plotjuggler_msgs.git
