@@ -244,6 +244,8 @@ set(ROS_EDITION "ROS2" CACHE STRING "ROS edition")
 set(ROS_VERSION "2" CACHE STRING "ROS Version")
 set(KILTED_ROS "kilted" CACHE STRING "ROS 2 kilted")
 set(ROS_DISTRO "humble" CACHE STRING "ROS 2 Distro")
+# webots_ros2_driver: runners have no Webots.app, so let it download one
+set(WEBOTS_DOWNLOAD ON CACHE BOOL "webots_ros2_driver: download Webots.app if missing")
 WORKSPACE_PATH(PCL_CONVERSIONS_INCLUDE_DIR "ros-perception/perception_pcl/pcl_conversions/include")
 set(pcl_conversions_INCLUDE_DIRS "${PCL_CONVERSIONS_INCLUDE_DIR}" CACHE PATH "PCL Conversions include dirs" FORCE)
 
