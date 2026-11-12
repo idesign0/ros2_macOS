@@ -1093,20 +1093,30 @@ def main():
     # only broken references in the shipped tree would be the ones scoping created.
     # Resolve from the ORIGINAL keg location, since inside the vendor dir the sibling is
     # no longer where the dep points, which is the whole problem.
-    scoped_units = {u for u, rel in dest_rel.items() if "/" in rel}
+    # The same holds for a FLAT copy whose file name is not the name the dep spells: the
+    # copy is named after the real file (realpath), but keg-mates reach it by its install
+    # name, often a symlink. brew vtk 9.7.1: libvtkCommonCore wants
+    # @rpath/libvtkfmt-9.7.1.dylib, a symlink to libvtkfmt-9.7.9.7.dylib, and only the
+    # latter was vendored -- kilted smoke 43203644418, libmrpt-img no longer loaded.
+    def _wrong_name(text, real):
+        if "/" in dest_rel[vendor_unit(real)]:
+            return True                         # scoped
+        rel = vendor_rel(real)
+        if text.startswith("@rpath/"):
+            return text[len("@rpath/"):] != rel
+        return os.path.basename(text) != os.path.basename(rel)
     fixed = 0
-    if scoped_units:
-        for p in targets:
-            cmd = ["install_name_tool"]
-            for text, real in rpath_deps(origin_of.get(p, p)).items():
-                if vendor_unit(real) in scoped_units:
-                    cmd += ["-change", text, f"@rpath/{vendor_rel(real)}"]
-            if len(cmd) == 1:
-                continue
-            cmd.append(p)
-            if run(cmd).returncode == 0:
-                fixed += 1
-        print(f"  scoped sibling refs  : {fixed} files", flush=True)
+    for p in targets:
+        cmd = ["install_name_tool"]
+        for text, real in rpath_deps(origin_of.get(p, p)).items():
+            if vendor_unit(real) in dest_rel and _wrong_name(text, real):
+                cmd += ["-change", text, f"@rpath/{vendor_rel(real)}"]
+        if len(cmd) == 1:
+            continue
+        cmd.append(p)
+        if run(cmd).returncode == 0:
+            fixed += 1
+    print(f"  sibling refs renamed : {fixed} files", flush=True)
 
     # One mach-o naming two kegs for ONE library was already broken before packaging --
     # two Qt majors cannot coexist in a process. Scoping leaves each reference pointing
