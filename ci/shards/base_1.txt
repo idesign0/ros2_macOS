@@ -60,6 +60,7 @@ automotive_navigation_msgs
 automotive_platform_msgs
 autoware_auto_debug_msgs
 autoware_cmake
+autoware_internal_control_msgs
 autoware_internal_debug_msgs
 autoware_lint_common
 autoware_pyplot
