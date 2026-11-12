@@ -46,6 +46,8 @@ set(BUILD_TESTING OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_OCTOVIS_SUBPROJECT OFF CACHE BOOL "Disable building octovis" FORCE)
+# webots_ros2_driver: runners have no Webots.app, so let it download one
+set(WEBOTS_DOWNLOAD ON CACHE BOOL "webots_ros2_driver: download Webots.app if missing")
 
 # Make sure all workspace-installed packages are visible
 set(ROS_WORKSPACE_INSTALL "${WORKSPACE_ROOT}/install")
