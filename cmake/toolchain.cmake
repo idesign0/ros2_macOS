@@ -365,6 +365,8 @@ set(ROS_EDITION "ROS2" CACHE STRING "ROS edition")
 set(ROS_VERSION "2" CACHE STRING "ROS Version")
 set(KILTED_ROS "kilted" CACHE STRING "ROS 2 kilted")
 set(ROS_DISTRO "kilted" CACHE STRING "ROS 2 Distro")
+# webots_ros2_driver: runners have no Webots.app, so let it download one
+set(WEBOTS_DOWNLOAD ON CACHE BOOL "webots_ros2_driver: download Webots.app if missing")
 
 # Qt5 path (for ROS packages)
 set(Qt5_DIR "/opt/homebrew/opt/qt@5/lib/cmake/Qt5" CACHE PATH "Qt5 CMake path")
