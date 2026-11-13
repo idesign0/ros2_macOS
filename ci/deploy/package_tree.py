@@ -579,7 +579,11 @@ def stage_qt_runtime(tree, vendor_abs, cl):
         return None
     # QtCore is scoped (vendor/lib/<keg>/QtCore.framework) exactly when two kegs claim
     # it; plugins cannot add a third QtCore, so the layout is already decided here.
-    scoped = len(qtcore_units) > 1
+    # ...or when an earlier pass already scoped it: a second pass sees a smaller closure
+    # (devfiles.py's staged tools: Qt5 only) and must not stage a parallel flat layout
+    scoped = len(qtcore_units) > 1 or (os.path.isdir(vendor_abs) and any(
+        os.path.isdir(os.path.join(vendor_abs, k, "QtCore.framework"))
+        for k in os.listdir(vendor_abs)))
     p5 = vendor_abs if scoped else os.path.dirname(vendor_abs)
     p6 = vendor_abs
     dests = {5: (os.path.join(p5, "plugins"), os.path.join(p5, "qml")),
@@ -670,6 +674,8 @@ def patch_qt6_prefix(fw_binary, libdir, prefix):
     new = new.encode()
     raw = bytearray(open(fw_binary, "rb").read())
     n = raw.count(QT6_PREFIX_LIT)
+    if n == 0 and len(new) == want and raw.count(new) == 1:
+        return None     # an earlier pass already patched this copy
     if n != 1 or len(new) != want:
         return f"literal found {n}x / {new!r} does not fit {want} bytes"
     i = raw.find(QT6_PREFIX_LIT)
@@ -833,6 +839,34 @@ def main():
     dest_rel = {}         # unit -> its path relative to the vendor dir
     scoped = {}           # key -> {scope: src}, for the report
     clashes = []
+    # A later pass (devfiles.py runs this script again over the tools it staged) must put
+    # a library where the FIRST pass put it: re-planning from a smaller closure would see
+    # no Qt5/Qt6 clash and drop a second, flat QtCore next to vendor/lib/qt@5/QtCore.
+    existing = collections.defaultdict(list)
+    if os.path.isdir(vendor_abs):
+        for r, dirs, names in os.walk(vendor_abs):
+            for d in list(dirs):
+                if d.endswith(".framework"):
+                    existing[d].append(os.path.relpath(os.path.join(r, d), vendor_abs))
+                    dirs.remove(d)
+            for n in names:
+                existing[n].append(os.path.relpath(os.path.join(r, n), vendor_abs))
+    reused = 0
+    for key in list(units):
+        if key not in existing:
+            continue
+        for unit, src in list(units[key].items()):
+            rels = existing[key]
+            pick = next((r for r in rels if r.split("/")[0] == keg_of(src)), None) \
+                or next((r for r in rels if "/" not in r), None)
+            if pick:
+                dest_rel[unit] = pick
+                del units[key][unit]
+                reused += 1
+        if not units[key]:
+            del units[key]
+    if reused:
+        print(f"  already vendored     : {reused} (placed by an earlier pass, reused)")
     for key, members in sorted(units.items()):
         if len(members) == 1:
             dest_rel[next(iter(members))] = key
@@ -924,6 +958,18 @@ def main():
 
     vendored = [os.path.join(vendor_abs, b) for b in sorted(set(base_of.values()))]
 
+    # Where each source library went, for devfiles.py: an overlay must link the very copy
+    # the tree loads, so the dev mirror of a formula points its dylibs at these. Merged
+    # with what an earlier pass recorded (devfiles runs this script a second time).
+    mpath = os.path.join(os.path.dirname(vendor_abs), ".manifest.json")
+    try:
+        manifest = json.load(open(mpath))
+    except (OSError, ValueError):
+        manifest = {}
+    for src, rel in base_of.items():
+        manifest[os.path.realpath(src)] = rel
+    json.dump(manifest, open(mpath, "w"), indent=0, sort_keys=True)
+
     if qt:
         for unit, rel in sorted(dest_rel.items()):
             if unit[0] != "fw" or not rel.endswith("QtCore.framework"):
@@ -964,7 +1010,10 @@ def main():
     for p in files:
         out = run(["otool", "-D", p]).stdout.splitlines()
         own = out[1].strip() if len(out) >= 2 else ""
-        if own.startswith(HB) or own.startswith(CELLAR):
+        # never the keg's OWN libraries: once relocated their id is
+        # /opt/homebrew/opt/ros2-<distro>/lib/..., which also starts with /opt/homebrew/opt,
+        # and an @rpath id there would leave every overlay binary unable to find them
+        if (own.startswith(HB) or own.startswith(CELLAR)) and _not_self(own):
             if run(["install_name_tool", "-id",
                     f"@rpath/{rpath_name(p)}", p]).returncode == 0:
                 reid += 1

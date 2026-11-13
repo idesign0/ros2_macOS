@@ -192,6 +192,21 @@ jobs:
             --tolerate-stale-input
           rc=$?
           echo "package_tree exit=$rc"
+          # Development files (headers, CMake/pkg-config files, static archives) for every
+          # external dependency the tree's exported build interface names, so an overlay
+          # workspace builds against the keg alone instead of the user's own Homebrew.
+          if [ "$rc" = 0 ] && [ -f ci/deploy/devfiles.py ]; then
+            python3 -I ci/deploy/devfiles.py install \
+              --install-prefix "/opt/homebrew/opt/ros2-humble" \
+              --tolerate-stale-input --step stage && \
+            python3 -I ci/deploy/package_tree.py install \
+              --install-prefix "/opt/homebrew/opt/ros2-humble" \
+              --tolerate-stale-input && \
+            python3 -I ci/deploy/devfiles.py install \
+              --install-prefix "/opt/homebrew/opt/ros2-humble" --step link
+            rc=$?
+            echo "devfiles exit=$rc  ($(du -sh install/vendor/opt 2>/dev/null | awk '{print $1}') in vendor/opt)"
+          fi
           if [ -d install/vendor/lib ]; then
             echo "vendored: $(find install/vendor/lib -maxdepth 2 \( -name '*.dylib' -o -name '*.framework' \) | wc -l | tr -d ' ') libs, $(du -sh install/vendor/lib | awk '{print $1}')"
           fi
@@ -283,6 +298,18 @@ jobs:
             exit 1
           fi
           echo "no regressions"
+
+      - name: Overlay probe -- find_package() every package from a fresh overlay
+        id: overlay
+        # Report-only until a clean CI pass sets the baseline; then drop continue-on-error.
+        if: ${{ !cancelled() && steps.package.conclusion == 'success' && hashFiles('ci/deploy/overlay_probe.py') != '' }}
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          allow=ci/deploy/overlay_allow.txt
+          env -i HOME="$HOME" PATH="/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin" bash -c \
+            ". /opt/homebrew/opt/ros2-humble/setup.bash && python3 -I ci/deploy/overlay_probe.py \
+               /opt/homebrew/opt/ros2-humble --jobs 3 --allow $allow --out report"
 
       - name: What still loads from Homebrew at runtime (the dlopen gap)
         if: always()
