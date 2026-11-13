@@ -989,6 +989,9 @@ jobs:
         run: |
           python3 -I ci/deploy/package_tree.py install \
             --install-prefix "/opt/homebrew/opt/ros2-kilted"
+          # dev files for overlay builds (see package-smoke-kilted.yml)
+          python3 -I ci/deploy/devfiles.py install \
+            --install-prefix "/opt/homebrew/opt/ros2-kilted"
           echo "vendored: $(find install/vendor/lib -maxdepth 2 \( -name '*.dylib' -o -name '*.framework' \) | wc -l | tr -d ' ') libs, $(du -sh install/vendor/lib | awk '{print $1}')"
       - name: Pack the release tree
         run: |

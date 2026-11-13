@@ -1,0 +1,42 @@
+# Packages whose find_package() fails from an overlay for reasons outside the packaging.
+# Fix upstream (fork + repoint), then drop the line.
+
+# component configs: only loadable through their parent (find_package(gz-sim9 COMPONENTS gz))
+GTSAM_UNSTABLE
+gz-physics8-tpe
+gz-physics8-tpe-plugin
+gz-sim9-camera-video-recorder-system
+gz-sim9-gz
+gz-sim9-lens-flare-system
+gz-sim9-sensors-system
+gz-sim9-shader-param-system
+gz-tools2-all
+
+# exports Qt5 / Qt without COMPONENTS (fails on Linux too)
+grid_map_rviz_plugin
+nav2_rviz_plugins
+navmap_rviz_plugin
+rmf_visualization_rviz2_plugins
+rviz_visual_testing_framework
+rviz_imu_plugin
+
+# exports a dependency name nothing provides ("eigen", "yaml-cpp::yaml-cpp", influx_component)
+cartographer_rviz
+cx_config_plugin
+easynav_routes_maps_manager
+diagnostic_remote_logging
+
+# exports a library it never installs
+ads_vendor
+autoware_lanelet2_extension_python
+grid_map_loader
+open_manipulator_collision
+open_manipulator_gui
+sm_dance_bot
+sm_dance_bot_strikes_back
+sm_dance_bot_warehouse
+sm_dance_bot_warehouse_2
+sm_dance_bot_warehouse_3
+
+# exports a source-tree dir it never installs (stomp: examples/)
+stomp
