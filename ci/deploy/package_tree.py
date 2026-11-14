@@ -1198,6 +1198,28 @@ def main():
     inner = add_intree_rpaths(tree, a.install_prefix, targets)
     print(f"  in-tree lib rpaths   : {inner} additions", flush=True)
 
+    # ---- 4b. brew rpaths go LAST. Brew pcl 1.15 carries LC_RPATH /opt/homebrew/opt/cjson/lib
+    # ahead of the vendor rpath, so wherever cjson is installed, @rpath/libcjson.1.dylib
+    # loads brew's copy (kilted smoke 43595886228). Demote, not delete: a ref left in place
+    # on purpose may still need them.
+    demoted = 0
+    for p in targets:
+        rps = [q for c, q in load_paths(p) if c == "LC_RPATH"]
+        brew = [q for q in rps if q.startswith("/opt/homebrew/") and _not_self(q)]
+        if not brew:
+            continue
+        if rps[-len(brew):] == brew:
+            continue                            # already after every tree rpath
+        d = ["install_name_tool"] + [x for q in brew for x in ("-delete_rpath", q)]
+        if run(d + [p]).returncode != 0:
+            continue
+        r = ["install_name_tool"] + [x for q in brew for x in ("-add_rpath", q)]
+        if run(r + [p]).returncode != 0:
+            print(f"::error::could not restore brew rpaths of {p}")
+            sys.exit(1)
+        demoted += 1
+    print(f"  brew rpaths demoted  : {demoted} files", flush=True)
+
     # ---- 5. re-sign everything we touched
     for p in targets:
         resign(p)
