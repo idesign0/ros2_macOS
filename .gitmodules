@@ -140,7 +140,7 @@
 	branch = jazzy
 [submodule "ros2_control/realtime_tools"]
 	path = ros2_control/realtime_tools
-	url = https://github.com/ros-controls/realtime_tools.git
+	url = https://github.com/idesign0/id_realtime_tools.git
 	branch = jazzy
 [submodule "ros2_control/control_msgs"]
 	path = ros2_control/control_msgs
