@@ -21,6 +21,8 @@ cmake_minimum_required(VERSION 3.22)
 project(overlay_probe_@N@ C CXX)
 set(_keg "$ENV{PROBE_PREFIX}")
 set(_kegreal "$ENV{PROBE_PREFIX_REAL}")
+set(_devdir "$ENV{PROBE_DEVDIR}")
+string(REGEX REPLACE "/+$" "" _sdk "${CMAKE_OSX_SYSROOT}")
 function(_probe_check pkg)
   # What an overlay that uses <pkg> compiles and links against: the package's own
   # targets/variables and, transitively, every target their link interface names. Targets
@@ -70,6 +72,12 @@ function(_probe_check pkg)
   endwhile()
   foreach(_x ${_vals})
     if(_x MATCHES "^\\$<" OR _x MATCHES "^-" OR NOT IS_ABSOLUTE "${_x}")
+      continue()
+    endif()
+    # the tree's own real location and the SDK this configure picked are fine wherever
+    # they are (on CI both live under /Users/runner and /Applications/Xcode_*)
+    if(_x MATCHES "^${_kegreal}/" OR (CMAKE_OSX_SYSROOT AND _x MATCHES "^${_sdk}")
+       OR (_devdir AND _x MATCHES "^${_devdir}/"))
       continue()
     endif()
     if(_x MATCHES "^/Users/runner/" OR _x MATCHES "^/Applications/Xcode_")
@@ -171,7 +179,11 @@ def main():
     prefix = a.prefix.rstrip("/")
     real = os.path.realpath(prefix)
     pkgs = packages(real)
-    env = dict(os.environ, PROBE_PREFIX=prefix, PROBE_PREFIX_REAL=real)
+    devdir = subprocess.run(["xcode-select", "-p"], capture_output=True, text=True).stdout.strip()
+    # /Applications/Xcode_26.6.app/Contents/Developer -> the .app; CommandLineTools as is
+    if devdir.endswith("/Contents/Developer"):
+        devdir = devdir[:-len("/Contents/Developer")]
+    env = dict(os.environ, PROBE_PREFIX=prefix, PROBE_PREFIX_REAL=real, PROBE_DEVDIR=devdir)
     work = tempfile.mkdtemp(prefix="overlay_probe.")
     res = probe(pkgs, work, env, a.jobs)
     shutil.rmtree(work, ignore_errors=True)
