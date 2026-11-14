@@ -364,6 +364,9 @@ SMALL_KEG = 25 << 20
 # when the tree does not load it, as long as it is small
 NAMED_DYLIB_MAX = 4 << 20
 NAMED_DYLIB_COUNT = 8
+# a keg reached through another's CMake/pkg-config files or a header include: larger
+# than this is a toolchain or SDK (llvm, aws-sdk-cpp), not a library an overlay builds on
+VIA_DEV_MAX = 120 << 20
 # a bin/ this small ships whole when the prefix's targets import its tools (GeographicLib)
 TINY_BIN = 5 << 20
 RUNTIME_DEV_MAX = 40 << 20
@@ -599,6 +602,37 @@ def plan(tree, ws, skip):
         why[f].add(reason)
         return True
 
+    def shipped_names():
+        return set().union(*(getattr(q, "names", set()) or config_names(q.src)
+                             for q in prefixes.values())) if prefixes else set()
+
+    def dev_size(root):
+        size = 0
+        for sub in ("include", "lib/cmake", "lib/pkgconfig"):
+            for r_, _, ns in os.walk(os.path.join(root, sub)):
+                size += sum(os.path.getsize(os.path.join(r_, n)) for n in ns
+                            if not os.path.islink(os.path.join(r_, n)))
+        return size
+
+    def refused(f, root, reason, cap):
+        """Why a keg reached only indirectly (runtime / include / via) is NOT shipped:
+        it would be a second provider of a package already shipped (brew boost 1.92 vs
+        boost-1.89), or it is toolchain-sized (llvm, aws-sdk-cpp)."""
+        clash = config_names(root) & shipped_names()
+        # a header-only sibling version (eigen 5 next to eigen@3) is not a duplicate: a
+        # consumer pins its version (Ceres wants exactly the Eigen it was built with), and
+        # the config-version file keeps the other one out of unversioned finds
+        fam = re.sub(r"@[0-9.]+$", "", f)
+        sibling = any(re.sub(r"@[0-9.]+$", "", q) == fam and q != f for q in prefixes)
+        if clash and sibling and reason.startswith("via:") and not info(f)[1]:
+            clash = set()
+        if clash:
+            return f"{reason}: would duplicate {', '.join(sorted(clash)[:3])}"
+        size = dev_size(root)
+        if size > cap:
+            return f"{reason}: dev files {size >> 20} MB (> {cap >> 20})"
+        return None
+
     def providers_of(name):
         n = name.lower()
         out = [x for x, p in prefixes.items() if p.kind == "ws" and n in p.names]
@@ -625,6 +659,10 @@ def plan(tree, ws, skip):
             # prefer the one the runtime actually loads
             ok.sort(key=lambda c: (not info(c)[2], c))
             c = ok[0]
+            no = refused(c, info(c)[0], reason, VIA_DEV_MAX) if reason.startswith("via:") else None
+            if no:
+                skipped[name].add(no)
+                return None
             if add(c, info(c)[0], "brew", reason):
                 return prefixes[c]
         skipped[name].add(f"{reason}: {'/'.join(cands)} (none loaded by the tree)")
@@ -649,8 +687,10 @@ def plan(tree, ws, skip):
         want_name(n, f"find:{n}")
     # 3. headers the tree installs include from a keg (header-only deps, keg-only ones)
     incs = header_includes([os.path.join(tree, "include")])
-    search = [os.path.join(HBROOT, "include")] + [
-        os.path.join(p.src, "include") for p in prefixes.values()]
+    # the prefixes already shipped first: /opt/homebrew/include holds whatever brew
+    # boost is linked, not the boost-1.89 the tree was built with
+    search = [os.path.join(p.src, "include") for p in prefixes.values()] + [
+        os.path.join(HBROOT, "include")]
     tree_inc = os.path.join(tree, "include")
     for inc in sorted(incs):
         if os.path.exists(os.path.join(tree_inc, inc)):
@@ -661,7 +701,10 @@ def plan(tree, ws, skip):
                 fr = formula_of(q) if q.startswith(HBROOT) else None
                 if fr and fr[0] not in prefixes:
                     root, has_libs, used = info(fr[0])
-                    if used or not has_libs:
+                    no = refused(fr[0], fr[1], f"include <{inc}>", VIA_DEV_MAX)
+                    if no:
+                        skipped[fr[0]].add(no)
+                    elif used or not has_libs:
                         add(fr[0], fr[1], "brew", "include")
                     else:
                         skipped[fr[0]].add(f"include <{inc}> (keg not loaded by the tree)")
@@ -682,25 +725,18 @@ def plan(tree, ws, skip):
         # boost@1.85 are loaded by brew pcl/ompl, but the tree builds on boost-1.89), and
         # not a toolchain-sized keg (llvm, gcc: loaded by mesa/gfortran users, never built
         # against by a ROS overlay)
-        shipped = set().union(*(getattr(q, "names", set()) or config_names(q.src)
-                                for q in prefixes.values()))
-        clash = config_names(root) & shipped
-        if clash:
-            skipped[f].add(f"runtime: would duplicate {', '.join(sorted(clash)[:3])}")
-            continue
-        size = 0
-        for sub in ("include", "lib/cmake", "lib/pkgconfig"):
-            for r_, _, ns in os.walk(os.path.join(root, sub)):
-                size += sum(os.path.getsize(os.path.join(r_, n)) for n in ns
-                            if not os.path.islink(os.path.join(r_, n)))
-        if size > RUNTIME_DEV_MAX:
-            skipped[f].add(f"runtime: dev files {size >> 20} MB (> {RUNTIME_DEV_MAX >> 20})")
+        no = refused(f, root, "runtime", RUNTIME_DEV_MAX)
+        if no:
+            skipped[f].add(no)
             continue
         add(f, root, "brew", "runtime")
     # 4. transitive: what the mirrored prefixes' own CMake files reach
-    frontier = [p for p in prefixes.values()]
-    for p in frontier:
+    # A keg shipped only because the tree RUNS it is a leaf: following its own CMake
+    # files is how pdal -> gdal -> arrow -> aws-sdk-cpp (89k files) and
+    # openblas -> gcc got in on CI. Only what the tree's build interface names spreads.
+    for p in prefixes.values():
         p.names = getattr(p, "names", set())
+    frontier = [p for n, p in prefixes.items() if why[n] - {"runtime"}]
     while frontier:
         nxt = []
         for pre in frontier:
@@ -708,13 +744,10 @@ def plan(tree, ws, skip):
                 t = read(p)
                 for m in ABS.finditer(t):
                     fr = formula_of(m.group(1))
-                    if fr and fr[0] not in prefixes:
-                        clash = config_names(fr[1]) & set().union(
-                            *(getattr(q, "names", set()) or config_names(q.src)
-                              for q in prefixes.values()))
-                        if clash:
-                            skipped[fr[0]].add(f"via:{pre.name} would duplicate "
-                                               f"{', '.join(sorted(clash)[:3])} already shipped")
+                    if fr and fr[0] not in prefixes and fr[0] != pre.name:
+                        no = refused(fr[0], fr[1], f"via:{pre.name}", VIA_DEV_MAX)
+                        if no:
+                            skipped[fr[0]].add(no)
                             continue
                         if add(fr[0], fr[1], "brew", f"via:{pre.name}"):
                             prefixes[fr[0]].names = set()
@@ -726,6 +759,10 @@ def plan(tree, ws, skip):
                             f = PCIDX.get(mod)
                             if f and f not in prefixes:
                                 root, has_libs, used = info(f)
+                                no = refused(f, root, f"via:{pre.name}", VIA_DEV_MAX)
+                                if no:
+                                    skipped[f].add(no)
+                                    continue
                                 if add(f, root, "brew", f"via:{pre.name}"):
                                     prefixes[f].names = set()
                                     nxt.append(prefixes[f])
@@ -1089,6 +1126,9 @@ def link(a, tree):
         m = re.match(r"#!\s*(/Library/Frameworks/Python\.framework/Versions/[0-9.]+)/bin/python",
                      sheb)
         if m:
+            # Python3_ROOT is what FindPython3 reads from the environment (CMP0074);
+            # Python3_ROOT_DIR only as a CMake variable, kept for scripts that pass it on
+            lines.append(f"set-if-unset;Python3_ROOT;{m.group(1)}")
             lines.append(f"set-if-unset;Python3_ROOT_DIR;{m.group(1)}")
     except OSError:
         pass
