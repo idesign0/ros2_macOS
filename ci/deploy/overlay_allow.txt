@@ -40,3 +40,8 @@ sm_dance_bot_warehouse_3
 
 # exports a source-tree dir it never installs (stomp: examples/)
 stomp
+
+# use Homebrew's pinocchio/eigenpy, built for Homebrew's python + boost 1.92; the tree
+# builds on boost-1.89 + python.org 3.11, so Boost python3XY for brew's python is absent
+kinematics_interface_pinocchio
+linear_feedback_controller
