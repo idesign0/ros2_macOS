@@ -1528,7 +1528,7 @@
 	branch = main
 [submodule "ros-perception/pointcloud/octomap_mapping"]
 	path = ros-perception/pointcloud/octomap_mapping
-	url = https://github.com/OctoMap/octomap_mapping.git
+	url = https://github.com/idesign0/id_octomap_mapping.git
 	branch = ros2
 [submodule "ros-perception/pointcloud/octomap_ros"]
 	path = ros-perception/pointcloud/octomap_ros
@@ -1576,7 +1576,7 @@
 	branch = main
 [submodule "ros-planning/ros2_planning_system"]
 	path = ros-planning/ros2_planning_system
-	url = https://github.com/PlanSys2/ros2_planning_system.git
+	url = https://github.com/idesign0/id_ros2_planning_system.git
 	branch = kilted-devel
 [submodule "ros2/interfaces/play_motion2"]
 	path = ros2/interfaces/play_motion2
