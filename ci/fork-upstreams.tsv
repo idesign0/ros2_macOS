@@ -124,3 +124,6 @@ ros2_control/ros2_control_cmake	https://github.com/ros-controls/ros2_control_cma
 ros-planning/cartographer	https://github.com/ros2/cartographer.git
 # verified: shares commit f8b2cca2 with ros2/rmw on branch kilted
 ros2/rmw	https://github.com/ros2/rmw.git
+ros-perception/pointcloud/octomap_mapping	https://github.com/OctoMap/octomap_mapping.git
+ros-planning/ros2_planning_system	https://github.com/PlanSys2/ros2_planning_system.git
+ros2_control/realtime_tools	https://github.com/ros-controls/realtime_tools.git

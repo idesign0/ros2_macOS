@@ -1625,6 +1625,54 @@ for _kc in $(find "$ROOT" -path '*kuka_external_control_sdk/iiqka/CMakeLists.txt
   fi
 done
 
+# --- kuka_external_control_sdk_common: utils/src/os-core-udp-communication/secure_replier.cc
+#     waits on Linux epoll (epoll_create/epoll_ctl/epoll_wait, <sys/epoll.h>) -> "sys/epoll.h
+#     file not found" on macOS. Port the five call sites to kqueue under __APPLE__: EPOLLIN|EPOLLET
+#     -> EVFILT_READ with EV_CLEAR, event.data.ptr -> udata, the ms timeout -> a timespec (NULL
+#     for "wait forever"). Linux keeps the epoll code. It is a nested submodule (kroshu wrapper
+#     -> kuka-ros SDK), hence a patch here rather than a fork. Validated: the old file fails
+#     with the CI error, the patched one builds, and a kqueue harness reproduces the epoll
+#     semantics (timeout -> 0, datagram -> 1 with the right udata, edge-triggered). ---
+_f="$(_pkg_dir kuka_external_control_sdk_common)"
+_f="${_f:-/nonexistent}/utils/src/os-core-udp-communication/secure_replier.cc"
+if [ -f "$_f" ] && ! grep -q 'ci-macos-kqueue' "$_f"; then
+  python3 - "$_f" <<'PYEOF'
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+subs = [
+    (r"#include <sys/epoll\.h>\n",
+     "// ci-macos-kqueue\n#ifdef __APPLE__\n#include <sys/event.h>\n#else\n#include <sys/epoll.h>\n#endif\n"),
+    (r"\n([ \t]*)epoll_fd_ = epoll_create\(1\);\n",
+     "\n#ifdef __APPLE__\n\\1epoll_fd_ = kqueue();\n#else\n\\1epoll_fd_ = epoll_create(1);\n#endif\n"),
+    (r"\n([ \t]*)struct epoll_event event;\n\s*int result = epoll_wait\(\n\s*epoll_fd_, &event, 1, (\(\(recv_timeout\.count\(\) == 0\) \? -1 : recv_timeout\.count\(\) / 1000\))\);\n",
+     "\n#ifdef __APPLE__\n\\1struct kevent event;\n\\1const long timeout_ms = \\2;\n"
+     "\\1struct timespec timeout_ts = {timeout_ms / 1000, (timeout_ms % 1000) * 1000000};\n"
+     "\\1int result = kevent(epoll_fd_, nullptr, 0, &event, 1, timeout_ms < 0 ? nullptr : &timeout_ts);\n"
+     "#else\n\\1struct epoll_event event;\n\\1int result = epoll_wait(\n\\1  epoll_fd_, &event, 1, \\2);\n#endif\n"),
+    (r"\n([ \t]*)last_active_socket_ = reinterpret_cast<SecureSocket \*>\(event\.data\.ptr\);\n",
+     "\n#ifdef __APPLE__\n\\1last_active_socket_ = reinterpret_cast<SecureSocket *>(event.udata);\n#else\n"
+     "\\1last_active_socket_ = reinterpret_cast<SecureSocket *>(event.data.ptr);\n#endif\n"),
+    (r"\n([ \t]*)struct epoll_event event;\n\s*event\.data\.ptr = accepted_socket\.get\(\);\n\s*event\.events = EPOLLIN \| EPOLLET;\n\s*auto r = epoll_ctl\(epoll_fd_, EPOLL_CTL_ADD, accepted_socket->GetSocketFd\(\), &event\);\n",
+     "\n#ifdef __APPLE__\n\\1struct kevent event;\n"
+     "\\1EV_SET(\n\\1  &event, accepted_socket->GetSocketFd(), EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0,\n\\1  accepted_socket.get());\n"
+     "\\1auto r = kevent(epoll_fd_, &event, 1, nullptr, 0, nullptr);\n#else\n"
+     "\\1struct epoll_event event;\n\\1event.data.ptr = accepted_socket.get();\n\\1event.events = EPOLLIN | EPOLLET;\n"
+     "\\1auto r = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, accepted_socket->GetSocketFd(), &event);\n#endif\n"),
+]
+for pat, rep in subs:
+    s, n = re.subn(pat, rep, s, count=1)
+    if n != 1:
+        print(f"  kuka_external_control_sdk_common: secure_replier.cc no longer matches /{pat[:50]}/ -- kqueue port NOT applied")
+        sys.exit(1)
+open(p, "w").write(s)
+print("  kuka_external_control_sdk_common: secure_replier.cc epoll -> kqueue on __APPLE__")
+PYEOF
+  if [ $? -ne 0 ] || ! grep -q 'ci-macos-kqueue' "$_f"; then
+    echo "::error::apply_source_patches: the kuka secure_replier kqueue port did not apply to ${_f#$ROOT/}"
+  fi
+fi
+
 # --- foxglove_bridge: its CMakeLists only has download arms for Linux aarch64/x86_64 and
 #     message(FATAL_ERROR) on every other platform. Foxglove DOES publish a macOS build
 #     (foxglove-v<ver>-cpp-aarch64-apple-darwin.zip). Add a Darwin/arm64 elseif before the
