@@ -91,7 +91,7 @@ jobs:
     # 180 was too tight once a slower runner turned up: run 42378019095 spent 74 min in
     # setup and 75 min packaging, leaving 31 of 180. Same shape as the 6h cap that killed
     # humble base-1 -- give it room rather than lose a 2.5h run to arithmetic.
-    timeout-minutes: 300
+    timeout-minutes: 360
     env:
       GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
     steps:
@@ -305,6 +305,8 @@ jobs:
         # Report-only until a clean CI pass sets the baseline; then drop continue-on-error.
         if: ${{ !cancelled() && steps.package.conclusion == 'success' && hashFiles('ci/deploy/overlay_probe.py') != '' }}
         continue-on-error: true
+        # report-only: never let it eat the time the publish step needs
+        timeout-minutes: 75
         run: |
           set -uo pipefail
           allow=ci/deploy/overlay_allow.txt
