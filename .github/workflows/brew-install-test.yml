@@ -64,7 +64,13 @@ jobs:
           grep -nE '^  (version|sha256|depends_on) ' "$T/Formula/ros2-$DISTRO.rb"
           before=$(brew list --formula | wc -l | tr -d ' ')
           start=$(date +%s)
-          brew install "idesign0/ros2/ros2-$DISTRO" 2>&1 | tail -40
+          mkdir -p report
+          rc=0; brew install "idesign0/ros2/ros2-$DISTRO" > report/brew-install.log 2>&1 || rc=$?
+          # tail alone hid the failure: the caveats are the last 40 lines either way
+          grep -nE '^(Error|Warning):|Failed|failed' report/brew-install.log | head -40 || true
+          tail -15 report/brew-install.log
+          cp -R "$HOME/Library/Logs/Homebrew/ros2-$DISTRO" report/homebrew-logs 2>/dev/null || true
+          [ "$rc" = 0 ] || { echo "::error::brew install exited $rc (full log in the artifact)"; exit "$rc"; }
           echo "install took $(( $(date +%s) - start ))s"
           after=$(brew list --formula | wc -l | tr -d ' ')
           echo "formulae installed alongside: $((after - before - 1))"
