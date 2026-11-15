@@ -992,6 +992,10 @@ def link(a, tree):
                 not in t and "/Library/Developer" not in t:
             continue
         orig = t
+        # a config that climbs out of its own dir into the keg it was built in
+        # (suite-sparse KLU_CHOLMODConfig: ${CMAKE_CURRENT_LIST_DIR}/../../../../../../../../
+        # opt/homebrew/Cellar/suite-sparse/7.14.1): spell it absolute so it is mapped below
+        t = re.sub(r"\$\{CMAKE_CURRENT_LIST_DIR\}(?:/\.\.)+(/opt/homebrew/)", r"\1", t)
 
         def sub(m):
             p = m.group(1).rstrip("/")

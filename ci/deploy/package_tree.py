@@ -1220,6 +1220,42 @@ def main():
         demoted += 1
     print(f"  brew rpaths demoted  : {demoted} files", flush=True)
 
+    # ---- 4c. dylib IDs = what `brew install` would set. Homebrew's fix_dynamic_linkage
+    # rewrites every dylib ID to <opt prefix>/<dir>/<basename of the ID> and aborts the
+    # install when one does not fit the header: kilted 26.11.15.19, the committed
+    # boost-1.89 dylibs (no -headerpad_max_install_names) under vendor/opt (install test
+    # 43749756039). Setting the same ID here leaves brew nothing to change; what cannot
+    # take it keeps its @rpath ID, which the formula's `preserve_rpath` tells brew to keep.
+    preset, kept_rpath, stuck = 0, [], []
+    for p in targets:
+        if os.path.islink(p):
+            continue
+        ids = [q for c, q in load_paths(p) if c == "LC_ID_DYLIB"]
+        if not ids:
+            continue
+        want = os.path.normpath(os.path.join(
+            a.install_prefix, os.path.relpath(os.path.dirname(p), tree), os.path.basename(ids[0])))
+        if ids[0] == want:
+            continue
+        if run(["install_name_tool", "-id", want, p]).returncode == 0:
+            preset += 1
+        elif ids[0].startswith("@rpath/"):
+            kept_rpath.append(p)
+        else:
+            stuck.append((p, ids[0]))
+    print(f"  dylib IDs preset     : {preset} files to their installed path", flush=True)
+    if kept_rpath:
+        print(f"::warning::{len(kept_rpath)} dylib(s) have no header room for their installed ID "
+              f"and keep @rpath (the formula needs preserve_rpath):")
+        for p in kept_rpath[:30]:
+            print(f"     {p[len(tree)+1:]}")
+    if stuck:
+        print(f"::error::{len(stuck)} dylib(s) have an absolute ID brew would rewrite and no room "
+              f"for it -- brew install would fail:")
+        for p, i in stuck[:20]:
+            print(f"     {p[len(tree)+1:]}  ({i})")
+        sys.exit(1)
+
     # ---- 5. re-sign everything we touched
     for p in targets:
         resign(p)
