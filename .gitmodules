@@ -1804,7 +1804,7 @@
 	branch = humble
 [submodule "ros-perception/pointcloud/octomap_mapping"]
 	path = ros-perception/pointcloud/octomap_mapping
-	url = https://github.com/OctoMap/octomap_mapping.git
+	url = https://github.com/idesign0/id_octomap_mapping.git
 	branch = ros2
 [submodule "ros-perception/pointcloud/octomap_ros"]
 	path = ros-perception/pointcloud/octomap_ros
@@ -2096,7 +2096,7 @@
 	branch = foxy-devel
 [submodule "ros-planning/ros2_planning_system"]
 	path = ros-planning/ros2_planning_system
-	url = https://github.com/IntelligentRoboticsLabs/ros2_planning_system.git
+	url = https://github.com/idesign0/id_ros2_planning_system.git
 	branch = humble-devel
 [submodule "ros-planning/rosbag_timing_inspector"]
 	path = ros-planning/rosbag_timing_inspector
