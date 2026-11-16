@@ -92,6 +92,9 @@ jobs:
     # setup and 75 min packaging, leaving 31 of 180. Same shape as the 6h cap that killed
     # humble base-1 -- give it room rather than lose a 2.5h run to arithmetic.
     timeout-minutes: 360
+    outputs:
+      packaged: ${{ steps.pack.outcome == 'success' }}
+      publishable: ${{ steps.gate.outputs.publishable }}
     env:
       GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
     steps:
@@ -300,20 +303,6 @@ jobs:
           fi
           echo "no regressions"
 
-      - name: Overlay probe -- find_package() every package from a fresh overlay
-        id: overlay
-        # Report-only until a clean CI pass sets the baseline; then drop continue-on-error.
-        if: ${{ !cancelled() && steps.package.conclusion == 'success' && hashFiles('ci/deploy/overlay_probe.py') != '' }}
-        continue-on-error: true
-        # report-only: never let it eat the time the publish step needs
-        timeout-minutes: 75
-        run: |
-          set -uo pipefail
-          allow=ci/deploy/overlay_allow.txt
-          env -i HOME="$HOME" PATH="/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin" bash -c \
-            ". /opt/homebrew/opt/ros2-kilted/setup.bash && python3 -I ci/deploy/overlay_probe.py \
-               /opt/homebrew/opt/ros2-kilted --jobs 3 --allow $allow --out report"
-
       - name: What still loads from Homebrew at runtime (the dlopen gap)
         if: always()
         run: |
@@ -362,29 +351,120 @@ jobs:
           path: report
           retention-days: 7
 
-      - name: Publish the TESTED tree as a pre-release, and point the tap's next branch at it
-        # Only the tree this run just packaged AND passed every check on is published, and
-        # only as a PRE-release behind the tap's `next` branch. Promoting it to main is a
-        # separate, deliberate step.
-        if: ${{ inputs.publish && steps.package.outcome == 'success' && steps.loadafter.outcome == 'success' && steps.functional.outcome == 'success' }}
-        env:
-          TAP: idesign0/homebrew-ros2
-          DISTRO: kilted
+      - name: Gate for the publish job
+        id: gate
+        if: always()
+        run: |
+          ok=false
+          if [ "${{ steps.package.outcome }}" = success ] && [ "${{ steps.loadafter.outcome }}" = success ] \
+             && [ "${{ steps.functional.outcome }}" = success ]; then
+            if [ -s /tmp/dyld_formulae.txt ]; then
+              echo "::error::Homebrew formulae still load at run time -- not publishable:"
+              cat /tmp/dyld_formulae.txt
+            else
+              ok=true
+            fi
+          fi
+          echo "publishable=$ok" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Pack the packaged tree for the overlay and publish jobs
+        id: pack
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
         run: |
           set -euo pipefail
-          if [ -s /tmp/dyld_formulae.txt ]; then
-            echo "::error::Homebrew formulae still load at run time -- not publishing:"
-            cat /tmp/dyld_formulae.txt
-            exit 1
-          fi
+          command -v zstd >/dev/null || brew install zstd
+          # __pycache__ is written by the checks' own python runs, not the build.
+          tar --exclude '__pycache__' -cf - install | zstd -T0 -3 -q -o packaged-kilted.tar.zst
+          echo "packed: $(( $(stat -f %z packaged-kilted.tar.zst) / 1048576 )) MB"
+      - uses: actions/upload-artifact@v4
+        if: ${{ steps.pack.outcome == 'success' }}
+        with:
+          name: packaged-kilted
+          path: packaged-kilted.tar.zst
+          retention-days: 3
+          compression-level: 0
+
+  # Report-only, on its own runner and in parallel with publish: in one job it took 75 min
+  # of the 6 h the compression needed (run 43828719339).
+  overlay:
+    needs: package
+    if: ${{ !cancelled() && needs.package.outputs.packaged == 'true' }}
+    runs-on: macos-26
+    timeout-minutes: 360
+    continue-on-error: true
+    env:
+      GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          ref: ${{ inputs.ref }}
+      - uses: ./.github/actions/setup-ros2-macos
+        with:
+          deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          gz-version: ${{ env.GZ_VERSION }}
+          brew-base-formulae: ${{ env.BREW_BASE }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: packaged-kilted
+      - name: Place the packaged tree at its installed path
+        run: |
+          set -euo pipefail
+          command -v zstd >/dev/null || brew install zstd
+          zstd -dc packaged-kilted.tar.zst | tar -xf -
+          rm -f packaged-kilted.tar.zst
+          sudo mkdir -p /opt/homebrew/opt
+          sudo rm -rf "/opt/homebrew/opt/ros2-kilted"
+          sudo ln -sfn "$PWD/install" "/opt/homebrew/opt/ros2-kilted"
+      - name: Overlay probe -- find_package() every package from a fresh overlay
+        if: ${{ hashFiles('ci/deploy/overlay_probe.py') != '' }}
+        timeout-minutes: 300
+        run: |
+          set -uo pipefail
+          allow=ci/deploy/overlay_allow.txt
+          env -i HOME="$HOME" PATH="/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin" bash -c \
+            ". /opt/homebrew/opt/ros2-kilted/setup.bash && python3 -I ci/deploy/overlay_probe.py \
+               /opt/homebrew/opt/ros2-kilted --jobs 3 --allow $allow --out report"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: overlay-probe-kilted
+          path: report
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # Only the tree the package job packaged AND passed every check on is published, and only
+  # as a PRE-release behind the tap's `next` branch; promoting it to main is a separate step.
+  # No ROS setup here: download, recompress, release.
+  publish:
+    needs: package
+    if: ${{ inputs.publish && needs.package.outputs.publishable == 'true' }}
+    runs-on: macos-26
+    timeout-minutes: 360
+    env:
+      GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+      TAP: idesign0/homebrew-ros2
+      DISTRO: kilted
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: packaged-kilted
+      - name: Publish the TESTED tree as a pre-release, and point the tap's next branch at it
+        run: |
+          set -euo pipefail
           VER="$(date -u +%y.%m.%d).${{ github.run_number }}"
           TAG="${DISTRO}-${VER}"
           ARCH="ros2-${DISTRO}-macos-${VER}.tar.xz"
-          # __pycache__ is written by the functional checks' own python runs, not the build.
           # xz, not gzip: the full jazzy tree is 2624 MB as .tar.gz, over the 2 GiB asset limit.
           # xz -9 took kilted 1902 -> 1212 MB in 10.5 min on 8 cores (-9e: 1194 MB in 87 min).
           command -v xz >/dev/null || brew install xz
-          tar --exclude '__pycache__' -cf - install | xz -T0 -9 > "$ARCH"
+          command -v zstd >/dev/null || brew install zstd
+          # The package job's tar stream (zstd), recompressed without unpacking. Own job, own
+          # 6 h: in run 43828719339 xz -9 was still running when the single job hit 6 h.
+          # --memlimit-compress lets -T0 use every core (the default limit allowed ~2 at -9).
+          t0=$(date +%s)
+          zstd -dc "packaged-kilted.tar.zst" | xz -T0 --memlimit-compress=80% -9 > "$ARCH"
+          echo "xz: $(( $(date +%s) - t0 )) s"
           SHA=$(shasum -a 256 "$ARCH" | awk '{print $1}')
           SIZE=$(stat -f %z "$ARCH")
           echo "archive: $ARCH  $((SIZE / 1048576)) MB  sha256 $SHA"
