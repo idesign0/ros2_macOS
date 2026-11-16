@@ -1098,6 +1098,49 @@ def main():
             print(f"     {p[len(tree)+1:]}")
         sys.exit(1)
 
+    # ---- 1d. load commands into the BUILD workspace, outside the install prefix.
+    # zenoh_c_vendor builds libzenohc with cargo, and its install name is the cargo
+    # target path (.../build/zenoh_cpp_vendor/.../target/release/deps/libzenohc.dylib).
+    # rmw_zenoh_cpp links it by that absolute path, so step 1c (install prefix only)
+    # never sees it, the load test passes on the runner where build/ still exists, and
+    # on a user's machine librmw_zenoh_cpp.dylib does not load at all (kilted 26.11.15.20).
+    # Point every such ref at the tree's own copy of that basename.
+    ws_roots = sorted({os.path.dirname(os.path.normpath(o)) for o in olds}, key=len, reverse=True)
+    by_name = {}
+    for root, dirs, names in os.walk(tree):
+        for n in names:
+            if ".dylib" in n or n.endswith(".so"):
+                f = os.path.join(root, n)
+                by_name.setdefault(n, {}).setdefault(os.path.realpath(f), f)
+    ws_fixed, ws_failed = 0, []
+    for p in files:
+        cmd = ["install_name_tool"]
+        for c, q in load_paths(p):
+            if c in ("LC_ID_DYLIB", "LC_RPATH") or not any(q.startswith(r + "/") for r in ws_roots):
+                continue
+            if any(q == o or q.startswith(o + "/") for o in olds):
+                continue
+            n = os.path.basename(q)
+            if len(by_name.get(n, ())) != 1:
+                ws_failed.append((p, q))
+                continue
+            rel = os.path.relpath(next(iter(by_name[n].values())), tree)
+            cmd += ["-change", q, os.path.join(a.install_prefix, rel)]
+        if len(cmd) == 1:
+            continue
+        if run(cmd + [p]).returncode == 0:
+            ws_fixed += 1
+        else:
+            ws_failed.append((p, "install_name_tool"))
+    print(f"  build-workspace refs : {ws_fixed} mach-o files pointed at their in-tree copy",
+          flush=True)
+    if ws_failed:
+        print(f"::error::{len(ws_failed)} load command(s) still point into the build "
+              f"workspace ({' | '.join(ws_roots)}):")
+        for p, q in ws_failed[:10]:
+            print(f"     {p[len(tree)+1:]} -> {q}")
+        sys.exit(1)
+
     # ---- 2. rewrite every reference, in the tree AND in the vendored copies
     targets = files + vendored
     allrefs = refs_of(targets)
