@@ -379,9 +379,12 @@ jobs:
           fi
           VER="$(date -u +%y.%m.%d).${{ github.run_number }}"
           TAG="${DISTRO}-${VER}"
-          ARCH="ros2-${DISTRO}-macos-${VER}.tar.gz"
+          ARCH="ros2-${DISTRO}-macos-${VER}.tar.xz"
           # __pycache__ is written by the functional checks' own python runs, not the build.
-          tar --exclude '__pycache__' -cf - install | gzip -6 > "$ARCH"
+          # xz, not gzip: the full jazzy tree is 2624 MB as .tar.gz, over the 2 GiB asset limit.
+          # xz -9 took kilted 1902 -> 1212 MB in 10.5 min on 8 cores (-9e: 1194 MB in 87 min).
+          command -v xz >/dev/null || brew install xz
+          tar --exclude '__pycache__' -cf - install | xz -T0 -9 > "$ARCH"
           SHA=$(shasum -a 256 "$ARCH" | awk '{print $1}')
           SIZE=$(stat -f %z "$ARCH")
           echo "archive: $ARCH  $((SIZE / 1048576)) MB  sha256 $SHA"
@@ -398,8 +401,8 @@ jobs:
           git -c http.extraheader="$AUTH" clone -q --branch next "https://github.com/$TAP.git" tap
           cd tap
           F="Formula/ros2-${DISTRO}.rb"
-          sed -i '' -E "s/^  version \".*\"/  version \"${VER}\"/; s/^  sha256 \".*\"/  sha256 \"${SHA}\"/" "$F"
-          grep -nE '^  (version|sha256) ' "$F"
+          sed -i '' -E "s/^  version \".*\"/  version \"${VER}\"/; s/^  sha256 \".*\"/  sha256 \"${SHA}\"/; s/\.tar\.gz\"$/.tar.xz\"/" "$F"
+          grep -nE '^  (version|sha256|url) ' "$F"
           git -c user.name="github-actions[bot]" \
               -c user.email="github-actions[bot]@users.noreply.github.com" \
               commit -qam "ros2-${DISTRO} ${VER} (pre-release) from package-smoke run ${{ github.run_id }}"
