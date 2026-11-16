@@ -1673,6 +1673,27 @@ PYEOF
   fi
 fi
 
+# --- webots_ros2_driver: chooses Python by ROS_DISTRO for Ubuntu (3.10 humble, 3.12 jazzy and
+#     kilted) with EXACT, which beats the toolchain's forced 3.11. The runner has those python.org
+#     versions, so lib/webots_ros2_driver/driver linked Python.framework/Versions/3.12 and does not
+#     load on a Mac with only the 3.11 everything else uses (kilted 26.11.15.20). Ask for 3.11. ---
+_f="$(_pkg_dir webots_ros2_driver)"
+_f="${_f:-/nonexistent}/CMakeLists.txt"
+if [ -f "$_f" ] && ! grep -q 'ci-macos-python311' "$_f"; then
+  python3 - "$_f" <<'PYEOF'
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+s, n = re.subn(r"find_package\(Python 3\.\d+ EXACT REQUIRED COMPONENTS Development\)",
+               "find_package(Python 3.11 EXACT REQUIRED COMPONENTS Development)", s)
+if n:
+    open(p, "w").write("# ci-macos-python311\n" + s)
+PYEOF
+  if [ $? -ne 0 ] || ! grep -q 'ci-macos-python311' "$_f"; then
+    echo "::error::webots_ros2_driver: Python 3.11 patch did not apply"
+  fi
+fi
+
 # --- foxglove_bridge: its CMakeLists only has download arms for Linux aarch64/x86_64 and
 #     message(FATAL_ERROR) on every other platform. Foxglove DOES publish a macOS build
 #     (foxglove-v<ver>-cpp-aarch64-apple-darwin.zip). Add a Darwin/arm64 elseif before the
