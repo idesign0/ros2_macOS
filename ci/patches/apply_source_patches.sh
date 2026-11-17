@@ -1719,6 +1719,50 @@ PYEOF
   fi
 fi
 
+# --- ci-export-real-libs: ament_export_libraries() of things that are not libraries in lib/,
+#     so find_package(<pkg>) fails in every overlay ("exports the library X which couldn't
+#     be found") -- upstream, Linux too. Export what is really a library, where ament looks.
+_f="$(_pkg_cml grid_map_loader)"
+if [ -f "$_f" ] && grep -q '^ament_export_libraries(${PROJECT_NAME})' "$_f" && grep -q 'set(library_name ${PROJECT_NAME}_core)' "$_f"; then
+  perl -pi -e 's{^ament_export_libraries\(\$\{PROJECT_NAME\}\)}{ament_export_libraries(\${library_name})  # ci-export-real-libs}' "$_f"
+  echo "  grid_map_loader: export grid_map_loader_core (the library), not the executable"
+fi
+for _p in open_manipulator_collision open_manipulator_gui; do
+  _f="$(_pkg_cml $_p)"
+  if [ -f "$_f" ] && grep -qE '^ament_export_libraries\((self_collision_node|[a-z0-9_]+_gui_node)\)' "$_f"; then
+    perl -pi -e 's{^(ament_export_libraries\((?:self_collision_node|[a-z0-9_]+_gui_node)\))}{# ci-export-real-libs: an executable, not a library: $1}' "$_f"
+    echo "  $_p: drop ament_export_libraries() of executables"
+  fi
+done
+_f="$(_pkg_cml dataspeed_can_tools)"
+if [ -f "$_f" ] && ! grep -q 'ci-export-real-libs' "$_f" && grep -q 'ARCHIVE DESTINATION lib/${PROJECT_NAME}' "$_f"; then
+  perl -0pi -e 's{install\(TARGETS \$\{PROJECT_NAME\} (dbc_node dbc_bag)\s*\n(\s*)ARCHIVE DESTINATION lib/\$\{PROJECT_NAME\}\s*\n\s*LIBRARY DESTINATION lib/\$\{PROJECT_NAME\}\s*\n\s*RUNTIME DESTINATION lib/\$\{PROJECT_NAME\}}{install(TARGETS \${PROJECT_NAME}  # ci-export-real-libs: the exported library goes where ament looks\n$2ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)\ninstall(TARGETS $1\n$2RUNTIME DESTINATION lib/\${PROJECT_NAME}}' "$_f"
+  grep -q 'ci-export-real-libs' "$_f" && echo "  dataspeed_can_tools: library to lib/" || echo "::error::dataspeed_can_tools: export fix did not apply"
+fi
+_f="$(_pkg_cml so_arm_100_hardware)"
+if [ -f "$_f" ] && ! grep -q 'ci-export-real-libs' "$_f"; then
+  perl -0pi -e 's{install\(\s*TARGETS\s*\n\s*\$\{PROJECT_NAME\}\s*\n(\s*)test_servo\s*\n\s*ping_test\s*\n\s*DESTINATION lib/\$\{PROJECT_NAME\}\s*\n\)}{install(TARGETS \${PROJECT_NAME}  # ci-export-real-libs: the exported plugin library goes to lib/\n  LIBRARY DESTINATION lib ARCHIVE DESTINATION lib RUNTIME DESTINATION bin)\ninstall(TARGETS test_servo ping_test DESTINATION lib/\${PROJECT_NAME})}' "$_f"
+  grep -q 'ci-export-real-libs' "$_f" && echo "  so_arm_100_hardware: plugin library to lib/" || echo "::error::so_arm_100_hardware: export fix did not apply"
+fi
+_f="$(_pkg_cml depth_obstacle_detect_ros)"
+if [ -f "$_f" ] && grep -q '^ament_export_dependencies(depth_obstacle_detect)' "$_f"; then
+  # its own (static, never installed) library target, not a package
+  perl -pi -e 's{^(ament_export_dependencies\(depth_obstacle_detect\))}{# ci-export-real-libs: a target of this package, not a package: $1}' "$_f"
+  echo "  depth_obstacle_detect_ros: drop ament_export_dependencies() of its own target"
+fi
+_f="$(_pkg_cml cx_ros_msgs_plugin)"
+if [ -f "$_f" ] && ! grep -q 'ci-icu-components' "$_f" && grep -qE '^\s*ICU\s*$' "$_f" && grep -q '^ament_package()' "$_f"; then
+  # exports a bare ICU; FindICU needs COMPONENTS, which ament_export_dependencies cannot
+  # carry -> an ament CONFIG_EXTRAS file asks for the components the plugin links
+  perl -0pi -e 's{^(\s*)ICU(\s*\n\))}{$1# ICU  (ci-icu-components: exported with COMPONENTS below)$2}m; s{^ament_package\(\)}{file(WRITE "\$\{CMAKE_CURRENT_BINARY_DIR\}/ci_icu-extras.cmake" "find_package(ICU REQUIRED COMPONENTS uc i18n)\\n")\nlist(APPEND \$\{PROJECT_NAME\}_CONFIG_EXTRAS "\$\{CMAKE_CURRENT_BINARY_DIR\}/ci_icu-extras.cmake")\nament_package()}m' "$_f"
+  grep -q 'ci-icu-components' "$_f" && echo "  cx_ros_msgs_plugin: export ICU with COMPONENTS uc i18n" || echo "::error::cx_ros_msgs_plugin: ICU export fix did not apply"
+fi
+_f="$(_pkg_cml autoware_lanelet2_extension_python)"
+if [ -f "$_f" ] && ! grep -q 'ci-export-real-libs' "$_f" && grep -q '^ament_auto_package(' "$_f"; then
+  perl -0pi -e 's{^ament_auto_package\(}{# ci-export-real-libs: the _*_boost_python_* targets are Python extension modules\nlist(FILTER \${PROJECT_NAME}_LIBRARIES EXCLUDE REGEX "^_\${PROJECT_NAME}_boost_python_")\nament_auto_package(}m' "$_f"
+  echo "  autoware_lanelet2_extension_python: python modules not exported as libraries"
+fi
+
 # --- ci-data-paths-in-prefix: compiled-in DATA paths named the runner's source tree ------
 #     (jazzy 26.11.16.7: gtsam/config.h, mrpt version.h + mrpt_paths_config.h, dart
 #     config.hpp -- in the headers AND in every binary built from them). Point them at

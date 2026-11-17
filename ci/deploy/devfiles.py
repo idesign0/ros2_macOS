@@ -96,6 +96,7 @@ class Prefix:
 
 
 DRIFT = {}
+PINOCCHIO_PRIVATE = ("boost", "boost-python3", "eigenpy")
 
 
 def formula_of(path):
@@ -201,6 +202,58 @@ def write_bridges(tree):
             "set(tl_expected_LIBRARIES tl_expected::tl_expected)\n")
         made.append("tl_expected")
     return made
+
+
+PINOCCHIO_PRELUDE = r"""# ros2_macOS: pinocchio, coal and eigenpy here are Homebrew builds against Homebrew boost
+# and boost-python3; the rest of this keg uses boost-1.89. Point this project's Boost at the
+# bundled Homebrew boost, as the CI toolchain does for every pinocchio consumer. Like there,
+# it holds for the whole project: find pinocchio before anything else that uses Boost.
+get_filename_component(_r2m_vopt "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE)
+if(NOT _R2M_PINOCCHIO_BOOST AND EXISTS "${_r2m_vopt}/boost/include/boost/version.hpp")
+  set(_R2M_PINOCCHIO_BOOST TRUE)
+  file(GLOB _r2m_bdir "${_r2m_vopt}/boost/lib/cmake/Boost-*")
+  if(_r2m_bdir)
+    list(GET _r2m_bdir 0 _r2m_bdir)
+    set(Boost_DIR "${_r2m_bdir}" CACHE PATH "" FORCE)
+  endif()
+  set(Boost_INCLUDE_DIR "${_r2m_vopt}/boost/include" CACHE PATH "" FORCE)
+  set(BOOST_ROOT "${_r2m_vopt}/boost")
+  set(Boost_NO_SYSTEM_PATHS ON)
+  list(PREPEND CMAKE_PREFIX_PATH "${_r2m_vopt}/boost" "${_r2m_vopt}/boost-python3" "${_r2m_vopt}/eigenpy")
+  # eigenpy asks for boost_python<NN> by the Python it was built with (python315); the
+  # library lives in boost-python3, not in boost
+  file(GLOB _r2m_bp "${_r2m_vopt}/boost-python3/lib/libboost_python3*.dylib"
+                    "${_r2m_vopt}/boost-python3/lib/libboost_numpy3*.dylib")
+  foreach(_r2m_l IN LISTS _r2m_bp)
+    if(_r2m_l MATCHES "libboost_(python|numpy)([0-9]+)\.dylib$")
+      string(TOUPPER "${CMAKE_MATCH_1}" _r2m_c)
+      set(Boost_${_r2m_c}${CMAKE_MATCH_2}_LIBRARY_RELEASE "${_r2m_l}" CACHE FILEPATH "" FORCE)
+      set(Boost_${_r2m_c}${CMAKE_MATCH_2}_LIBRARY_DEBUG "${_r2m_l}" CACHE FILEPATH "" FORCE)
+    endif()
+  endforeach()
+  if(EXISTS "${_r2m_vopt}/eigenpy/lib/cmake/eigenpy/eigenpyConfig.cmake")
+    set(eigenpy_DIR "${_r2m_vopt}/eigenpy/lib/cmake/eigenpy" CACHE PATH "" FORCE)
+  endif()
+endif()
+"""
+
+
+def write_pinocchio_prelude(tree):
+    """Include PINOCCHIO_PRELUDE at the top of the shipped pinocchio and coal configs."""
+    done = []
+    for pkg in ("pinocchio", "coal"):
+        d = os.path.join(tree, "vendor", "opt", pkg, "lib", "cmake", pkg)
+        cfg = os.path.join(d, f"{pkg}Config.cmake")
+        if not os.path.isfile(cfg) or not os.path.isdir(os.path.join(tree, "vendor", "opt", "boost")):
+            continue
+        io.open(os.path.join(d, "ros2_macos_boost.cmake"), "w").write(PINOCCHIO_PRELUDE)
+        t = open(cfg).read()
+        inc = 'include("${CMAKE_CURRENT_LIST_DIR}/ros2_macos_boost.cmake")\n'
+        if inc not in t:
+            os.chmod(cfg, os.stat(cfg).st_mode | 0o200)
+            io.open(cfg, "w").write(inc + t)
+        done.append(pkg)
+    return done
 
 
 def cmake_names_index():
@@ -803,6 +856,18 @@ def plan(tree, ws, skip):
             skipped[f].add(no)
             continue
         add(f, root, "brew", "runtime")
+    # 3c. pinocchio, coal and eigenpy are Homebrew builds against Homebrew boost (1.9x) and
+    #     boost-python3, while the tree uses boost-1.89. CI builds their consumers with the
+    #     toolchain pointing the whole project at Homebrew boost; an overlay gets the same
+    #     from write_pinocchio_prelude(). These prefixes are PRIVATE: shipped, but kept off
+    #     the overlay's CMAKE_PREFIX_PATH, so every other find_package(Boost) still resolves
+    #     the boost-1.89 the tree was built with (that clash is why refused() drops them).
+    if "pinocchio" in prefixes:
+        for f in PINOCCHIO_PRIVATE:
+            if os.path.isdir(os.path.join(HB, f)) and add(f, info(f)[0], "brew", "private:pinocchio"):
+                prefixes[f].private = True
+                skipped.pop(f, None)
+
     # 4. transitive: what the mirrored prefixes' own CMake files reach
     # A keg shipped only because the tree RUNS it is a leaf: following its own CMake
     # files is how pdal -> gdal -> arrow -> aws-sdk-cpp (89k files) and
@@ -878,7 +943,8 @@ def stage(a, tree, skip):
         print(f"  source dirs UNMATCHED: {len(unmatched)} (left as they are)")
         for s in unmatched[:20]:
             print(f"     {s}")
-    state = {"prefixes": {n: {"src": p.src, "kind": p.kind, "dest": p.dest_rel}
+    state = {"prefixes": {n: {"src": p.src, "kind": p.kind, "dest": p.dest_rel,
+                              "private": bool(getattr(p, "private", False))}
                           for n, p in prefixes.items()},
              "source_map": {s: os.path.relpath(d, tree) for s, d in src.items()}}
     sp = os.path.join(tree, "vendor", ".devfiles.json")
@@ -904,6 +970,9 @@ def link(a, tree):
     bridges = write_bridges(tree)
     if bridges:
         print(f"  bridges: {', '.join(bridges)}Config.cmake")
+    pre = write_pinocchio_prelude(tree)
+    if pre:
+        print(f"  Homebrew-boost prelude: {', '.join(pre)}")
     state = json.load(open(os.path.join(tree, "vendor", ".devfiles.json")))
     man = {}
     mp = os.path.join(tree, "vendor", ".manifest.json")
@@ -1166,6 +1235,8 @@ def link(a, tree):
     lines = []
     for name, info in sorted(state["prefixes"].items()):
         d = info["dest"]
+        if info.get("private"):
+            continue            # reached only through write_pinocchio_prelude()
         lines.append(f"prepend-non-duplicate;CMAKE_PREFIX_PATH;{d}")
         for pc in ("lib/pkgconfig", "share/pkgconfig"):
             if os.path.isdir(os.path.join(tree, d, pc)):
