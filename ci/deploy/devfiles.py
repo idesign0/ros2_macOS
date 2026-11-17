@@ -169,6 +169,40 @@ def config_names(root, depth=3):
     return out
 
 
+# CMake package names ROS packages ask for that Homebrew spells differently. In CI the
+# toolchain bridges them with a Find module (cmake/Modules/Find<name>.cmake), which an
+# overlay does not have: ship the formula and a <name>Config.cmake bridge (write_bridges).
+CMAKE_NAME_ALIAS = {"tl_expected": "tl-expected"}
+
+
+def write_bridges(tree):
+    """<name>Config.cmake for each CMAKE_NAME_ALIAS whose formula was shipped, next to the
+    formula's own config under vendor/opt/<formula>/share/cmake, where an overlay's
+    find_package(<name>) finds it through the CMAKE_PREFIX_PATH entry devfiles adds."""
+    made = []
+    tl = os.path.join(tree, "vendor", "opt", "tl-expected")
+    if os.path.isdir(os.path.join(tl, "share", "cmake", "tl-expected")):
+        d = os.path.join(tl, "share", "cmake", "tl_expected")
+        os.makedirs(d, exist_ok=True)
+        shim_src = os.path.join(HERE, "..", "..", "cmake", "Modules", "tl_expected_shim")
+        if os.path.isdir(shim_src):
+            shutil.copytree(shim_src, os.path.join(d, "tl_expected_shim"), dirs_exist_ok=True)
+        io.open(os.path.join(d, "tl_expectedConfig.cmake"), "w").write(
+            "# ros2_macOS bridge: ROS packages find_package(tl_expected); Homebrew's\n"
+            "# tl-expected ships tl-expected-config.cmake and the target tl::expected.\n"
+            "include(CMakeFindDependencyMacro)\n"
+            "find_dependency(tl-expected CONFIG PATHS \"${CMAKE_CURRENT_LIST_DIR}/../tl-expected\" NO_DEFAULT_PATH)\n"
+            "if(NOT TARGET tl_expected::tl_expected)\n"
+            "  add_library(tl_expected::tl_expected INTERFACE IMPORTED)\n"
+            "  set_target_properties(tl_expected::tl_expected PROPERTIES INTERFACE_LINK_LIBRARIES tl::expected)\n"
+            "  set_property(TARGET tl_expected::tl_expected APPEND PROPERTY\n"
+            "    INTERFACE_INCLUDE_DIRECTORIES \"${CMAKE_CURRENT_LIST_DIR}/tl_expected_shim\")\n"
+            "endif()\n"
+            "set(tl_expected_LIBRARIES tl_expected::tl_expected)\n")
+        made.append("tl_expected")
+    return made
+
+
 def cmake_names_index():
     """CMake package name -> every formula providing a config for it. Several can
     (OpenCV: opencv and opencv@4; Eigen3: eigen and eigen@3; Boost), which is exactly
@@ -241,6 +275,34 @@ def vendored_at(tree, name, scope):
     flat = [c for c in cands if os.path.dirname(c) == os.path.join(tree, "vendor", "lib")]
     return (flat or cands or [None])[0]
 
+
+
+_MAN = {}
+
+
+def made_from(tree, vendored, src):
+    """True when the runtime pass vendored `vendored` from `src` (its manifest maps
+    realpath(source) -> path under vendor/lib). No manifest: unknown, so no."""
+    if tree not in _MAN:
+        mp = os.path.join(tree, "vendor", ".manifest.json")
+        raw = json.load(open(mp)) if os.path.exists(mp) else {}
+        # keys are spelled as the tree referenced them (/opt/homebrew/opt/boost/lib/...):
+        # index both that spelling and where it resolves to
+        _MAN[tree] = {}
+        for k, v in raw.items():
+            _MAN[tree][k] = v
+            _MAN[tree].setdefault(os.path.realpath(k), v)
+    rel = os.path.relpath(os.path.realpath(vendored), os.path.realpath(os.path.join(tree, "vendor", "lib")))
+    m = _MAN[tree]
+    return rel in (m.get(src), m.get(os.path.realpath(src)))
+
+
+def fw_versions(fw):
+    """A framework bundle's version dirs (Qt6: {'A'}, qt@5: {'5'})."""
+    try:
+        return {v for v in os.listdir(os.path.join(fw, "Versions")) if v != "Current"}
+    except OSError:
+        return set()
 
 
 def runtime_names(tree):
@@ -463,6 +525,11 @@ def mirror(prefix, tree, tools, whole_ok=True):
                 if d.endswith(".framework"):
                     dirs.remove(d)
                     at = vendored_at(tree, d, prefix.name) if d in vendored else None
+                    # same NAME is not the same framework: qt@5 and Qt6 both ship
+                    # QtQml.framework (Versions/5 vs Versions/A). Linking Qt6's CMake
+                    # package to the Qt5 copy hands an overlay Qt5 headers for Qt6Qml.
+                    if at and fw_versions(at) != fw_versions(sp):
+                        at = None
                     dp = os.path.join(dst_root, rel_r, d)
                     if at and not os.path.lexists(dp):
                         os.makedirs(os.path.dirname(dp), exist_ok=True)
@@ -495,6 +562,12 @@ def mirror(prefix, tree, tools, whole_ok=True):
                     # the runtime copy, not a second one: overlay and tree must share it
                     at = next((x for x in (vendored_at(tree, al, prefix.name)
                                            for al in sorted(aliases(sp))) if x), None)
+                    # same NAME is not the same library: boost-1.89's libboost_filesystem
+                    # was linked to Homebrew boost 1.92's copy (jazzy 26.11.16.7), so an
+                    # overlay compiled 1.89 headers against 1.92 binaries. Only the copy
+                    # the runtime pass made FROM THIS FILE counts.
+                    if at and not made_from(tree, at, sp):
+                        at = None
                     if at:
                         os.symlink(os.path.relpath(at, os.path.dirname(dp)), dp)
                     else:
@@ -634,7 +707,7 @@ def plan(tree, ws, skip):
         return None
 
     def providers_of(name):
-        n = name.lower()
+        n = CMAKE_NAME_ALIAS.get(name.lower(), name.lower())
         out = [x for x, p in prefixes.items() if p.kind == "ws" and n in p.names]
         return out + [f for f in idx.get(n, []) if f not in out]
 
@@ -828,6 +901,9 @@ def stage(a, tree, skip):
 
 # ------------------------------------------------------------------ link
 def link(a, tree):
+    bridges = write_bridges(tree)
+    if bridges:
+        print(f"  bridges: {', '.join(bridges)}Config.cmake")
     state = json.load(open(os.path.join(tree, "vendor", ".devfiles.json")))
     man = {}
     mp = os.path.join(tree, "vendor", ".manifest.json")

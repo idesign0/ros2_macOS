@@ -223,6 +223,7 @@ raspimouse_slam
 raspimouse_slam_navigation
 rosbag2rawlog
 rosbag_timing_inspector
+rtabmap
 rtabmap_conversions
 rtabmap_costmap_plugins
 rtabmap_demos

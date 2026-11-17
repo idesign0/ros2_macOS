@@ -11,14 +11,15 @@ gz-sim9-lens-flare-system
 gz-sim9-sensors-system
 gz-sim9-shader-param-system
 gz-tools2-all
+gz-physics7-tpe
+gz-physics7-tpe-plugin
+gz-sim8-camera-video-recorder-system
+gz-sim8-gz
+gz-sim8-lens-flare-system
+gz-sim8-sensors-system
+gz-sim8-shader-param-system
 
-# exports Qt5 / Qt without COMPONENTS (fails on Linux too)
-grid_map_rviz_plugin
-nav2_rviz_plugins
-navmap_rviz_plugin
-rmf_visualization_rviz2_plugins
-rviz_visual_testing_framework
-rviz_imu_plugin
+# (Qt5 exported without COMPONENTS: fixed in packaging, keg_hygiene.py -> Qt5Widgets)
 
 # exports a dependency name nothing provides ("eigen", "yaml-cpp::yaml-cpp", influx_component)
 cartographer_rviz
@@ -45,3 +46,14 @@ stomp
 # builds on boost-1.89 + python.org 3.11, so Boost python3XY for brew's python is absent
 kinematics_interface_pinocchio
 linear_feedback_controller
+
+# ament_export_libraries() of something that is not a library in lib/ (upstream; Linux too):
+#   an executable                  grid_map_loader, open_manipulator_collision, open_manipulator_gui
+#   a lib in a lib/<pkg>/ subdir    dataspeed_can_tools, so_arm_100_hardware
+#   a python module (no lib prefix) autoware_lanelet2_extension_python
+grid_map_loader
+open_manipulator_collision
+open_manipulator_gui
+dataspeed_can_tools
+so_arm_100_hardware
+autoware_lanelet2_extension_python

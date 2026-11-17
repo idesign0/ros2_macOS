@@ -20,6 +20,8 @@ program looks it up, and bundled Homebrew bottles carry their own build records 
 and for Mach-O load commands:
   load     absolute load path outside the keg, the system and python.org 3.11
   rpath    @rpath/@loader_path/@executable_path load that resolves to nothing in the keg
+  mixed    vendor/opt/<f>/... linked to a bundled file the manifest records as ANOTHER
+           formula's (same name, different library: boost-1.89 vs boost, qt@5 vs Qt6)
 
 An earlier gate asked "does this path exist on this machine?", which the CI runner
 answered yes for python.org 3.12 and Homebrew simdjson, so jazzy 26.11.16.7 shipped
@@ -148,9 +150,33 @@ for i in range(0, len(machos), 200):
             if not ok:
                 add("rpath", p, rel)
 
+# mixed: a formula's dev tree (vendor/opt/<f>/...) must link the runtime copy of THAT
+# formula. Matching by file name alone linked boost-1.89's dev tree to Homebrew boost 1.92's
+# dylibs and Qt6's QtQml.framework to qt@5's (jazzy 26.11.16.7): an overlay then compiles
+# against one version's headers and links another's binaries.
+man_p = os.path.join(tree, "vendor", ".manifest.json")
+if os.path.exists(man_p):
+    import json
+    src_of = {}
+    for src, dst in json.load(open(man_p)).items():
+        src_of[os.path.normpath(os.path.join(tree, "vendor", "lib", dst))] = src
+    vopt = os.path.join(tree, "vendor", "opt")
+    for f_name in (os.listdir(vopt) if os.path.isdir(vopt) else []):
+        for root, dirs, names in os.walk(os.path.join(vopt, f_name)):
+            for n in list(names) + list(dirs):
+                q = os.path.join(root, n)
+                if not os.path.islink(q):
+                    continue
+                real = os.path.realpath(q)
+                hit = next((v for k, v in src_of.items() if real == k or real.startswith(k + "/")), None)
+                if hit is None and real.endswith(".framework"):
+                    hit = next((v for k, v in src_of.items() if k.startswith(real + "/")), None)
+                if hit and not re.search(r"/(?:opt|Cellar)/" + re.escape(f_name) + r"(?:/|$)", hit):
+                    add("mixed", hit, os.path.relpath(q, tree))
+
 lines = [f"files scanned: {n_files}   mach-o: {len(machos)}   allow rules: {len(allow)}"]
 total = 0
-for cat in ("runner", "tmp", "cellar", "sdk", "python", "kegref", "load", "rpath",
+for cat in ("runner", "tmp", "cellar", "sdk", "python", "kegref", "load", "rpath", "mixed",
             "runner-bin", "tmp-bin", "cellar-bin", "sdk-bin", "python-bin"):
     vals = findings.get(cat, {})
     files = collections.defaultdict(set)

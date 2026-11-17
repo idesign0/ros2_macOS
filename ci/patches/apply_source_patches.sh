@@ -1694,6 +1694,89 @@ PYEOF
   fi
 fi
 
+# --- rtabmap (in-tree core library, built against the tree's opencv@4): PCL, ZLIB and
+#     pthreads resolve their include dir to the macOS SDK's usr/include, and rtabmap
+#     re-exports it from RTABMap_core/utiliteTargets.cmake. Homebrew's formula strips it
+#     post-install for the same reason. Filter it before the targets are defined. ---
+d="$ROOT/ros-planning/rtabmap"
+if grep -q "<name>rtabmap</name>" "$d/package.xml" 2>/dev/null && ! grep -q 'ci-macos-rtabmap-sdk-include' "$d/CMakeLists.txt"; then
+  python3 - "$d/CMakeLists.txt" <<'PYEOF'
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+block = ('# ci-macos-rtabmap-sdk-include\n'
+         'foreach(_ci_v PCL_INCLUDE_DIRS ZLIB_INCLUDE_DIRS PTHREADS_INCLUDE_DIR)\n'
+         '  list(FILTER ${_ci_v} EXCLUDE REGEX "(\\\\.sdk/usr/include|^/opt/local/include)/?$")\n'
+         'endforeach()\n')
+s, n = re.subn(r'(?m)^(IF\(OpenCV_FOUND\)\s*\n\s*MESSAGE\(STATUS "Found OpenCV)', block + r'\1', s, count=1)
+if n:
+    open(p, "w").write(s)
+PYEOF
+  if [ $? -ne 0 ] || ! grep -q 'ci-macos-rtabmap-sdk-include' "$d/CMakeLists.txt"; then
+    echo "::error::rtabmap: SDK include filter did not apply"
+  else
+    echo "  rtabmap: filter SDK usr/include from exported include dirs"
+  fi
+fi
+
+# --- ci-data-paths-in-prefix: compiled-in DATA paths named the runner's source tree ------
+#     (jazzy 26.11.16.7: gtsam/config.h, mrpt version.h + mrpt_paths_config.h, dart
+#     config.hpp -- in the headers AND in every binary built from them). Point them at
+#     what is installed instead:
+#       gtsam GTSAM_SOURCE_TREE_DATASET_DIR -> "" (examples/Data is not installed; its
+#             lookup falls through to GTSAM_INSTALLED_DATASET_DIR as it would for a user)
+#       mrpt  MRPT_SOURCE_BASE_DIRECTORY / MRPT_CMAKE_SOURCE_DIR -> install prefix
+#             (MRPT looks for <base>/share/mrpt, which is installed there)
+#       dart  DART_ROOT_PATH / DART_DATA_PATH / DART_DATA_LOCAL_PATH -> the installed
+#             data dir DART_DATA_GLOBAL_PATH already names (patch for ament_vendor PATCHES)
+for _f in $(find "$ROOT" -path '*/gtsam/gtsam/config.h.in' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q '#define GTSAM_SOURCE_TREE_DATASET_DIR "@GTSAM_SOURCE_DIR@' "$_f"; then
+    perl -pi -e 's{^#define GTSAM_SOURCE_TREE_DATASET_DIR ".*"$}{#define GTSAM_SOURCE_TREE_DATASET_DIR ""}' "$_f"
+    echo "  gtsam: source-tree dataset dir -> \"\" in ${_f#$ROOT/}"
+  fi
+done
+_f="$(_pkg_dir mrpt_libbase)/ci_patch_mrpt.sh"
+if [ -f "$_f" ] && ! grep -q 'ci-mrpt-install-paths' "$_f"; then
+  cat >> "$_f" <<'MRPTEOF'
+
+# --- ci-mrpt-install-paths (appended by ros2_macOS apply_source_patches.sh) ---------------
+# MRPT_SOURCE_BASE_DIRECTORY / MRPT_CMAKE_SOURCE_DIR are compiled into mrpt and its
+# headers; the build machine's source dir is gone after packaging. The installed tree has
+# <prefix>/share/mrpt, which is what MRPT looks for under that base.
+for _t in "$SRC/parse-files/mrpt_paths_config.h.in" "$SRC/parse-files/version.h.in"; do
+  if [ -f "$_t" ] && grep -q '"${MRPT_SOURCE_DIR}"' "$_t"; then
+    perl -pi -e 's{"\$\{MRPT_SOURCE_DIR\}"}{"\$\{CMAKE_INSTALL_PREFIX\}"}g' "$_t"
+    echo "ci_patch_mrpt: source-dir paths -> install prefix in ${_t##*/}"
+  fi
+done
+MRPTEOF
+  echo "  mrpt_libbase: +install-prefix data paths in ci_patch_mrpt.sh"
+fi
+_d="$(_pkg_dir gz_dartsim_vendor)/patches"
+if [ -d "$_d" ] && [ ! -f "$_d/0003-ci-data-paths-in-install-prefix.patch" ]; then
+  cat > "$_d/0003-ci-data-paths-in-install-prefix.patch" <<'DARTEOF'
+diff --git a/dart/config.hpp.in b/dart/config.hpp.in
+index 20e4e1e..d8d826c 100644
+--- a/dart/config.hpp.in
++++ b/dart/config.hpp.in
+@@ -63,10 +63,10 @@
+ #cmakedefine01 DART_ENABLE_SIMD
+ 
+ // Deprecated in DART 6.2 and will be removed in DART 7.
+-#define DART_ROOT_PATH "@DART_SOURCE_DIR@/"
+-#define DART_DATA_PATH "@DART_SOURCE_DIR@/data/"
++#define DART_ROOT_PATH "@CMAKE_INSTALL_PREFIX@/@DART_ADDITIONAL_DOCUMENTATION_INSTALL_PATH@/"
++#define DART_DATA_PATH "@CMAKE_INSTALL_PREFIX@/@DART_ADDITIONAL_DOCUMENTATION_INSTALL_PATH@/data/"
+ 
+-#define DART_DATA_LOCAL_PATH "@DART_SOURCE_DIR@/data/"
++#define DART_DATA_LOCAL_PATH "@CMAKE_INSTALL_PREFIX@/@DART_ADDITIONAL_DOCUMENTATION_INSTALL_PATH@/data/"
+ #define DART_DATA_GLOBAL_PATH "@CMAKE_INSTALL_PREFIX@/@DART_ADDITIONAL_DOCUMENTATION_INSTALL_PATH@/data/"
+ 
+ // See #451
+DARTEOF
+  echo "  gz_dartsim_vendor: +0003-ci-data-paths-in-install-prefix.patch"
+fi
+
 # --- foxglove_bridge: its CMakeLists only has download arms for Linux aarch64/x86_64 and
 #     message(FATAL_ERROR) on every other platform. Foxglove DOES publish a macOS build
 #     (foxglove-v<ver>-cpp-aarch64-apple-darwin.zip). Add a Darwin/arm64 elseif before the
