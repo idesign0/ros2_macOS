@@ -1694,6 +1694,31 @@ PYEOF
   fi
 fi
 
+# --- rtabmap (in-tree core library, built against the tree's opencv@4): PCL, ZLIB and
+#     pthreads resolve their include dir to the macOS SDK's usr/include, and rtabmap
+#     re-exports it from RTABMap_core/utiliteTargets.cmake. Homebrew's formula strips it
+#     post-install for the same reason. Filter it before the targets are defined. ---
+d="$ROOT/ros-planning/rtabmap"
+if grep -q "<name>rtabmap</name>" "$d/package.xml" 2>/dev/null && ! grep -q 'ci-macos-rtabmap-sdk-include' "$d/CMakeLists.txt"; then
+  python3 - "$d/CMakeLists.txt" <<'PYEOF'
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+block = ('# ci-macos-rtabmap-sdk-include\n'
+         'foreach(_ci_v PCL_INCLUDE_DIRS ZLIB_INCLUDE_DIRS PTHREADS_INCLUDE_DIR)\n'
+         '  list(FILTER ${_ci_v} EXCLUDE REGEX "(\\\\.sdk/usr/include|^/opt/local/include)/?$")\n'
+         'endforeach()\n')
+s, n = re.subn(r'(?m)^(IF\(OpenCV_FOUND\)\s*\n\s*MESSAGE\(STATUS "Found OpenCV)', block + r'\1', s, count=1)
+if n:
+    open(p, "w").write(s)
+PYEOF
+  if [ $? -ne 0 ] || ! grep -q 'ci-macos-rtabmap-sdk-include' "$d/CMakeLists.txt"; then
+    echo "::error::rtabmap: SDK include filter did not apply"
+  else
+    echo "  rtabmap: filter SDK usr/include from exported include dirs"
+  fi
+fi
+
 # --- foxglove_bridge: its CMakeLists only has download arms for Linux aarch64/x86_64 and
 #     message(FATAL_ERROR) on every other platform. Foxglove DOES publish a macOS build
 #     (foxglove-v<ver>-cpp-aarch64-apple-darwin.zip). Add a Darwin/arm64 elseif before the

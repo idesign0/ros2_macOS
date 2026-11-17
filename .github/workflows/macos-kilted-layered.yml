@@ -32,7 +32,7 @@ env:
   # libs resolved through @rpath (gz-sim 9.6 loading gz-rendering 9.5). Only protobuf from
   # gz-macOS is still needed.
   GZ_BUILD_STACK: "false"
-  BREW_BASE: "graphviz eigen@3 eigen geographiclib vtk opencv@4 zbar png++ sophus vrpn draco aravis zeromq cppzmq glfw libusb rtabmap libpqxx leveldb libmodbus readline msgpack-cxx openvdb"
+  BREW_BASE: "graphviz eigen@3 eigen geographiclib vtk opencv@4 zbar png++ sophus vrpn draco aravis zeromq cppzmq glfw libusb g2o librealsense libfreenect pdal qtsvg libpqxx leveldb libmodbus readline msgpack-cxx openvdb"
 
 jobs:
   plan:
