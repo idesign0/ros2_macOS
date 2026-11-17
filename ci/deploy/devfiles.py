@@ -209,6 +209,20 @@ PINOCCHIO_PRELUDE = r"""# ros2_macOS: pinocchio, coal and eigenpy here are Homeb
 # bundled Homebrew boost, as the CI toolchain does for every pinocchio consumer. Like there,
 # it holds for the whole project: find pinocchio before anything else that uses Boost.
 get_filename_component(_r2m_vopt "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE)
+# Boost's config defines each Boost::<component> target once per project, so a Boost found
+# EARLIER (the keg's boost-1.89) would silently stay in use for the components it already
+# defined while pinocchio's new ones come from 1.92. Refuse that mix instead.
+if(NOT _R2M_PINOCCHIO_BOOST AND TARGET Boost::headers)
+  get_target_property(_r2m_hinc Boost::headers INTERFACE_INCLUDE_DIRECTORIES)
+  list(GET _r2m_hinc 0 _r2m_h0)
+  file(REAL_PATH "${_r2m_h0}" _r2m_h0)                  # the keg is reached through a symlink
+  file(REAL_PATH "${_r2m_vopt}/boost/include" _r2m_mine)
+  if(NOT _r2m_h0 STREQUAL _r2m_mine)
+    message(FATAL_ERROR "pinocchio/coal here are built against the bundled Homebrew Boost "
+      "(${_r2m_vopt}/boost), but this project already found another Boost (${_r2m_hinc}). "
+      "Call find_package(pinocchio) before anything else that finds Boost.")
+  endif()
+endif()
 if(NOT _R2M_PINOCCHIO_BOOST AND EXISTS "${_r2m_vopt}/boost/include/boost/version.hpp")
   set(_R2M_PINOCCHIO_BOOST TRUE)
   file(GLOB _r2m_bdir "${_r2m_vopt}/boost/lib/cmake/Boost-*")
