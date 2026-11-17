@@ -209,6 +209,54 @@ for root, dirs, names in os.walk(tree):
 for f, k in sorted(inc_fixed.items()):
     print(f"  hygiene: {f}: dropped {k} exported include dir(s) that do not exist")
 
+# ---- 1c3. imported libraries whose install name is @rpath/...: an overlay binary that
+# links one records @rpath/<lib> but gets no LC_RPATH to resolve it, so it builds and then
+# fails to start ("Library not loaded: @rpath/libboost_regex.dylib": 9 moveit2_tutorials
+# executables against jazzy 26.11.16.7). Everything else here has an absolute install name;
+# boost-1.89 cannot get one without a relink (no header pad). Give each such imported
+# target an rpath to its own directory as a link option, which an overlay keeps installed.
+# Spelled <dir>/. on purpose: CMake's install step deletes its own build rpath, and the
+# same string would take this one with it (an installed overlay binary then had none).
+def install_name(dylib):
+    out = subprocess.run(["otool", "-D", dylib], capture_output=True, text=True).stdout.splitlines()
+    return out[1].strip() if len(out) > 1 else ""
+BLOCK = re.compile(r'set_target_properties\(([^\s)]+) PROPERTIES\n(.*?)\n\s*\)\n', re.S)
+rp_fixed = collections.Counter()
+for root, dirs, names in os.walk(tree):
+    for n in names:
+        if not (n.endswith(".cmake") and ("variant-shared" in n or re.search(r"[Tt]argets-\w+\.cmake$", n))):
+            continue
+        f = os.path.join(root, n)
+        try:
+            txt = open(f).read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if "IMPORTED_LOCATION" not in txt or "ros2_macOS: @rpath install name" in txt:
+            continue
+        lv = import_prefix_levels(root)
+        ip = root
+        for _ in range(lv if lv is not None else 0):
+            ip = os.path.dirname(ip)
+        def add_rpath(m):
+            loc = re.search(r'IMPORTED_LOCATION(?:_\w+)? "([^"]+\.dylib)"', m.group(2))
+            if not loc:
+                return m.group(0)
+            expr = loc.group(1)
+            real = expr.replace("${_BOOST_LIBDIR}", os.path.dirname(os.path.dirname(root)))
+            real = kegpath(real, ip)
+            if "${" in real or not os.path.isfile(real) or not install_name(real).startswith("@rpath/"):
+                return m.group(0)
+            rp_fixed[os.path.relpath(f, tree)] += 1
+            return (m.group(0) + f'set_property(TARGET {m.group(1)} APPEND PROPERTY INTERFACE_LINK_OPTIONS '
+                    f'"LINKER:-rpath,{os.path.dirname(expr)}/.")  # ros2_macOS: @rpath install name\n')
+        new = BLOCK.sub(add_rpath, txt)
+        if new != txt:
+            st = os.stat(f); os.chmod(f, st.st_mode | 0o200)
+            io.open(f, "w", encoding="utf-8", newline="").write(new); os.chmod(f, st.st_mode)
+if rp_fixed:
+    print(f"  hygiene: rpath link option for {sum(rp_fixed.values())} imported target(s) with an "
+          f"@rpath install name, in {len(rp_fixed)} file(s)")
+
 # ---- 1d. scripts whose interpreter is a keg path that is not shipped (openvino's
 # libexec/bin tools run libexec/bin/python, a venv Homebrew builds and we do not vendor).
 dead_scripts = []
