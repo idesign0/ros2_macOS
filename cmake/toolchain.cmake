@@ -690,6 +690,23 @@ foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER
   set(${_lf} "${${_lf}} -L/opt/homebrew/lib" CACHE STRING "" FORCE)
 endforeach()
 
+# ci-dead-strip-dylibs: Apple ld keeps every dylib on the link line, used or not; Ubuntu's ROS
+# builds link with --as-needed, which drops the unused ones. ament hands each target whole
+# ${pkg}_TARGETS lists (every typesupport of a message package, the Python ones included) and
+# this toolchain adds OpenGL/glog/backward to every link above, so librclcpp ended up with 70
+# direct deps and a nav2 server with 346 direct / 1000+ loaded libraries: ~140 s from exec to
+# its first log line in jazzy 26.11.16.7 (keg-built and overlay-built alike). Drop dylibs the
+# output references no symbol from. Plugins and typesupports loaded by name at run time are
+# dlopen()ed, not linked, so nothing that is needed goes.
+if(APPLE AND NOT DEFINED _CI_DEAD_STRIP_DONE)
+  set(_CI_DEAD_STRIP_DONE TRUE)
+  foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
+    if(NOT "${${_lf}}" MATCHES "dead_strip_dylibs")
+      set(${_lf} "${${_lf}} -Wl,-dead_strip_dylibs" CACHE STRING "" FORCE)
+    endif()
+  endforeach()
+endif()
+
 # --- Make the vendored yaml-cpp resolvable for a BARE `-lyaml-cpp` -------------------------
 # yaml_cpp_vendor installs to the nested prefix install/opt/yaml_cpp_vendor/{lib,include}, which is
 # not on the normal <prefix>/lib search path, so any package linking the bare name `yaml-cpp`
