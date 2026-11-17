@@ -201,6 +201,17 @@ def write_bridges(tree):
             "endif()\n"
             "set(tl_expected_LIBRARIES tl_expected::tl_expected)\n")
         made.append("tl_expected")
+    # nlohmann_json's config defines only the target; ament_target_dependencies(<t>
+    # nlohmann_json) reads ${pkg}_TARGETS, so without this the header dir never reaches the
+    # compile line and the package only builds where json.hpp is in a default include dir
+    # (/usr/include on Ubuntu) -- nav2_route, nav2_smac_planner, ...
+    nj = os.path.join(tree, "vendor", "opt", "nlohmann-json", "share", "cmake", "nlohmann_json",
+                      "nlohmann_jsonConfig.cmake")
+    if os.path.isfile(nj) and "nlohmann_json_TARGETS" not in open(nj).read():
+        os.chmod(nj, os.stat(nj).st_mode | 0o200)
+        io.open(nj, "a").write("\n# ros2_macOS bridge: ament_target_dependencies(<t> nlohmann_json) reads _TARGETS\n"
+                               "set(nlohmann_json_TARGETS nlohmann_json::nlohmann_json)\n")
+        made.append("nlohmann_json(_TARGETS)")
     return made
 
 
@@ -1277,6 +1288,10 @@ def link(a, tree):
         # /opt/homebrew/opt/openssl@3 against jazzy 26.11.16.7); its root variable wins
         if name.startswith("openssl@") and os.path.isfile(os.path.join(tree, d, "include", "openssl", "ssl.h")):
             lines.append(f"set-if-unset;OPENSSL_ROOT_DIR;{d}")
+        # Apple clang has no OpenMP of its own: FindOpenMP finds nothing without a root, and
+        # with this one picks -Xclang -fopenmp and the shipped libomp (nav2_smac_planner...)
+        if name == "libomp" and os.path.isfile(os.path.join(tree, d, "include", "omp.h")):
+            lines.append(f"set-if-unset;OpenMP_ROOT;{d}")
         for pc in ("lib/pkgconfig", "share/pkgconfig"):
             if os.path.isdir(os.path.join(tree, d, pc)):
                 lines.append(f"prepend-non-duplicate;PKG_CONFIG_PATH;{d}/{pc}")
