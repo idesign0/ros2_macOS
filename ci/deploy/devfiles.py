@@ -248,6 +248,17 @@ if(NOT _R2M_PINOCCHIO_BOOST AND EXISTS "${_r2m_vopt}/boost/include/boost/version
   if(EXISTS "${_r2m_vopt}/eigenpy/lib/cmake/eigenpy/eigenpyConfig.cmake")
     set(eigenpy_DIR "${_r2m_vopt}/eigenpy/lib/cmake/eigenpy" CACHE PATH "" FORCE)
   endif()
+  # Homebrew pinocchio links Homebrew urdfdom (6.x); the tree's own urdfdom (4.x) is what
+  # every other package here exports. Same once-per-project rule as Boost.
+  file(GLOB _r2m_ud "${_r2m_vopt}/urdfdom/lib/urdfdom/cmake/urdfdom-config.cmake")
+  if(_r2m_ud)
+    if(TARGET urdfdom::urdfdom_model)
+      message(WARNING "pinocchio here is built against the bundled Homebrew urdfdom "
+        "(${_r2m_vopt}/urdfdom); this project already found another urdfdom.")
+    else()
+      set(urdfdom_DIR "${_r2m_vopt}/urdfdom/lib/urdfdom/cmake" CACHE PATH "" FORCE)
+    endif()
+  endif()
 endif()
 """
 
@@ -869,7 +880,16 @@ def plan(tree, ws, skip):
         if no:
             skipped[f].add(no)
             continue
-        add(f, root, "brew", "runtime")
+        # the tree builds its OWN package of that name (urdfdom 4 in lib/urdfdom; Homebrew's
+        # urdfdom 6 is only loaded by Homebrew pinocchio/dartsim): shipping Homebrew's as a
+        # public prefix put it ahead of the tree's, and moveit_core's export then asked an
+        # overlay for urdfdom::urdfdom_model_state, which urdfdom 6 no longer has (jazzy
+        # 26.11.16.7, moveit2_tutorials). Ship it private: the Homebrew builds that need it
+        # reach it through their prelude (write_pinocchio_prelude).
+        own = config_names(root) & have_in_tree
+        if add(f, root, "brew", "runtime") and own:
+            prefixes[f].private = True
+            why[f].add(f"private: tree has its own {', '.join(sorted(own)[:3])}")
     # 3c. pinocchio, coal and eigenpy are Homebrew builds against Homebrew boost (1.9x) and
     #     boost-python3, while the tree uses boost-1.89. CI builds their consumers with the
     #     toolchain pointing the whole project at Homebrew boost; an overlay gets the same
@@ -1252,6 +1272,11 @@ def link(a, tree):
         if info.get("private"):
             continue            # reached only through write_pinocchio_prelude()
         lines.append(f"prepend-non-duplicate;CMAKE_PREFIX_PATH;{d}")
+        # CMake's FindOpenSSL finds Homebrew's openssl@3 by its own hints even when
+        # pkg-config already found ours (moveit2_tutorials linked the user's
+        # /opt/homebrew/opt/openssl@3 against jazzy 26.11.16.7); its root variable wins
+        if name.startswith("openssl@") and os.path.isfile(os.path.join(tree, d, "include", "openssl", "ssl.h")):
+            lines.append(f"set-if-unset;OPENSSL_ROOT_DIR;{d}")
         for pc in ("lib/pkgconfig", "share/pkgconfig"):
             if os.path.isdir(os.path.join(tree, d, pc)):
                 lines.append(f"prepend-non-duplicate;PKG_CONFIG_PATH;{d}/{pc}")

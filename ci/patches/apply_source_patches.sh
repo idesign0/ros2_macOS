@@ -1763,6 +1763,19 @@ if [ -f "$_f" ] && ! grep -q 'ci-export-real-libs' "$_f" && grep -q '^ament_auto
   echo "  autoware_lanelet2_extension_python: python modules not exported as libraries"
 fi
 
+# --- ci-mtc-fmt: moveit_task_constructor_core links a bare `fmt`, which its export turns
+#     into -lfmt for every consumer; Linux resolves that from /usr/lib, an overlay here has
+#     no libfmt on the linker path ("ld: library 'fmt' not found", moveit2_tutorials).
+#     Link the fmt::fmt target and export the fmt dependency that defines it.
+_f="$(find "$ROOT" -path '*moveit_task_constructor/core/src/CMakeLists.txt' -not -path '*/build/*' 2>/dev/null | head -1)"
+if [ -n "$_f" ] && ! grep -q 'ci-mtc-fmt' "$_f" && grep -qE '^\s*fmt\s*$' "$_f"; then
+  perl -pi -e 's{^(\s*)fmt\s*$}{$1fmt::fmt  # ci-mtc-fmt\n}' "$_f"
+  _c="$(dirname "$(dirname "$_f")")/CMakeLists.txt"
+  grep -q '^ament_export_dependencies(fmt)' "$_c" || \
+    perl -0pi -e 's{^(ament_export_dependencies\(Boost\)\n)}{$1ament_export_dependencies(fmt)  # ci-mtc-fmt\n}m' "$_c"
+  grep -q 'ci-mtc-fmt' "$_c" && echo "  moveit_task_constructor_core: link + export fmt::fmt" || echo "::error::moveit_task_constructor_core: fmt export fix did not apply"
+fi
+
 # --- ci-data-paths-in-prefix: compiled-in DATA paths named the runner's source tree ------
 #     (jazzy 26.11.16.7: gtsam/config.h, mrpt version.h + mrpt_paths_config.h, dart
 #     config.hpp -- in the headers AND in every binary built from them). Point them at
