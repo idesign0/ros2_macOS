@@ -130,6 +130,11 @@ jobs:
           chmod -R +x install/bin 2>/dev/null || true
           echo "packages: $(ls install/share | wc -l | tr -d ' ')"
           du -sh install
+          # ci-install-prefix: the tree was built INTO /opt/homebrew/opt/ros2-jazzy, so its
+          # libraries find each other there. Same symlink the build jobs used.
+          sudo mkdir -p /opt/homebrew/opt
+          sudo rm -rf "/opt/homebrew/opt/ros2-jazzy"
+          sudo ln -sfn "$PWD/install" "/opt/homebrew/opt/ros2-jazzy"
 
       - name: Load-test a sample BEFORE packaging
         run: |
@@ -209,6 +214,12 @@ jobs:
               --install-prefix "/opt/homebrew/opt/ros2-jazzy" --step link
             rc=$?
             echo "devfiles exit=$rc  ($(du -sh install/vendor/opt 2>/dev/null | awk '{print $1}') in vendor/opt)"
+          fi
+          # Third-party paths: Cellar/SDK/build-sandbox paths in text files, @rpath loads
+          # that resolve to nothing in the keg, dSYM bundles.
+          if [ "$rc" = 0 ] && [ -f ci/deploy/keg_hygiene.py ]; then
+            python3 -I ci/deploy/keg_hygiene.py install --prefix "/opt/homebrew/opt/ros2-jazzy"
+            rc=$?
           fi
           if [ -d install/vendor/lib ]; then
             echo "vendored: $(find install/vendor/lib -maxdepth 2 \( -name '*.dylib' -o -name '*.framework' \) | wc -l | tr -d ' ') libs, $(du -sh install/vendor/lib | awk '{print $1}')"
@@ -336,13 +347,26 @@ jobs:
         # The checks live in ci/deploy/functional_smoke.sh (from inputs.ref) so that
         # brew-install-test.yml runs exactly the same ones against a `brew install`ed keg.
         run: bash ci/deploy/functional_smoke.sh install
+      - name: Every path in the keg points inside the keg or at the system
+        id: paths
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        run: |
+          # No /Users/runner, build sandbox, Cellar or versioned-SDK path in any file, every
+          # <prefix>/... reference exists, every @rpath load resolves inside the keg.
+          if [ ! -f ci/deploy/check_keg_paths.py ]; then
+            echo "::error::ci/deploy/check_keg_paths.py missing on this ref -- cannot prove the keg is relocatable"
+            exit 1
+          fi
+          python3 -I ci/deploy/check_keg_paths.py install --prefix "/opt/homebrew/opt/ros2-jazzy" \
+            --allow ci/deploy/keg-paths-allow.txt --report /tmp/keg_paths.txt
+
       - name: Upload the packaged tree and the report
         if: always()
         run: |
           mkdir -p report
           cp /tmp/sample.txt /tmp/failed_before.txt /tmp/failed_after.txt /tmp/regressions.txt \
              /tmp/why_before.txt /tmp/why_after.txt \
-             /tmp/dyld_formulae.txt report/ 2>/dev/null || true
+             /tmp/dyld_formulae.txt /tmp/keg_paths.txt report/ 2>/dev/null || true
           ls -la report | sed 's/^/  /'
       - uses: actions/upload-artifact@v4
         if: always()
@@ -357,7 +381,7 @@ jobs:
         run: |
           ok=false
           if [ "${{ steps.package.outcome }}" = success ] && [ "${{ steps.loadafter.outcome }}" = success ] \
-             && [ "${{ steps.functional.outcome }}" = success ]; then
+             && [ "${{ steps.functional.outcome }}" = success ] && [ "${{ steps.paths.outcome }}" = success ]; then
             if [ -s /tmp/dyld_formulae.txt ]; then
               echo "::error::Homebrew formulae still load at run time -- not publishable:"
               cat /tmp/dyld_formulae.txt

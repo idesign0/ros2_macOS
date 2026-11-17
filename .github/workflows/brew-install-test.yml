@@ -85,14 +85,21 @@ jobs:
           export PATH="/tmp/sysruby:/Library/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
           bash ci/deploy/functional_smoke.sh "$(brew --prefix)/opt/ros2-$DISTRO"
 
-      - name: Every absolute load path in the keg exists on this machine
+      - name: Every path in the installed keg points inside the keg or at the system
         if: ${{ !cancelled() }}
         run: |
-          # The smoke load test runs where the tree was built, so a build-dir install name
-          # (libzenohc in kilted 26.11.15.20) or a runner-only Python (webots driver -> 3.12)
-          # loads there. This runner has neither.
+          # Not "does it exist on this machine": GitHub's runners carry python.org 3.12 and
+          # Homebrew simdjson, so jazzy 26.11.16.7 passed that while linking both. Every
+          # absolute path must point inside the keg (python.org 3.11 and the system aside),
+          # every @rpath load must resolve inside it, and no file may name the build machine.
           set -o pipefail
-          python3 ci/deploy/check_load_paths.py "$(brew --prefix)/opt/ros2-$DISTRO" | tee report/load-paths.txt
+          if [ -f ci/deploy/check_keg_paths.py ]; then
+            python3 -I ci/deploy/check_keg_paths.py "$(brew --prefix)/opt/ros2-$DISTRO" \
+              --prefix "$(brew --prefix)/opt/ros2-$DISTRO" --allow ci/deploy/keg-paths-allow.txt \
+              --report report/keg-paths.txt
+          else
+            python3 ci/deploy/check_load_paths.py "$(brew --prefix)/opt/ros2-$DISTRO" | tee report/load-paths.txt
+          fi
 
       - name: ros2 CLI -- talker/listener from a sourced zsh
         if: ${{ !cancelled() }}
