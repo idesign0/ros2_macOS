@@ -16,6 +16,15 @@ permissions:
   contents: read
 
 env:
+  # ci-install-prefix: build INTO the formula's prefix (a symlink to install/, made before
+  # each colcon build) so compiled-in paths, exported configs and env hooks never name the
+  # runner's checkout. The prefix maps rewrite __FILE__ / debug paths of sources and build
+  # dirs (asserts, log macros) the same way; env, so ExternalProject vendors inherit them.
+  ROS2_PREFIX: /opt/homebrew/opt/ros2-jazzy
+  CFLAGS: -ffile-prefix-map=${{ github.workspace }}/install=/opt/homebrew/opt/ros2-jazzy -ffile-prefix-map=${{ github.workspace }}/=
+  CXXFLAGS: -ffile-prefix-map=${{ github.workspace }}/install=/opt/homebrew/opt/ros2-jazzy -ffile-prefix-map=${{ github.workspace }}/=
+  OBJCFLAGS: -ffile-prefix-map=${{ github.workspace }}/install=/opt/homebrew/opt/ros2-jazzy -ffile-prefix-map=${{ github.workspace }}/=
+  OBJCXXFLAGS: -ffile-prefix-map=${{ github.workspace }}/install=/opt/homebrew/opt/ros2-jazzy -ffile-prefix-map=${{ github.workspace }}/=
   CI_BUILD: "TRUE"
   # ExternalProject vendors (e.g. clips_vendor) run `git apply` inside their build dir.
   # When build/ is under the workspace git checkout, git apply finds the PARENT repo and
@@ -206,13 +215,14 @@ jobs:
           # the unlink. The gz stack DOES need Qt6, so do NOT also unlink `qt`/qtdeclarative.
           brew unlink qtbase || true
           brew unlink protobuf || true
-          colcon build --packages-select protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
+          mkdir -p install && ln -sfn "$GITHUB_WORKSPACE/install" "$ROS2_PREFIX"
+          colcon build --install-base "$ROS2_PREFIX" --packages-select protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
             --merge-install --continue-on-error --cmake-args -DBUILD_SHARED_LIBS=ON -Dprotobuf_BUILD_TESTS=OFF \
             -Dprotobuf_BUILD_CONFORMANCE=OFF -Dprotobuf_BUILD_EXAMPLES=OFF \
             -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache || true
           if [ "$GZ_BUILD_STACK" = "true" ]; then
-          colcon build --base-paths "$GZ_DIR/" --packages-ignore protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
+          colcon build --install-base "$ROS2_PREFIX" --base-paths "$GZ_DIR/" --packages-ignore protobuf --executor parallel --parallel-workers $(sysctl -n hw.ncpu) \
             --merge-install --continue-on-error --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_gz.log || true
           else
@@ -352,7 +362,8 @@ jobs:
         run: |
           set +e
           SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/base_1.txt | tr '\n' ' ')
-          colcon build --packages-select $SEL \
+          mkdir -p install && ln -sfn "$GITHUB_WORKSPACE/install" "$ROS2_PREFIX"
+          colcon build --install-base "$ROS2_PREFIX" --packages-select $SEL \
             --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_base1.log
@@ -369,7 +380,7 @@ jobs:
           done | tr '\n' ' ')
           if [ -n "${RETRY// /}" ]; then
             echo "::warning::retrying transient failures: $RETRY"
-            colcon build --packages-select $RETRY --merge-install \
+            colcon build --install-base "$ROS2_PREFIX" --packages-select $RETRY --merge-install \
               --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
               --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
               -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_base1.log
@@ -557,9 +568,10 @@ jobs:
         continue-on-error: true
         run: |
           set +e
+          mkdir -p install && ln -sfn "$GITHUB_WORKSPACE/install" "$ROS2_PREFIX"
           source install/setup.sh
           SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/base_2a.txt | tr '\n' ' ')
-          colcon build --packages-select $SEL \
+          colcon build --install-base "$ROS2_PREFIX" --packages-select $SEL \
             --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_base2a.log
@@ -576,7 +588,7 @@ jobs:
           done | tr '\n' ' ')
           if [ -n "${RETRY// /}" ]; then
             echo "::warning::retrying transient failures: $RETRY"
-            colcon build --packages-select $RETRY --merge-install \
+            colcon build --install-base "$ROS2_PREFIX" --packages-select $RETRY --merge-install \
               --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
               --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
               -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_base2a.log
@@ -764,9 +776,10 @@ jobs:
         continue-on-error: true
         run: |
           set +e
+          mkdir -p install && ln -sfn "$GITHUB_WORKSPACE/install" "$ROS2_PREFIX"
           source install/setup.sh
           SEL=$(grep -vE '^\s*#|^\s*$' ci/shards/base_2b.txt | tr '\n' ' ')
-          colcon build --packages-select $SEL \
+          colcon build --install-base "$ROS2_PREFIX" --packages-select $SEL \
             --merge-install --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee build_base2b.log
@@ -783,7 +796,7 @@ jobs:
           done | tr '\n' ' ')
           if [ -n "${RETRY// /}" ]; then
             echo "::warning::retrying transient failures: $RETRY"
-            colcon build --packages-select $RETRY --merge-install \
+            colcon build --install-base "$ROS2_PREFIX" --packages-select $RETRY --merge-install \
               --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
               --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
               -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee retry_base2b.log
@@ -982,6 +995,7 @@ jobs:
           # in the same prefix (a separate --install-base breaks ros_workspace and
           # ament-python consumers). Snapshot first, then extract this shard's delta.
           touch /tmp/base_marker
+          mkdir -p install && ln -sfn "$GITHUB_WORKSPACE/install" "$ROS2_PREFIX"
           source install/setup.sh
           # abseil-compat restore: place the base's protoc-linked abseil dylibs next to THIS shard's
           # abseil so the workspace protoc's absolute /opt/homebrew/opt/abseil/lib/libabsl_*.<soname>.dylib
@@ -994,7 +1008,7 @@ jobs:
           fi
           SEL=$(grep -vE '^\s*#|^\s*$' "ci/shards/dom_${{ matrix.shard }}.txt" | tr '\n' ' ')
           [ -z "$SEL" ] && { echo "empty shard"; exit 0; }
-          colcon build --packages-select $SEL --merge-install \
+          colcon build --install-base "$ROS2_PREFIX" --packages-select $SEL --merge-install \
             --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
             --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "build_${{ matrix.shard }}.log"
@@ -1011,7 +1025,7 @@ jobs:
           done | tr '\n' ' ')
           if [ -n "${RETRY// /}" ]; then
             echo "::warning::retrying transient failures: $RETRY"
-            colcon build --packages-select $RETRY --merge-install \
+            colcon build --install-base "$ROS2_PREFIX" --packages-select $RETRY --merge-install \
               --executor parallel --parallel-workers $(sysctl -n hw.ncpu) --continue-on-error \
               --cmake-args -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN_FILE}" -DCI_BUILD=TRUE \
               -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee "retry_${{ matrix.shard }}.log"

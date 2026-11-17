@@ -1,0 +1,29 @@
+# Exceptions to check_keg_paths.py: "<category> <glob on the keg-relative path> # reason".
+# Every line must name WHY the path is harmless or what fixes it. Text-file categories
+# (runner, tmp, cellar, sdk, python, kegref) are never allowed for our own packages.
+
+# boost-1.89 is committed prebuilt (ros-commondep) without -headerpad_max_install_names, so
+# install_name_tool cannot repoint these sibling @rpath loads. They resolve through the
+# rpath every consumer carries to vendor/opt/boost-1.89/lib (package_tree step 4).
+# Fix: relink boost-1.89 with -headerpad_max_install_names.
+rpath vendor/opt/boost-1.89/lib/libboost_json.dylib
+rpath vendor/opt/boost-1.89/lib/libboost_fiber.dylib
+rpath vendor/opt/boost-1.89/lib/libboost_coroutine.dylib
+
+# Homebrew bottles we vendor were compiled by Homebrew: their binaries carry Homebrew's own
+# Cellar prefix, build sandbox and SDK as compiled-in strings (build info, __FILE__,
+# default search dirs). Changing them means rebuilding those formulae from source.
+cellar-bin vendor/*
+tmp-bin vendor/*
+sdk-bin vendor/*
+
+# Upstream text that names a path but is never used as one on this platform:
+# ament_pclint ships PC-lint sample configs written for a 2017 Xcode; nothing reads them.
+sdk lib/python3.11/site-packages/ament_pclint/config/gcc/co-osx-*.lnt
+# pinocchio: the Xcode path is inside a source comment.
+sdk vendor/opt/pinocchio/include/pinocchio/src/autodiff/casadi/algorithm/algo.hxx
+# CPython's own test suite uses fake SDK/framework paths as test data.
+sdk vendor/lib/Python.framework/Versions/3.*/lib/python3.*/test/*
+python vendor/lib/Python.framework/Versions/3.*/lib/python3.*/test/*
+# Homebrew's sitecustomize.py compares sys.prefix against its Cellar dir (logic, not a lookup).
+cellar vendor/lib/Python.framework/Versions/3.*/lib/python3.*/sitecustomize.py
