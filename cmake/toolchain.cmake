@@ -41,15 +41,26 @@ set(CMAKE_IGNORE_PATH
 # --- ensure correct stdlib ---
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 
-# ci-file-prefix-map (CI only): __FILE__ / debug paths of headers OUTSIDE the workspace
-# (whose own maps come from the workflow's CFLAGS/CXXFLAGS) -- the runner's Xcode SDK
-# (libc++ asserts) and Homebrew kegs whose configs resolve to Cellar/<f>/<version>
-# (OpenCV's inline headers) -- become the paths a user has: the CLT SDK and the keg's
-# vendored copy. Measured on jazzy 26.11.16.7: 19 binaries named Cellar/opencv@4/4.14.0_11,
-# 4 named /Applications/Xcode_26.6.app/... .
+# ci-file-prefix-map (CI only): __FILE__ / debug paths become the paths a user has --
+# the workspace (sources, build dirs, install) maps to relative / the formula prefix, the
+# runner's Xcode SDK and clang resource dir (libc++ asserts, static archives) to the CLT
+# copies, Homebrew kegs whose configs resolve to Cellar/<f>/<version> (OpenCV's inline
+# headers) to the keg's vendored copy. The workspace maps were the workflow's CFLAGS/
+# CXXFLAGS until jazzy 44117826051 showed them lost: this file's set(CMAKE_CXX_FLAGS ...)
+# and the FORCE cache write below shadow the env-seeded cache, so 1901 binaries still
+# named /Users/runner/work/... Apple clang applies the most specific map, so order is free.
 if(IS_CI AND DEFINED ENV{ROS2_PREFIX} AND NOT DEFINED _CI_FILE_PREFIX_MAP_DONE)
   set(_CI_FILE_PREFIX_MAP_DONE TRUE)
   set(_ci_maps "")
+  if(DEFINED ENV{GITHUB_WORKSPACE})
+    string(APPEND _ci_maps " -ffile-prefix-map=$ENV{GITHUB_WORKSPACE}/install=$ENV{ROS2_PREFIX}"
+                           " -ffile-prefix-map=$ENV{GITHUB_WORKSPACE}/=")
+  endif()
+  execute_process(COMMAND xcrun clang -print-resource-dir OUTPUT_VARIABLE _ci_res
+                  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  if(_ci_res MATCHES "^/Applications/.*/usr/lib/clang/([^/]+)$")
+    string(APPEND _ci_maps " -ffile-prefix-map=${_ci_res}=/Library/Developer/CommandLineTools/usr/lib/clang/${CMAKE_MATCH_1}")
+  endif()
   execute_process(COMMAND xcrun --show-sdk-path OUTPUT_VARIABLE _ci_sdk
                   OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
   if(_ci_sdk)
