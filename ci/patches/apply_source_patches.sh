@@ -432,6 +432,29 @@ for f in $(grep -rlF 'target_include_directories(kuka-iiqka-client-library-proto
     echo "::error::apply_source_patches: kuka iiqka protobuf include patch did not apply to ${f#$ROOT/}"
   fi
 done
+# rtabmap (in-tree since ec31ba45): with VTK 9 it builds its GUI against VTK_QT_VERSION, which is 6
+# for Homebrew vtk 9.7. Its sources include QVTKOpenGLNativeWidget.h -> <QOpenGLWidget>, which in
+# Qt6 lives in the separate OpenGLWidgets module, but rtabmap's Qt6 path asks only for
+# Widgets Core Gui OpenGL PrintSupport and links only those (upstream never met Qt6+VTK9: Ubuntu's
+# VTK is Qt5). In CI Qt6 is isolated (qtbase unlinked), so nothing else supplies the header:
+#   QVTKOpenGLNativeWidget.h:94:10: fatal error: 'QOpenGLWidget' file not found   (jazzy 44117826051)
+# Request OpenGLWidgets and put it on rtabmap_gui's public link/include. Idempotent (ci-rtabmap-qt6-oglw). ---
+_RT_ROOT=$(find "$ROOT" -path '*/rtabmap/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null \
+           | while read -r _c; do grep -q 'RTABMAP_QT_VERSION' "$_c" && echo "$_c" && break; done)
+if [ -n "${_RT_ROOT:-}" ]; then
+  _RT_GUI="$(dirname "$_RT_ROOT")/guilib/src/CMakeLists.txt"
+  if ! grep -q 'ci-rtabmap-qt6-oglw' "$_RT_ROOT"; then
+    perl -0pi -e 's~FIND_PACKAGE\(Qt6 COMPONENTS Widgets Core Gui OpenGL PrintSupport QUIET~FIND_PACKAGE(Qt6 COMPONENTS Widgets Core Gui OpenGL OpenGLWidgets PrintSupport QUIET~g; s~\A~# ci-rtabmap-qt6-oglw: Qt6 path also finds OpenGLWidgets (QVTKOpenGLNativeWidget.h needs QOpenGLWidget). See apply_source_patches.sh.\n~' "$_RT_ROOT"
+  fi
+  if [ -f "$_RT_GUI" ] && ! grep -q 'ci-rtabmap-qt6-oglw' "$_RT_GUI"; then
+    perl -0pi -e 's~(SET\(PUBLIC_LIBRARIES \$\{PUBLIC_LIBRARIES\} Qt6::Widgets Qt6::Core Qt6::Gui Qt6::OpenGL)\)~$1 Qt6::OpenGLWidgets)  # ci-rtabmap-qt6-oglw~; s~(\$\{Qt6OpenGL_INCLUDE_DIRS\})\)~$1\n        \${Qt6OpenGLWidgets_INCLUDE_DIRS})~' "$_RT_GUI"
+  fi
+  if grep -q 'OpenGLWidgets PrintSupport' "$_RT_ROOT" && grep -q 'Qt6::OpenGLWidgets' "$_RT_GUI" 2>/dev/null; then
+    echo "  rtabmap: Qt6 OpenGLWidgets requested and linked (${_RT_ROOT#$ROOT/}, guilib/src)"
+  else
+    echo "::error::apply_source_patches: rtabmap Qt6 OpenGLWidgets patch did not apply (${_RT_ROOT#$ROOT/})"
+  fi
+fi
 # nao_lola / nao_lola_client vendor msgpack as a NESTED git submodule (external/msgpack-c, declared
 # in nao_lola's own .gitmodules) and add it via include_directories(external/msgpack-c/include). The
 # superproject checkout does not recurse into that submodule-of-a-submodule, so in CI the dir is
