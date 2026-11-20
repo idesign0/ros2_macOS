@@ -231,6 +231,17 @@ def has_rpath(path, want):
         r"^\s*path (.+?) \(offset \d+\)$", run(["otool", "-l", path]).stdout, re.M)]
 
 
+def load_lines(path, lc=None):
+    """otool -L lines for what `path` loads. A dylib's first line is its own ID; a
+    plugin (MH_BUNDLE) has none, so its first line is a real dep -- dropping it
+    unconditionally hid the one framework most Qt plugins name first
+    (liblabsstylekitplugin -> QtLabsStyleKit, libqgif -> QtGui)."""
+    lines = run(["otool", "-L", path]).stdout.splitlines()[1:]
+    if lc is None:
+        lc = run(["otool", "-l", path]).stdout
+    return lines[1:] if "cmd LC_ID_DYLIB" in lc else lines
+
+
 def rpath_deps(path):
     """dep TEXT -> the brew file it resolves to, for every @rpath/@loader_path dep of
     `path`. The text matters as well as the target: a scoped library is no longer at the
@@ -241,8 +252,7 @@ def rpath_deps(path):
     rpaths = [m.group(1).strip() for m in
               re.finditer(r"^\s*path (.+?) \(offset \d+\)$", lc, re.M)]
     rpaths = [r.replace("@loader_path", d) for r in rpaths]
-    deps = run(["otool", "-L", path]).stdout.splitlines()[2:]  # [0] header, [1] own ID
-    for line in deps:
+    for line in load_lines(path, lc):
         t = line.strip().split(" ")[0]
         if t.startswith("@loader_path/"):
             cand = [t.replace("@loader_path", d)]
@@ -633,7 +643,7 @@ def stage_qt_runtime(tree, vendor_abs, cl):
     for q in staged:
         if any(q.startswith(g + os.sep) for g in gone_dirs):
             continue
-        lines = run(["otool", "-L", q]).stdout.splitlines()[2:]
+        lines = load_lines(q)
         refs = [l.strip().split(" ")[0] for l in lines]
         bad = [r for r in refs if QT_DENY.search(r)
                or ((r.startswith(HB) or r.startswith(CELLAR)) and not os.path.exists(r))]
@@ -915,14 +925,40 @@ def main():
                     dirs.remove(d)
             for n in names:
                 existing[n].append(os.path.relpath(os.path.join(r, n), vendor_abs))
+    # ...but only the copy of the SAME keg: a flat name the first pass gave one keg is not
+    # a home for another keg's file of that name. Pass 1 vendored qt@5's QtQml flat; pass
+    # 2 (VTK's QtQuick module) also wants qtdeclarative's, and reusing the flat bundle
+    # pointed Qt6 at Versions/A inside a Versions/5 bundle (jazzy re-smoke 44776512592).
+    # Judge a source by its REAL keg: Qt 6.12's `qt` meta formula symlinks every
+    # framework into qtbase/qtdeclarative, so opt/qt/lib/QtOpenGL.framework is qtbase's.
+    flat_kegs = collections.defaultdict(set)    # flat vendor entry -> kegs it was copied from
+    prev_rel = {}                               # unit -> entry an earlier pass gave it
+    try:
+        for k, v in json.load(open(os.path.join(os.path.dirname(vendor_abs),
+                                                ".manifest.json"))).items():
+            m = re.search(r"/vendor/opt/([^/]+)/", k)
+            top = v.split(".framework/")[0] + ".framework" if fw_parts(v) else v
+            flat_kegs[top.split("/")[0]].add(m.group(1) if m else keg_of(os.path.realpath(k)))
+            if not m and os.path.exists(k):
+                prev_rel.setdefault(vendor_unit(k), top)
+    except (OSError, ValueError):
+        pass
+    flat_taken = set()    # names whose flat slot holds another keg's copy
     reused = 0
     for key in list(units):
         if key not in existing:
             continue
         for unit, src in list(units[key].items()):
             rels = existing[key]
-            pick = next((r for r in rels if r.split("/")[0] == keg_of(src)), None) \
-                or next((r for r in rels if "/" not in r), None)
+            kg = keg_of(os.path.realpath(src))
+            pick = prev_rel.get(unit) if prev_rel.get(unit) in rels else None
+            pick = pick or next((r for r in rels if r.split("/")[0] == kg), None)
+            flat = next((r for r in rels if "/" not in r), None)
+            if not pick and flat:
+                if flat in flat_kegs and kg not in flat_kegs[flat]:
+                    flat_taken.add(key)
+                else:
+                    pick = flat
             if pick:
                 dest_rel[unit] = pick
                 del units[key][unit]
@@ -932,14 +968,14 @@ def main():
     if reused:
         print(f"  already vendored     : {reused} (placed by an earlier pass, reused)")
     for key, members in sorted(units.items()):
-        if len(members) == 1:
+        if len(members) == 1 and key not in flat_taken:
             dest_rel[next(iter(members))] = key
             continue
         # group by keg first: only a keg wanted twice needs its version in the name, so
         # the common case reads vendor/lib/qt@5/QtCore.framework, not qt@5-5.15.19/...
         by_keg = collections.defaultdict(list)
         for unit, src in members.items():
-            by_keg[keg_of(src)].append((unit, src))
+            by_keg[keg_of(os.path.realpath(src))].append((unit, src))
         used = {}
         for keg, group in sorted(by_keg.items()):
             for unit, src in group:
