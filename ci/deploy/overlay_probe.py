@@ -117,7 +117,29 @@ def note_component(name, cfg):
         return
     m = COMPONENT_HDR.search(head)
     if m and name == f"{m.group(1)}-{m.group(2)}":
-        COMPONENT_OF[name] = (m.group(1), m.group(2))
+        par, comp = m.group(1), m.group(2)
+        # sibling components this one links (gz-physics7-tpe -> gz-physics7::gz-physics7-tpelib,
+        # gz-sim8-sensors-system -> gz-sim8::gz-sim8-rendering) but does not load itself:
+        # upstream they must come earlier in COMPONENTS, so the probe asks for them first
+        deps = set()
+        for f in os.listdir(os.path.dirname(cfg)):
+            if f.endswith(".cmake"):
+                txt = open(os.path.join(os.path.dirname(cfg), f), errors="replace").read()
+                deps |= set(re.findall(r"\b%s::%s-([\w.+-]+)" % (re.escape(par), re.escape(par)), txt))
+        deps.discard(comp)
+        COMPONENT_OF[name] = (par, comp, sorted(deps))
+
+
+def component_list(par, comp, seen=None):
+    """comp preceded by every sibling component it needs, dependencies first."""
+    seen = set() if seen is None else seen
+    if comp in seen:
+        return []
+    seen.add(comp)
+    out = []
+    for d in COMPONENT_OF.get(f"{par}-{comp}", (par, comp, []))[2]:
+        out += [c for c in component_list(par, d, seen) if c not in out]
+    return out + [comp]
 
 
 def packages(prefix):
@@ -153,8 +175,9 @@ def run_batch(pkgs, work, env):
     for i, p in enumerate(pkgs):
         os.makedirs(os.path.join(d, f"p{i}"))
         if p in COMPONENT_OF:
-            par, comp = COMPONENT_OF[p]
-            body = SUB_COMPONENT.replace("@PARENT@", par).replace("@COMP@", comp).replace("@P@", p)
+            par, comp, _ = COMPONENT_OF[p]
+            body = SUB_COMPONENT.replace("@PARENT@", par).replace(
+                "@COMP@", " ".join(component_list(par, comp))).replace("@P@", p)
         else:
             body = SUB.replace("@P@", p)
         open(os.path.join(d, f"p{i}", "CMakeLists.txt"), "w").write(body)
