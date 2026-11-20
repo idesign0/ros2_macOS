@@ -1300,6 +1300,12 @@ def link(a, tree):
             d = os.path.join(tree, "include", m.group(1))
             if not os.path.exists(d):
                 os.makedirs(d)
+                # Homebrew's cleaner deletes empty directories at install time (jazzy
+                # 26.11.20.9: 6 of these were in the tarball, none in the installed keg,
+                # and overlay_probe flagged each package); a file keeps the directory.
+                io.open(os.path.join(d, ".ros2_macos_keep"), "w").write(
+                    "Exported include dir this package does not install; kept so CMake "
+                    "consumers find the path.\n")
                 made += 1
         def _dylib(m):
             has = lambda ext: any(os.path.exists(os.path.join(r, f"lib{m.group(2)}{ext}"))
