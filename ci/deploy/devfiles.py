@@ -522,6 +522,37 @@ VIA_DEV_MAX = 120 << 20
 TINY_BIN = 5 << 20
 RUNTIME_DEV_MAX = 40 << 20
 TREE_FILES = set()      # file names the tree's own build interface references
+LINKED_TARGETS = set()  # Ns::Name targets the tree's and the shipped prefixes' configs name
+TARGET_TOKEN = re.compile(r"\b([A-Za-z][A-Za-z0-9_]*::[A-Za-z0-9_][A-Za-z0-9_.+-]*)")
+
+
+def linked_target_files(src):
+    """Library basenames of the targets an overlay can reach: every target LINKED_TARGETS
+    names that src's own targets files define, plus what those link transitively. A big
+    keg (vtk) ships only what the tree loads, but -dead_strip_dylibs drops a module the
+    code never calls (vtkChartsCore) while pcl's exported targets still link VTK::ChartsCore;
+    an overlay linking PCL then fails "IMPORTED_LOCATION not set for VTK::ChartsCore"."""
+    loc, links = collections.defaultdict(set), collections.defaultdict(set)
+    for p in text_files(src):
+        n = os.path.basename(p)
+        if not re.search(r"[Tt]argets(-\w+)?\.cmake$", n):
+            continue
+        t = read(p)
+        for m in re.finditer(r'set_target_properties\((\S+) PROPERTIES(.*?)\n\s*\)', t, re.S):
+            for l in re.findall(r'IMPORTED_LOCATION(?:_\w+)? "([^"]+)"', m.group(2)):
+                loc[m.group(1)].add(os.path.basename(l))
+            il = re.search(r'INTERFACE_LINK_LIBRARIES "([^"]*)"', m.group(2))
+            if il:
+                links[m.group(1)].update(TARGET_TOKEN.findall(il.group(1)))
+    todo = [t for t in LINKED_TARGETS if t in loc or t in links]
+    seen = set()
+    while todo:
+        t = todo.pop()
+        if t in seen:
+            continue
+        seen.add(t)
+        todo.extend(x for x in links.get(t, ()) if x not in seen)
+    return set().union(*(loc[t] for t in seen if t in loc)) if seen else set()
 
 
 def named_in_configs(src):
@@ -576,6 +607,7 @@ def mirror(prefix, tree, tools, whole_ok=True):
                 and x not in vendored and os.path.getsize(os.path.join(ld, x)) < NAMED_DYLIB_MAX}
         if len(cand) <= NAMED_DYLIB_COUNT:
             few_named = cand
+    few_named |= linked_target_files(prefix.src)
 
     def wanted(sp, nm):
         """Binaries are mirrored only when something will look for them: the runtime
@@ -966,6 +998,10 @@ def plan(tree, ws, skip):
 def stage(a, tree, skip):
     prefixes, why, src, unmatched, skipped = plan(tree, a.ws, skip)
     print(f"  dev prefixes         : {len(prefixes)}", flush=True)
+    for root in [tree] + [p.src for p in prefixes.values()]:
+        for p in text_files(root, skip if root == tree else ()):
+            if p.endswith(".cmake"):
+                LINKED_TARGETS.update(TARGET_TOKEN.findall(read(p)))
     total = 0
     for name, pre in sorted(prefixes.items()):
         n = 0 if a.report_only else mirror(pre, tree, imported_tools(pre.src),

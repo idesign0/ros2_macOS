@@ -148,7 +148,7 @@ def kegpath(path, import_prefix):
 pruned = collections.Counter()
 for root, dirs, names in os.walk(tree):
     for n in names:
-        if not re.search(r"Targets-[\w]+\.cmake$", n):
+        if not re.search(r"[Tt]argets-[\w]+\.cmake$", n):
             continue
         f = os.path.join(root, n)
         txt = open(f, errors="replace").read()
