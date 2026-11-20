@@ -26,7 +26,7 @@ path points inside the keg or at the system":
     (VTK's wrapping generators, a stray protoc) -- it could never run.
 Binary files are never length-changed; check_keg_paths.py reports what remains in them.
 """
-import argparse, collections, hashlib, io, os, re, shutil, subprocess, sys
+import argparse, collections, glob, hashlib, io, os, re, shutil, subprocess, sys
 
 ap = argparse.ArgumentParser()
 ap.add_argument("tree")
@@ -208,6 +208,56 @@ for root, dirs, names in os.walk(tree):
             io.open(f, "w", encoding="utf-8", newline="").write(new); os.chmod(f, st.st_mode)
 for f, k in sorted(inc_fixed.items()):
     print(f"  hygiene: {f}: dropped {k} exported include dir(s) that do not exist")
+
+# ---- 1c2b. ament exported dependencies that are not CMake packages. Every overlay that
+# finds such a package runs find_package(<dep> REQUIRED) on each entry, so one bad name
+# fails it outright, on Linux as well (upstream bugs; seen on jazzy 26.11.20.9):
+#   - a target, not a package: yaml-cpp::yaml-cpp (cx_config_plugin,
+#     easynav_routes_maps_manager) -> its package, yaml-cpp
+#   - the package's own exported target: influx_component (diagnostic_remote_logging,
+#     which exports diagnostic_remote_logging::influx_component) -> dropped
+#   - a rosdep key instead of the CMake name: eigen (cartographer_rviz) -> Eigen3
+#   - ICU, whose Find module needs COMPONENTS that the list cannot carry
+#     (cx_ros_msgs_plugin) -> found first with the components its targets link
+DEP_ALIAS = {"eigen": "Eigen3"}
+EXPORT_DEPS = re.compile(r'(set\(_exported_dependencies ")([^"]*)("\))')
+dep_fixed = collections.Counter()
+for f in glob.glob(os.path.join(tree, "share", "*", "cmake",
+                                "ament_cmake_export_dependencies-extras.cmake")):
+    # glob follows symlinks; never write outside the tree (a symlinked package dir)
+    if not os.path.realpath(f).startswith(tree + os.sep):
+        continue
+    pkg = os.path.basename(os.path.dirname(os.path.dirname(f)))
+    txt = open(f, errors="replace").read()
+    m = EXPORT_DEPS.search(txt)
+    if not m:
+        continue
+    exports = " ".join(open(x, errors="replace").read()
+                       for x in glob.glob(os.path.join(os.path.dirname(f), "*Export*.cmake")))
+    out = []
+    for d in m.group(2).split(";"):
+        if not d:
+            continue
+        orig = d
+        if "::" in d:
+            d = d.split("::", 1)[0]
+        d = DEP_ALIAS.get(d, d)
+        if re.search(r"\b%s::%s\b" % (re.escape(pkg), re.escape(d)), exports):
+            d = None
+        if d and (d == orig or d not in out):   # keep upstream's own repeats: no churn
+            out.append(d)
+    new = txt.replace(m.group(0), m.group(1) + ";".join(out) + m.group(3), 1)
+    if "ICU" in out and "find_package(ICU" not in new:
+        comps = sorted(set(re.findall(r"\bICU::(\w+)", exports))) or ["uc"]
+        new = new.replace(m.group(0).replace(m.group(2), ";".join(out)),
+                          m.group(0).replace(m.group(2), ";".join(out))
+                          + "\nfind_package(ICU QUIET COMPONENTS %s)" % " ".join(comps), 1)
+    if new != txt:
+        st = os.stat(f); os.chmod(f, st.st_mode | 0o200)
+        io.open(f, "w", encoding="utf-8", newline="").write(new); os.chmod(f, st.st_mode)
+        dep_fixed[os.path.relpath(f, tree)] += 1
+for f in sorted(dep_fixed):
+    print(f"  hygiene: {f}: exported dependency names fixed")
 
 # ---- 1c3. imported libraries whose install name is @rpath/...: an overlay binary that
 # links one records @rpath/<lib> but gets no LC_RPATH to resolve it, so it builds and then
