@@ -415,6 +415,23 @@ for f in $(grep -rlF '#$<BUILD_INTERFACE:${Protobuf_INCLUDE_DIRS}>' "$ROOT" --in
   perl -0pi -e 's~#\$<BUILD_INTERFACE:\$\{Protobuf_INCLUDE_DIRS\}>~\$<BUILD_INTERFACE:\${Protobuf_INCLUDE_DIRS}>  # ci-mvsim-protobuf-inc: uncommented so gencode finds google/protobuf/runtime_version.h~g' "$f"
   echo "  mvsim: uncomment \${Protobuf_INCLUDE_DIRS} in mvsim_msgs include dirs (runtime_version.h) in ${f#$ROOT/}"
 done
+# kuka_external_control_sdk_iiqka: iiqka/CMakeLists.txt protobuf_generate()s into the
+# kuka-iiqka-client-library-protobuf target but gives that target only its own binary dir as an
+# include path. The gencode (workspace protoc, protobuf v26+) begins with
+# #include "google/protobuf/runtime_version.h"; Linux finds it on the default /usr/include, macOS
+# does not -> "control_attributes.pb.h:14: fatal error: 'google/protobuf/runtime_version.h' file
+# not found" (jazzy 44117826051). The SDK's bundled cmake/FindProtobuf.cmake already set
+# Protobuf_INCLUDE_DIRS; add it (BUILD_INTERFACE only: nothing build-tree is exported).
+# Idempotent (ci-kuka-protobuf-inc). ---
+for f in $(grep -rlF 'target_include_directories(kuka-iiqka-client-library-protobuf PUBLIC' "$ROOT" --include=CMakeLists.txt 2>/dev/null); do
+  grep -q 'ci-kuka-protobuf-inc' "$f" && continue
+  perl -0pi -e 's~(target_include_directories\(kuka-iiqka-client-library-protobuf PUBLIC\n\s*"\$<BUILD_INTERFACE:\$\{CMAKE_CURRENT_BINARY_DIR\}>")\n\)~$1\n  "\$<BUILD_INTERFACE:\${Protobuf_INCLUDE_DIRS}>"  # ci-kuka-protobuf-inc: gencode needs google/protobuf/runtime_version.h\n)~' "$f"
+  if grep -q 'ci-kuka-protobuf-inc' "$f"; then
+    echo "  kuka iiqka: add \${Protobuf_INCLUDE_DIRS} to kuka-iiqka-client-library-protobuf in ${f#$ROOT/}"
+  else
+    echo "::error::apply_source_patches: kuka iiqka protobuf include patch did not apply to ${f#$ROOT/}"
+  fi
+done
 # nao_lola / nao_lola_client vendor msgpack as a NESTED git submodule (external/msgpack-c, declared
 # in nao_lola's own .gitmodules) and add it via include_directories(external/msgpack-c/include). The
 # superproject checkout does not recurse into that submodule-of-a-submodule, so in CI the dir is
