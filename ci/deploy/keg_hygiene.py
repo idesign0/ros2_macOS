@@ -92,7 +92,18 @@ for root, dirs, names in os.walk(tree):
         except UnicodeDecodeError:
             continue
         new = txt
-        for rx, fn in RULES:
+        rules = RULES
+        if os.path.relpath(f, tree) == os.path.join("vendor", ".manifest.json"):
+            # its keys only record where a vendored file came from: a dev mirror path is
+            # right only if the mirror has that file (most Qt6 frameworks VTK's QtQuick
+            # module pulls in do not -- jazzy re-smoke 44886604407, 55 dangling keys)
+            def manifest_key(m):
+                v = cellar(m)
+                return v if not v.startswith(P + "/vendor/opt/") or os.path.lexists(
+                    os.path.join(tree, v[len(P) + 1:])) else \
+                    f"/opt/homebrew/opt/{m.group(1)}{m.group(3) or ''}"
+            rules = [(RULES[0][0], manifest_key)] + RULES[1:]
+        for rx, fn in rules:
             new = rx.sub(fn, new)
         if RELATIVE_ONLY.search(n):
             new = WS_ROOT.sub("", new)
