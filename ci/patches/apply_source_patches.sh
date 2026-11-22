@@ -1694,6 +1694,39 @@ PYEOF
   fi
 fi
 
+# --- ci-data-paths-in-prefix: compiled-in DATA paths named the runner's source tree ------
+#     (seen on jazzy 26.11.16.7: gtsam/config.h, mrpt version.h + mrpt_paths_config.h, dart
+#     config.hpp -- in the headers AND in every binary built from them). Point them at
+#     what is installed instead:
+#       gtsam GTSAM_SOURCE_TREE_DATASET_DIR -> "" (examples/Data is not installed; its
+#             lookup falls through to GTSAM_INSTALLED_DATASET_DIR as it would for a user)
+#       mrpt  MRPT_SOURCE_BASE_DIRECTORY / MRPT_CMAKE_SOURCE_DIR -> install prefix
+#             (MRPT looks for <base>/share/mrpt, which is installed there)
+#       (dart: humble builds no gz_dartsim_vendor; Gazebo uses Homebrew's dartsim)
+for _f in $(find "$ROOT" -path '*/gtsam/gtsam/config.h.in' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q '#define GTSAM_SOURCE_TREE_DATASET_DIR "@GTSAM_SOURCE_DIR@' "$_f"; then
+    perl -pi -e 's{^#define GTSAM_SOURCE_TREE_DATASET_DIR ".*"$}{#define GTSAM_SOURCE_TREE_DATASET_DIR ""}' "$_f"
+    echo "  gtsam: source-tree dataset dir -> \"\" in ${_f#$ROOT/}"
+  fi
+done
+_f="$(_pkg_dir mrpt_libbase)/ci_patch_mrpt.sh"
+if [ -f "$_f" ] && ! grep -q 'ci-mrpt-install-paths' "$_f"; then
+  cat >> "$_f" <<'MRPTEOF'
+
+# --- ci-mrpt-install-paths (appended by ros2_macOS apply_source_patches.sh) ---------------
+# MRPT_SOURCE_BASE_DIRECTORY / MRPT_CMAKE_SOURCE_DIR are compiled into mrpt and its
+# headers; the build machine's source dir is gone after packaging. The installed tree has
+# <prefix>/share/mrpt, which is what MRPT looks for under that base.
+for _t in "$SRC/parse-files/mrpt_paths_config.h.in" "$SRC/parse-files/version.h.in"; do
+  if [ -f "$_t" ] && grep -q '"${MRPT_SOURCE_DIR}"' "$_t"; then
+    perl -pi -e 's{"\$\{MRPT_SOURCE_DIR\}"}{"\$\{CMAKE_INSTALL_PREFIX\}"}g' "$_t"
+    echo "ci_patch_mrpt: source-dir paths -> install prefix in ${_t##*/}"
+  fi
+done
+MRPTEOF
+  echo "  mrpt_libbase: +install-prefix data paths in ci_patch_mrpt.sh"
+fi
+
 # --- foxglove_bridge: its CMakeLists only has download arms for Linux aarch64/x86_64 and
 #     message(FATAL_ERROR) on every other platform. Foxglove DOES publish a macOS build
 #     (foxglove-v<ver>-cpp-aarch64-apple-darwin.zip). Add a Darwin/arm64 elseif before the
