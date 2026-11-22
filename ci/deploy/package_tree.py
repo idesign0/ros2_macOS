@@ -231,6 +231,17 @@ def has_rpath(path, want):
         r"^\s*path (.+?) \(offset \d+\)$", run(["otool", "-l", path]).stdout, re.M)]
 
 
+def load_lines(path, lc=None):
+    """otool -L lines for what `path` loads. A dylib's first line is its own ID; a
+    plugin (MH_BUNDLE) has none, so its first line is a real dep -- dropping it
+    unconditionally hid the one framework most Qt plugins name first
+    (liblabsstylekitplugin -> QtLabsStyleKit, libqgif -> QtGui)."""
+    lines = run(["otool", "-L", path]).stdout.splitlines()[1:]
+    if lc is None:
+        lc = run(["otool", "-l", path]).stdout
+    return lines[1:] if "cmd LC_ID_DYLIB" in lc else lines
+
+
 def rpath_deps(path):
     """dep TEXT -> the brew file it resolves to, for every @rpath/@loader_path dep of
     `path`. The text matters as well as the target: a scoped library is no longer at the
@@ -241,8 +252,7 @@ def rpath_deps(path):
     rpaths = [m.group(1).strip() for m in
               re.finditer(r"^\s*path (.+?) \(offset \d+\)$", lc, re.M)]
     rpaths = [r.replace("@loader_path", d) for r in rpaths]
-    deps = run(["otool", "-L", path]).stdout.splitlines()[2:]  # [0] header, [1] own ID
-    for line in deps:
+    for line in load_lines(path, lc):
         t = line.strip().split(" ")[0]
         if t.startswith("@loader_path/"):
             cand = [t.replace("@loader_path", d)]
@@ -383,7 +393,7 @@ def load_paths(path):
 ENV_PKG = "ros2_macos_install_env"
 
 
-def write_install_prefix_env(tree):
+def write_install_prefix_env(tree, extra=None):
     """Tell each gz library where it ACTUALLY lives, via the override gz built in for it.
 
     gz libraries compile their install prefix in, and derive every plugin, engine,
@@ -427,6 +437,7 @@ def write_install_prefix_env(tree):
                 var = m.group(1).decode()
                 if var not in found or (rel and not found[var]):   # opt/ beats the root
                     found[var] = rel
+    found.update(extra or {})
     if not found:
         return {}
     meta = os.path.join(tree, "share", "colcon-core", "packages")
@@ -632,7 +643,7 @@ def stage_qt_runtime(tree, vendor_abs, cl):
     for q in staged:
         if any(q.startswith(g + os.sep) for g in gone_dirs):
             continue
-        lines = run(["otool", "-L", q]).stdout.splitlines()[2:]
+        lines = load_lines(q)
         refs = [l.strip().split(" ")[0] for l in lines]
         bad = [r for r in refs if QT_DENY.search(r)
                or ((r.startswith(HB) or r.startswith(CELLAR)) and not os.path.exists(r))]
@@ -683,6 +694,63 @@ def patch_qt6_prefix(fw_binary, libdir, prefix):
     os.chmod(fw_binary, os.stat(fw_binary).st_mode | 0o200)   # brew ships it 0444
     open(fw_binary, "wb").write(bytes(raw))
     return None
+
+
+GM_DIR = "GraphicsMagick"
+
+
+def stage_gm_runtime(tree, vendor_abs, cl, install_prefix):
+    """GraphicsMagick decodes every format through modules it dlopens (coders/*.so) and
+    reads its .mgk config, both from directories compiled in as the keg's Cellar path
+    (Cellar/graphicsmagick/1.3.49_1/lib/GraphicsMagick/...). The closure only follows link
+    edges, so neither shipped: on a user's machine nav2 map_server failed every .pgm map
+    ("Failed to load image file ... warehouse.pgm"), so localization and nav2 never came up
+    (jazzy 26.11.20.9). Copy them next to the vendored library; the second pass links each
+    module to that same copy (a second libGraphicsMagick in the process aborts), and
+    write_install_prefix_env points MAGICK_* at them. libltdl opens a module through its
+    .la and tries the .la's libdir FIRST: left at Homebrew's Cellar it loaded Homebrew's
+    pnm.so + libGraphicsMagick + libltdl next to the keg's and aborted (semaphore assert),
+    so libdir is rewritten to the module's installed location."""
+    roots = {os.path.dirname(os.path.dirname(os.path.realpath(p))) for p in cl
+             if re.search(r"/libGraphicsMagick\.\d+\.dylib$", p) and os.path.exists(p)}
+    if len(roots) != 1:
+        return None
+    root = roots.pop()
+    src = os.path.join(root, "lib", GM_DIR)
+    if not os.path.isdir(src):
+        return None
+    dst = os.path.join(vendor_abs, GM_DIR)
+    rel = os.path.relpath(dst, tree)
+    files = []
+    # config: lib/GraphicsMagick/config (delegates, type) + share/GraphicsMagick/config
+    # (modules, log, colors -- "Unable to access configuration file (modules.mgk)")
+    pairs = [(os.path.join(src, "config"), os.path.join(dst, "config")),
+             (os.path.join(root, "share", GM_DIR, "config"), os.path.join(dst, "config")),
+             (os.path.join(src, "modules-Q16"), os.path.join(dst, "modules-Q16"))]
+    for s_dir, d_dir in pairs:
+        if not os.path.isdir(s_dir):
+            continue
+        for r, _, names in os.walk(s_dir):
+            for n in names:
+                q = os.path.join(d_dir, os.path.relpath(os.path.join(r, n), s_dir))
+                os.makedirs(os.path.dirname(q), exist_ok=True)
+                shutil.copy2(os.path.join(r, n), q)
+                os.chmod(q, os.stat(q).st_mode | 0o200)
+                if n.endswith(".la"):
+                    inst = os.path.join(install_prefix, os.path.relpath(os.path.dirname(q), tree))
+                    t = open(q, errors="replace").read()
+                    t = re.sub(r"(?m)^libdir=.*$", f"libdir='{inst}'", t)
+                    # link-time only (shouldnotlink=yes modules); full of Homebrew -L paths
+                    t = re.sub(r"(?m)^dependency_libs=.*$", "dependency_libs=''", t)
+                    open(q, "w").write(t)
+                elif is_macho(q):
+                    files.append(q)
+    env = {"MAGICK_CONFIGURE_PATH": f"{rel}/config"}
+    for kind in ("coders", "filters"):
+        if os.path.isdir(os.path.join(dst, "modules-Q16", kind)):
+            env[f"MAGICK_{kind[:-1].upper()}_MODULE_PATH" if kind == "coders"
+                else "MAGICK_FILTER_MODULE_PATH"] = f"{rel}/modules-Q16/{kind}"
+    return {"files": files, "env": env}
 
 
 def main():
@@ -741,6 +809,12 @@ def main():
               + (f"; dropped (heavy/unused Qt modules): "
                  + ", ".join(f"{k}x{v}" for k, v in qt['dropped'].most_common())
                  if qt['dropped'] else ""), flush=True)
+    gm = stage_gm_runtime(tree, vendor_abs, cl, a.install_prefix)
+    if gm:
+        files += gm["files"]
+        cl |= closure(gm["files"], resolve_rpaths=True)
+        print(f"  graphicsmagick staged: {len(gm['files'])} coder/filter modules + config; "
+              + ", ".join(f"{k}={v}" for k, v in sorted(gm["env"].items())), flush=True)
     present = sorted(p for p in cl if os.path.exists(p))
     missing = sorted(p for p in cl if not os.path.exists(p))
     print(f"  closure              : {len(cl)} dylibs "
@@ -851,14 +925,40 @@ def main():
                     dirs.remove(d)
             for n in names:
                 existing[n].append(os.path.relpath(os.path.join(r, n), vendor_abs))
+    # ...but only the copy of the SAME keg: a flat name the first pass gave one keg is not
+    # a home for another keg's file of that name. Pass 1 vendored qt@5's QtQml flat; pass
+    # 2 (VTK's QtQuick module) also wants qtdeclarative's, and reusing the flat bundle
+    # pointed Qt6 at Versions/A inside a Versions/5 bundle (jazzy re-smoke 44776512592).
+    # Judge a source by its REAL keg: Qt 6.12's `qt` meta formula symlinks every
+    # framework into qtbase/qtdeclarative, so opt/qt/lib/QtOpenGL.framework is qtbase's.
+    flat_kegs = collections.defaultdict(set)    # flat vendor entry -> kegs it was copied from
+    prev_rel = {}                               # unit -> entry an earlier pass gave it
+    try:
+        for k, v in json.load(open(os.path.join(os.path.dirname(vendor_abs),
+                                                ".manifest.json"))).items():
+            m = re.search(r"/vendor/opt/([^/]+)/", k)
+            top = v.split(".framework/")[0] + ".framework" if fw_parts(v) else v
+            flat_kegs[top.split("/")[0]].add(m.group(1) if m else keg_of(os.path.realpath(k)))
+            if not m and os.path.exists(k):
+                prev_rel.setdefault(vendor_unit(k), top)
+    except (OSError, ValueError):
+        pass
+    flat_taken = set()    # names whose flat slot holds another keg's copy
     reused = 0
     for key in list(units):
         if key not in existing:
             continue
         for unit, src in list(units[key].items()):
             rels = existing[key]
-            pick = next((r for r in rels if r.split("/")[0] == keg_of(src)), None) \
-                or next((r for r in rels if "/" not in r), None)
+            kg = keg_of(os.path.realpath(src))
+            pick = prev_rel.get(unit) if prev_rel.get(unit) in rels else None
+            pick = pick or next((r for r in rels if r.split("/")[0] == kg), None)
+            flat = next((r for r in rels if "/" not in r), None)
+            if not pick and flat:
+                if flat in flat_kegs and kg not in flat_kegs[flat]:
+                    flat_taken.add(key)
+                else:
+                    pick = flat
             if pick:
                 dest_rel[unit] = pick
                 del units[key][unit]
@@ -868,14 +968,14 @@ def main():
     if reused:
         print(f"  already vendored     : {reused} (placed by an earlier pass, reused)")
     for key, members in sorted(units.items()):
-        if len(members) == 1:
+        if len(members) == 1 and key not in flat_taken:
             dest_rel[next(iter(members))] = key
             continue
         # group by keg first: only a keg wanted twice needs its version in the name, so
         # the common case reads vendor/lib/qt@5/QtCore.framework, not qt@5-5.15.19/...
         by_keg = collections.defaultdict(list)
         for unit, src in members.items():
-            by_keg[keg_of(src)].append((unit, src))
+            by_keg[keg_of(os.path.realpath(src))].append((unit, src))
         used = {}
         for keg, group in sorted(by_keg.items()):
             for unit, src in group:
@@ -1087,7 +1187,7 @@ def main():
     print(f"  relocated            : {' | '.join(olds) or '(none)'} -> {a.install_prefix}")
     print(f"                         {text_fixed} text files, {macho_fixed} mach-o files",
           flush=True)
-    envs = write_install_prefix_env(tree)
+    envs = write_install_prefix_env(tree, gm["env"] if gm else None)
     if envs:
         print(f"  gz install prefixes  : {len(envs)} via share/{ENV_PKG}: "
               + ", ".join(f"{k}={v or '.'}" for k, v in sorted(envs.items())))

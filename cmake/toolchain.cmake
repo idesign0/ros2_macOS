@@ -41,13 +41,63 @@ set(CMAKE_IGNORE_PATH
 # --- ensure correct stdlib ---
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 
+# ci-file-prefix-map (CI only): __FILE__ / debug paths become the paths a user has --
+# the workspace (sources, build dirs, install) maps to relative / the formula prefix, the
+# runner's Xcode SDK and clang resource dir (libc++ asserts, static archives) to the CLT
+# copies, Homebrew kegs whose configs resolve to Cellar/<f>/<version> (OpenCV's inline
+# headers) to the keg's vendored copy. The workspace maps were the workflow's CFLAGS/
+# CXXFLAGS until jazzy 44117826051 showed them lost: this file's set(CMAKE_CXX_FLAGS ...)
+# and the FORCE cache write below shadow the env-seeded cache, so 1901 binaries still
+# named /Users/runner/work/... Apple clang applies the most specific map, so order is free.
+if(IS_CI AND DEFINED ENV{ROS2_PREFIX} AND NOT DEFINED _CI_FILE_PREFIX_MAP_DONE)
+  set(_CI_FILE_PREFIX_MAP_DONE TRUE)
+  set(_ci_maps "")
+  if(DEFINED ENV{GITHUB_WORKSPACE})
+    string(APPEND _ci_maps " -ffile-prefix-map=$ENV{GITHUB_WORKSPACE}/install=$ENV{ROS2_PREFIX}"
+                           " -ffile-prefix-map=$ENV{GITHUB_WORKSPACE}/=")
+  endif()
+  execute_process(COMMAND xcrun clang -print-resource-dir OUTPUT_VARIABLE _ci_res
+                  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  if(_ci_res MATCHES "^/Applications/.*/usr/lib/clang/([^/]+)$")
+    string(APPEND _ci_maps " -ffile-prefix-map=${_ci_res}=/Library/Developer/CommandLineTools/usr/lib/clang/${CMAKE_MATCH_1}")
+  endif()
+  execute_process(COMMAND xcrun --show-sdk-path OUTPUT_VARIABLE _ci_sdk
+                  OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  if(_ci_sdk)
+    file(REAL_PATH "${_ci_sdk}" _ci_sdk_real)
+    get_filename_component(_ci_sdk_dir "${_ci_sdk}" DIRECTORY)
+    foreach(_ci_p "${_ci_sdk_real}" "${_ci_sdk}" "${_ci_sdk_dir}/MacOSX.sdk")
+      string(APPEND _ci_maps " -ffile-prefix-map=${_ci_p}=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk")
+    endforeach()
+  endif()
+  foreach(_ci_f opencv@4)
+    if(EXISTS "/opt/homebrew/opt/${_ci_f}")
+      file(REAL_PATH "/opt/homebrew/opt/${_ci_f}" _ci_keg)
+      string(APPEND _ci_maps " -ffile-prefix-map=${_ci_keg}=$ENV{ROS2_PREFIX}/vendor/opt/${_ci_f}")
+    endif()
+  endforeach()
+  foreach(_ci_lang C CXX OBJC OBJCXX)
+    string(APPEND CMAKE_${_ci_lang}_FLAGS "${_ci_maps}")
+  endforeach()
+  unset(_ci_maps)
+endif()
+
 # Setting all the Build Tests Off
 set(BUILD_TESTING OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_UNIT_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 set(BUILD_TESTS OFF CACHE BOOL "Disable building tests" FORCE)
 
-# Make sure all workspace-installed packages are visible
-set(ROS_WORKSPACE_INSTALL "${WORKSPACE_ROOT}/install")
+# Make sure all workspace-installed packages are visible.
+# ci-install-prefix: CI builds INTO the formula's prefix, /opt/homebrew/opt/ros2-<distro>
+# (ROS2_PREFIX, a symlink to the workspace's install/), so every path a package records at
+# build time -- configs, env hooks, compiled-in data/plugin dirs -- is already the installed
+# one. Pointing the prefix path at the workspace dir instead would leak /Users/runner/... into
+# every exported config that records where a dependency was found.
+if(DEFINED ENV{ROS2_PREFIX} AND IS_DIRECTORY "$ENV{ROS2_PREFIX}")
+  set(ROS_WORKSPACE_INSTALL "$ENV{ROS2_PREFIX}")
+else()
+  set(ROS_WORKSPACE_INSTALL "${WORKSPACE_ROOT}/install")
+endif()
 list(APPEND CMAKE_PREFIX_PATH "${ROS_WORKSPACE_INSTALL}")
 
 # Homebrew's tl-expected ships tl-expected-config.cmake (hyphen); several
@@ -173,11 +223,11 @@ endif()
 # Ceres
 set(BUILD_BENCHMARKS OFF CACHE BOOL "Disable building benchmarks" FORCE) 
 set(BUILD_EXAMPLES OFF CACHE BOOL "Disable building examples" FORCE)
-set(Ceres_DIR "${WORKSPACE_ROOT}/install/lib/cmake/Ceres" CACHE PATH "Ceres Solver CMake path" FORCE)
+set(Ceres_DIR "${ROS_WORKSPACE_INSTALL}/lib/cmake/Ceres" CACHE PATH "Ceres Solver CMake path" FORCE)
 
 # --- yaml-cpp from Kilted ROS 2 (opt/vendor install) ---
 # Path to the vendor install prefix
-set(YAML_CPP_PREFIX "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor" CACHE PATH "yaml-cpp vendor prefix")
+set(YAML_CPP_PREFIX "${ROS_WORKSPACE_INSTALL}/opt/yaml_cpp_vendor" CACHE PATH "yaml-cpp vendor prefix")
 
 # Make CMake find the config
 list(APPEND CMAKE_PREFIX_PATH "${YAML_CPP_PREFIX}")
@@ -598,6 +648,25 @@ list(APPEND CMAKE_INCLUDE_PATH "/opt/homebrew/include")
 #     so include-path is all that's needed; scoped to find_path (not a global -I) so it
 #     doesn't shadow Fast-DDS's own relative use. ---
 WORKSPACE_PATH(_FASTDDS_ASIO_INC "eProsima/Fast-DDS/thirdparty/asio/asio/include")
+# ci-asio-in-prefix: a package that exports this include dir (off_highway_premium_radar)
+# would hand overlays the runner's source checkout. In CI, use a copy INSIDE the install
+# prefix instead, so the exported path exists in the keg and ships with it. Copied to a
+# unique temp dir and renamed into place: concurrent configures never see a partial copy.
+if(IS_CI AND DEFINED ENV{ROS2_PREFIX} AND EXISTS "${_FASTDDS_ASIO_INC}/asio.hpp")
+  set(_ci_asio_dst "$ENV{ROS2_PREFIX}/opt/fastdds_asio/include")
+  if(NOT EXISTS "${_ci_asio_dst}/asio.hpp")
+    string(RANDOM LENGTH 12 _ci_rnd)
+    set(_ci_asio_tmp "$ENV{ROS2_PREFIX}/opt/fastdds_asio/.tmp-${_ci_rnd}")
+    file(COPY "${_FASTDDS_ASIO_INC}/" DESTINATION "${_ci_asio_tmp}")
+    file(RENAME "${_ci_asio_tmp}" "${_ci_asio_dst}" RESULT _ci_asio_mv)
+    if(NOT _ci_asio_mv STREQUAL "0")
+      file(REMOVE_RECURSE "${_ci_asio_tmp}")     # another configure won the race
+    endif()
+  endif()
+  if(EXISTS "${_ci_asio_dst}/asio.hpp")
+    set(_FASTDDS_ASIO_INC "${_ci_asio_dst}")
+  endif()
+endif()
 if(EXISTS "${_FASTDDS_ASIO_INC}/asio.hpp")
   list(APPEND CMAKE_INCLUDE_PATH "${_FASTDDS_ASIO_INC}")
   message(STATUS "Toolchain: using Fast-DDS vendored asio 1.34.2 at ${_FASTDDS_ASIO_INC}")
@@ -628,6 +697,23 @@ foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER
   set(${_lf} "${${_lf}} -L/opt/homebrew/lib" CACHE STRING "" FORCE)
 endforeach()
 
+# ci-dead-strip-dylibs: Apple ld keeps every dylib on the link line, used or not; Ubuntu's ROS
+# builds link with --as-needed, which drops the unused ones. ament hands each target whole
+# ${pkg}_TARGETS lists (every typesupport of a message package, the Python ones included) and
+# this toolchain adds OpenGL/glog/backward to every link above, so librclcpp ended up with 70
+# direct deps and a nav2 server with 346 direct / 1000+ loaded libraries: ~140 s from exec to
+# its first log line in jazzy 26.11.16.7 (keg-built and overlay-built alike). Drop dylibs the
+# output references no symbol from. Plugins and typesupports loaded by name at run time are
+# dlopen()ed, not linked, so nothing that is needed goes.
+if(APPLE AND NOT DEFINED _CI_DEAD_STRIP_DONE)
+  set(_CI_DEAD_STRIP_DONE TRUE)
+  foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
+    if(NOT "${${_lf}}" MATCHES "dead_strip_dylibs")
+      set(${_lf} "${${_lf}} -Wl,-dead_strip_dylibs" CACHE STRING "" FORCE)
+    endif()
+  endforeach()
+endif()
+
 # --- Make the vendored yaml-cpp resolvable for a BARE `-lyaml-cpp` -------------------------
 # yaml_cpp_vendor installs to the nested prefix install/opt/yaml_cpp_vendor/{lib,include}, which is
 # not on the normal <prefix>/lib search path, so any package linking the bare name `yaml-cpp`
@@ -648,7 +734,7 @@ endforeach()
 # base packages configure before yaml_cpp_vendor is installed (they do not need it).
 # FIND-guarded: the toolchain is re-read on every configure and these are FORCEd cache appends,
 # so without it the flag would accumulate on repeat configures of the same build tree.
-set(_ci_ycpp_libdir "${WORKSPACE_ROOT}/install/opt/yaml_cpp_vendor/lib")
+set(_ci_ycpp_libdir "${ROS_WORKSPACE_INSTALL}/opt/yaml_cpp_vendor/lib")
 if(EXISTS "${_ci_ycpp_libdir}")
   foreach(_lf CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
     string(FIND "${${_lf}}" "${_ci_ycpp_libdir}" _ci_ycpp_seen)

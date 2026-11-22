@@ -1,0 +1,68 @@
+# Exceptions to check_keg_paths.py: "<category> <glob on the keg-relative path> # reason".
+# Every line must name WHY the path is harmless or what fixes it. Text-file categories
+# (runner, tmp, cellar, sdk, python, kegref) are never allowed for our own packages.
+
+# boost-1.89 is committed prebuilt (ros-commondep) without -headerpad_max_install_names, so
+# install_name_tool cannot repoint these sibling @rpath loads. They resolve through the
+# rpath every consumer carries to vendor/opt/boost-1.89/lib (package_tree step 4).
+# Fix: relink boost-1.89 with -headerpad_max_install_names.
+rpath vendor/opt/boost-1.89/lib/libboost_json.dylib
+rpath vendor/opt/boost-1.89/lib/libboost_fiber.dylib
+rpath vendor/opt/boost-1.89/lib/libboost_coroutine.dylib
+rpath vendor/opt/boost-1.89/lib/libboost_filesystem.dylib
+rpath vendor/opt/boost-1.89/lib/libboost_wserialization.dylib
+
+# Homebrew bottles we vendor were compiled by Homebrew: their binaries carry Homebrew's own
+# Cellar prefix, build sandbox and SDK as compiled-in strings (build info, __FILE__,
+# default search dirs). Changing them means rebuilding those formulae from source.
+cellar-bin vendor/*
+tmp-bin vendor/*
+sdk-bin vendor/*
+
+# Upstream text that names a path but is never used as one on this platform:
+# ament_pclint ships PC-lint sample configs written for a 2017 Xcode; nothing reads them.
+sdk lib/python3.11/site-packages/ament_pclint/config/gcc/co-osx-*.lnt
+# pinocchio: the Xcode path is inside a source comment.
+sdk vendor/opt/pinocchio/include/pinocchio/src/autodiff/casadi/algorithm/algo.hxx
+# CPython's own test suite uses fake SDK/framework paths as test data.
+sdk vendor/lib/Python.framework/Versions/3.*/lib/python3.*/test/*
+sdk vendor/lib/python@3.*/Python.framework/Versions/3.*/lib/python3.*/test/*
+python vendor/lib/Python.framework/Versions/3.*/lib/python3.*/test/*
+python vendor/lib/python@3.*/Python.framework/Versions/3.*/lib/python3.*/test/*
+# Homebrew's sitecustomize.py compares sys.prefix against its Cellar dir (logic, not a lookup).
+cellar vendor/lib/Python.framework/Versions/3.*/lib/python3.*/sitecustomize.py
+cellar vendor/lib/python@3.*/Python.framework/Versions/3.*/lib/python3.*/sitecustomize.py
+# distutils picks a default SDK path only when CFLAGS name none (logic, not a lookup).
+sdk vendor/lib/python@3.*/Python.framework/Versions/3.*/lib/python3.*/distutils/unixccompiler.py
+
+# <prefix>/... references to a path upstream itself never creates:
+# gz-sim / sdformat: deprecated macros ("should not be used"); upstream's own install has no
+# such dir either, the code goes through getSystemConfigPath() / getSharePath().
+kegref opt/gz_sim_vendor/include/gz/sim9/gz/sim/config.hh
+kegref opt/sdformat_vendor/include/gz/sdformat15/sdf/config.hh
+# plotjuggler: PJ_PLUGIN_INSTALL_DIRECTORY says lib/plotjuggler/plugins while its ament
+# install puts the plugins in lib/plotjuggler, where PlotJuggler also looks.
+kegref share/plotjuggler/cmake/plotjugglerTargetsExport.cmake
+# Vendored formulae: pkg-config variables (bindir, datadir, an optional component's
+# includedir) for parts we do not ship; a nonexistent -I/-L dir is ignored by the compiler
+# and linker, and no Libs: entry names a missing library.
+kegref vendor/opt/*/lib/pkgconfig/*.pc
+kegref vendor/opt/*/share/pkgconfig/*.pc
+kegref vendor/opt/bullet/lib/bullet/*/pkgconfig/*.pc
+# Default directories for optional runtime plugins/data that are empty unless installed.
+kegref vendor/opt/hdf5/include/H5pubconf.h
+kegref vendor/opt/netcdf/lib/libnetcdf.settings
+kegref vendor/opt/dartsim/include/dart/config.hpp
+# qmake's PKG_CONFIG default; qmake is not how the tree or an overlay builds.
+kegref vendor/opt/qt@5/mkspecs/qmodule.pri
+# SuiteSparse SPEX STATIC targets name libgmp.a; only a static link of SPEX would need it.
+kegref vendor/opt/suite-sparse/lib/cmake/SPEX/SPEXTargets_static.cmake
+
+# abseil-compat/: the gz job's snapshot of Homebrew's abseil dylibs (see the layered
+# workflow): Homebrew-built, so the gmock helpers carry Homebrew's build sandbox paths.
+tmp-bin abseil-compat/*
+
+# devfiles' boost_python314/numpy314 config wrappers name vendor/opt/boost-python3, which
+# is not vendored: an overlay asking Boost for python314 fails at link. Fix in devfiles.py.
+kegref vendor/opt/boost-1.89/lib/cmake/boost_numpy314-1.89.0/boost_numpy314-config.cmake
+kegref vendor/opt/boost-1.89/lib/cmake/boost_python314-1.89.0/boost_python314-config.cmake
