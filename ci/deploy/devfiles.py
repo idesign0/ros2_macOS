@@ -292,6 +292,29 @@ def write_pinocchio_prelude(tree):
     return done
 
 
+def pinocchio_first(tree):
+    """Move pinocchio/coal to the front of each package's exported dependencies."""
+    # the prelude switches the project to the bundled Homebrew Boost, so it must run before
+    # any other exported dependency finds the keg's boost-1.89 (linear_feedback_controller
+    # lists realtime_tools first, which finds Boost::boost)
+    done = []
+    for f in glob.glob(os.path.join(tree, "share", "*", "cmake",
+                                    "ament_cmake_export_dependencies-extras.cmake")):
+        t = read(f)
+        m = re.search(r'set\(_exported_dependencies "([^"]*)"\)', t)
+        if not m:
+            continue
+        deps = m.group(1).split(";")
+        first = [d for d in deps if d in ("pinocchio", "coal")]
+        new = first + [d for d in deps if d not in first]
+        if first and new != deps:
+            t = t[:m.start(1)] + ";".join(new) + t[m.end(1):]
+            os.chmod(f, os.stat(f).st_mode | 0o200)
+            io.open(f, "w").write(t)
+            done.append(f.split(os.sep)[-3])
+    return sorted(done)
+
+
 def cmake_names_index():
     """CMake package name -> every formula providing a config for it. Several can
     (OpenCV: opencv and opencv@4; Eigen3: eigen and eigen@3; Boost), which is exactly
@@ -1054,6 +1077,9 @@ def link(a, tree):
     pre = write_pinocchio_prelude(tree)
     if pre:
         print(f"  Homebrew-boost prelude: {', '.join(pre)}")
+        moved = pinocchio_first(tree)
+        if moved:
+            print(f"  pinocchio found first: {', '.join(moved)}")
     state = json.load(open(os.path.join(tree, "vendor", ".devfiles.json")))
     man = {}
     mp = os.path.join(tree, "vendor", ".manifest.json")
@@ -1320,7 +1346,10 @@ def link(a, tree):
 
     # 4. a colcon package that puts the shipped prefixes ahead of the user's Homebrew
     lines = []
-    for name, info in sorted(state["prefixes"].items()):
+    # each line is prepended, so the last one is searched first. qt@5 goes last: rviz here
+    # is Qt5, and find_package(QT NAMES Qt6 Qt5) takes whichever prefix comes first
+    # (rviz_2d_overlay_plugins got Qt6 from the qtbase prefix that VTK brings)
+    for name, info in sorted(state["prefixes"].items(), key=lambda kv: (kv[0] == "qt@5", kv[0])):
         d = info["dest"]
         if info.get("private"):
             continue            # reached only through write_pinocchio_prelude()
