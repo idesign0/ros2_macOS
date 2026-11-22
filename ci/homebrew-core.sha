@@ -10,5 +10,5 @@
 # resolved versions -- and the cache -- stable between refreshes, and makes a build
 # reproducible from this SHA plus matched_packages.txt.
 #
-# Refreshed 2026-11-01.
-4392eb17026de31d12a17bdf6b17b753f767d198
+# Refreshed 2026-11-22.
+aaa62293b46519df9e3429ee6afb559761156e3d
