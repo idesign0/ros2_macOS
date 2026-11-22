@@ -1864,7 +1864,7 @@
 	branch = master
 [submodule "ros-visualization/rviz_2d_overlay_plugins"]
 	path = ros-visualization/rviz_2d_overlay_plugins
-	url = https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git
+	url = https://github.com/idesign0/id_rviz_2d_overlay_plugins.git
 	branch = main
 [submodule "ros-visualization/rviz_satellite"]
 	path = ros-visualization/rviz_satellite
