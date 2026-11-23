@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/dhruvpatel29/jazzy-ros2/src/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

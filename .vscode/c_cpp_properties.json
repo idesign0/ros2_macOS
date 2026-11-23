@@ -5,6 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/homebrew/include/**",
+                "/opt/homebrew/opt/ros2-jazzy/include/**",
                 "${HOME}/jazzy-ros2/install/include/**"
             ],
             "defines": [],

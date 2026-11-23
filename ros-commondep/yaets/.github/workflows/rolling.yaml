@@ -1,0 +1,41 @@
+name: rolling
+
+on:
+  pull_request:
+    branches:
+      - rolling
+  push:
+    branches:
+      - rolling
+  schedule:
+      - cron: '0 0 * * 6'     
+jobs:
+  build-and-test:
+    runs-on: ubuntu-26.04
+    container:
+      image: ghcr.io/ros-tooling/setup-ros-docker/setup-ros-docker-ubuntu-resolute-ros-rolling-ros-base:master
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: rolling
+      - name: build and test
+        uses: ros-tooling/action-ros-ci@0.4.8
+        with:
+          package-name: yaets
+          target-ros2-distro: rolling
+          colcon-defaults: |
+            {
+              "test": {
+                "parallel-workers" : 1
+              }
+            }
+          colcon-mixin-name: coverage-gcc
+          colcon-mixin-repository: https://raw.githubusercontent.com/colcon/colcon-mixin-repository/master/index.yaml
+      - name: Codecov
+        uses: codecov/codecov-action@v1.2.1
+        with:
+          file: ros_ws/lcov/total_coverage.info
+          flags: unittests
+          name: codecov-umbrella
+          # yml: ./codecov.yml
+          fail_ci_if_error: false

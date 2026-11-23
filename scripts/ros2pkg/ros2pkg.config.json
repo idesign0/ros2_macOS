@@ -1,0 +1,89 @@
+{
+  "_comment": "Config for ros2pkg.py. Edit this, not the code.",
+
+  "_manifest_dir": "Relative paths resolve against the scripts folder, so all generated data stays inside the repo (no dependency on ~/Downloads). Use an absolute or ~ path to override.",
+  "manifest_dir": "manifests",
+  "home_dir": "~",
+
+  "distros": {
+    "humble": "humble-ros2/src",
+    "jazzy":  "jazzy-ros2/src",
+    "kilted": "kilted-ros2/src"
+  },
+
+  "_domains": "domain -> physical folder in src/. Existing folders kept as-is; new domains get clean names. A repo classified into <domain>[/<subdomain>] lands at <folder>[/<subdomain>]/<repo>.",
+  "domains": {
+    "core":          { "folder": "ros2" },
+    "build_system":  { "folder": "ament" },
+    "middleware":    { "folder": "middleware" },
+    "geometry_tf":   { "folder": "geometry" },
+    "perception":    { "folder": "ros-perception" },
+    "navigation":    { "folder": "ros-planning" },
+    "manipulation":  { "folder": "moveit" },
+    "control":       { "folder": "ros2_control" },
+    "drivers":       { "folder": "ros-drivers" },
+    "simulation":    { "folder": "gzsim" },
+    "visualization": { "folder": "ros-visualization" },
+    "tooling":       { "folder": "ros-tooling" },
+    "fleet":         { "folder": "fleet" },
+    "teleop":        { "folder": "teleop" },
+    "micro_ros":     { "folder": "micro_ros" },
+    "aerial":        { "folder": "aerial" },
+    "autonomous_driving": { "folder": "autonomous_driving" },
+    "_incoming":     { "folder": "_incoming" }
+  },
+
+  "_overrides": "Per-repo hard pins that beat every rule. Use for repos that span domains (e.g. a driver repo that also ships a moveit_config). Value is `domain` or `domain/subdomain`.",
+  "overrides": {
+    "ur_robot_driver": "drivers/arm",
+    "franka_ros2": "drivers/arm"
+  },
+
+  "_domain_rules": "ORDERED. First match wins. A rule matches if repo-name matches `repo`, OR any package name matches `pkg`, OR owner is in `owners`. Regex, case-insensitive. Put specific domains before generic ones.",
+  "domain_rules": [
+    { "domain": "manipulation", "pkg": "^moveit|_moveit|moveit_|srdf|^pilz|pick_ik|bio_ik|grasp|graph_msgs|py_binding_tools|rviz_visual_tools|moveit_task|affordance_primitives", "repo": "moveit|srdfdom|pymoveit", "owners": ["moveit", "PickNikRobotics"] },
+
+    { "domain": "aerial", "pkg": "^as2_|aerostack|crazyflie|^mavros|^mavlink|_uav|^px4|_multirotor|ardrone|tello", "repo": "aerostack2|mavros|mavlink|crazyflie|as2_", "owners": ["aerostack2", "mavlink"] },
+
+    { "domain": "autonomous_driving", "pkg": "^autoware|_autoware|lanelet2|^tier4|carma|^opendrive", "repo": "autoware|lanelet|tier4|carma", "owners": ["autowarefoundation", "tier4", "Autoware-AI"] },
+
+    { "domain": "navigation", "pkg": "^nav2|_nav2|nav2_|costmap|^amcl|^slam|slam_|cartographer|_localization|robot_localization|behaviortree|^bt_|_bt_|^smac|teb_|^dwb|regulated_pure|spatio_temporal|voxel_layer|_recovery|opennav|^planner|nonpersistent_voxel", "repo": "navigation2|nav2|slam|cartographer|behaviortree|robot_localization|teb_local", "owners": ["ros-navigation", "ros-planning", "SteveMacenski", "open-navigation", "cra-ros-pkg", "rst-tu-dortmund", "MOLAorg", "MRPT", "mrpt-ros-pkg", "Ekumen-OS"] },
+
+    { "domain": "control", "pkg": "_controller$|_controllers$|controller_|hardware_interface|ros2_control|control_toolbox|control_msgs|joint_trajectory|kinematics_interface|realtime_tools|transmission|admittance|gripper_controller|forward_command|joint_state_broadcaster|effort_controllers|position_controllers|velocity_controllers|steering_controller", "repo": "ros2_control|control_msgs|control_toolbox|kinematics_interface|realtime_tools", "owners": ["ros-controls"] },
+
+    { "domain": "middleware", "pkg": "^rmw_|_rmw$|_dds|cyclonedds|fastrtps|fastdds|fast_dds|fast-dds|connext|iceoryx|zenoh|_cdr|micro_xrce|^xrce", "repo": "Fast-DDS|Fast-CDR|cyclonedds|iceoryx|rmw_|zenoh|foonathan", "owners": ["eProsima", "eclipse-cyclonedds", "eclipse-iceoryx", "eclipse-zenoh", "eclipse-ecal"] },
+
+    { "domain": "micro_ros", "pkg": "micro_ros|microros|micro-ros", "repo": "micro_ros|micro-ROS", "owners": ["micro-ROS"] },
+
+    { "domain": "fleet", "pkg": "^rmf_|_rmf_|traffic_editor", "repo": "^rmf|_rmf", "owners": ["open-rmf"] },
+
+    { "domain": "teleop", "pkg": "^teleop|_teleop|^joy$|^joy_|joystick|spacenav|gamepad", "repo": "teleop|^joy", "owners": ["ros-teleop"] },
+
+    { "domain": "simulation", "pkg": "gazebo|^gz_|_gz_|ros_gz|ignition|^ign_|webots|mujoco|^isaac|carla|coppelia|_simulation$|physics_sim|actuator_msgs", "repo": "gazebo|gz_|ros_gz|ignition|webots|mujoco", "owners": ["gazebosim", "gazebo-release", "ros-simulation", "cyberbotics", "ignitionrobotics", "ignition-release"] },
+
+    { "domain": "visualization", "pkg": "^rviz|rviz_|^rqt|rqt_|qt_gui|foxglove|plotjuggler|rosboard|interactive_markers|tango_icons|python_qt_binding|^marker", "repo": "rviz|rqt|qt_gui|foxglove|PlotJuggler|python_qt_binding|interactive_markers", "owners": ["ros-visualization", "foxglove", "facontidavide"] },
+
+    { "domain": "drivers", "subdomain": "arm", "pkg": "^ur_|_ur_|universal_robot|franka|kinova|kortex|^panda|iiwa|kuka|xarm|robotiq|schunk|dynamixel|elite_|_manipulator_driver|flexiv|jaka", "repo": "Universal_Robots|franka|kinova|xarm|robotiq|schunk|DynamixelSDK|kuka", "owners": ["UniversalRobots", "frankaemika", "Kinovarobotics", "ROBOTIS-GIT", "SCHUNK-GmbH-Co-KG", "qbrobotics"] },
+    { "domain": "drivers", "subdomain": "lidar", "pkg": "lidar|_laser|velodyne|ouster|sick|hokuyo|rplidar|slamtec|^urg|livox|lslidar", "repo": "lidar|velodyne|ouster|sick|rplidar|slamtec|livox", "owners": ["ouster-lidar", "SICKAG", "Slamtec", "AutonicsLiDAR"] },
+    { "domain": "drivers", "subdomain": "camera", "pkg": "realsense|usb_cam|depthai|^zed|orbbec|astra|kinect|_flir|spinnaker|basler|pylon|gscam|^v4l|inuitive|nerian", "repo": "realsense|usb_cam|depthai|zed|orbbec|libcamera", "owners": ["IntelRealSense", "orbbec", "stereolabs", "luxonis", "alliedvision", "nerian-vision", "inuitive", "libcamera"] },
+    { "domain": "drivers", "subdomain": "imu_gnss", "pkg": "^imu|_imu|gnss|^gps|_gps|_ins$|novatel|microstrain|xsens|vectornav|ublox|septentrio|^sbg|witmotion|marvelmind|vrpn", "repo": "gps|imu|novatel|microstrain|septentrio|sbg|vrpn", "owners": ["novatel", "LORD-MicroStrain", "SBG-Systems", "septentrio-gnss", "MarvelmindRobotics", "vrpn"] },
+    { "domain": "drivers", "subdomain": "mobile_base", "pkg": "turtlebot|kobuki|husky|jackal|create_robot|libcreate|husarion|rosbot|neobotix|cob_|leo_|scout_|ackermann_msgs|clearpath", "repo": "turtlebot|kobuki|create_robot|libcreate|husarion|cob_|leo_robot|clearpath", "owners": ["kobuki-base", "turtlebot", "husarion", "4am-robotics", "AutonomyLab", "fictionlab", "neobotix", "robotont", "clearpathrobotics"] },
+    { "domain": "drivers", "pkg": "_driver$|_drivers$|_hardware$|canopen|_bringup$|_description$|adi_|bno055|_socketcan", "repo": "_driver|_drivers|^adi_", "owners": ["ros-drivers", "ros-naoqi", "astuff", "DataspeedInc", "analogdevicesinc", "olive-robotics"] },
+
+    { "domain": "perception", "subdomain": "pointcloud", "pkg": "^pcl|_pcl|point_cloud|pointcloud|perception_pcl|octomap|pointcloud_to_laserscan", "repo": "pcl|octomap|perception_pcl", "owners": ["OctoMap", "PRBonn"] },
+    { "domain": "perception", "subdomain": "vision", "pkg": "vision_|_vision|^image_|cv_bridge|apriltag|aruco|fiducial|object_recognition|^yolo|_detector|find_object|^depth_|opencv|event_camera|_dvs", "repo": "vision_opencv|vision_msgs|image_common|image_pipeline|apriltag|find_object|event_camera", "owners": ["AprilRobotics", "wg-perception", "ros-event-camera", "roboception"] },
+    { "domain": "perception", "pkg": "laser_geometry|laser_filters|laser_proc|^filters$|depth_image_proc", "repo": "laser_geometry|laser_filters|image_common", "owners": ["ros-perception"] },
+
+    { "domain": "geometry_tf", "pkg": "^tf2|tf2_|geometry2|^kdl|kdl_parser|orocos_kdl|^urdf|urdfdom|xacro|robot_state_publisher|joint_state_publisher|eigen_stl|geometric_shapes|^angles$|^tf$", "repo": "geometry2|kdl|urdf|xacro|robot_state_publisher|joint_state_publisher|geometric_shapes|eigen_stl|angles", "owners": [] },
+
+    { "domain": "build_system", "pkg": "^ament|ament_|_cmake|rosidl|python_cmake|eigen3_cmake|pybind11|google_benchmark|uncrustify|googletest|^gmock|^gtest|performance_test_fixture", "repo": "^ament|_cmake|rosidl|pybind11|googletest|uncrustify|google_benchmark", "owners": ["ament"] },
+
+    { "domain": "tooling", "pkg": "rosbag2|ros2cli|^launch$|^launch_|ros_testing|_tracing|ros2_tracing|diagnostic|keyboard_handler|^demos$|_tutorials|sros2|^ros2$|osrf_|^rpyutils|^rosidl_runtime_py", "repo": "rosbag2|ros2cli|^launch|ros_testing|ros2_tracing|diagnostics|demos|examples|ros_tutorials|sros2|osrf", "owners": ["ros-tooling", "osrf"] },
+
+    { "domain": "core", "pkg": "^rclcpp|^rclpy|^rcl$|^rcl_|^rmw$|rcutils|rcpputils|rmw_implementation|libstatistics|rcl_interfaces|^std_msgs|^std_srvs|builtin_interfaces|common_interfaces|action_msgs|rosidl_typesupport|spdlog_vendor|libyaml_vendor|yaml_cpp_vendor|tinyxml|console_bridge|ros_environment|class_loader|pluginlib|resource_retriever|lifecycle|unique_identifier|^rosgraph|mimick|tlsf|^rmw_dds_common|bond_core|^bond|backward_ros|^rosbag2", "repo": "^rcl|^rmw|rcutils|rcpputils|rcl_interfaces|common_interfaces|class_loader|pluginlib|resource_retriever|console_bridge|spdlog|libyaml|yaml_cpp|tinyxml|unique_identifier|bond_core|backward_ros", "owners": ["ros2"] },
+
+    { "domain": "build_system", "pkg": "_vendor$|^catch_ros2|_cmake_|boost_plugin_loader|ros_industrial_cmake", "repo": "_vendor$|catch_ros2|cmake_boilerplate", "owners": [] },
+
+    { "domain": "core", "subdomain": "interfaces", "pkg": "_msgs$|_srvs$|_interfaces$|_action$|_actions$", "repo": "_msgs$|_interfaces$", "owners": [] }
+  ]
+}

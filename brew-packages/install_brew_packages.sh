@@ -46,16 +46,160 @@ for pkg in "${PACKAGE_NAMES_ARRAY[@]}"; do
   packages+=("$pkg")
 done
 
+# --- install with retries -------------------------------------------------------------------
+# A bottle fetch can fail transiently -- a DNS blip on ghcr.io took libzip out of one humble
+# base job ("Failed to download resource libzip" / "Could not resolve host: ghcr.io" x4), and
+# because that was swallowed with a warning it silently cost 19 packages downstream:
+# gz-fuel_tools' find_package(ZIP) failed -> gz_ros2_control + ros_gz_sim (+ ouster_ros, which
+# has its own Findlibzip) -> 16 cascades through ign_ros2_control / ros_ign_gazebo.
+# brew's own curl retries fire immediately, so they all land inside the same outage window;
+# back off for tens of seconds instead, and say loudly what is still missing at the end.
+install_with_retry() {
+    local pkg="$1"
+    local attempt
+    for attempt in 1 2 3; do
+        if brew install "$pkg"; then
+            return 0
+        fi
+        echo "   $pkg: install attempt ${attempt}/3 failed"
+        if [ "$attempt" -lt 3 ]; then
+            sleep $(( attempt * 20 ))
+        fi
+    done
+    return 1
+}
+
+FAILED_PKGS=()
+
 # Only enter the loop if there is actually something in the array
 if [ ${#packages[@]:-0} -gt 0 ]; then
     for pkg in "${packages[@]}"; do
         echo "🔹 Installing $pkg..."
-        brew install "$pkg" || {
-            echo "⚠️ Warning: Failed to install $pkg, continuing..."
+        install_with_retry "$pkg" || {
+            echo "⚠️ Warning: Failed to install $pkg after 3 attempts, continuing..."
+            FAILED_PKGS+=("$pkg")
         }
     done
 else
     echo "✅ No new packages to install."
 fi
+
+# A few entries are legitimately not installable here and nothing in the workspace needs them;
+# those are listed in allow_install_failures.txt. Anything else is fatal. Failing now costs one
+# job; letting it through costs a whole run of phantom failures somewhere else entirely, because
+# a missing formula only resurfaces as somebody else's find_package error in a later job.
+ALLOW_FILE="$SCRIPT_DIR/allow_install_failures.txt"
+is_allowed_failure() {
+    local pkg="$1" line
+    [ -f "$ALLOW_FILE" ] || return 1
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="$(echo "$line" | awk '{print $1}')"
+        [ -z "$line" ] && continue
+        [ "$line" = "$pkg" ] && return 0
+    done < "$ALLOW_FILE"
+    return 1
+}
+
+if [ ${#FAILED_PKGS[@]:-0} -gt 0 ]; then
+    UNEXPECTED=()
+    for pkg in "${FAILED_PKGS[@]}"; do
+        if is_allowed_failure "$pkg"; then
+            echo "   (tolerated) $pkg is listed in allow_install_failures.txt"
+        else
+            UNEXPECTED+=("$pkg")
+        fi
+    done
+
+    if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+        {
+            echo "### Homebrew formulae that failed to install"
+            echo
+            for pkg in "${FAILED_PKGS[@]}"; do
+                if is_allowed_failure "$pkg"; then
+                    echo "- \`${pkg}\` (tolerated)"
+                else
+                    echo "- \`${pkg}\` **UNEXPECTED**"
+                fi
+            done
+        } >> "$GITHUB_STEP_SUMMARY"
+    fi
+
+    if [ ${#UNEXPECTED[@]:-0} -gt 0 ]; then
+        echo "::error::brew: ${#UNEXPECTED[@]} formula(e) failed to install and are not in allow_install_failures.txt: ${UNEXPECTED[*]}"
+        echo "Refusing to build against an incomplete Homebrew prefix. Re-run this job;"
+        echo "if the formula is genuinely unavailable, add it to allow_install_failures.txt."
+        exit 1
+    fi
+
+    echo "All install failures are in allow_install_failures.txt; continuing."
+fi
+
+
+# ---------------------------------------------------------------------------------------
+# Record the Homebrew versions this job ACTUALLY installed.
+#
+# matched_packages.txt supplies the formula NAMES; `brew install "$pkg"` above passes no
+# version, so what lands is whatever homebrew-core currently says -- the versions written
+# beside the names in that file are a record, not a constraint. A record can be stale: it
+# said abseil 20260107.1 (soname 2601) while jobs were installing 20260817.0 (2608).
+#
+# The gz-install cache key hashes this file, so the key reflects what the job really has
+# rather than what some earlier commit claimed. Without it, a cached gz tree built against
+# an older brew is restored into a job that installed a newer one, and nothing notices.
+# That is how gz and protobuf ended up linked to abseil 2601 after abseil DELETED
+# libabsl_crc_cpu_detect and libabsl_borrowed_fixup_buffer: 236 dylibs and 5 executables in
+# the shipped ros2-jazzy keg cannot be dlopen'd at all.
+#
+# Narrowed to the formulae this workspace names. Hashing all of `brew list --versions`
+# would also cover the runner image's preinstalls, whose churn would rebuild gz on every
+# image bump for no reason.
+ROOT="${GITHUB_WORKSPACE:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+# The state file drives BOTH the gz cache key and the inter-job skew gate, so it has to
+# cover every formula the build LINKS -- not just the ones we install. Two formulae are
+# linked but deliberately absent from matched_packages.txt: simdjson (never named) and
+# openssl@4 (named would mean installed, and openssl@4 is NOT keg-only -- it links into
+# /opt/homebrew/include, shadows openssl@3 and makes ASN1_STRING opaque, which hard-fails
+# fastrtps and librealsense2). Both showed up still loading from brew after packaging in
+# smoke run 41055576065, so a version change in either is invisible to the gate today.
+# also_linked.txt names them for the state file WITHOUT putting them on the install list.
+ALSO_LINKED="$SCRIPT_DIR/also_linked.txt"
+{ awk '{print $1}' "$INPUT_FILE"
+  [ -f "$ALSO_LINKED" ] && grep -vE '^\s*(#|$)' "$ALSO_LINKED" | awk '{print $1}'
+} | sort -u > /tmp/brew_want.txt
+# Record the LINKED version, not the keg inventory. `brew list --versions` prints every
+# keg present, so a baseline job that still carries a superseded keg reads as skew against a
+# job that pruned to one -- `brotli: baseline "1.2.0 1.2.1" -> this job "1.2.1"`, same linked
+# version on both sides. That shape was 12 of humble's 16 gate diffs and ALL five kilted
+# domain failures on 2026-10-31 (brotli, harfbuzz, icu4c@78, libpq, python@3.14 -- none of
+# them load-bearing). What a build actually links is /opt/homebrew/opt/<f>, so that is what
+# the state file and therefore the gate and the gz cache key must track.
+HB_PREFIX="$(brew --prefix 2>/dev/null || echo /opt/homebrew)"
+while read -r _name; do
+  [ -n "$_name" ] || continue
+  _cellar="$HB_PREFIX/Cellar/$_name"
+  [ -d "$_cellar" ] || continue
+  _v=""
+  if [ -L "$HB_PREFIX/opt/$_name" ]; then
+    _v="$(basename "$(readlink "$HB_PREFIX/opt/$_name")")"
+  fi
+  if [ -n "$_v" ] && [ -d "$_cellar/$_v" ]; then
+    printf '%s %s\n' "$_name" "$_v"
+  else
+    # No usable opt/ link (never linked, or dangling). Fall back to the keg list so the
+    # formula still appears -- an absent line would read as "gone" in the skew gate.
+    printf '%s %s\n' "$_name" "$(ls -1 "$_cellar" 2>/dev/null | sort | tr '\n' ' ' \
+      | sed 's/ *$//')"
+  fi
+done < /tmp/brew_want.txt | sed 's/ *$//' | sort > "$ROOT/brew-state.txt"
+BREW_STATE_N=$(wc -l < "$ROOT/brew-state.txt" | tr -d ' ')
+echo "brew-state.txt: $BREW_STATE_N formulae (feeds the gz cache key)"
+# An empty or near-empty file hashes to a constant, which would silently validate ANY
+# cached gz tree -- the same shape of trap as packing a partial install tree.
+if [ "${BREW_STATE_N:-0}" -lt 50 ]; then
+    echo "::error::brew-state.txt has only ${BREW_STATE_N:-0} entries; refusing to let the gz cache key be keyed on it"
+    exit 1
+fi
+grep -E '^(abseil|protobuf|qt@5|qtbase|boost|openssl@3|opencv@4|dartsim) ' "$ROOT/brew-state.txt" || true
 
 echo "✅ Done"

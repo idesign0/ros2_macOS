@@ -1,0 +1,2 @@
+Vendored from https://github.com/fmrico/yaets @ 8590560e0ccb19401f32276234154a8df6ff2dfb (branch rolling)
+Builds clean on macOS arm64 (ament_cmake, no macOS patches needed).
