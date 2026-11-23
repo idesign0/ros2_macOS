@@ -156,12 +156,16 @@ jobs:
           else
             "$K/lib/nav2_map_server/map_server" --ros-args -p yaml_filename:="$M" > /tmp/map.log 2>&1 &
             mp=$!
-            sleep 5; timeout 30 ros2 lifecycle set /map_server configure > /dev/null 2>&1; sleep 2
+            # no `timeout` here: it is GNU coreutils, not on a stock Mac
+            sleep 5; ros2 lifecycle set /map_server configure > /tmp/map_cfg.log 2>&1 &
+            cp_=$!
+            for _ in $(seq 30); do kill -0 $cp_ 2>/dev/null || break; sleep 1; done
+            kill $cp_ 2>/dev/null; sleep 2
             kill $mp 2>/dev/null; wait $mp 2>/dev/null
             if grep -q 'Read map' /tmp/map.log; then echo "map_server OK: $(grep -o 'Read map.*' /tmp/map.log)"
             else echo "::error::map_server could not read $M"; tail -20 /tmp/map.log; fails=$((fails+1)); fi
           fi
-          cp /tmp/source_err.txt /tmp/c_*.log /tmp/map.log report/ 2>/dev/null
+          cp /tmp/source_err.txt /tmp/c_*.log /tmp/map.log /tmp/map_cfg.log report/ 2>/dev/null
           exit $fails
           ZSH
           zsh /tmp/caveats.zsh
