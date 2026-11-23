@@ -119,6 +119,53 @@ jobs:
           ZSH
           zsh /tmp/chat.zsh
 
+      - name: The caveats' zsh block -- Cyclone lo0 talker/listener, colcon completion, map_server
+        if: ${{ !cancelled() }}
+        run: |
+          # The lines `brew info` tells users to put in ~/.zshrc, run as written, so a
+          # green install test also stands for the setup users actually copy. map_server
+          # reads a .pgm through the keg's GraphicsMagick coder modules (MAGICK_* env hook).
+          mkdir -p report
+          cat > /tmp/caveats.zsh <<'ZSH'
+          export PATH="/Library/Frameworks/Python.framework/Versions/3.11/bin:$PATH"
+          K="$(brew --prefix)/opt/ros2-$DISTRO"
+          source "$K/setup.zsh" 2> /tmp/source_err.txt
+          autoload bashcompinit && bashcompinit
+          eval "$(register-python-argcomplete colcon)"
+          export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp ROS_DOMAIN_ID=42
+          export CYCLONEDDS_URI='<CycloneDDS><Domain><General><Interfaces><NetworkInterface name="lo0" multicast="true"/></Interfaces></General><Discovery><ParticipantIndex>none</ParticipantIndex></Discovery></Domain></CycloneDDS>'
+          fails=0
+
+          nf=$(grep -c 'not found' /tmp/source_err.txt)
+          [ "$nf" = 0 ] || { echo "::warning::sourcing setup.zsh printed $nf 'not found' line(s)"; cat /tmp/source_err.txt; }
+
+          if whence -w _python_argcomplete >/dev/null; then echo "colcon completion OK"
+          else echo "::error::colcon completion not registered"; fails=$((fails+1)); fi
+
+          ros2 run demo_nodes_cpp listener > /tmp/c_listener.log 2>&1 &
+          ros2 run demo_nodes_cpp talker   > /tmp/c_talker.log 2>&1 &
+          for _ in $(seq 40); do grep -q 'I heard' /tmp/c_listener.log && break; sleep 1; done
+          pkill -f 'demo_nodes_cpp/(talker|listener)$'; pkill -f 'ros2 run demo_nodes_cpp'
+          if grep -q 'I heard' /tmp/c_listener.log; then echo "Cyclone lo0 talker -> listener OK"
+          else echo "::error::Cyclone lo0: listener heard nothing"; tail -20 /tmp/c_talker.log /tmp/c_listener.log; fails=$((fails+1)); fi
+
+          M="$K/share/turtlebot4_navigation/maps/warehouse.yaml"
+          [ -f "$M" ] || M=$(grep -l '\.pgm' "$K"/share/nav2_bringup/maps/*.yaml 2>/dev/null | head -1)
+          if [ -z "$M" ] || [ ! -x "$K/lib/nav2_map_server/map_server" ]; then
+            echo "::warning::no nav2 map_server or .pgm map in this keg -- map check skipped"
+          else
+            "$K/lib/nav2_map_server/map_server" --ros-args -p yaml_filename:="$M" > /tmp/map.log 2>&1 &
+            mp=$!
+            sleep 5; timeout 30 ros2 lifecycle set /map_server configure > /dev/null 2>&1; sleep 2
+            kill $mp 2>/dev/null; wait $mp 2>/dev/null
+            if grep -q 'Read map' /tmp/map.log; then echo "map_server OK: $(grep -o 'Read map.*' /tmp/map.log)"
+            else echo "::error::map_server could not read $M"; tail -20 /tmp/map.log; fails=$((fails+1)); fi
+          fi
+          cp /tmp/source_err.txt /tmp/c_*.log /tmp/map.log report/ 2>/dev/null
+          exit $fails
+          ZSH
+          zsh /tmp/caveats.zsh
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
