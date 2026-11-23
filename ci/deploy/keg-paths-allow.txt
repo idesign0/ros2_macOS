@@ -67,3 +67,11 @@ tmp-bin abseil-compat/*
 # is not vendored: an overlay asking Boost for python314 fails at link. Fix in devfiles.py.
 kegref vendor/opt/boost-1.89/lib/cmake/boost_numpy314-1.89.0/boost_numpy314-config.cmake
 kegref vendor/opt/boost-1.89/lib/cmake/boost_python314-1.89.0/boost_python314-config.cmake
+
+# Vendored bottles name their own bin/ dir, which we do not ship (empty, so `brew install`
+# deletes it). Harmless: libxml2's config only uses it as find_program(... NO_DEFAULT_PATH)
+# HINTS for xmllint/xmlcatalog, which we do not ship either, so those stay NOTFOUND as
+# they would anyway; unixODBC's BIN_PREFIX is a #define in its build-config header (pulled
+# in by sqltypes.h), the library's own default tool dir. Seen in brew-install-test 45177269583.
+kegref vendor/opt/libxml2/lib/cmake/libxml2/libxml2-config.cmake
+kegref vendor/opt/unixodbc/include/unixODBC/unixodbc_conf.h
