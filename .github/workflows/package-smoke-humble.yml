@@ -357,6 +357,11 @@ jobs:
             echo "::error::ci/deploy/check_keg_paths.py missing on this ref -- cannot prove the keg is relocatable"
             exit 1
           fi
+          # `brew install` deletes empty directories from the keg (Homebrew's cleaner), so a
+          # reference to one passes here but fails brew-install-test.yml (jazzy 26.11.23.13:
+          # libxml2/unixodbc bin/). Delete them first, so this gate sees what users get.
+          n=$(find install/ -mindepth 1 -depth -type d -empty -print -delete | wc -l | tr -d ' ')
+          echo "empty directories removed, as brew install would: $n"
           python3 -I ci/deploy/check_keg_paths.py install --prefix "/opt/homebrew/opt/ros2-humble" \
             --allow ci/deploy/keg-paths-allow.txt --report /tmp/keg_paths.txt
 
