@@ -62,3 +62,6 @@ webots_ros2_tests
 webots_ros2_tiago
 webots_ros2_turtlebot
 webots_ros2_universal_robot
+# as2_swarmlink: new in aerostack2 main (#1044, 2026-11-10), after these shards were generated;
+# aerostack2 (this shard) depends on it, so it failed with "Failed to find .../as2_swarmlink/package.sh".
+as2_swarmlink

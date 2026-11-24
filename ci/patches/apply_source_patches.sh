@@ -1444,6 +1444,20 @@ if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'framework CoreFoundat
   echo "  as2_platform_crazyflie: link CoreFoundation/IOKit/Security frameworks (libusb macOS backend)"
 fi
 
+# --- as2_platform_crazyflie (humble only): `target_compile_options(crazyflieLinkCpp PRIVATE
+#     -include string)`. The toolchain already adds `-include macos_compat.h`, and CMake
+#     de-duplicates the second `-include`, leaving `string` as a stray input ->
+#     "clang++: error: no such file or directory: 'string'". SHELL: keeps the pair together
+#     (same as the ouster/aerostack2 cases). Matches the shape, marker ci-crazyflie-shell-include.
+#     Compile-tested: minimal CMake 4.4.2 + Apple clang 21 repro (toolchain-style
+#     add_compile_options(-include X) + this line): old fails exactly so, SHELL: builds clean. ---
+d="$(_pkg_dir as2_platform_crazyflie)"
+if [ -n "$d" ] && [ -f "$d/CMakeLists.txt" ] && ! grep -q 'ci-crazyflie-shell-include' "$d/CMakeLists.txt" \
+   && grep -qE 'target_compile_options\(\s*crazyflieLinkCpp\s+PRIVATE\s+-include\s+string\s*\)' "$d/CMakeLists.txt"; then
+  perl -0pi -e 's/target_compile_options\(\s*crazyflieLinkCpp\s+PRIVATE\s+-include\s+string\s*\)/target_compile_options(crazyflieLinkCpp PRIVATE "SHELL:-include string")  # ci-crazyflie-shell-include/' "$d/CMakeLists.txt"
+  echo "  as2_platform_crazyflie: -include string -> SHELL:-include string"
+fi
+
 # --- Lane 1b (shared, same commit daa44c9 all 3): libmavconn's own FindASIO.cmake
 #     only searches PATHS /usr/include /usr/local/include for asio.hpp -> never
 #     checks the Apple Silicon homebrew prefix -> "Could NOT find ASIO (missing:

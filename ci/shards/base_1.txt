@@ -65,7 +65,6 @@ autoware_internal_debug_msgs
 autoware_lint_common
 autoware_pyplot
 autoware_utils_math
-autoware_utils_launch
 backward_ros
 behaviortree_cpp_v3
 builtin_interfaces

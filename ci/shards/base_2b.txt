@@ -360,3 +360,10 @@ moveit
 moveit_task_constructor_capabilities
 tiago_pro_moveit_config
 rosx_introspection
+# autoware_utils_launch: moved from base_1.txt -- it depends on rcl/rclpy/launch_ros, which are
+# built in base_2a, so in base_1 it failed with "Failed to find .../rcl/package.sh".
+autoware_utils_launch
+# ros2lifecycle, ros2lifecycle_test_fixtures: co-located from dom_ros2.txt -- fusioncore_ros (this
+# shard) depends on them and colcon --packages-select does not build deps; duplicate build is harmless.
+ros2lifecycle
+ros2lifecycle_test_fixtures
