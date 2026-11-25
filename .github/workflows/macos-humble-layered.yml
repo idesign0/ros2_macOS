@@ -1092,8 +1092,12 @@ jobs:
           retention-days: 5
 
   assemble:
-    needs: domains
-    if: always()
+    # Needs the install-base of base-2b. Gate on it: when base-2b never ran (a runner was
+    # not acquired -> cancelled, or an earlier base failed -> skipped), assembling can only
+    # fail fetching install-base and turn a capacity cancel into a fake build failure
+    # (run 45603889822). !cancelled(): still assemble when some domain legs failed.
+    needs: [base-2b, domains]
+    if: ${{ !cancelled() && needs.base-2b.result == 'success' }}
     runs-on: macos-26
     steps:
       - name: Fetch and extract install-base
