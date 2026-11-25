@@ -657,3 +657,10 @@ mvsim
 # must NOT build. Reasons on their own lines: the skip step reads each line whole.
 # mrpt_imgui_vendor: mrpt3 module; mrpt3 is skipped (we keep mrpt_ros v2)
 mrpt_imgui_vendor
+
+# onnxruntime_vendor: downloads a prebuilt onnxruntime per platform; the pinned
+# onnxruntime-osx-arm64-1.24.3.tgz asset returns 404 (jazzy 44117826051, kilted 45173777871) -- github.com/microsoft/onnxruntime
+# itself answers 404 as of 2026-11-24 -- and upstream main refuses Darwin outright
+# ("onnxruntime_vendor: macOS (Darwin) is not supported."). Nothing in the tree depends on it.
+# Homebrew has onnxruntime (1.32) if a consumer ever needs it. Same entry as jazzy-new f47c8980.
+onnxruntime_vendor

@@ -1850,6 +1850,10 @@
 	path = ros-drivers/imu_gnss/rt_usb_9axisimu_driver
 	url = https://github.com/idesign0/id_rt_usb_9axisimu_driver.git
 	branch = jazzy
+[submodule "ros-planning/rtabmap"]
+	path = ros-planning/rtabmap
+	url = https://github.com/introlab/rtabmap.git
+	branch = kilted-devel
 [submodule "ros-planning/rtabmap_ros"]
 	path = ros-planning/rtabmap_ros
 	url = https://github.com/idesign0/id_rtabmap_ros.git
@@ -1860,7 +1864,7 @@
 	branch = master
 [submodule "ros-visualization/rviz_2d_overlay_plugins"]
 	path = ros-visualization/rviz_2d_overlay_plugins
-	url = https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git
+	url = https://github.com/idesign0/id_rviz_2d_overlay_plugins.git
 	branch = main
 [submodule "ros-visualization/rviz_satellite"]
 	path = ros-visualization/rviz_satellite

@@ -209,9 +209,16 @@ runs:
         SHA='${{ inputs.brew-core-sha }}'
         core="$(brew --repo homebrew/core 2>/dev/null || true)"
         [ -n "$core" ] || core=/opt/homebrew/Library/Taps/homebrew/homebrew-core
+        # Current runner images ship NO homebrew-core tap at all (every job of humble run
+        # 45173783375 and kilted run 45173777871 warned here and ran unpinned; humble then lost
+        # 9 domain jobs to opencv@4 4.14.0_11 -> _12 mid-run). Create the directory and let the
+        # plain-directory path below initialise and pin it.
         if [ ! -d "$core" ]; then
-          echo "::warning::homebrew-core tap directory does not exist at $core -- continuing unpinned"
-          exit 0
+          echo "homebrew-core tap directory does not exist at $core -- creating it"
+          mkdir -p "$core" || {
+            echo "::warning::could not create $core -- continuing unpinned"
+            exit 0
+          }
         fi
         # Runner images have started shipping the taps as PLAIN DIRECTORIES with no .git, so
         # there is nothing to check out. Image 20261102.0473.1 is such an image and image

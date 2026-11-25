@@ -415,6 +415,29 @@ for f in $(grep -rlF '#$<BUILD_INTERFACE:${Protobuf_INCLUDE_DIRS}>' "$ROOT" --in
   perl -0pi -e 's~#\$<BUILD_INTERFACE:\$\{Protobuf_INCLUDE_DIRS\}>~\$<BUILD_INTERFACE:\${Protobuf_INCLUDE_DIRS}>  # ci-mvsim-protobuf-inc: uncommented so gencode finds google/protobuf/runtime_version.h~g' "$f"
   echo "  mvsim: uncomment \${Protobuf_INCLUDE_DIRS} in mvsim_msgs include dirs (runtime_version.h) in ${f#$ROOT/}"
 done
+# rtabmap: with VTK 9 it builds its GUI against VTK_QT_VERSION, which is 6
+# for Homebrew vtk 9.7. Its sources include QVTKOpenGLNativeWidget.h -> <QOpenGLWidget>, which in
+# Qt6 lives in the separate OpenGLWidgets module, but rtabmap's Qt6 path asks only for
+# Widgets Core Gui OpenGL PrintSupport and links only those (upstream never met Qt6+VTK9: Ubuntu's
+# VTK is Qt5). In CI Qt6 is isolated (qtbase unlinked), so nothing else supplies the header:
+#   QVTKOpenGLNativeWidget.h:94:10: fatal error: 'QOpenGLWidget' file not found   (jazzy 44117826051, kilted 45173777871)
+# Request OpenGLWidgets and put it on rtabmap_gui's public link/include. Idempotent (ci-rtabmap-qt6-oglw). ---
+_RT_ROOT=$(find "$ROOT" -path '*/rtabmap/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null \
+           | while read -r _c; do grep -q 'RTABMAP_QT_VERSION' "$_c" && echo "$_c" && break; done)
+if [ -n "${_RT_ROOT:-}" ]; then
+  _RT_GUI="$(dirname "$_RT_ROOT")/guilib/src/CMakeLists.txt"
+  if ! grep -q 'ci-rtabmap-qt6-oglw' "$_RT_ROOT"; then
+    perl -0pi -e 's~FIND_PACKAGE\(Qt6 COMPONENTS Widgets Core Gui OpenGL PrintSupport QUIET~FIND_PACKAGE(Qt6 COMPONENTS Widgets Core Gui OpenGL OpenGLWidgets PrintSupport QUIET~g; s~\A~# ci-rtabmap-qt6-oglw: Qt6 path also finds OpenGLWidgets (QVTKOpenGLNativeWidget.h needs QOpenGLWidget). See apply_source_patches.sh.\n~' "$_RT_ROOT"
+  fi
+  if [ -f "$_RT_GUI" ] && ! grep -q 'ci-rtabmap-qt6-oglw' "$_RT_GUI"; then
+    perl -0pi -e 's~(SET\(PUBLIC_LIBRARIES \$\{PUBLIC_LIBRARIES\} Qt6::Widgets Qt6::Core Qt6::Gui Qt6::OpenGL)\)~$1 Qt6::OpenGLWidgets)  # ci-rtabmap-qt6-oglw~; s~(\$\{Qt6OpenGL_INCLUDE_DIRS\})\)~$1\n        \${Qt6OpenGLWidgets_INCLUDE_DIRS})~' "$_RT_GUI"
+  fi
+  if grep -q 'OpenGLWidgets PrintSupport' "$_RT_ROOT" && grep -q 'Qt6::OpenGLWidgets' "$_RT_GUI" 2>/dev/null; then
+    echo "  rtabmap: Qt6 OpenGLWidgets requested and linked (${_RT_ROOT#$ROOT/}, guilib/src)"
+  else
+    echo "::error::apply_source_patches: rtabmap Qt6 OpenGLWidgets patch did not apply (${_RT_ROOT#$ROOT/})"
+  fi
+fi
 # nao_lola / nao_lola_client vendor msgpack as a NESTED git submodule (external/msgpack-c, declared
 # in nao_lola's own .gitmodules) and add it via include_directories(external/msgpack-c/include). The
 # superproject checkout does not recurse into that submodule-of-a-submodule, so in CI the dir is
@@ -1692,6 +1715,89 @@ PYEOF
   if [ $? -ne 0 ] || ! grep -q 'ci-macos-python311' "$_f"; then
     echo "::error::webots_ros2_driver: Python 3.11 patch did not apply"
   fi
+fi
+
+# --- rtabmap (in-tree core library, built against the tree's opencv@4): PCL, ZLIB and
+#     pthreads resolve their include dir to the macOS SDK's usr/include, and rtabmap
+#     re-exports it from RTABMap_core/utiliteTargets.cmake. Homebrew's formula strips it
+#     post-install for the same reason. Filter it before the targets are defined. ---
+d="$ROOT/ros-planning/rtabmap"
+if grep -q "<name>rtabmap</name>" "$d/package.xml" 2>/dev/null && ! grep -q 'ci-macos-rtabmap-sdk-include' "$d/CMakeLists.txt"; then
+  python3 - "$d/CMakeLists.txt" <<'PYEOF'
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+block = ('# ci-macos-rtabmap-sdk-include\n'
+         'foreach(_ci_v PCL_INCLUDE_DIRS ZLIB_INCLUDE_DIRS PTHREADS_INCLUDE_DIR)\n'
+         '  list(FILTER ${_ci_v} EXCLUDE REGEX "(\\\\.sdk/usr/include|^/opt/local/include)/?$")\n'
+         'endforeach()\n')
+s, n = re.subn(r'(?m)^(IF\(OpenCV_FOUND\)\s*\n\s*MESSAGE\(STATUS "Found OpenCV)', block + r'\1', s, count=1)
+if n:
+    open(p, "w").write(s)
+PYEOF
+  if [ $? -ne 0 ] || ! grep -q 'ci-macos-rtabmap-sdk-include' "$d/CMakeLists.txt"; then
+    echo "::error::rtabmap: SDK include filter did not apply"
+  else
+    echo "  rtabmap: filter SDK usr/include from exported include dirs"
+  fi
+fi
+
+# --- ci-data-paths-in-prefix: compiled-in DATA paths named the runner's source tree ------
+#     (seen on jazzy 26.11.16.7: gtsam/config.h, mrpt version.h + mrpt_paths_config.h, dart
+#     config.hpp -- in the headers AND in every binary built from them). Point them at
+#     what is installed instead:
+#       gtsam GTSAM_SOURCE_TREE_DATASET_DIR -> "" (examples/Data is not installed; its
+#             lookup falls through to GTSAM_INSTALLED_DATASET_DIR as it would for a user)
+#       mrpt  MRPT_SOURCE_BASE_DIRECTORY / MRPT_CMAKE_SOURCE_DIR -> install prefix
+#             (MRPT looks for <base>/share/mrpt, which is installed there)
+#       dart  DART_ROOT_PATH / DART_DATA_PATH / DART_DATA_LOCAL_PATH -> the installed
+#             data dir DART_DATA_GLOBAL_PATH already names (patch for ament_vendor PATCHES)
+for _f in $(find "$ROOT" -path '*/gtsam/gtsam/config.h.in' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null); do
+  if grep -q '#define GTSAM_SOURCE_TREE_DATASET_DIR "@GTSAM_SOURCE_DIR@' "$_f"; then
+    perl -pi -e 's{^#define GTSAM_SOURCE_TREE_DATASET_DIR ".*"$}{#define GTSAM_SOURCE_TREE_DATASET_DIR ""}' "$_f"
+    echo "  gtsam: source-tree dataset dir -> \"\" in ${_f#$ROOT/}"
+  fi
+done
+_f="$(_pkg_dir mrpt_libbase)/ci_patch_mrpt.sh"
+if [ -f "$_f" ] && ! grep -q 'ci-mrpt-install-paths' "$_f"; then
+  cat >> "$_f" <<'MRPTEOF'
+
+# --- ci-mrpt-install-paths (appended by ros2_macOS apply_source_patches.sh) ---------------
+# MRPT_SOURCE_BASE_DIRECTORY / MRPT_CMAKE_SOURCE_DIR are compiled into mrpt and its
+# headers; the build machine's source dir is gone after packaging. The installed tree has
+# <prefix>/share/mrpt, which is what MRPT looks for under that base.
+for _t in "$SRC/parse-files/mrpt_paths_config.h.in" "$SRC/parse-files/version.h.in"; do
+  if [ -f "$_t" ] && grep -q '"${MRPT_SOURCE_DIR}"' "$_t"; then
+    perl -pi -e 's{"\$\{MRPT_SOURCE_DIR\}"}{"\$\{CMAKE_INSTALL_PREFIX\}"}g' "$_t"
+    echo "ci_patch_mrpt: source-dir paths -> install prefix in ${_t##*/}"
+  fi
+done
+MRPTEOF
+  echo "  mrpt_libbase: +install-prefix data paths in ci_patch_mrpt.sh"
+fi
+_d="$(_pkg_dir gz_dartsim_vendor)/patches"
+if [ -d "$_d" ] && [ ! -f "$_d/0003-ci-data-paths-in-install-prefix.patch" ]; then
+  cat > "$_d/0003-ci-data-paths-in-install-prefix.patch" <<'DARTEOF'
+diff --git a/dart/config.hpp.in b/dart/config.hpp.in
+index 0a6b001..3972cbe 100644
+--- a/dart/config.hpp.in
++++ b/dart/config.hpp.in
+@@ -81,10 +81,10 @@
+ #cmakedefine01 DART_ENABLE_SIMD
+ 
+ // Deprecated in DART 6.2 and will be removed in DART 7.
+-#define DART_ROOT_PATH "@DART_SOURCE_DIR@/"
+-#define DART_DATA_PATH "@DART_SOURCE_DIR@/data/"
++#define DART_ROOT_PATH "@CMAKE_INSTALL_PREFIX@/@DART_ADDITIONAL_DOCUMENTATION_INSTALL_PATH@/"
++#define DART_DATA_PATH "@CMAKE_INSTALL_PREFIX@/@DART_ADDITIONAL_DOCUMENTATION_INSTALL_PATH@/data/"
+ 
+-#define DART_DATA_LOCAL_PATH "@DART_SOURCE_DIR@/data/"
++#define DART_DATA_LOCAL_PATH "@CMAKE_INSTALL_PREFIX@/@DART_ADDITIONAL_DOCUMENTATION_INSTALL_PATH@/data/"
+ #define DART_DATA_GLOBAL_PATH                                                  \
+   "@CMAKE_INSTALL_PREFIX@/@DART_ADDITIONAL_DOCUMENTATION_INSTALL_PATH@/data/"
+ 
+DARTEOF
+  echo "  gz_dartsim_vendor: +0003-ci-data-paths-in-install-prefix.patch"
 fi
 
 # --- foxglove_bridge: its CMakeLists only has download arms for Linux aarch64/x86_64 and

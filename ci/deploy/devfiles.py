@@ -96,6 +96,7 @@ class Prefix:
 
 
 DRIFT = {}
+PINOCCHIO_PRIVATE = ("boost", "boost-python3", "eigenpy")
 
 
 def formula_of(path):
@@ -167,6 +168,151 @@ def config_names(root, depth=3):
                 if m:
                     out.add(m.group(1).lower())
     return out
+
+
+# CMake package names ROS packages ask for that Homebrew spells differently. In CI the
+# toolchain bridges them with a Find module (cmake/Modules/Find<name>.cmake), which an
+# overlay does not have: ship the formula and a <name>Config.cmake bridge (write_bridges).
+CMAKE_NAME_ALIAS = {"tl_expected": "tl-expected"}
+
+
+def write_bridges(tree):
+    """<name>Config.cmake for each CMAKE_NAME_ALIAS whose formula was shipped, next to the
+    formula's own config under vendor/opt/<formula>/share/cmake, where an overlay's
+    find_package(<name>) finds it through the CMAKE_PREFIX_PATH entry devfiles adds."""
+    made = []
+    tl = os.path.join(tree, "vendor", "opt", "tl-expected")
+    if os.path.isdir(os.path.join(tl, "share", "cmake", "tl-expected")):
+        d = os.path.join(tl, "share", "cmake", "tl_expected")
+        os.makedirs(d, exist_ok=True)
+        shim_src = os.path.join(HERE, "..", "..", "cmake", "Modules", "tl_expected_shim")
+        if os.path.isdir(shim_src):
+            shutil.copytree(shim_src, os.path.join(d, "tl_expected_shim"), dirs_exist_ok=True)
+        io.open(os.path.join(d, "tl_expectedConfig.cmake"), "w").write(
+            "# ros2_macOS bridge: ROS packages find_package(tl_expected); Homebrew's\n"
+            "# tl-expected ships tl-expected-config.cmake and the target tl::expected.\n"
+            "include(CMakeFindDependencyMacro)\n"
+            "find_dependency(tl-expected CONFIG PATHS \"${CMAKE_CURRENT_LIST_DIR}/../tl-expected\" NO_DEFAULT_PATH)\n"
+            "if(NOT TARGET tl_expected::tl_expected)\n"
+            "  add_library(tl_expected::tl_expected INTERFACE IMPORTED)\n"
+            "  set_target_properties(tl_expected::tl_expected PROPERTIES INTERFACE_LINK_LIBRARIES tl::expected)\n"
+            "  set_property(TARGET tl_expected::tl_expected APPEND PROPERTY\n"
+            "    INTERFACE_INCLUDE_DIRECTORIES \"${CMAKE_CURRENT_LIST_DIR}/tl_expected_shim\")\n"
+            "endif()\n"
+            "set(tl_expected_LIBRARIES tl_expected::tl_expected)\n")
+        made.append("tl_expected")
+    # nlohmann_json's config defines only the target; ament_target_dependencies(<t>
+    # nlohmann_json) reads ${pkg}_TARGETS, so without this the header dir never reaches the
+    # compile line and the package only builds where json.hpp is in a default include dir
+    # (/usr/include on Ubuntu) -- nav2_route, nav2_smac_planner, ...
+    nj = os.path.join(tree, "vendor", "opt", "nlohmann-json", "share", "cmake", "nlohmann_json",
+                      "nlohmann_jsonConfig.cmake")
+    if os.path.isfile(nj) and "nlohmann_json_TARGETS" not in open(nj).read():
+        os.chmod(nj, os.stat(nj).st_mode | 0o200)
+        io.open(nj, "a").write("\n# ros2_macOS bridge: ament_target_dependencies(<t> nlohmann_json) reads _TARGETS\n"
+                               "set(nlohmann_json_TARGETS nlohmann_json::nlohmann_json)\n")
+        made.append("nlohmann_json(_TARGETS)")
+    return made
+
+
+PINOCCHIO_PRELUDE = r"""# ros2_macOS: pinocchio, coal and eigenpy here are Homebrew builds against Homebrew boost
+# and boost-python3; the rest of this keg uses boost-1.89. Point this project's Boost at the
+# bundled Homebrew boost, as the CI toolchain does for every pinocchio consumer. Like there,
+# it holds for the whole project: find pinocchio before anything else that uses Boost.
+get_filename_component(_r2m_vopt "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE)
+# Boost's config defines each Boost::<component> target once per project, so a Boost found
+# EARLIER (the keg's boost-1.89) would silently stay in use for the components it already
+# defined while pinocchio's new ones come from 1.92. Refuse that mix instead.
+if(NOT _R2M_PINOCCHIO_BOOST AND TARGET Boost::headers)
+  get_target_property(_r2m_hinc Boost::headers INTERFACE_INCLUDE_DIRECTORIES)
+  list(GET _r2m_hinc 0 _r2m_h0)
+  file(REAL_PATH "${_r2m_h0}" _r2m_h0)                  # the keg is reached through a symlink
+  file(REAL_PATH "${_r2m_vopt}/boost/include" _r2m_mine)
+  if(NOT _r2m_h0 STREQUAL _r2m_mine)
+    message(FATAL_ERROR "pinocchio/coal here are built against the bundled Homebrew Boost "
+      "(${_r2m_vopt}/boost), but this project already found another Boost (${_r2m_hinc}). "
+      "Call find_package(pinocchio) before anything else that finds Boost.")
+  endif()
+endif()
+if(NOT _R2M_PINOCCHIO_BOOST AND EXISTS "${_r2m_vopt}/boost/include/boost/version.hpp")
+  set(_R2M_PINOCCHIO_BOOST TRUE)
+  file(GLOB _r2m_bdir "${_r2m_vopt}/boost/lib/cmake/Boost-*")
+  if(_r2m_bdir)
+    list(GET _r2m_bdir 0 _r2m_bdir)
+    set(Boost_DIR "${_r2m_bdir}" CACHE PATH "" FORCE)
+  endif()
+  set(Boost_INCLUDE_DIR "${_r2m_vopt}/boost/include" CACHE PATH "" FORCE)
+  set(BOOST_ROOT "${_r2m_vopt}/boost")
+  set(Boost_NO_SYSTEM_PATHS ON)
+  list(PREPEND CMAKE_PREFIX_PATH "${_r2m_vopt}/boost" "${_r2m_vopt}/boost-python3" "${_r2m_vopt}/eigenpy")
+  # eigenpy asks for boost_python<NN> by the Python it was built with (python315); the
+  # library lives in boost-python3, not in boost
+  file(GLOB _r2m_bp "${_r2m_vopt}/boost-python3/lib/libboost_python3*.dylib"
+                    "${_r2m_vopt}/boost-python3/lib/libboost_numpy3*.dylib")
+  foreach(_r2m_l IN LISTS _r2m_bp)
+    if(_r2m_l MATCHES "libboost_(python|numpy)([0-9]+)\.dylib$")
+      string(TOUPPER "${CMAKE_MATCH_1}" _r2m_c)
+      set(Boost_${_r2m_c}${CMAKE_MATCH_2}_LIBRARY_RELEASE "${_r2m_l}" CACHE FILEPATH "" FORCE)
+      set(Boost_${_r2m_c}${CMAKE_MATCH_2}_LIBRARY_DEBUG "${_r2m_l}" CACHE FILEPATH "" FORCE)
+    endif()
+  endforeach()
+  if(EXISTS "${_r2m_vopt}/eigenpy/lib/cmake/eigenpy/eigenpyConfig.cmake")
+    set(eigenpy_DIR "${_r2m_vopt}/eigenpy/lib/cmake/eigenpy" CACHE PATH "" FORCE)
+  endif()
+  # Homebrew pinocchio links Homebrew urdfdom (6.x); the tree's own urdfdom (4.x) is what
+  # every other package here exports. Same once-per-project rule as Boost.
+  file(GLOB _r2m_ud "${_r2m_vopt}/urdfdom/lib/urdfdom/cmake/urdfdom-config.cmake")
+  if(_r2m_ud)
+    if(TARGET urdfdom::urdfdom_model)
+      message(WARNING "pinocchio here is built against the bundled Homebrew urdfdom "
+        "(${_r2m_vopt}/urdfdom); this project already found another urdfdom.")
+    else()
+      set(urdfdom_DIR "${_r2m_vopt}/urdfdom/lib/urdfdom/cmake" CACHE PATH "" FORCE)
+    endif()
+  endif()
+endif()
+"""
+
+
+def write_pinocchio_prelude(tree):
+    """Include PINOCCHIO_PRELUDE at the top of the shipped pinocchio and coal configs."""
+    done = []
+    for pkg in ("pinocchio", "coal"):
+        d = os.path.join(tree, "vendor", "opt", pkg, "lib", "cmake", pkg)
+        cfg = os.path.join(d, f"{pkg}Config.cmake")
+        if not os.path.isfile(cfg) or not os.path.isdir(os.path.join(tree, "vendor", "opt", "boost")):
+            continue
+        io.open(os.path.join(d, "ros2_macos_boost.cmake"), "w").write(PINOCCHIO_PRELUDE)
+        t = open(cfg).read()
+        inc = 'include("${CMAKE_CURRENT_LIST_DIR}/ros2_macos_boost.cmake")\n'
+        if inc not in t:
+            os.chmod(cfg, os.stat(cfg).st_mode | 0o200)
+            io.open(cfg, "w").write(inc + t)
+        done.append(pkg)
+    return done
+
+
+def pinocchio_first(tree):
+    """Move pinocchio/coal to the front of each package's exported dependencies."""
+    # the prelude switches the project to the bundled Homebrew Boost, so it must run before
+    # any other exported dependency finds the keg's boost-1.89 (linear_feedback_controller
+    # lists realtime_tools first, which finds Boost::boost)
+    done = []
+    for f in glob.glob(os.path.join(tree, "share", "*", "cmake",
+                                    "ament_cmake_export_dependencies-extras.cmake")):
+        t = read(f)
+        m = re.search(r'set\(_exported_dependencies "([^"]*)"\)', t)
+        if not m:
+            continue
+        deps = m.group(1).split(";")
+        first = [d for d in deps if d in ("pinocchio", "coal")]
+        new = first + [d for d in deps if d not in first]
+        if first and new != deps:
+            t = t[:m.start(1)] + ";".join(new) + t[m.end(1):]
+            os.chmod(f, os.stat(f).st_mode | 0o200)
+            io.open(f, "w").write(t)
+            done.append(f.split(os.sep)[-3])
+    return sorted(done)
 
 
 def cmake_names_index():
@@ -241,6 +387,34 @@ def vendored_at(tree, name, scope):
     flat = [c for c in cands if os.path.dirname(c) == os.path.join(tree, "vendor", "lib")]
     return (flat or cands or [None])[0]
 
+
+
+_MAN = {}
+
+
+def made_from(tree, vendored, src):
+    """True when the runtime pass vendored `vendored` from `src` (its manifest maps
+    realpath(source) -> path under vendor/lib). No manifest: unknown, so no."""
+    if tree not in _MAN:
+        mp = os.path.join(tree, "vendor", ".manifest.json")
+        raw = json.load(open(mp)) if os.path.exists(mp) else {}
+        # keys are spelled as the tree referenced them (/opt/homebrew/opt/boost/lib/...):
+        # index both that spelling and where it resolves to
+        _MAN[tree] = {}
+        for k, v in raw.items():
+            _MAN[tree][k] = v
+            _MAN[tree].setdefault(os.path.realpath(k), v)
+    rel = os.path.relpath(os.path.realpath(vendored), os.path.realpath(os.path.join(tree, "vendor", "lib")))
+    m = _MAN[tree]
+    return rel in (m.get(src), m.get(os.path.realpath(src)))
+
+
+def fw_versions(fw):
+    """A framework bundle's version dirs (Qt6: {'A'}, qt@5: {'5'})."""
+    try:
+        return {v for v in os.listdir(os.path.join(fw, "Versions")) if v != "Current"}
+    except OSError:
+        return set()
 
 
 def runtime_names(tree):
@@ -371,6 +545,37 @@ VIA_DEV_MAX = 120 << 20
 TINY_BIN = 5 << 20
 RUNTIME_DEV_MAX = 40 << 20
 TREE_FILES = set()      # file names the tree's own build interface references
+LINKED_TARGETS = set()  # Ns::Name targets the tree's and the shipped prefixes' configs name
+TARGET_TOKEN = re.compile(r"\b([A-Za-z][A-Za-z0-9_]*::[A-Za-z0-9_][A-Za-z0-9_.+-]*)")
+
+
+def linked_target_files(src):
+    """Library basenames of the targets an overlay can reach: every target LINKED_TARGETS
+    names that src's own targets files define, plus what those link transitively. A big
+    keg (vtk) ships only what the tree loads, but -dead_strip_dylibs drops a module the
+    code never calls (vtkChartsCore) while pcl's exported targets still link VTK::ChartsCore;
+    an overlay linking PCL then fails "IMPORTED_LOCATION not set for VTK::ChartsCore"."""
+    loc, links = collections.defaultdict(set), collections.defaultdict(set)
+    for p in text_files(src):
+        n = os.path.basename(p)
+        if not re.search(r"[Tt]argets(-\w+)?\.cmake$", n):
+            continue
+        t = read(p)
+        for m in re.finditer(r'set_target_properties\((\S+) PROPERTIES(.*?)\n\s*\)', t, re.S):
+            for l in re.findall(r'IMPORTED_LOCATION(?:_\w+)? "([^"]+)"', m.group(2)):
+                loc[m.group(1)].add(os.path.basename(l))
+            il = re.search(r'INTERFACE_LINK_LIBRARIES "([^"]*)"', m.group(2))
+            if il:
+                links[m.group(1)].update(TARGET_TOKEN.findall(il.group(1)))
+    todo = [t for t in LINKED_TARGETS if t in loc or t in links]
+    seen = set()
+    while todo:
+        t = todo.pop()
+        if t in seen:
+            continue
+        seen.add(t)
+        todo.extend(x for x in links.get(t, ()) if x not in seen)
+    return set().union(*(loc[t] for t in seen if t in loc)) if seen else set()
 
 
 def named_in_configs(src):
@@ -425,6 +630,7 @@ def mirror(prefix, tree, tools, whole_ok=True):
                 and x not in vendored and os.path.getsize(os.path.join(ld, x)) < NAMED_DYLIB_MAX}
         if len(cand) <= NAMED_DYLIB_COUNT:
             few_named = cand
+    few_named |= linked_target_files(prefix.src)
 
     def wanted(sp, nm):
         """Binaries are mirrored only when something will look for them: the runtime
@@ -463,6 +669,11 @@ def mirror(prefix, tree, tools, whole_ok=True):
                 if d.endswith(".framework"):
                     dirs.remove(d)
                     at = vendored_at(tree, d, prefix.name) if d in vendored else None
+                    # same NAME is not the same framework: qt@5 and Qt6 both ship
+                    # QtQml.framework (Versions/5 vs Versions/A). Linking Qt6's CMake
+                    # package to the Qt5 copy hands an overlay Qt5 headers for Qt6Qml.
+                    if at and fw_versions(at) != fw_versions(sp):
+                        at = None
                     dp = os.path.join(dst_root, rel_r, d)
                     if at and not os.path.lexists(dp):
                         os.makedirs(os.path.dirname(dp), exist_ok=True)
@@ -495,6 +706,12 @@ def mirror(prefix, tree, tools, whole_ok=True):
                     # the runtime copy, not a second one: overlay and tree must share it
                     at = next((x for x in (vendored_at(tree, al, prefix.name)
                                            for al in sorted(aliases(sp))) if x), None)
+                    # same NAME is not the same library: boost-1.89's libboost_filesystem
+                    # was linked to Homebrew boost 1.92's copy (jazzy 26.11.16.7), so an
+                    # overlay compiled 1.89 headers against 1.92 binaries. Only the copy
+                    # the runtime pass made FROM THIS FILE counts.
+                    if at and not made_from(tree, at, sp):
+                        at = None
                     if at:
                         os.symlink(os.path.relpath(at, os.path.dirname(dp)), dp)
                     else:
@@ -634,7 +851,7 @@ def plan(tree, ws, skip):
         return None
 
     def providers_of(name):
-        n = name.lower()
+        n = CMAKE_NAME_ALIAS.get(name.lower(), name.lower())
         out = [x for x, p in prefixes.items() if p.kind == "ws" and n in p.names]
         return out + [f for f in idx.get(n, []) if f not in out]
 
@@ -729,7 +946,28 @@ def plan(tree, ws, skip):
         if no:
             skipped[f].add(no)
             continue
-        add(f, root, "brew", "runtime")
+        # the tree builds its OWN package of that name (urdfdom 4 in lib/urdfdom; Homebrew's
+        # urdfdom 6 is only loaded by Homebrew pinocchio/dartsim): shipping Homebrew's as a
+        # public prefix put it ahead of the tree's, and moveit_core's export then asked an
+        # overlay for urdfdom::urdfdom_model_state, which urdfdom 6 no longer has (jazzy
+        # 26.11.16.7, moveit2_tutorials). Ship it private: the Homebrew builds that need it
+        # reach it through their prelude (write_pinocchio_prelude).
+        own = config_names(root) & have_in_tree
+        if add(f, root, "brew", "runtime") and own:
+            prefixes[f].private = True
+            why[f].add(f"private: tree has its own {', '.join(sorted(own)[:3])}")
+    # 3c. pinocchio, coal and eigenpy are Homebrew builds against Homebrew boost (1.9x) and
+    #     boost-python3, while the tree uses boost-1.89. CI builds their consumers with the
+    #     toolchain pointing the whole project at Homebrew boost; an overlay gets the same
+    #     from write_pinocchio_prelude(). These prefixes are PRIVATE: shipped, but kept off
+    #     the overlay's CMAKE_PREFIX_PATH, so every other find_package(Boost) still resolves
+    #     the boost-1.89 the tree was built with (that clash is why refused() drops them).
+    if "pinocchio" in prefixes:
+        for f in PINOCCHIO_PRIVATE:
+            if os.path.isdir(os.path.join(HB, f)) and add(f, info(f)[0], "brew", "private:pinocchio"):
+                prefixes[f].private = True
+                skipped.pop(f, None)
+
     # 4. transitive: what the mirrored prefixes' own CMake files reach
     # A keg shipped only because the tree RUNS it is a leaf: following its own CMake
     # files is how pdal -> gdal -> arrow -> aws-sdk-cpp (89k files) and
@@ -783,6 +1021,10 @@ def plan(tree, ws, skip):
 def stage(a, tree, skip):
     prefixes, why, src, unmatched, skipped = plan(tree, a.ws, skip)
     print(f"  dev prefixes         : {len(prefixes)}", flush=True)
+    for root in [tree] + [p.src for p in prefixes.values()]:
+        for p in text_files(root, skip if root == tree else ()):
+            if p.endswith(".cmake"):
+                LINKED_TARGETS.update(TARGET_TOKEN.findall(read(p)))
     total = 0
     for name, pre in sorted(prefixes.items()):
         n = 0 if a.report_only else mirror(pre, tree, imported_tools(pre.src),
@@ -805,7 +1047,8 @@ def stage(a, tree, skip):
         print(f"  source dirs UNMATCHED: {len(unmatched)} (left as they are)")
         for s in unmatched[:20]:
             print(f"     {s}")
-    state = {"prefixes": {n: {"src": p.src, "kind": p.kind, "dest": p.dest_rel}
+    state = {"prefixes": {n: {"src": p.src, "kind": p.kind, "dest": p.dest_rel,
+                              "private": bool(getattr(p, "private", False))}
                           for n, p in prefixes.items()},
              "source_map": {s: os.path.relpath(d, tree) for s, d in src.items()}}
     sp = os.path.join(tree, "vendor", ".devfiles.json")
@@ -828,6 +1071,15 @@ def stage(a, tree, skip):
 
 # ------------------------------------------------------------------ link
 def link(a, tree):
+    bridges = write_bridges(tree)
+    if bridges:
+        print(f"  bridges: {', '.join(bridges)}Config.cmake")
+    pre = write_pinocchio_prelude(tree)
+    if pre:
+        print(f"  Homebrew-boost prelude: {', '.join(pre)}")
+        moved = pinocchio_first(tree)
+        if moved:
+            print(f"  pinocchio found first: {', '.join(moved)}")
     state = json.load(open(os.path.join(tree, "vendor", ".devfiles.json")))
     man = {}
     mp = os.path.join(tree, "vendor", ".manifest.json")
@@ -1074,6 +1326,12 @@ def link(a, tree):
             d = os.path.join(tree, "include", m.group(1))
             if not os.path.exists(d):
                 os.makedirs(d)
+                # Homebrew's cleaner deletes empty directories at install time (jazzy
+                # 26.11.20.9: 6 of these were in the tarball, none in the installed keg,
+                # and overlay_probe flagged each package); a file keeps the directory.
+                io.open(os.path.join(d, ".ros2_macos_keep"), "w").write(
+                    "Exported include dir this package does not install; kept so CMake "
+                    "consumers find the path.\n")
                 made += 1
         def _dylib(m):
             has = lambda ext: any(os.path.exists(os.path.join(r, f"lib{m.group(2)}{ext}"))
@@ -1088,9 +1346,23 @@ def link(a, tree):
 
     # 4. a colcon package that puts the shipped prefixes ahead of the user's Homebrew
     lines = []
-    for name, info in sorted(state["prefixes"].items()):
+    # each line is prepended, so the last one is searched first. qt@5 goes last: rviz here
+    # is Qt5, and find_package(QT NAMES Qt6 Qt5) takes whichever prefix comes first
+    # (rviz_2d_overlay_plugins got Qt6 from the qtbase prefix that VTK brings)
+    for name, info in sorted(state["prefixes"].items(), key=lambda kv: (kv[0] == "qt@5", kv[0])):
         d = info["dest"]
+        if info.get("private"):
+            continue            # reached only through write_pinocchio_prelude()
         lines.append(f"prepend-non-duplicate;CMAKE_PREFIX_PATH;{d}")
+        # CMake's FindOpenSSL finds Homebrew's openssl@3 by its own hints even when
+        # pkg-config already found ours (moveit2_tutorials linked the user's
+        # /opt/homebrew/opt/openssl@3 against jazzy 26.11.16.7); its root variable wins
+        if name.startswith("openssl@") and os.path.isfile(os.path.join(tree, d, "include", "openssl", "ssl.h")):
+            lines.append(f"set-if-unset;OPENSSL_ROOT_DIR;{d}")
+        # Apple clang has no OpenMP of its own: FindOpenMP finds nothing without a root, and
+        # with this one picks -Xclang -fopenmp and the shipped libomp (nav2_smac_planner...)
+        if name == "libomp" and os.path.isfile(os.path.join(tree, d, "include", "omp.h")):
+            lines.append(f"set-if-unset;OpenMP_ROOT;{d}")
         for pc in ("lib/pkgconfig", "share/pkgconfig"):
             if os.path.isdir(os.path.join(tree, d, pc)):
                 lines.append(f"prepend-non-duplicate;PKG_CONFIG_PATH;{d}/{pc}")
