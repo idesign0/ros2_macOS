@@ -39,7 +39,7 @@ on:
       ref:
         description: "Branch to take ci/deploy/package_tree.py and the setup action from"
         required: true
-        default: kilted-new
+        default: kilted
       sample:
         description: "How many dylibs to load-test before and after"
         default: "150"
