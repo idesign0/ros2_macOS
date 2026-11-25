@@ -22,6 +22,14 @@ on:
       tap_branch:
         description: "Branch of idesign0/homebrew-ros2 to install from"
         default: next
+      expect_version:
+        description: "Fail unless the formula on tap_branch has this version (set by package-smoke)"
+        required: false
+        default: ""
+      promote:
+        description: "On a pass from next: copy this distro's formula to the tap's main and mark its release final"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,6 +37,8 @@ permissions:
 jobs:
   install:
     runs-on: macos-26
+    outputs:
+      version: ${{ steps.brew.outputs.version }}
     timeout-minutes: 120
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
@@ -55,6 +65,7 @@ jobs:
             argcomplete typing_extensions
 
       - name: brew install from the tap
+        id: brew
         run: |
           set -euo pipefail
           brew tap idesign0/ros2
@@ -62,6 +73,12 @@ jobs:
           git -C "$T" fetch -q origin "${{ inputs.tap_branch }}"
           git -C "$T" checkout -q -B "${{ inputs.tap_branch }}" FETCH_HEAD
           grep -nE '^  (version|sha256|depends_on) ' "$T/Formula/ros2-$DISTRO.rb"
+          VER=$(sed -nE 's/^  version "(.*)"$/\1/p' "$T/Formula/ros2-$DISTRO.rb")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          if [ -n "${{ inputs.expect_version }}" ] && [ "$VER" != "${{ inputs.expect_version }}" ]; then
+            echo "::error::${{ inputs.tap_branch }} has ros2-$DISTRO $VER, expected ${{ inputs.expect_version }} (a newer publish moved it?)"
+            exit 1
+          fi
           before=$(brew list --formula | wc -l | tr -d ' ')
           start=$(date +%s)
           mkdir -p report
@@ -177,3 +194,42 @@ jobs:
           path: report
           retention-days: 7
           if-no-files-found: ignore
+
+  # Release chain, step 3 of 3. Copies ONLY this distro's formula from next onto main (never
+  # a fast-forward: next can carry other distros' formulae that are not released), and only
+  # if next still has the exact version the install job tested.
+  promote:
+    needs: install
+    if: ${{ inputs.promote && inputs.tap_branch == 'next' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+      TAP: idesign0/homebrew-ros2
+      DISTRO: ${{ inputs.distro }}
+      VER: ${{ needs.install.outputs.version }}
+    steps:
+      - name: Promote ros2-${{ inputs.distro }} from next to main and mark the release final
+        run: |
+          set -euo pipefail
+          [ -n "$VER" ] || { echo "::error::install job reported no version"; exit 1; }
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
+          git -c http.extraheader="$AUTH" clone -q --branch main "https://github.com/$TAP.git" tap
+          cd tap
+          git -c http.extraheader="$AUTH" fetch -q origin next
+          F="Formula/ros2-${DISTRO}.rb"
+          NEXT_VER=$(git show "origin/next:$F" | sed -nE 's/^  version "(.*)"$/\1/p')
+          if [ "$NEXT_VER" != "$VER" ]; then
+            echo "::error::next now has ros2-$DISTRO $NEXT_VER, but $VER was tested -- not promoting"
+            exit 1
+          fi
+          git show "origin/next:$F" > "$F"
+          if git diff --quiet -- "$F"; then
+            echo "main already has ros2-$DISTRO $VER"
+          else
+            git -c user.name="github-actions[bot]" \
+                -c user.email="github-actions[bot]@users.noreply.github.com" \
+                commit -qm "ros2-${DISTRO} ${VER}" -- "$F"
+            git -c http.extraheader="$AUTH" push -q origin main
+          fi
+          gh release edit "${DISTRO}-${VER}" --repo "$TAP" --prerelease=false --title "$DISTRO $VER"
+          echo "::notice::promoted ros2-$DISTRO $VER to the tap's main; release ${DISTRO}-${VER} is final"

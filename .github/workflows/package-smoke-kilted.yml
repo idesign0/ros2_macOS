@@ -63,6 +63,13 @@ on:
           not touched.
         type: boolean
         default: false
+      promote:
+        description: >
+          After publishing, brew-install-test.yml always runs on the tap's next branch. With
+          promote, a pass there also copies this distro's formula to the tap's main and marks
+          the release final. The layered build's release job sets it.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -479,6 +486,7 @@ jobs:
         with:
           name: packaged-kilted
       - name: Publish the TESTED tree as a pre-release, and point the tap's next branch at it
+        id: pub
         run: |
           set -euo pipefail
           VER="$(date -u +%y.%m.%d).${{ github.run_number }}"
@@ -516,4 +524,14 @@ jobs:
               -c user.email="github-actions[bot]@users.noreply.github.com" \
               commit -qam "ros2-${DISTRO} ${VER} (pre-release) from package-smoke run ${{ github.run_id }}"
           git -c http.extraheader="$AUTH" push -q origin next
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
           echo "::notice::published $TAG to $TAP (pre-release) and the tap's next branch"
+      # Release chain, step 2 of 3: install what was just published, on a clean runner.
+      - name: Start brew-install-test.yml on the tap's next branch
+        run: |
+          set -euo pipefail
+          gh workflow run brew-install-test.yml -R "$GITHUB_REPOSITORY" \
+            --ref "${{ github.event.repository.default_branch }}" \
+            -f distro="$DISTRO" -f tap_branch=next \
+            -f expect_version="${{ steps.pub.outputs.ver }}" -f promote=${{ inputs.promote }}
+          echo "::notice::brew-install-test started for $DISTRO ${{ steps.pub.outputs.ver }} (promote=${{ inputs.promote }})"
