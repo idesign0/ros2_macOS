@@ -1,0 +1,64 @@
+name: Retry runs lost to runner capacity
+
+# GitHub sometimes cannot hand a macOS arm64 job a runner ("The job was not acquired by Runner
+# of type hosted even after multiple attempts"; it posts "Due to capacity constraints ..."
+# notices next to it). The job ends cancelled although nothing in the build failed. This
+# re-runs the failed jobs of such a run (successful jobs such as gz are kept), at most twice.
+#
+# It only re-runs when EVERY failed or cancelled job of the latest attempt carries the
+# "not acquired" annotation, so a real build failure or a run you cancelled is left alone.
+# Lives on the default branch: workflow_run only fires for workflows listed here from there.
+on:
+  workflow_run:
+    workflows:
+      - "macOS ROS 2 Kilted — Layered Matrix (experimental)"
+      - "macOS ROS 2 Jazzy — Layered Matrix (experimental)"
+      - "macOS ROS 2 Humble — Layered Matrix (experimental)"
+      - "Package smoke kilted (vendor + load test)"
+      - "Package smoke jazzy (vendor + load test)"
+      - "Package smoke humble (vendor + load test)"
+      - "Homebrew install test"
+    types: [completed]
+
+permissions:
+  actions: read
+  checks: read
+
+jobs:
+  retry:
+    if: >-
+      (github.event.workflow_run.conclusion == 'failure' ||
+       github.event.workflow_run.conclusion == 'cancelled') &&
+      github.event.workflow_run.run_attempt < 3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-run when only runner capacity failed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # A re-run started with GITHUB_TOKEN would not fire workflow_run again, so the
+          # second retry would never happen; the deploy token (already used to dispatch the
+          # release chain) starts it instead.
+          RERUN_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RUN_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          set -euo pipefail
+          bad=$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/attempts/$ATTEMPT/jobs?per_page=100" \
+                  --jq '.jobs[] | select(.conclusion=="failure" or .conclusion=="cancelled") | "\(.id)\t\(.name)"')
+          if [ -z "$bad" ]; then echo "no failed or cancelled jobs; nothing to do"; exit 0; fi
+          lost=0; other=0
+          while IFS=$'\t' read -r id name; do
+            if gh api "repos/$REPO/check-runs/$id/annotations" --jq '.[].message' | grep -q "not acquired"; then
+              echo "runner not acquired: $name"; lost=$((lost+1))
+            else
+              echo "real failure or manual cancel: $name"; other=$((other+1))
+            fi
+          done <<< "$bad"
+          if [ "$lost" -eq 0 ] || [ "$other" -ne 0 ]; then
+            echo "::notice::$RUN_NAME run $RUN_ID attempt $ATTEMPT: not a pure runner-capacity loss ($lost lost, $other other); not re-running"
+            exit 0
+          fi
+          GH_TOKEN="$RERUN_TOKEN" gh run rerun "$RUN_ID" -R "$REPO" --failed
+          echo "::notice::$RUN_NAME run $RUN_ID: $lost job(s) never got a runner; re-ran failed jobs (attempt $((ATTEMPT+1)) of max 3)"
