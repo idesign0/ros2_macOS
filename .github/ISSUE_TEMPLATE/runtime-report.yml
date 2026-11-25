@@ -1,0 +1,87 @@
+name: Runtime report
+description: Tell us how a ROS 2 framework or tool works on your Mac (working, broken, or could be better).
+title: "[runtime] <distro>: <area> — <works / broken / could be better>"
+labels: ["runtime-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing! See [TESTING.md](https://github.com/idesign0/ros2_macOS/blob/jazzy/TESTING.md) for what to check.
+        "It works" reports are welcome: they tell us which parts are verified.
+  - type: dropdown
+    id: distro
+    attributes:
+      label: Distro
+      options: [Jazzy, Kilted, Humble]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Release version
+      description: "Output of: brew info --json=v2 ros2-<distro> (installed version), e.g. 26.11.23.13"
+    validations:
+      required: true
+  - type: input
+    id: machine
+    attributes:
+      label: Mac and macOS
+      description: "Chip and macOS version, e.g. M2 Pro, macOS 27.3 (from sw_vers)"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Core (nodes, topics, services, actions, launch)
+        - Middleware (Fast DDS / Cyclone DDS / Zenoh)
+        - CLI tools and rosbag2
+        - GUI tools (rviz2, rqt, PlotJuggler, turtlesim)
+        - Web bridges (Foxglove, rosbridge)
+        - Gazebo and ros_gz
+        - Navigation (Nav2, SLAM, localization)
+        - Manipulation (MoveIt 2)
+        - Control (ros2_control, MuJoCo)
+        - Perception (images, point clouds, markers)
+        - Mapping and state estimation (Cartographer, MOLA/MRPT, grid_map, RTAB-Map)
+        - Fleet (Open-RMF)
+        - Other simulators (Webots)
+        - Hardware driver
+        - Autonomy and behaviour (Autoware, Lanelet2, behaviour trees, PlanSys2)
+        - Building my own packages (overlay)
+        - Long runs / performance
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options: [Works, Partly works, Broken, Works but could be better]
+    validations:
+      required: true
+  - type: input
+    id: rmw
+    attributes:
+      label: RMW_IMPLEMENTATION
+      placeholder: rmw_cyclonedds_cpp
+  - type: textarea
+    id: what
+    attributes:
+      label: What you ran
+      description: Exact commands, launch files, and the hardware or data you used.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened
+      description: For a failure, paste the full output. For a crash, attach the ~/Library/Logs/DiagnosticReports/*.ips file.
+  - type: textarea
+    id: improve
+    attributes:
+      label: What could be better
+      description: Missing packages, slow startup, awkward setup, performance compared with Linux, anything.
