@@ -11,6 +11,14 @@ on:
           this only narrows the domains matrix, reusing the gz-install/ccache/base caches.
         required: false
         default: ''
+      release:
+        description: >-
+          When the whole build is green (all domains, empty `domains`), start
+          package-smoke-kilted.yml with publish + promote: it publishes a pre-release on the tap's
+          next branch, runs brew-install-test.yml on it, and on a pass promotes the formula to
+          the tap's main. Untick for a build that must not reach users.
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -1030,3 +1038,21 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           grep -rhE 'Failed +<<<' summaries/ | sort -u >> "$GITHUB_STEP_SUMMARY" || true
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  # Release chain, step 1 of 3: build -> package-smoke (publish, promote) -> brew-install-test
+  # (promote) -> tap main. Each step dispatches the next only when it passed, so no manual
+  # dispatch is left between a green build and `brew upgrade`.
+  release:
+    needs: [package, domains]
+    if: ${{ inputs.release && inputs.domains == '' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.CATS_DEPLOY_TOKEN }}
+    steps:
+      - name: Start package-smoke-kilted.yml (publish + promote) on this build
+        run: |
+          set -euo pipefail
+          gh workflow run package-smoke-kilted.yml -R "$GITHUB_REPOSITORY" \
+            --ref "${{ github.event.repository.default_branch }}" \
+            -f run_id="$GITHUB_RUN_ID" -f ref="$GITHUB_REF_NAME" -f publish=true -f promote=true
+          echo "::notice::release chain started: package-smoke-kilted from build run $GITHUB_RUN_ID (ref $GITHUB_REF_NAME)"
