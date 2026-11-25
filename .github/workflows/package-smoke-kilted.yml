@@ -39,7 +39,7 @@ on:
       ref:
         description: "Branch to take ci/deploy/package_tree.py and the setup action from"
         required: true
-        default: kilted-new
+        default: kilted
       sample:
         description: "How many dylibs to load-test before and after"
         default: "150"
@@ -70,7 +70,7 @@ permissions:
 # Lifted verbatim from macos-kilted-layered.yml. The setup action REQUIRES gz-version and
 # brew-base-formulae, and BREW_BASE differs per distro (kilted is ionic; humble has no
 # `eigen`), so a single shared smoke workflow taking distro as an input would silently pass
-# the wrong formula set. One file per distro, each on its own -new ref, cannot mismatch.
+# the wrong formula set. One file per distro, each on its own branch, cannot mismatch.
 env:
   CI_BUILD: "TRUE"
   # ExternalProject vendors (e.g. clips_vendor) run `git apply` inside their build dir.

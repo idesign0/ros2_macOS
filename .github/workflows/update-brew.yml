@@ -1,6 +1,6 @@
 name: Update Homebrew package pins
 
-# Refreshes brew-packages/matched_packages.txt on all three -new refs.
+# Refreshes brew-packages/matched_packages.txt on the three working refs (humble-new, jazzy, kilted).
 #
 # That file already feeds the bottle cache key
 #   macOS-brewbottles-v1-${{ hashFiles('brew-packages/matched_packages.txt') }}
@@ -111,7 +111,7 @@ jobs:
           # Collect the union of formula names across all three refs, resolve each ONCE, then write
           # each ref's file back with the shared versions. Resolving per-ref would let the refs
           # disagree, which is the bug being closed.
-          for ref in humble-new jazzy-new kilted-new; do
+          for ref in humble-new jazzy kilted; do
             gh api "repos/idesign0/ros2_macOS/contents/brew-packages/matched_packages.txt?ref=$ref" \
               --jq .content | base64 -d > "cur-$ref.txt"
             echo "$ref: $(wc -l < "cur-$ref.txt" | tr -d ' ') formulae"
@@ -145,7 +145,7 @@ jobs:
             sed 's/^/    /' unresolved.txt
           fi
 
-          for ref in humble-new jazzy-new kilted-new; do
+          for ref in humble-new jazzy kilted; do
             # resolved.txt wins where it has the formula; otherwise the recorded line is kept
             # verbatim, so a formula that vanished from core is never silently dropped -- losing
             # one from BREW_BASE has hard-failed a whole base job before.
@@ -178,7 +178,7 @@ jobs:
           # on the runner, so a hard gate here would cry wolf every week and get muted.
           [ -s status.tsv ] || { echo "no status.tsv -- the resolve step did not run"; exit 0; }
 
-          for ref in humble-new jazzy-new kilted-new; do
+          for ref in humble-new jazzy kilted; do
             gh api "repos/idesign0/ros2_macOS/contents/brew-packages/allow_install_failures.txt?ref=$ref" \
               --jq .content 2>/dev/null | base64 -d > "allow-$ref.txt" || : > "allow-$ref.txt"
           done
@@ -281,7 +281,7 @@ jobs:
           # Refreshed $(date -u +%Y-%m-%d).
           $FULL
           EOF
-          for ref in humble-new jazzy-new kilted-new; do
+          for ref in humble-new jazzy kilted; do
             cur=$(gh api "repos/idesign0/ros2_macOS/contents/ci/homebrew-core.sha?ref=$ref" \
                     --jq .content 2>/dev/null | base64 -d 2>/dev/null \
                     | grep -oE '^[0-9a-f]{40}' | head -1 || true)
@@ -316,7 +316,7 @@ jobs:
         run: |
           set -euo pipefail
           CORE=$(git -C "$(brew --repo homebrew/core)" rev-parse --short HEAD)
-          for ref in humble-new jazzy-new kilted-new; do
+          for ref in humble-new jazzy kilted; do
             if diff -q "cur-$ref.txt" "next-$ref.txt" >/dev/null; then
               echo "  $ref unchanged, nothing to commit"
               continue
@@ -334,7 +334,7 @@ jobs:
             echo "libabsl_crc_cpu_detect and libabsl_borrowed_fixup_buffer, so 236 dylibs and 5" >> msg.txt
             echo "executables in the shipped tree could not be dlopen'd at all." >> msg.txt
             echo "" >> msg.txt
-            echo "Versions were resolved once, in one job, and written to all three -new refs" >> msg.txt
+            echo "Versions were resolved once, in one job, and written to all three working refs" >> msg.txt
             echo "together, so the distros cannot disagree about a formula version the way they did" >> msg.txt
             echo "in run 40491414514 (kilted qt 6.11.2 vs humble/jazzy 6.12.0)." >> msg.txt
             echo "" >> msg.txt

@@ -38,7 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.distro }}-new
+          ref: ${{ inputs.distro == 'humble' && 'humble-new' || inputs.distro }}
           submodules: false
 
       - name: What this machine has before the install

@@ -13,8 +13,8 @@ on:
   # GitHub reports a timed-out job as "cancelled", which made it look like a quota problem.
   # Pushing a fix batch to a -new branch should not start a build that cannot finish and
   # that starves the layered run of the same commit.
-  push:
-    branches: [jazzy]
+  # No push trigger: jazzy is the working branch now (2026-11-25) and this monolithic
+  # build would publish to the tap's main the old way. Builds are macos-jazzy-layered.yml.
   pull_request:
   workflow_dispatch:
 
