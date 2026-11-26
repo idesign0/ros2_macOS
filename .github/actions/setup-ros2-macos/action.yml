@@ -55,9 +55,18 @@ runs:
       run: |
         git submodule sync --recursive
         # Always a cold clone now (see the note above); retry+backoff for transient flakes.
-        ok=0
+        # No Git LFS content: only two submodules use LFS -- foxglove-sdk (example/test
+        # images and STL meshes) and novatel_oem7_driver (Linux .a, skip-listed) -- and
+        # nothing built here reads it. An LFS smudge timeout ("We couldn't respond to your
+        # request in time") left foxglove-sdk half checked out, and every retry then died
+        # on "untracked working tree files would be overwritten" (humble run 45602018103:
+        # 11 domain jobs). Skipping the smudge leaves LFS pointer files.
+        export GIT_LFS_SKIP_SMUDGE=1
+        ok=0; force=""
         for n in 1 2 3 4 5 6; do
-          if git submodule update --init --recursive --jobs 8; then ok=1; break; fi
+          if git submodule update --init --recursive --jobs 8 $force; then ok=1; break; fi
+          # A failed checkout leaves files behind; force the next checkout over them.
+          force="--force"
           echo "submodule update attempt $n failed (transient); retrying in $((n*20))s…"
           git submodule sync --recursive || true
           sleep $((n*20))
