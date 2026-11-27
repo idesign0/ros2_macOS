@@ -2798,3 +2798,66 @@ for _f in $(grep -rl 'YAML_CPP_LIBRARIES' "$ROOT" --include=CMakeLists.txt 2>/de
     echo "  ${_f#$ROOT/}: \${YAML_CPP_LIBRARIES} -> \${CI_YAML_CPP_LIB} in link line(s)"
   fi
 done
+
+# rtabmap (in-tree since ec31ba45): with VTK 9 it builds its GUI against VTK_QT_VERSION, which is 6
+# for Homebrew vtk 9.7. Its sources include QVTKOpenGLNativeWidget.h -> <QOpenGLWidget>, which in
+# Qt6 lives in the separate OpenGLWidgets module, but rtabmap's Qt6 path asks only for
+# Widgets Core Gui OpenGL PrintSupport and links only those (upstream never met Qt6+VTK9: Ubuntu's
+# VTK is Qt5). In CI Qt6 is isolated (qtbase unlinked), so nothing else supplies the header:
+#   QVTKOpenGLNativeWidget.h:94:10: fatal error: 'QOpenGLWidget' file not found   (jazzy 44117826051)
+# Request OpenGLWidgets and put it on rtabmap_gui's public link/include. Idempotent (ci-rtabmap-qt6-oglw). ---
+_RT_ROOT=$(find "$ROOT" -path '*/rtabmap/CMakeLists.txt' -not -path '*/build/*' -not -path '*/install/*' 2>/dev/null \
+           | while read -r _c; do grep -q 'RTABMAP_QT_VERSION' "$_c" && echo "$_c" && break; done)
+if [ -n "${_RT_ROOT:-}" ]; then
+  _RT_GUI="$(dirname "$_RT_ROOT")/guilib/src/CMakeLists.txt"
+  if ! grep -q 'ci-rtabmap-qt6-oglw' "$_RT_ROOT"; then
+    perl -0pi -e 's~FIND_PACKAGE\(Qt6 COMPONENTS Widgets Core Gui OpenGL PrintSupport QUIET~FIND_PACKAGE(Qt6 COMPONENTS Widgets Core Gui OpenGL OpenGLWidgets PrintSupport QUIET~g; s~\A~# ci-rtabmap-qt6-oglw: Qt6 path also finds OpenGLWidgets (QVTKOpenGLNativeWidget.h needs QOpenGLWidget). See apply_source_patches.sh.\n~' "$_RT_ROOT"
+  fi
+  if [ -f "$_RT_GUI" ] && ! grep -q 'ci-rtabmap-qt6-oglw' "$_RT_GUI"; then
+    perl -0pi -e 's~(SET\(PUBLIC_LIBRARIES \$\{PUBLIC_LIBRARIES\} Qt6::Widgets Qt6::Core Qt6::Gui Qt6::OpenGL)\)~$1 Qt6::OpenGLWidgets)  # ci-rtabmap-qt6-oglw~; s~(\$\{Qt6OpenGL_INCLUDE_DIRS\})\)~$1\n        \${Qt6OpenGLWidgets_INCLUDE_DIRS})~' "$_RT_GUI"
+  fi
+  if grep -q 'OpenGLWidgets PrintSupport' "$_RT_ROOT" && grep -q 'Qt6::OpenGLWidgets' "$_RT_GUI" 2>/dev/null; then
+    echo "  rtabmap: Qt6 OpenGLWidgets requested and linked (${_RT_ROOT#$ROOT/}, guilib/src)"
+  else
+    echo "::error::apply_source_patches: rtabmap Qt6 OpenGLWidgets patch did not apply (${_RT_ROOT#$ROOT/})"
+  fi
+fi
+
+# --- rtabmap (in-tree core library, built against the tree's opencv@4): PCL, ZLIB and
+#     pthreads resolve their include dir to the macOS SDK's usr/include, and rtabmap
+#     re-exports it from RTABMap_core/utiliteTargets.cmake. Homebrew's formula strips it
+#     post-install for the same reason. Filter it before the targets are defined. ---
+d="$ROOT/ros-planning/rtabmap"
+if grep -q "<name>rtabmap</name>" "$d/package.xml" 2>/dev/null && ! grep -q 'ci-macos-rtabmap-sdk-include' "$d/CMakeLists.txt"; then
+  python3 - "$d/CMakeLists.txt" <<'PYEOF'
+import re, sys
+p = sys.argv[1]
+s = open(p).read()
+block = ('# ci-macos-rtabmap-sdk-include\n'
+         'foreach(_ci_v PCL_INCLUDE_DIRS ZLIB_INCLUDE_DIRS PTHREADS_INCLUDE_DIR)\n'
+         '  list(FILTER ${_ci_v} EXCLUDE REGEX "(\\\\.sdk/usr/include|^/opt/local/include)/?$")\n'
+         'endforeach()\n')
+s, n = re.subn(r'(?m)^(IF\(OpenCV_FOUND\)\s*\n\s*MESSAGE\(STATUS "Found OpenCV)', block + r'\1', s, count=1)
+if n:
+    open(p, "w").write(s)
+PYEOF
+  if [ $? -ne 0 ] || ! grep -q 'ci-macos-rtabmap-sdk-include' "$d/CMakeLists.txt"; then
+    echo "::error::rtabmap: SDK include filter did not apply"
+  else
+    echo "  rtabmap: filter SDK usr/include from exported include dirs"
+  fi
+fi
+# Pthreads is only looked up inside utilite/CMakeLists.txt (added after the filter above), so
+# PTHREADS_INCLUDE_DIR still resolved to the SDK's usr/include and RTABMap_utiliteTargets.cmake
+# exported it (rtabmap humble-devel 0.23.14, checked locally). An exported SDK usr/include
+# shadows libc++'s own headers in consumers (cartographer_rviz broke the same way).
+u="$ROOT/ros-planning/rtabmap/utilite/CMakeLists.txt"
+if [ -f "$u" ] && grep -q 'FIND_PACKAGE(Pthreads REQUIRED)' "$u" && ! grep -q 'ci-macos-rtabmap-sdk-include' "$u"; then
+  perl -0pi -e 's~(FIND_PACKAGE\(Pthreads REQUIRED\)[^\n]*\n)~$1   list(FILTER PTHREADS_INCLUDE_DIR EXCLUDE REGEX "(\\.sdk/usr/include|^/opt/local/include)/?\$")  # ci-macos-rtabmap-sdk-include\n~' "$u"
+  if grep -q 'ci-macos-rtabmap-sdk-include' "$u"; then
+    echo "  rtabmap: filter SDK usr/include from PTHREADS_INCLUDE_DIR (utilite)"
+  else
+    echo "::error::rtabmap: utilite pthreads SDK include filter did not apply"
+  fi
+fi
+

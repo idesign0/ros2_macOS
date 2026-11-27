@@ -41,6 +41,7 @@ sdk vendor/lib/python@3.*/Python.framework/Versions/3.*/lib/python3.*/distutils/
 # the code goes through getSystemConfigPath() / getSharePath().
 kegref include/gz/sim8/gz/sim/config.hh
 kegref include/gz/sdformat14/sdf/config.hh
+kegref include/gz/rendering8/gz/rendering/config.hh
 # plotjuggler: PJ_PLUGIN_INSTALL_DIRECTORY says lib/plotjuggler/plugins while its ament
 # install puts the plugins in lib/plotjuggler, where PlotJuggler also looks.
 kegref share/plotjuggler/cmake/plotjugglerTargetsExport.cmake
@@ -75,3 +76,14 @@ kegref vendor/opt/boost-1.89/lib/cmake/boost_python314-1.89.0/boost_python314-co
 # in by sqltypes.h), the library's own default tool dir. Seen in brew-install-test 45177269583.
 kegref vendor/opt/libxml2/lib/cmake/libxml2/libxml2-config.cmake
 kegref vendor/opt/unixodbc/include/unixODBC/unixodbc_conf.h
+
+# --- Temporary, same as jazzy (user decision 2026-11-19, extended to humble 2026-11-27) ---
+# Humble smoke 45977199947 (build 45602018103): 375 binaries keep /Users/runner/... as
+# compiled-in __FILE__ / debug strings that nothing looks up -- 365 under build/<pkg>
+# (mostly rosidl_generator_py), plus Rust crates (cargo registry/git: zenoh_bridge_dds,
+# foxglove), libcartographer.a, lanelet2_examples, traffic-editor; and three static
+# archives keep Xcode SDK paths. Remove once a build ships without them.
+runner-bin *
+sdk-bin lib/libqpOASES.a
+sdk-bin lib/libsick_scan_xd_lib.a
+sdk-bin opt/zenoh_cpp_vendor/lib/libzenohc.a

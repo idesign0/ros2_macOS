@@ -171,7 +171,12 @@ if os.path.exists(man_p):
                 hit = next((v for k, v in src_of.items() if real == k or real.startswith(k + "/")), None)
                 if hit is None and real.endswith(".framework"):
                     hit = next((v for k, v in src_of.items() if k.startswith(real + "/")), None)
-                if hit and not re.search(r"/(?:opt|Cellar)/" + re.escape(f_name) + r"(?:/|$)", hit):
+                # Homebrew's `qt` is an umbrella formula: every framework under opt/qt is a
+                # symlink into a modular Qt 6 keg (qtbase, qtsvg, ...), so its dev tree linking
+                # those copies is the same file, not a second Qt (humble smoke 45977199947:
+                # vendor/opt/qt/.../QtOpenGL -> qtbase). qt@5 is still a mismatch.
+                own = re.escape(f_name) + (r"(?:[a-z0-9]+)?" if f_name == "qt" else "")
+                if hit and not re.search(r"/(?:opt|Cellar)/" + own + r"(?:/|$)", hit):
                     add("mixed", hit, os.path.relpath(q, tree))
 
 lines = [f"files scanned: {n_files}   mach-o: {len(machos)}   allow rules: {len(allow)}"]

@@ -2705,3 +2705,7 @@
 	path = ros-planning/kairos
 	url = https://github.com/PlanSys2/kairos.git
 	branch = main
+[submodule "ros-planning/rtabmap"]
+	path = ros-planning/rtabmap
+	url = https://github.com/introlab/rtabmap.git
+	branch = humble-devel
