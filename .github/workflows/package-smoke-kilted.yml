@@ -103,8 +103,30 @@ jobs:
         with:
           submodules: false
           ref: ${{ inputs.ref }}
+      # Pin homebrew-core to the commit the BUILD run used (its ci/homebrew-core.sha), the
+      # same pin every job of that run had. Unpinned, this job resolved formulae against
+      # today's tap: kilted smoke 45655388966 installed octomap 2.0.0 / gpsd 3.28 while the
+      # tree linked octomap 1.10.1 / gpsd 3.27.5, so the packager could not vendor them and
+      # the DART physics plugin could not load. Empty -> unpinned, as before.
+      - name: Homebrew pin of the build run
+        id: brewcore
+        run: |
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/${{ inputs.run_id }}" --jq .head_sha 2>/dev/null || true)
+          pin=""
+          if [ -n "$sha" ]; then
+            pin=$(gh api -H "Accept: application/vnd.github.raw" \
+                    "repos/$GITHUB_REPOSITORY/contents/ci/homebrew-core.sha?ref=$sha" 2>/dev/null \
+                  | grep -oE '^[0-9a-f]{40}' | head -1 || true)
+          fi
+          if [ -n "$pin" ]; then
+            echo "homebrew-core pinned to $pin (ci/homebrew-core.sha at build commit $sha)"
+          else
+            echo "::warning::no homebrew-core pin found for build run ${{ inputs.run_id }} (commit ${sha:-?}); running unpinned"
+          fi
+          echo "sha=$pin" >> "$GITHUB_OUTPUT"
       - uses: ./.github/actions/setup-ros2-macos
         with:
+          brew-core-sha: ${{ steps.brewcore.outputs.sha }}
           deploy-token: ${{ secrets.CATS_DEPLOY_TOKEN }}
           gz-version: ${{ env.GZ_VERSION }}
           brew-base-formulae: ${{ env.BREW_BASE }}
